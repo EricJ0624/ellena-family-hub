@@ -207,6 +207,9 @@ export type TravelTranslations = {
   ui_direct_input_mode: string;
   ui_place_fill_hint: string;
   ui_coord_input_advanced: string;
+  /** 지도 아래 좌표 라벨 (다이어리·플래너 공용) */
+  ui_coords_under_map: string;
+  ui_map_places_under_map: string;
   ui_section_dining: string;
   ui_add_dining_line: string;
   ui_section_accommodation: string;
@@ -472,6 +475,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: '직접 입력 모드 (Google 자동완성 호출 안 함)',
     ui_place_fill_hint: '이름에서 장소를 선택하면 주소·좌표가 채워집니다',
     ui_coord_input_advanced: '좌표 입력 (고급)',
+    ui_coords_under_map: '좌표',
+    ui_map_places_under_map: '지도에 표시된 위치',
     ui_section_dining: '먹거리',
     ui_add_dining_line: '+ 먹거리 추가',
     ui_section_accommodation: '숙소',
@@ -734,6 +739,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Direct input mode (disable Google autocomplete)',
     ui_place_fill_hint: 'Selecting a place name fills address and coordinates',
     ui_coord_input_advanced: 'Coordinate input (advanced)',
+    ui_coords_under_map: 'Coordinates',
+    ui_map_places_under_map: 'Places on the map',
     ui_section_dining: 'Dining',
     ui_add_dining_line: '+ Add dining',
     ui_section_accommodation: 'Accommodation',
@@ -996,6 +1003,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: '直接入力モード（Google 自動補完を使わない）',
     ui_place_fill_hint: '名前から場所を選ぶと住所・座標が入力されます',
     ui_coord_input_advanced: '座標入力（詳細）',
+    ui_coords_under_map: '座標',
+    ui_map_places_under_map: '地図に表示される場所',
     ui_section_dining: '飲食',
     ui_add_dining_line: '+ 飲食を追加',
     ui_section_accommodation: '宿泊',
@@ -1258,6 +1267,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: '直接输入模式（不使用 Google 自动完成）',
     ui_place_fill_hint: '从名称中选择地点将填充地址和坐标',
     ui_coord_input_advanced: '坐标输入（高级）',
+    ui_coords_under_map: '坐标',
+    ui_map_places_under_map: '地图上显示的位置',
     ui_section_dining: '餐饮',
     ui_add_dining_line: '+ 添加餐饮',
     ui_section_accommodation: '住宿',
@@ -1520,6 +1531,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: '直接輸入模式（不使用 Google 自動完成）',
     ui_place_fill_hint: '從名稱中選擇地點將填入地址和座標',
     ui_coord_input_advanced: '座標輸入（進階）',
+    ui_coords_under_map: '座標',
+    ui_map_places_under_map: '地圖上顯示的位置',
     ui_section_dining: '餐飲',
     ui_add_dining_line: '+ 新增餐飲',
     ui_section_accommodation: '住宿',
@@ -1781,6 +1794,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Modo de entrada directa (sin autocompletado de Google)',
     ui_place_fill_hint: 'Al seleccionar un lugar se rellenan dirección y coordenadas',
     ui_coord_input_advanced: 'Entrada de coordenadas (avanzado)',
+    ui_coords_under_map: 'Coordenadas',
+    ui_map_places_under_map: 'Lugares en el mapa',
     ui_section_dining: 'Comida',
     ui_add_dining_line: '+ Añadir comida',
     ui_section_accommodation: 'Alojamiento',
@@ -2042,6 +2057,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Mode de saisie directe (sans saisie automatique Google)',
     ui_place_fill_hint: 'La sélection d\'un lieu remplit l\'adresse et les coordonnées',
     ui_coord_input_advanced: 'Saisie des coordonnées (avancé)',
+    ui_coords_under_map: 'Coordonnées',
+    ui_map_places_under_map: 'Lieux sur la carte',
     ui_section_dining: 'Restauration',
     ui_add_dining_line: '+ Ajouter un restaurant',
     ui_section_accommodation: 'Hébergement',
@@ -2303,6 +2320,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Direkteingabemodus (Google-Autovervollständigung aus)',
     ui_place_fill_hint: 'Bei Ortsauswahl werden Adresse und Koordinaten ausgefüllt',
     ui_coord_input_advanced: 'Koordinateneingabe (erweitert)',
+    ui_coords_under_map: 'Koordinaten',
+    ui_map_places_under_map: 'Orte auf der Karte',
     ui_section_dining: 'Essen',
     ui_add_dining_line: '+ Essen hinzufügen',
     ui_section_accommodation: 'Unterkunft',
@@ -2564,6 +2583,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Modalità inserimento diretto (senza completamento Google)',
     ui_place_fill_hint: 'Selezionando un luogo si compilano indirizzo e coordinate',
     ui_coord_input_advanced: 'Inserimento coordinate (avanzato)',
+    ui_coords_under_map: 'Coordinate',
+    ui_map_places_under_map: 'Luoghi sulla mappa',
     ui_section_dining: 'Ristorazione',
     ui_add_dining_line: '+ Aggiungi ristorazione',
     ui_section_accommodation: 'Alloggio',
@@ -2825,6 +2846,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Modo de entrada direta (desativar autocompletar do Google)',
     ui_place_fill_hint: 'Selecionar um local preenche endereço e coordenadas',
     ui_coord_input_advanced: 'Entrada de coordenadas (avançado)',
+    ui_coords_under_map: 'Coordenadas',
+    ui_map_places_under_map: 'Locais no mapa',
     ui_section_dining: 'Refeições',
     ui_add_dining_line: '+ Adicionar refeição',
     ui_section_accommodation: 'Hospedagem',

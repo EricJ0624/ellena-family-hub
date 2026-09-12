@@ -21,6 +21,7 @@ import type {
 import { normalizePackingChecklist } from '@/lib/modules/travel-planner/document-meta';
 import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
 import { buildStaticMapUrl, collectTripMapPoints } from '@/lib/modules/travel-planner/static-map-url';
+import { formatPlaceCoords } from '@/lib/modules/travel-planner/google-maps-embed';
 import { ItineraryDocument, printItineraryDocumentPreview } from '@/app/modules/travel-planner/components/ItineraryDocument';
 import {
   canUserOptInDiaryForTrip,
@@ -2574,6 +2575,72 @@ export function TravelPlannerContent() {
     );
   }, [accommodations, dining, attractions, itineraries]);
 
+  /** 여행 지도 아래: 주소 또는 좌표가 있는 숙소·먹거리·관광지·기타 일정 */
+  const mapPlacesUnderMap = useMemo(() => {
+    type Row = {
+      key: string;
+      emoji: string;
+      name: string;
+      address?: string | null;
+      latitude?: number | null;
+      longitude?: number | null;
+    };
+    const rows: Row[] = [];
+    for (const a of accommodations) {
+      const addr = typeof a.address === 'string' ? a.address.trim() : '';
+      if (addr || formatPlaceCoords(a)) {
+        rows.push({
+          key: `acc-${a.id}`,
+          emoji: '🏨',
+          name: a.name,
+          address: a.address,
+          latitude: a.latitude,
+          longitude: a.longitude,
+        });
+      }
+    }
+    for (const d of dining) {
+      const addr = typeof d.address === 'string' ? d.address.trim() : '';
+      if (addr || formatPlaceCoords(d)) {
+        rows.push({
+          key: `din-${d.id}`,
+          emoji: '🍽️',
+          name: d.name,
+          address: d.address,
+          latitude: d.latitude,
+          longitude: d.longitude,
+        });
+      }
+    }
+    for (const a of attractions) {
+      const addr = typeof a.address === 'string' ? a.address.trim() : '';
+      if (addr || formatPlaceCoords(a)) {
+        rows.push({
+          key: `att-${a.id}`,
+          emoji: '🏛️',
+          name: a.name,
+          address: a.address,
+          latitude: a.latitude,
+          longitude: a.longitude,
+        });
+      }
+    }
+    for (const i of itineraries) {
+      const addr = typeof i.address === 'string' ? i.address.trim() : '';
+      if (addr || formatPlaceCoords(i)) {
+        rows.push({
+          key: `iti-${i.id}`,
+          emoji: '📌',
+          name: i.title,
+          address: i.address,
+          latitude: i.latitude,
+          longitude: i.longitude,
+        });
+      }
+    }
+    return rows;
+  }, [accommodations, dining, attractions, itineraries]);
+
   const getItineraryTypeLabel = (type: string, transport_type?: 'air' | 'train' | 'car' | 'bike') => {
     if (type === 'accommodation') return tt('ui_section_accommodation');
     if (type === 'dining') return tt('ui_section_dining');
@@ -3101,6 +3168,14 @@ export function TravelPlannerContent() {
                                       {i.description && (
                                         <div className="mt-1 text-[13px] text-slate-600">{i.description}</div>
                                       )}
+                                      {i.address?.trim() ? (
+                                        <div className="mt-1 text-[13px] text-slate-600">{i.address.trim()}</div>
+                                      ) : null}
+                                      {formatPlaceCoords(i) ? (
+                                        <div className="mt-0.5 font-mono text-[11px] text-slate-400">
+                                          {tt('ui_coords_under_map')}: {formatPlaceCoords(i)}
+                                        </div>
+                                      ) : null}
                                     </div>
                                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                                       <div className="flex items-center gap-1">
@@ -3200,6 +3275,14 @@ export function TravelPlannerContent() {
                                     {i.description && (
                                       <div className="mt-1 text-[13px] text-slate-600">{i.description}</div>
                                     )}
+                                    {i.address?.trim() ? (
+                                      <div className="mt-1 text-[13px] text-slate-600">{i.address.trim()}</div>
+                                    ) : null}
+                                    {formatPlaceCoords(i) ? (
+                                      <div className="mt-0.5 font-mono text-[11px] text-slate-400">
+                                        {tt('ui_coords_under_map')}: {formatPlaceCoords(i)}
+                                      </div>
+                                    ) : null}
                                   </div>
                                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                                     <div className="flex items-center gap-1">
@@ -3301,6 +3384,14 @@ export function TravelPlannerContent() {
                               {(a.start_time || a.end_time) && <span className="ml-1.5">· {(a.start_time || '--')} ~ {(a.end_time || '--')}</span>}
                             </div>
                             {a.description && <div className="mt-1 text-[13px] text-slate-600">{a.description}</div>}
+                            {a.address?.trim() ? (
+                              <div className="mt-1 text-[13px] text-slate-600">{a.address.trim()}</div>
+                            ) : null}
+                            {formatPlaceCoords(a) ? (
+                              <div className="mt-0.5 font-mono text-[11px] text-slate-400">
+                                {tt('ui_coords_under_map')}: {formatPlaceCoords(a)}
+                              </div>
+                            ) : null}
                             <div className="mt-1 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(a.created_by)}{a.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(a.updated_by)}`}</div>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -3374,6 +3465,14 @@ export function TravelPlannerContent() {
                               {d.time_at && <span className="ml-1.5">{d.time_at}</span>}
                               {d.category && <span className="ml-1.5 text-slate-500">{d.category}</span>}
                             </div>
+                            {d.address?.trim() ? (
+                              <div className="mt-1 text-[13px] text-slate-600">{d.address.trim()}</div>
+                            ) : null}
+                            {formatPlaceCoords(d) ? (
+                              <div className="mt-0.5 font-mono text-[11px] text-slate-400">
+                                {tt('ui_coords_under_map')}: {formatPlaceCoords(d)}
+                              </div>
+                            ) : null}
                             <div className="mt-1 text-[11px] text-slate-400">
                               {tt('ui_created_label')}: {getDisplayName(d.created_by)}
                               {d.updated_by != null && ` · ${tt('ui_updated_label')}: ${getDisplayName(d.updated_by)}`}
@@ -3459,6 +3558,11 @@ export function TravelPlannerContent() {
                               )}
                             </div>
                             {a.address && <div className="mt-1 text-[13px] text-slate-600">{a.address}</div>}
+                            {formatPlaceCoords(a) ? (
+                              <div className="mt-0.5 font-mono text-[11px] text-slate-400">
+                                {tt('ui_coords_under_map')}: {formatPlaceCoords(a)}
+                              </div>
+                            ) : null}
                             <div className="mt-1 text-[11px] text-slate-400">
                               {tt('ui_created_label')}: {getDisplayName(a.created_by)}
                               {a.updated_by != null && ` · ${tt('ui_updated_label')}: ${getDisplayName(a.updated_by)}`}
@@ -3633,6 +3737,35 @@ export function TravelPlannerContent() {
                         {tt('hide_map_btn')}
                       </button>
                     </p>
+                    {mapPlacesUnderMap.length > 0 ? (
+                      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+                        <div className="mb-2 text-xs font-semibold text-slate-600">
+                          {tt('ui_map_places_under_map')}
+                        </div>
+                        <ul className="m-0 list-none space-y-2 p-0">
+                          {mapPlacesUnderMap.map((p) => {
+                            const addr = typeof p.address === 'string' ? p.address.trim() : '';
+                            const coords = formatPlaceCoords(p);
+                            return (
+                              <li key={p.key} className="min-w-0 text-[13px] leading-snug">
+                                <div className="font-medium text-slate-700">
+                                  <span className="mr-1">{p.emoji}</span>
+                                  {p.name}
+                                </div>
+                                {addr ? (
+                                  <div className="mt-0.5 text-slate-500">{addr}</div>
+                                ) : null}
+                                {coords ? (
+                                  <div className="mt-0.5 font-mono text-[11px] text-slate-400">
+                                    {tt('ui_coords_under_map')}: {coords}
+                                  </div>
+                                ) : null}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ) : null}
                   </>
                 )}
               </div>
@@ -4967,6 +5100,43 @@ export function TravelPlannerContent() {
                   </a>
                 </div>
               )}
+              <details className="mb-3">
+                <summary className="cursor-pointer text-xs text-slate-500">{tt('ui_coord_input_advanced')}</summary>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lat_map')}</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={attractionLatitude}
+                      readOnly={!attractionDirectInputMode}
+                      onChange={(e) => {
+                        if (attractionDirectInputMode) setAttractionLatitude(e.target.value);
+                      }}
+                      placeholder={tt('placeholder_lat')}
+                      className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
+                        attractionDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lng_map')}</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={attractionLongitude}
+                      readOnly={!attractionDirectInputMode}
+                      onChange={(e) => {
+                        if (attractionDirectInputMode) setAttractionLongitude(e.target.value);
+                      }}
+                      placeholder={tt('placeholder_lng')}
+                      className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
+                        attractionDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </details>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_description')}</label>
               <textarea
                 value={attractionDescription}

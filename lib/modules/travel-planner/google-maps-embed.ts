@@ -17,6 +17,17 @@ function toNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** 지도 아래 표시용 — 위도, 경도. 없거나 무효면 null. */
+export function formatPlaceCoords(
+  item: Pick<GoogleMapsPlaceRef, 'latitude' | 'longitude'>,
+  digits = 6,
+): string | null {
+  const lat = toNum(item.latitude);
+  const lng = toNum(item.longitude);
+  if (lat == null || lng == null) return null;
+  return `${lat.toFixed(digits)}, ${lng.toFixed(digits)}`;
+}
+
 /** 구글 지도 웹(소비자용) 링크 — Maps Platform 과금 없음. */
 export function buildGoogleMapsViewUrl(item: GoogleMapsPlaceRef): string | null {
   const pid = typeof item.place_id === 'string' ? item.place_id.trim() : '';

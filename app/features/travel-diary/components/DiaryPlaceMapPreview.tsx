@@ -8,6 +8,7 @@ import {
   buildGoogleMapsViewUrl,
   buildMapsEmbedUrl,
   canShowDiaryPlaceMap,
+  formatPlaceCoords,
   type GoogleMapsPlaceRef,
 } from '@/lib/modules/travel-planner/google-maps-embed';
 
@@ -19,7 +20,9 @@ type Props = {
 export function DiaryPlaceMapPreview({ place, sourceKind }: Props) {
   const { lang } = useLanguage();
   const viewOnMap = getTravelTranslation(lang, 'view_on_map');
+  const coordsLabel = getTravelTranslation(lang, 'ui_coords_under_map');
   const address = typeof place.address === 'string' ? place.address.trim() : '';
+  const coords = formatPlaceCoords(place);
 
   if (!canShowDiaryPlaceMap(place, sourceKind)) return null;
 
@@ -52,8 +55,17 @@ export function DiaryPlaceMapPreview({ place, sourceKind }: Props) {
         </a>
       ) : null}
 
-      {address ? (
-        <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-500">{address}</p>
+      {(address || coords) ? (
+        <div className="mt-0.5 space-y-0.5">
+          {address ? (
+            <p className="line-clamp-2 text-[11px] leading-snug text-slate-500">{address}</p>
+          ) : null}
+          {coords ? (
+            <p className="font-mono text-[10px] leading-snug text-slate-400">
+              {coordsLabel}: {coords}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
