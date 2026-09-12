@@ -3,9 +3,10 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
 import type { PendingGroupEmailInvite } from '@/lib/group-email-invite';
 import { getGroupDisplayNameRaw } from '@/lib/group-display-name';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 /**
- * 로그인 사용자의 pending 이메일 초대 목록
+ * 로그인 사용자의 pending 이메일 초대 목록 (현재 앱 그룹만)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -39,13 +40,15 @@ export async function GET(request: NextRequest) {
     const [{ data: groups }, { data: profiles }] = await Promise.all([
       supabase
         .from('groups')
-        .select('id, name, family_name, display_name_pending, title_style')
-        .in('id', groupIds),
+        .select('id, name, family_name, display_name_pending, title_style, app_id')
+        .in('id', groupIds)
+        .eq('app_id', CURRENT_APP_ID),
       inviterIds.length
         ? supabase.from('profiles').select('id, nickname, email').in('id', inviterIds)
         : Promise.resolve({ data: [] as { id: string; nickname: string | null; email: string | null }[] }),
     ]);
 
+    const allowedGroupIds = new Set((groups ?? []).map((g) => g.id));
     const groupById = new Map((groups ?? []).map((g) => [g.id, g]));
     const inviterNameById = new Map<string, string | null>();
     (profiles ?? []).forEach((p) => {
@@ -55,15 +58,17 @@ export async function GET(request: NextRequest) {
       );
     });
 
-    const invites: PendingGroupEmailInvite[] = rows.map((row) => {
-      const group = groupById.get(row.group_id) ?? null;
-      return {
-        id: row.id,
-        group_id: row.group_id,
-        group_name: getGroupDisplayNameRaw(group) || group?.name || '',
-        invited_by_name: inviterNameById.get(row.invited_by) ?? null,
-      };
-    });
+    const invites: PendingGroupEmailInvite[] = rows
+      .filter((row) => allowedGroupIds.has(row.group_id))
+      .map((row) => {
+        const group = groupById.get(row.group_id) ?? null;
+        return {
+          id: row.id,
+          group_id: row.group_id,
+          group_name: getGroupDisplayNameRaw(group) || group?.name || '',
+          invited_by_name: inviterNameById.get(row.invited_by) ?? null,
+        };
+      });
 
     return NextResponse.json({ success: true, invites });
   } catch (err) {

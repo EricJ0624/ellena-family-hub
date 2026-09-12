@@ -149,6 +149,7 @@ const GroupSelector: React.FC = () => {
     try {
       const { data: joinedGroupIdData, error: joinError } = await supabase.rpc('join_group_by_invite_code', {
         invite_code_param: inviteCode.trim(),
+        p_app_id: CURRENT_APP_ID,
       });
 
       if (joinError) throw joinError;

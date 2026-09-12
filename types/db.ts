@@ -1304,6 +1304,14 @@ export interface Database {
       join_group_by_invite_code: {
         Args: {
           invite_code_param: string
+          p_app_id: string
+        }
+        Returns: string
+      }
+      accept_group_email_invite: {
+        Args: {
+          p_invite_id: string
+          p_app_id: string
         }
         Returns: string
       }

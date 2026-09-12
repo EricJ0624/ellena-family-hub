@@ -686,6 +686,7 @@ export default function OnboardingPage() {
       const runJoin = () =>
         supabase.rpc('join_group_by_invite_code', {
           invite_code_param: inviteCodeClean,
+          p_app_id: CURRENT_APP_ID,
         });
 
       let { data: joinedGroupIdData, error: joinError } = await runJoin();

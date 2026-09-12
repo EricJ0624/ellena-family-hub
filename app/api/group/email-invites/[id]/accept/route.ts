@@ -3,11 +3,13 @@ import { getSupabaseClientForAccessToken } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
 import { GROUP_SUSPENDED_CODE } from '@/lib/account-suspend-access';
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * 이메일 초대 수락 → memberships 추가, group_id 반환
+ * 현재 앱(CURRENT_APP_ID) 그룹 초대만 수락 가능.
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
@@ -29,6 +31,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const supabase = getSupabaseClientForAccessToken(token);
     const { data: groupIdRaw, error } = await supabase.rpc('accept_group_email_invite', {
       p_invite_id: inviteId,
+      p_app_id: CURRENT_APP_ID,
     });
 
     if (error) {
@@ -36,6 +39,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       if (message.includes('GROUP_SUSPENDED')) {
         return NextResponse.json(
           { error: '이 그룹은 현재 이용할 수 없습니다.', code: GROUP_SUSPENDED_CODE },
+          { status: 403 },
+        );
+      }
+      if (message.includes('not available in this app')) {
+        return NextResponse.json(
+          { error: '이 앱에서 수락할 수 없는 초대입니다.' },
           { status: 403 },
         );
       }
