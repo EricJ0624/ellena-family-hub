@@ -195,6 +195,58 @@ export function shrinkFontSizeToElement(
   return size;
 }
 
+/**
+ * 여러 줄 텍스트 — line-clamp를 잠시 끄고 scrollHeight로 측정해
+ * maxLines 안에 들어가도록 font-size(px)를 줄인다.
+ */
+export function shrinkFontSizeToMaxLines(
+  el: HTMLElement,
+  maxPx: number,
+  minPx: number,
+  maxLines: number,
+): number {
+  if (maxLines < 1 || maxPx < minPx) return minPx;
+
+  const prev = {
+    fontSize: el.style.fontSize,
+    display: el.style.display,
+    overflow: el.style.overflow,
+    webkitLineClamp: el.style.webkitLineClamp,
+    lineClamp: (el.style as CSSStyleDeclaration & { lineClamp?: string }).lineClamp,
+    webkitBoxOrient: el.style.webkitBoxOrient,
+  };
+
+  el.style.display = 'block';
+  el.style.overflow = 'visible';
+  el.style.webkitLineClamp = 'unset';
+  (el.style as CSSStyleDeclaration & { lineClamp?: string }).lineClamp = 'unset';
+  el.style.webkitBoxOrient = 'unset';
+
+  let size = Math.round(maxPx);
+  const floor = Math.max(1, Math.round(minPx));
+  el.style.fontSize = `${size}px`;
+
+  while (size > floor) {
+    el.style.fontSize = `${size}px`;
+    const cs = getComputedStyle(el);
+    let lh = parseFloat(cs.lineHeight);
+    if (!Number.isFinite(lh) || lh <= 0) lh = size * 1.2;
+    if (el.scrollHeight <= lh * maxLines + 2) break;
+    size -= 1;
+  }
+
+  el.style.fontSize = `${size}px`;
+  el.style.display = prev.display;
+  el.style.overflow = prev.overflow;
+  el.style.webkitLineClamp = prev.webkitLineClamp;
+  (el.style as CSSStyleDeclaration & { lineClamp?: string }).lineClamp = prev.lineClamp ?? '';
+  el.style.webkitBoxOrient = prev.webkitBoxOrient;
+  if (!prev.fontSize) {
+    /* keep computed px so cqw 기본값으로 다시 커지지 않음 */
+  }
+  return size;
+}
+
 /** 관리자(⚙️ 버튼 있음) vs 일반 사용자 대시보드 타이틀 가용 폭 (fallback) */
 export const DASHBOARD_TITLE_MAX_WIDTH = {
   admin: 262,

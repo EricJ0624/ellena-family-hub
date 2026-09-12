@@ -2015,7 +2015,7 @@ select:not(.chalkboard-form-input) {
   content: none;
 }
 
-/* top-bar 아래 — 임무 줄만큼 위젯(셀) 성장, 칠판 내부 스크롤 없음 */
+/* top-bar 아래 — 기본 1~4줄은 내용만큼 성장, 5줄+는 목록만 스크롤 */
 .chalkboard-task-area {
   position: relative;
   z-index: 1;
@@ -2031,6 +2031,23 @@ select:not(.chalkboard-form-input) {
   overflow-y: visible;
   padding-top: 1.5cqw;
   padding-bottom: 3cqw;
+}
+
+.chalkboard-task-area--scroll .todo-list {
+  overflow-x: clip;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 248, 235, 0.35) transparent;
+}
+
+.chalkboard-task-area--scroll .todo-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chalkboard-task-area--scroll .todo-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 248, 235, 0.35);
+  border-radius: 999px;
 }
 
 .chalkboard-task-area:has(.chalkboard-empty-state) {
@@ -2126,6 +2143,54 @@ select:not(.chalkboard-form-input) {
   transform: scale(0.97);
 }
 
+/* 행 안 «내가 할게요» — +ADD 보다 낮게 */
+.chalkboard-btn-claim {
+  position: relative;
+  margin: 0 0.5cqw 0 0;
+  padding: 0.35cqw 1.6cqw;
+  min-height: 5.2cqw;
+  width: auto;
+  max-width: 100%;
+  background: transparent;
+  color: rgba(255, 248, 235, 0.86);
+  border: 1.75px solid rgba(255, 248, 235, 0.72);
+  border-radius: var(--chalk-sketch-radius);
+  font-family: var(--chalk-font-title);
+  font-size: 2.75cqw;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  -webkit-text-stroke: 0.35px rgba(255, 248, 235, 0.4);
+  paint-order: stroke fill;
+  filter: url('#chalkboard-chalk-texture');
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.28),
+    0 0 1.25px rgba(255, 255, 255, 0.24);
+  box-shadow: none;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease;
+}
+
+.chalkboard-btn-claim:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 248, 235, 0.92);
+  border-color: rgba(255, 248, 235, 0.84);
+  filter: url('#chalkboard-chalk-texture') brightness(1.06);
+}
+
+.chalkboard-btn-claim:active {
+  transform: scale(0.97);
+}
+
 .todo-list {
   display: flex;
   flex-direction: column;
@@ -2208,23 +2273,31 @@ select:not(.chalkboard-form-input) {
 
 .todo-text-wrapper {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 3cqw;
+  gap: 2cqw;
   flex: 1;
   min-width: 0;
   max-width: 100%;
 }
 
 .todo-text {
+  flex: 1 1 auto;
   font-size: 5.5cqw;
   font-weight: 600;
+  line-height: 1.2;
   color: #ffffff;
   letter-spacing: 0.03em;
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 .todo-text-done {
@@ -2233,12 +2306,16 @@ select:not(.chalkboard-form-input) {
 }
 
 .todo-assignee {
+  flex: 0 1 auto;
+  align-self: center;
   font-size: 4cqw;
   font-weight: 600;
+  line-height: 1.2;
   color: rgba(255, 255, 255, 0.85);
   white-space: normal;
   overflow-wrap: anywhere;
-  max-width: 100%;
+  max-width: 38%;
+  min-width: 0;
 }
 
 .chalkboard-btn-delete {

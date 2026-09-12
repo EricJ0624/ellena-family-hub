@@ -10,13 +10,23 @@ import React, { memo, startTransition, useCallback, useEffect, useLayoutEffect, 
 import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
-import { fitFontSizeToWidth, shrinkFontSizeToElement } from '@/lib/dashboard-title-fit';
+import {
+  fitFontSizeToWidth,
+  shrinkFontSizeToElement,
+  shrinkFontSizeToMaxLines,
+} from '@/lib/dashboard-title-fit';
 
 /** chalkboard-empty-state — Caveat + Gaegu(Hangul), globals.css --chalk-font-body 와 동일 */
 const CHALK_EMPTY_FONT_FAMILY = "'Caveat', 'Gaegu', 'Patrick Hand', cursive";
 const CHALK_EMPTY_FONT_MIN_PX = 10;
 /** 이전 7.5cqw 상한과 동일 비율 — 컨테이너 기준 최대 시작 크기 */
 const CHALK_EMPTY_FONT_MAX_CQW = 0.075;
+/** 칠판 목록: 이 개수까지는 높이 성장, 초과 시 스크롤 */
+const CHALK_TASK_SCROLL_AFTER = 4;
+/** .todo-text 기본 5.5cqw / 축소 하한 */
+const CHALK_TASK_TEXT_MAX_CQW = 0.055;
+const CHALK_TASK_TEXT_MIN_CQW = 0.032;
+const CHALK_TASK_TEXT_MAX_LINES = 2;
 
 interface FamilyTasksSectionProps {
   tasks: FamilyTask[];
@@ -122,7 +132,9 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
   const emptyStateRef = useRef<HTMLParagraphElement>(null);
+  const chalkTodoListRef = useRef<HTMLDivElement>(null);
   const [emptyStateFontPx, setEmptyStateFontPx] = useState<number | null>(null);
+  const [chalkTodoListMaxPx, setChalkTodoListMaxPx] = useState<number | null>(null);
 
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
@@ -286,6 +298,69 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   };
 
   const visibleTasks = dedupeFamilyTasks(tasks || []);
+  const chalkTasksScrollable = visibleTasks.length > CHALK_TASK_SCROLL_AFTER;
+  const chalkTasksLayoutKey = visibleTasks
+    .map((task) => `${task.id}:${task.text}:${task.assignee ?? ''}:${task.done ? 1 : 0}`)
+    .join('|');
+
+  const fitChalkTodoTextsAndCap = useCallback(() => {
+    const list = chalkTodoListRef.current;
+    if (!list) return;
+
+    const frame = list.closest('.chalkboard-frame') as HTMLElement | null;
+    const frameW = frame?.clientWidth ?? list.clientWidth;
+    if (frameW <= 0) return;
+
+    const maxPx = Math.max(CHALK_EMPTY_FONT_MIN_PX, frameW * CHALK_TASK_TEXT_MAX_CQW);
+    const minPx = Math.max(8, frameW * CHALK_TASK_TEXT_MIN_CQW);
+
+    list.querySelectorAll<HTMLElement>('.todo-text').forEach((el) => {
+      el.style.fontSize = '';
+      shrinkFontSizeToMaxLines(el, maxPx, minPx, CHALK_TASK_TEXT_MAX_LINES);
+    });
+
+    if (visibleTasks.length <= CHALK_TASK_SCROLL_AFTER) {
+      setChalkTodoListMaxPx((prev) => (prev === null ? prev : null));
+      return;
+    }
+
+    const items = list.querySelectorAll<HTMLElement>('.todo-item');
+    if (items.length < CHALK_TASK_SCROLL_AFTER) return;
+
+    let height = 0;
+    for (let i = 0; i < CHALK_TASK_SCROLL_AFTER; i++) {
+      height += items[i].offsetHeight;
+    }
+    const gap = parseFloat(getComputedStyle(list).rowGap || getComputedStyle(list).gap) || 0;
+    height += gap * (CHALK_TASK_SCROLL_AFTER - 1);
+    const next = Math.ceil(height);
+    setChalkTodoListMaxPx((prev) => (prev === next ? prev : next));
+  }, [visibleTasks.length]);
+
+  useLayoutEffect(() => {
+    if (!isKidsTheme || isTodoModalOpen || visibleTasks.length === 0) {
+      setChalkTodoListMaxPx((prev) => (prev === null ? prev : null));
+      return;
+    }
+
+    fitChalkTodoTextsAndCap();
+    const list = chalkTodoListRef.current;
+    const frame = list?.closest('.chalkboard-frame') ?? null;
+    if (!list) return;
+
+    const ro = new ResizeObserver(() => {
+      fitChalkTodoTextsAndCap();
+    });
+    ro.observe(list);
+    if (frame) ro.observe(frame);
+    return () => ro.disconnect();
+  }, [
+    isKidsTheme,
+    isTodoModalOpen,
+    visibleTasks.length,
+    chalkTasksLayoutKey,
+    fitChalkTodoTextsAndCap,
+  ]);
 
   const fitEmptyStateFont = useCallback(() => {
     const el = emptyStateRef.current;
@@ -597,14 +672,22 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
             </div>
           </div>
           <div
-            className={`chalkboard-task-area ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
+            className={`chalkboard-task-area${chalkTasksScrollable ? ' chalkboard-task-area--scroll' : ''}${chatDragOver ? ' rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
             ref={chatDropRef}
             onDragOver={onChatDragOver}
             onDragLeave={onChatDragLeave}
             onDrop={onChatDrop}
           >
             {visibleTasks.length > 0 ? (
-              <div className="todo-list">
+              <div
+                className="todo-list"
+                ref={chalkTodoListRef}
+                style={
+                  chalkTasksScrollable && chalkTodoListMaxPx != null
+                    ? { maxHeight: chalkTodoListMaxPx }
+                    : undefined
+                }
+              >
                 {visibleTasks.map((task) => (
                   <div key={task.id} className="todo-item">
                     <div onClick={() => handleToggleTask(task.id)} className="todo-content">
@@ -628,8 +711,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                       <button
                         type="button"
                         onClick={() => handleClaimTask(task.id)}
-                        className="chalkboard-btn-add"
-                        style={{ fontSize: '10px', padding: '2px 6px', marginRight: '4px' }}
+                        className="chalkboard-btn-claim"
                       >
                         내가 할게요
                       </button>
