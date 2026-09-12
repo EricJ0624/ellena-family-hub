@@ -3,7 +3,6 @@ import {
   buildOnboardingPath,
   isValidInviteCodeFormat,
 } from '@/lib/family-auth-routing';
-import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
 
 export const APP_ENROLL_PATH = '/app-enroll';
 
@@ -26,6 +25,7 @@ export function buildAppEnrollPath(invite: string | null | undefined): string {
 /**
  * 로그인/콜백 직후 목적지.
  * enrollment 없으면 /app-enroll (단, 무그룹 시스템 관리자는 /admin).
+ * 그룹이 1개여도 대시보드로 건너뛰지 않음 — 새 그룹 만들기·초대 가입은 온보딩 선택 화면에서만 가능.
  */
 export function resolvePostAuthPath(
   bootstrap: AuthBootstrapPayload,
@@ -49,9 +49,6 @@ export function resolvePostAuthPath(
   }
   if (bootstrap.isSystemAdmin && !bootstrap.hasGroups) {
     return '/admin';
-  }
-  if (bootstrap.accessibleGroupIds.length === 1) {
-    return dashboardHrefWithOpenGroup(bootstrap.accessibleGroupIds[0]);
   }
   return buildOnboardingPath(null);
 }

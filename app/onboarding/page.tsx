@@ -1348,7 +1348,7 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* 그룹 선택 단계 (로그인 시 여러 그룹이 있을 때) */}
+          {/* 그룹 선택 단계 (로그인 후 소속 그룹이 1개 이상이어도 항상 여기) */}
           {step === 'choose-group' && (
             <motion.div
               key="choose-group"
@@ -1358,8 +1358,15 @@ export default function OnboardingPage() {
               className="w-full max-w-[500px] rounded-3xl bg-white p-10 shadow-[0_20px_60px_rgba(0,0,0,0.1)]"
             >
               <div className="mb-8 text-center">
-                <div className="mb-4 text-[64px] leading-none [filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.1))]">
-                  🏠
+                <div className="mb-4 flex justify-center">
+                  <img
+                    src="/branding/hearth-family-icon.png"
+                    alt=""
+                    width={144}
+                    height={144}
+                    className="h-36 w-36 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
+                    aria-hidden
+                  />
                 </div>
                 <h2 className="mb-2 text-2xl font-bold text-slate-800">
                   {ot('select_group')}
