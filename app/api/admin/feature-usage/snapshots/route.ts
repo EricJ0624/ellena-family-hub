@@ -2,8 +2,53 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { getAuditRequestMeta, writeAdminAuditLog } from '@/lib/admin-audit';
-import { isFeatureUsagePeriod } from '@/lib/admin-feature-usage';
+import { isFeatureUsagePeriod, type FeatureUsageGroupRow } from '@/lib/admin-feature-usage';
 import { loadLiveFeatureUsage, parseUuid } from '@/lib/admin-feature-usage-query';
+import { isAppId } from '@/lib/apps';
+
+type SnapshotRow = {
+  id: string;
+  period_start: string;
+  period_end: string;
+  period_label: string;
+  group_id: string | null;
+  totals: unknown;
+  per_group: FeatureUsageGroupRow[] | null;
+  last_reset_at: string | null;
+  saved_at: string;
+  note: string | null;
+};
+
+/** 예전 스냅샷에 appId가 없으면 groups.app_id로 보강 */
+async function enrichSnapshotsWithAppId(rows: SnapshotRow[]): Promise<SnapshotRow[]> {
+  const missingIds = new Set<string>();
+  for (const row of rows) {
+    for (const group of row.per_group || []) {
+      if (group?.groupId && !group.appId) missingIds.add(String(group.groupId));
+    }
+  }
+  if (missingIds.size === 0) return rows;
+
+  const supabase = getSupabaseServerClient();
+  const { data: groups, error } = await supabase
+    .from('groups')
+    .select('id, app_id')
+    .in('id', [...missingIds]);
+  if (error) throw error;
+
+  const appByGroupId = new Map<string, string | null>();
+  for (const group of groups || []) {
+    appByGroupId.set(String(group.id), group.app_id ? String(group.app_id) : null);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    per_group: (row.per_group || []).map((group) => ({
+      ...group,
+      appId: group.appId ?? appByGroupId.get(String(group.groupId)) ?? null,
+    })),
+  }));
+}
 
 /**
  * 저장된 기간별 활동량 스냅샷 목록
@@ -24,7 +69,8 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: data ?? [] });
+    const enriched = await enrichSnapshotsWithAppId((data || []) as SnapshotRow[]);
+    return NextResponse.json({ success: true, data: enriched });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '저장 기록 조회 중 오류가 발생했습니다.';
     console.error('활동량 스냅샷 조회 오류:', error);
@@ -49,6 +95,8 @@ export async function POST(request: NextRequest) {
     const periodRaw = typeof body.period === 'string' ? body.period : 'custom';
     const periodLabel = isFeatureUsagePeriod(periodRaw) ? periodRaw : 'custom';
     const groupId = parseUuid(typeof body.groupId === 'string' ? body.groupId : null);
+    const appIdRaw = typeof body.appId === 'string' ? body.appId.trim() : null;
+    const appId = appIdRaw && isAppId(appIdRaw) ? appIdRaw : null;
     const note = typeof body.note === 'string' ? body.note.trim().slice(0, 200) : '';
 
     if (!from || !to) {
@@ -60,6 +108,7 @@ export async function POST(request: NextRequest) {
       toIso: to,
       periodLabel,
       groupId,
+      appId,
     });
 
     const supabase = getSupabaseServerClient();
@@ -92,6 +141,7 @@ export async function POST(request: NextRequest) {
         period_start: usage.effectiveFrom,
         period_end: usage.periodEnd,
         group_id: usage.groupId,
+        app_id: appId,
       },
       ipAddress: meta.ipAddress,
       userAgent: meta.userAgent,

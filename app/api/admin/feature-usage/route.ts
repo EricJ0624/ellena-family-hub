@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { isFeatureUsagePeriod } from '@/lib/admin-feature-usage';
 import { loadLiveFeatureUsage, parseUuid } from '@/lib/admin-feature-usage-query';
+import { isAppId } from '@/lib/apps';
 
 /**
  * 시스템 관리자 위젯 활동량 조회
- * GET ?from=ISO&to=ISO&period=today|7d|30d|since_reset|custom&group_id=
+ * GET ?from=ISO&to=ISO&period=today|7d|30d|since_reset|custom&group_id=&app_id=
  */
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +23,8 @@ export async function GET(request: NextRequest) {
     const periodRaw = searchParams.get('period') || 'today';
     const periodLabel = isFeatureUsagePeriod(periodRaw) ? periodRaw : 'custom';
     const groupId = parseUuid(searchParams.get('group_id'));
+    const appIdRaw = searchParams.get('app_id')?.trim() || null;
+    const appId = appIdRaw && isAppId(appIdRaw) ? appIdRaw : null;
 
     if (!from || !to) {
       return NextResponse.json({ error: 'from, to 기간이 필요합니다.' }, { status: 400 });
@@ -32,6 +35,7 @@ export async function GET(request: NextRequest) {
       toIso: to,
       periodLabel,
       groupId,
+      appId,
     });
 
     return NextResponse.json({ success: true, data });

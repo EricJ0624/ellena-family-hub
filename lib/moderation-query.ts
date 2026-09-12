@@ -18,6 +18,7 @@ export type ModerationThreadDetail = {
   scope: string;
   groupId: string;
   groupName: string;
+  appId: string | null;
   userId: string | null;
   userLabel: string | null;
   updatedAt: string;
@@ -171,7 +172,10 @@ export async function listModerationThreadsForAdmin(): Promise<ModerationThreadD
   const userIds = [...new Set(threadRows.map((row) => row.user_id).filter((id): id is string => !!id))];
 
   const [{ data: groups }, { data: profiles }, { data: messages }] = await Promise.all([
-    supabase.from('groups').select('id, name, family_name, display_name_pending, title_style').in('id', groupIds),
+    supabase
+      .from('groups')
+      .select('id, name, family_name, display_name_pending, title_style, app_id')
+      .in('id', groupIds),
     userIds.length
       ? supabase.from('profiles').select('id, email, nickname').in('id', userIds)
       : Promise.resolve({ data: [] as Array<{ id: string; email: string | null; nickname: string | null }> }),
@@ -184,9 +188,18 @@ export async function listModerationThreadsForAdmin(): Promise<ModerationThreadD
   ]);
 
   const groupNameById = new Map<string, string>();
+  const groupAppById = new Map<string, string | null>();
   for (const group of groups || []) {
-    const g = group as { id: string; name?: string; family_name?: string; display_name_pending?: boolean; title_style?: unknown };
+    const g = group as {
+      id: string;
+      name?: string;
+      family_name?: string;
+      display_name_pending?: boolean;
+      title_style?: unknown;
+      app_id?: string | null;
+    };
     groupNameById.set(String(g.id), getGroupDisplayNameRaw(g) || String(g.id).slice(0, 8));
+    groupAppById.set(String(g.id), g.app_id ? String(g.app_id) : null);
   }
   const userLabelById = new Map<string, string>();
   for (const profile of profiles || []) {
@@ -220,6 +233,7 @@ export async function listModerationThreadsForAdmin(): Promise<ModerationThreadD
     scope: String(row.scope),
     groupId: String(row.group_id),
     groupName: groupNameById.get(String(row.group_id)) || String(row.group_id).slice(0, 8),
+    appId: groupAppById.get(String(row.group_id)) ?? null,
     userId: row.user_id ? String(row.user_id) : null,
     userLabel: row.user_id ? userLabelById.get(String(row.user_id)) || String(row.user_id).slice(0, 8) : null,
     updatedAt: String(row.updated_at),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { ModerationThreadDetail } from '@/lib/moderation-query';
@@ -8,9 +8,11 @@ import { MESSAGE_MAX_LENGTH } from '@/lib/admin-suspend';
 import { getAdminModerationTranslation } from '@/lib/translations/adminModeration';
 import { getAccountSuspendNoticeTranslation } from '@/lib/translations/accountSuspend';
 import { intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
+import { getAppIdBadgeClass, getAppIdLabel, type AppId } from '@/lib/apps';
 
 type AdminModerationInboxProps = {
   lang: LangCode;
+  appFilter?: 'all' | 'global' | AppId;
 };
 
 async function authHeaders(): Promise<HeadersInit | null> {
@@ -24,7 +26,7 @@ async function authHeaders(): Promise<HeadersInit | null> {
   };
 }
 
-export function AdminModerationInbox({ lang }: AdminModerationInboxProps) {
+export function AdminModerationInbox({ lang, appFilter = 'all' }: AdminModerationInboxProps) {
   const t = useCallback(
     (key: Parameters<typeof getAdminModerationTranslation>[1]) => getAdminModerationTranslation(lang, key),
     [lang],
@@ -42,6 +44,11 @@ export function AdminModerationInbox({ lang }: AdminModerationInboxProps) {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const visibleThreads = useMemo(() => {
+    if (appFilter === 'all' || appFilter === 'global') return threads;
+    return threads.filter((thread) => thread.appId === appFilter);
+  }, [appFilter, threads]);
 
   const load = useCallback(async (silent = false) => {
     const headers = await authHeaders();
@@ -134,14 +141,19 @@ export function AdminModerationInbox({ lang }: AdminModerationInboxProps) {
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
-      ) : threads.length === 0 ? (
+      ) : visibleThreads.length === 0 ? (
         <p className="text-sm text-slate-500">{t('empty')}</p>
       ) : (
         <div className="flex max-h-[28rem] flex-col gap-4 overflow-y-auto">
-          {threads.map((thread) => (
+          {visibleThreads.map((thread) => (
             <section key={thread.threadId} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
                 <span className="font-semibold text-slate-800">{thread.groupName}</span>
+                {thread.appId && (
+                  <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${getAppIdBadgeClass(thread.appId)}`}>
+                    {getAppIdLabel(thread.appId)}
+                  </span>
+                )}
                 <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">
                   {thread.scope === 'group' ? t('scope_group') : t('scope_user')}
                 </span>

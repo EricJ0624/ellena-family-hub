@@ -1,9 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { DASHBOARD_WIDGET_KEYS, type DashboardWidgetKey } from '@/lib/widgets/types';
+import { type DashboardWidgetKey } from '@/lib/widgets/types';
+import {
+  appsForFeatureUsageFilter,
+  sumWidgetCounts,
+  widgetKeysForApp,
+} from '@/lib/widgets/widget-keys-by-app';
 import {
   FEATURE_USAGE_PERIODS,
   type FeatureUsagePayload,
@@ -18,6 +23,7 @@ import { getTravelTranslation } from '@/lib/translations/travel';
 import { getPiggyTranslation } from '@/lib/translations/piggy';
 import { getGamesTranslation } from '@/lib/translations/games';
 import { intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
+import { getAppIdBadgeClass, getAppIdLabel, type AppId } from '@/lib/apps';
 
 type SnapshotRow = {
   id: string;
@@ -34,6 +40,7 @@ type SnapshotRow = {
 
 type FeatureUsageSectionProps = {
   lang: LangCode;
+  appFilter?: 'all' | 'global' | AppId;
 };
 
 const PERIOD_LABEL_KEY: Record<FeatureUsagePeriod, keyof AdminFeatureUsageTranslations> = {
@@ -131,7 +138,7 @@ async function authHeaders(): Promise<HeadersInit | null> {
   };
 }
 
-export function FeatureUsageSection({ lang }: FeatureUsageSectionProps) {
+export function FeatureUsageSection({ lang, appFilter = 'all' }: FeatureUsageSectionProps) {
   const t = useCallback(
     (key: Parameters<typeof getAdminFeatureUsageTranslation>[1]) =>
       getAdminFeatureUsageTranslation(lang, key),
@@ -154,6 +161,12 @@ export function FeatureUsageSection({ lang }: FeatureUsageSectionProps) {
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** 앱별 상세는 기본 접힘 — 필요할 때만 펼침 */
+  const [expandedApps, setExpandedApps] = useState<Partial<Record<AppId, boolean>>>({});
+
+  const toggleAppExpanded = (appId: AppId) => {
+    setExpandedApps((prev) => ({ ...prev, [appId]: !prev[appId] }));
+  };
 
   const display = useMemo((): FeatureUsagePayload | null => {
     if (!viewing) return live;
@@ -169,14 +182,26 @@ export function FeatureUsageSection({ lang }: FeatureUsageSectionProps) {
     };
   }, [live, viewing]);
 
-  const rankedWidgets = useMemo(() => {
+  const appSections = useMemo(() => {
     if (!display) return [];
-    return [...DASHBOARD_WIDGET_KEYS]
-      .map((key) => ({ key, count: Number(display.totals[key] || 0) }))
-      .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
-  }, [display]);
-
-  const maxCount = Math.max(1, ...rankedWidgets.map((item) => item.count));
+    const apps = appsForFeatureUsageFilter(appFilter);
+    return apps.map((appId) => {
+      const keys = widgetKeysForApp(appId);
+      const groups = display.perGroup.filter((group) => group.appId === appId);
+      const totals = Object.fromEntries(keys.map((key) => [key, 0])) as Record<DashboardWidgetKey, number>;
+      for (const group of groups) {
+        for (const key of keys) {
+          totals[key] = (totals[key] || 0) + Number(group.counts?.[key] || 0);
+        }
+      }
+      const ranked = [...keys]
+        .map((key) => ({ key, count: Number(totals[key] || 0) }))
+        .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+      const maxCount = Math.max(1, ...ranked.map((item) => item.count));
+      const appTotal = sumWidgetCounts(totals, keys);
+      return { appId, keys, groups, ranked, maxCount, appTotal };
+    });
+  }, [appFilter, display]);
 
   const loadLive = useCallback(async (resetAtHint?: string | null) => {
     const headers = await authHeaders();
@@ -192,6 +217,9 @@ export function FeatureUsageSection({ lang }: FeatureUsageSectionProps) {
       period,
     });
     if (groupId) params.set('group_id', groupId);
+    if (appFilter !== 'all' && appFilter !== 'global') {
+      params.set('app_id', appFilter);
+    }
 
     setLoading(true);
     setError(null);
@@ -209,7 +237,7 @@ export function FeatureUsageSection({ lang }: FeatureUsageSectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [customFrom, customTo, groupId, live?.lastResetAt, period, t]);
+  }, [appFilter, customFrom, customTo, groupId, live?.lastResetAt, period, t]);
 
   const loadSnapshots = useCallback(async () => {
     const headers = await authHeaders();
@@ -225,11 +253,15 @@ export function FeatureUsageSection({ lang }: FeatureUsageSectionProps) {
   }, [t]);
 
   useEffect(() => {
+    setGroupId('');
+  }, [appFilter]);
+
+  useEffect(() => {
     void loadLive();
     void loadSnapshots();
-    // 기간·그룹이 바뀔 때만 다시 조회. loadLive 함수 자체는 의존에서 제외.
+    // 기간·그룹·앱 필터가 바뀔 때만 다시 조회. loadLive 함수 자체는 의존에서 제외.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period, customFrom, customTo, groupId]);
+  }, [period, customFrom, customTo, groupId, appFilter]);
 
   const formatDateTime = (value: string | null) => {
     if (!value) return t('never_reset');
@@ -257,6 +289,7 @@ export function FeatureUsageSection({ lang }: FeatureUsageSectionProps) {
           to: range.to.toISOString(),
           period,
           groupId: groupId || null,
+          appId: appFilter !== 'all' && appFilter !== 'global' ? appFilter : null,
           note,
         }),
       });
@@ -445,61 +478,129 @@ export function FeatureUsageSection({ lang }: FeatureUsageSectionProps) {
             {t('effective_from')}: {formatDateTime(display.effectiveFrom)}
           </p>
 
-          <h4 className="mb-3 text-sm font-semibold text-slate-800">{t('overall')}</h4>
-          <ul className="mb-6 flex flex-col gap-2">
-            {rankedWidgets.map((item) => (
-              <li key={item.key} className="flex items-center gap-3">
-                <span className="w-36 shrink-0 text-sm text-slate-700">{widgetLabel(lang, item.key)}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className={`h-full rounded-full ${item.count === 0 ? 'bg-slate-300' : 'bg-purple-500'} ${barWidthClass(item.count, maxCount)}`}
-                  />
-                </div>
-                <span className={`w-24 shrink-0 text-right text-sm font-semibold ${item.count === 0 ? 'text-slate-400' : 'text-slate-800'}`}>
-                  {item.count === 0 ? t('unused') : formatCount(item.count)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-6 flex flex-col gap-3">
+            {appSections.map((section) => {
+              const isOpen = expandedApps[section.appId] === true;
+              return (
+              <section
+                key={section.appId}
+                className="rounded-xl border border-slate-200 bg-slate-50/80"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleAppExpanded(section.appId)}
+                  aria-expanded={isOpen}
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-left transition-colors hover:bg-slate-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+                >
+                  {isOpen ? (
+                    <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
+                  )}
+                  <span className={`rounded px-2 py-0.5 text-[12px] font-bold ${getAppIdBadgeClass(section.appId)}`}>
+                    {getAppIdLabel(section.appId)}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-800">
+                    {lang === 'ko' ? '위젯 활동량' : 'Widget activity'}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {lang === 'ko'
+                      ? `그룹 ${section.groups.length} · 합계 ${formatCount(section.appTotal)}`
+                      : `${section.groups.length} groups · ${formatCount(section.appTotal)} total`}
+                  </span>
+                  <span className="ml-auto text-xs font-semibold text-purple-700">
+                    {isOpen
+                      ? lang === 'ko'
+                        ? '접기'
+                        : 'Close'
+                      : lang === 'ko'
+                        ? '펼치기'
+                        : 'Open'}
+                  </span>
+                </button>
 
-          <h4 className="mb-3 text-sm font-semibold text-slate-800">{t('per_group')}</h4>
-          <div className="mb-6 overflow-x-auto rounded-lg border border-slate-200">
-            <table className="min-w-full border-collapse text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="sticky left-0 bg-slate-50 px-3 py-2 font-semibold">{t('group_filter')}</th>
-                  {DASHBOARD_WIDGET_KEYS.map((key) => (
-                    <th key={key} className="whitespace-nowrap px-3 py-2 font-semibold">
-                      {widgetLabel(lang, key)}
-                    </th>
+                {isOpen && (
+                <div className="border-t border-slate-200 px-4 pb-4 pt-3">
+                <h5 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {lang === 'ko' ? '앱 합계 (이 앱 위젯)' : 'App total (this app’s widgets)'}
+                </h5>
+                <ul className="mb-4 flex flex-col gap-2">
+                  {section.ranked.map((item) => (
+                    <li key={item.key} className="flex items-center gap-3">
+                      <span className="w-36 shrink-0 text-sm text-slate-700">
+                        {widgetLabel(lang, item.key)}
+                      </span>
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white">
+                        <div
+                          className={`h-full rounded-full ${item.count === 0 ? 'bg-slate-300' : 'bg-purple-500'} ${barWidthClass(item.count, section.maxCount)}`}
+                        />
+                      </div>
+                      <span
+                        className={`w-24 shrink-0 text-right text-sm font-semibold ${item.count === 0 ? 'text-slate-400' : 'text-slate-800'}`}
+                      >
+                        {item.count === 0 ? t('unused') : formatCount(item.count)}
+                      </span>
+                    </li>
                   ))}
-                  <th className="px-3 py-2 font-semibold">{t('overall')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {display.perGroup.map((group) => (
-                  <tr key={group.groupId} className="border-t border-slate-100">
-                    <td className="sticky left-0 bg-white px-3 py-2 font-medium text-slate-800">
-                      {group.groupName}
-                    </td>
-                    {DASHBOARD_WIDGET_KEYS.map((key) => {
-                      const count = Number(group.counts?.[key] || 0);
-                      return (
-                        <td
-                          key={key}
-                          className={`px-3 py-2 ${count === 0 ? 'text-slate-400' : 'text-slate-700'}`}
-                        >
-                          {count === 0 ? '0' : formatCount(count)}
-                        </td>
-                      );
-                    })}
-                    <td className="px-3 py-2 font-semibold text-slate-800">
-                      {formatCount(group.total)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </ul>
+
+                <h5 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t('per_group')}
+                </h5>
+                {section.groups.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    {lang === 'ko' ? '이 앱에 표시할 그룹이 없습니다.' : 'No groups for this app.'}
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                    <table className="min-w-full border-collapse text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-600">
+                        <tr>
+                          <th className="sticky left-0 bg-slate-50 px-3 py-2 font-semibold">
+                            {t('group_filter')}
+                          </th>
+                          {section.keys.map((key) => (
+                            <th key={key} className="whitespace-nowrap px-3 py-2 font-semibold">
+                              {widgetLabel(lang, key)}
+                            </th>
+                          ))}
+                          <th className="px-3 py-2 font-semibold">{t('overall')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {section.groups.map((group) => {
+                          const groupTotal = sumWidgetCounts(group.counts, section.keys);
+                          return (
+                            <tr key={group.groupId} className="border-t border-slate-100">
+                              <td className="sticky left-0 bg-white px-3 py-2 font-medium text-slate-800">
+                                {group.groupName}
+                              </td>
+                              {section.keys.map((key) => {
+                                const count = Number(group.counts?.[key] || 0);
+                                return (
+                                  <td
+                                    key={key}
+                                    className={`px-3 py-2 ${count === 0 ? 'text-slate-400' : 'text-slate-700'}`}
+                                  >
+                                    {count === 0 ? '0' : formatCount(count)}
+                                  </td>
+                                );
+                              })}
+                              <td className="px-3 py-2 font-semibold text-slate-800">
+                                {formatCount(groupTotal)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                </div>
+                )}
+              </section>
+              );
+            })}
           </div>
         </>
       )}

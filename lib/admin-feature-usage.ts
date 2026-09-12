@@ -1,5 +1,7 @@
 import { DASHBOARD_WIDGET_KEYS, type DashboardWidgetKey } from '@/lib/widgets/types';
 import { getGroupDisplayNameRaw, type GroupDisplayNameFields } from '@/lib/group-display-name';
+import { widgetKeysForApp, sumWidgetCounts } from '@/lib/widgets/widget-keys-by-app';
+import { isAppId } from '@/lib/apps';
 
 export const FEATURE_USAGE_PERIODS = ['today', '7d', '30d', 'since_reset', 'custom'] as const;
 export type FeatureUsagePeriod = (typeof FEATURE_USAGE_PERIODS)[number];
@@ -9,6 +11,7 @@ export type FeatureUsageCounts = Record<DashboardWidgetKey, number>;
 export type FeatureUsageGroupRow = {
   groupId: string;
   groupName: string;
+  appId: string | null;
   counts: FeatureUsageCounts;
   total: number;
 };
@@ -55,7 +58,7 @@ function addCounts(target: FeatureUsageCounts, key: string, amount: number) {
 
 export function assembleFeatureUsage(params: {
   rows: FeatureUsageCountRow[] | null | undefined;
-  groups: Array<{ id: string } & GroupDisplayNameFields>;
+  groups: Array<{ id: string; app_id?: string | null } & GroupDisplayNameFields>;
   periodLabel: string;
   periodStart: Date;
   periodEnd: Date;
@@ -87,18 +90,27 @@ export function assembleFeatureUsage(params: {
       getGroupDisplayNameRaw(group) || group.family_name?.trim() || group.name?.trim() || group.id.slice(0, 8),
     ]),
   );
+  const groupAppById = new Map(
+    params.groups.map((group) => [group.id, group.app_id ? String(group.app_id) : null]),
+  );
 
   const perGroup: FeatureUsageGroupRow[] = Array.from(byGroup.entries())
     .map(([groupId, counts]) => {
-      const total = DASHBOARD_WIDGET_KEYS.reduce((sum, key) => sum + counts[key], 0);
+      const appId = groupAppById.get(groupId) ?? null;
+      const keys = widgetKeysForApp(isAppId(appId) ? appId : null);
       return {
         groupId,
         groupName: groupNameById.get(groupId) || groupId.slice(0, 8),
+        appId,
         counts,
-        total,
+        total: sumWidgetCounts(counts, keys),
       };
     })
-    .sort((a, b) => b.total - a.total || a.groupName.localeCompare(b.groupName));
+    .sort((a, b) => {
+      const appCmp = String(a.appId || '').localeCompare(String(b.appId || ''));
+      if (appCmp !== 0) return appCmp;
+      return b.total - a.total || a.groupName.localeCompare(b.groupName);
+    });
 
   return {
     periodLabel: params.periodLabel,

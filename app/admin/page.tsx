@@ -115,6 +115,9 @@ interface SystemStats {
   totalAdmins: number;
   languageDistribution: Record<string, number>;
   countryDistribution: Record<string, number>;
+  languageDistributionByApp?: Record<string, Record<string, number>>;
+  countryDistributionByApp?: Record<string, Record<string, number>>;
+  activeUsersByApp?: Record<string, number>;
 }
 
 interface GroupDetailInfo {
@@ -580,6 +583,9 @@ export default function AdminPage() {
         totalMemberTickets: Number(result?.data?.totalMemberTickets || 0),
         languageDistribution: result?.data?.languageDistribution || {},
         countryDistribution: result?.data?.countryDistribution || {},
+        languageDistributionByApp: result?.data?.languageDistributionByApp || {},
+        countryDistributionByApp: result?.data?.countryDistributionByApp || {},
+        activeUsersByApp: result?.data?.activeUsersByApp || {},
         groupsByApp: result?.data?.groupsByApp || {},
         usersByApp: result?.data?.usersByApp || {},
         supportTicketsByApp: result?.data?.supportTicketsByApp || {},
@@ -1395,16 +1401,30 @@ export default function AdminPage() {
         activeUsers: stats.activeUsers,
         supportTickets: stats.totalSupportTickets || 0,
         memberTickets: stats.totalMemberTickets || 0,
+        languageDistribution: stats.languageDistribution,
+        countryDistribution: stats.countryDistribution,
       };
     }
     return {
       users: stats.usersByApp?.[appFilter] || 0,
       groups: stats.groupsByApp?.[appFilter] || 0,
-      activeUsers: stats.activeUsers,
+      activeUsers: stats.activeUsersByApp?.[appFilter] || 0,
       supportTickets: stats.supportTicketsByApp?.[appFilter] || 0,
       memberTickets: stats.memberTicketsByApp?.[appFilter] || 0,
+      languageDistribution: stats.languageDistributionByApp?.[appFilter] || {},
+      countryDistribution: stats.countryDistributionByApp?.[appFilter] || {},
     };
   }, [stats, appFilter]);
+
+  const recentSupportTickets = useMemo(
+    () => filteredSupportTickets.slice(0, 5),
+    [filteredSupportTickets]
+  );
+
+  const pendingSupportTicketCount = useMemo(
+    () => filteredSupportTickets.filter((t) => t.status === 'pending').length,
+    [filteredSupportTickets]
+  );
 
   // 그룹 관리 탭으로 전환 (시스템 관리자: 전 앱 그룹)
   const handleSelectGroupForAdmin = async (groupId: string) => {
@@ -1739,9 +1759,10 @@ export default function AdminPage() {
                   >
                     <div className="mb-2 text-sm font-medium text-amber-800">
                       {at('active_users')}
+                      {appFilter !== 'all' && appFilter !== 'global' ? ` (${getAppIdLabel(appFilter)})` : ''}
                     </div>
                     <div className="text-[32px] font-bold text-amber-900">
-                      {stats.activeUsers.toLocaleString()}
+                      {(statsForFilter?.activeUsers ?? stats.activeUsers).toLocaleString()}
                     </div>
                   </motion.div>
 
@@ -1819,6 +1840,7 @@ export default function AdminPage() {
                           </span>
                           <span>{adminLang === 'ko' ? '그룹' : 'Groups'}: <strong>{(stats.groupsByApp?.[appId] || 0).toLocaleString()}</strong></span>
                           <span>{adminLang === 'ko' ? '유저' : 'Users'}: <strong>{(stats.usersByApp?.[appId] || 0).toLocaleString()}</strong></span>
+                          <span>{adminLang === 'ko' ? '활성(30일)' : 'Active(30d)'}: <strong>{(stats.activeUsersByApp?.[appId] || 0).toLocaleString()}</strong></span>
                           <span>{adminLang === 'ko' ? '문의' : 'Tickets'}: <strong>{(stats.supportTicketsByApp?.[appId] || 0).toLocaleString()}</strong></span>
                           <span>{adminLang === 'ko' ? '멤버문의' : 'Member'}: <strong>{(stats.memberTicketsByApp?.[appId] || 0).toLocaleString()}</strong></span>
                         </li>
@@ -1833,37 +1855,105 @@ export default function AdminPage() {
                   <div className="rounded-xl border border-slate-200 bg-white p-6">
                     <h3 className="mb-4 text-base font-semibold text-slate-800">
                       {at('stats_language_distribution')}
+                      {appFilter !== 'all' && appFilter !== 'global' ? ` (${getAppIdLabel(appFilter)})` : ''}
                     </h3>
-                    <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                      {Object.entries(stats.languageDistribution)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([code, count]) => (
-                          <li key={code} className="flex items-center justify-between text-sm text-slate-700">
-                            <span>{isValidLang(code) ? (LANG_LABELS[code] || code) : code}</span>
-                            <span className="font-semibold">{count}</span>
-                          </li>
-                        ))}
-                    </ul>
+                    {appFilter === 'all' || appFilter === 'global' ? (
+                      <div className="flex flex-col gap-4">
+                        {ALL_APP_IDS.map((appId) => {
+                          const dist = stats.languageDistributionByApp?.[appId] || {};
+                          const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+                          return (
+                            <div key={appId} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                              <div className="mb-2">
+                                <span className={`rounded px-2 py-0.5 text-[12px] font-bold ${getAppIdBadgeClass(appId)}`}>
+                                  {getAppIdLabel(appId)}
+                                </span>
+                              </div>
+                              {entries.length === 0 ? (
+                                <p className="m-0 text-xs text-slate-400">—</p>
+                              ) : (
+                                <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                                  {entries.map(([code, count]) => (
+                                    <li key={code} className="flex items-center justify-between text-sm text-slate-700">
+                                      <span>{isValidLang(code) ? (LANG_LABELS[code] || code) : code}</span>
+                                      <span className="font-semibold">{count}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                        {Object.entries(statsForFilter?.languageDistribution ?? {})
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([code, count]) => (
+                            <li key={code} className="flex items-center justify-between text-sm text-slate-700">
+                              <span>{isValidLang(code) ? (LANG_LABELS[code] || code) : code}</span>
+                              <span className="font-semibold">{count}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
                   </div>
                   <div className="rounded-xl border border-slate-200 bg-white p-6">
                     <h3 className="mb-4 text-base font-semibold text-slate-800">
                       {at('stats_country_distribution')}
+                      {appFilter !== 'all' && appFilter !== 'global' ? ` (${getAppIdLabel(appFilter)})` : ''}
                     </h3>
-                    <ul className="m-0 flex max-h-64 list-none flex-col gap-2 overflow-y-auto p-0">
-                      {Object.entries(stats.countryDistribution)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([code, count]) => (
-                          <li key={code} className="flex items-center justify-between text-sm text-slate-700">
-                            <span>{getCountryDisplayName(code, adminLocale)}</span>
-                            <span className="font-semibold">{count}</span>
-                          </li>
-                        ))}
-                    </ul>
+                    {appFilter === 'all' || appFilter === 'global' ? (
+                      <div className="flex flex-col gap-4">
+                        {ALL_APP_IDS.map((appId) => {
+                          const dist = stats.countryDistributionByApp?.[appId] || {};
+                          const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+                          return (
+                            <div key={appId} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                              <div className="mb-2">
+                                <span className={`rounded px-2 py-0.5 text-[12px] font-bold ${getAppIdBadgeClass(appId)}`}>
+                                  {getAppIdLabel(appId)}
+                                </span>
+                              </div>
+                              {entries.length === 0 ? (
+                                <p className="m-0 text-xs text-slate-400">—</p>
+                              ) : (
+                                <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                                  {entries.map(([code, count]) => (
+                                    <li key={code} className="flex items-center justify-between text-sm text-slate-700">
+                                      <span>
+                                        {code === 'unknown'
+                                          ? adminLang === 'ko'
+                                            ? '미설정'
+                                            : 'Unset'
+                                          : getCountryDisplayName(code, adminLocale)}
+                                      </span>
+                                      <span className="font-semibold">{count}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <ul className="m-0 flex max-h-64 list-none flex-col gap-2 overflow-y-auto p-0">
+                        {Object.entries(statsForFilter?.countryDistribution ?? {})
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([code, count]) => (
+                            <li key={code} className="flex items-center justify-between text-sm text-slate-700">
+                              <span>{getCountryDisplayName(code, adminLocale)}</span>
+                              <span className="font-semibold">{count}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
 
-                <FeatureUsageSection lang={adminLang} />
-                <AdminModerationInbox lang={adminLang} />
+                <FeatureUsageSection lang={adminLang} appFilter={appFilter} />
+                <AdminModerationInbox lang={adminLang} appFilter={appFilter} />
 
                 {/* 최근 문의 위젯 */}
                 <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6">
@@ -1872,9 +1962,9 @@ export default function AdminPage() {
                       <div className="mb-1 text-base font-semibold text-slate-800">
                         {at('recent_inquiries_title')}
                       </div>
-                      <div className={`text-[13px] ${supportTickets.filter(t => t.status === 'pending').length > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                      <div className={`text-[13px] ${pendingSupportTicketCount > 0 ? 'text-red-500' : 'text-green-500'}`}>
                         {fat('pending_inquiries_count', {
-                          count: supportTickets.filter(t => t.status === 'pending').length,
+                          count: pendingSupportTicketCount,
                         })}
                       </div>
                     </div>
@@ -1885,13 +1975,13 @@ export default function AdminPage() {
                       {at('view_all_btn')}
                     </button>
                   </div>
-                  {supportTickets.length === 0 ? (
+                  {recentSupportTickets.length === 0 ? (
                     <div className="p-8 text-center text-sm text-slate-400">
                       {at('no_inquiries')}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-3">
-                      {supportTickets.slice(0, 5).map((ticket) => (
+                      {recentSupportTickets.map((ticket) => (
                         <div
                           key={ticket.id}
                           className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
@@ -1912,6 +2002,7 @@ export default function AdminPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-slate-500">
+                            {renderAppBadge(ticket.app_id ?? ticket.groups?.app_id, false)}
                             <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px]">
                               {ticket.groups?.name || ct('unknown')}
                             </span>

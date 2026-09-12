@@ -19,6 +19,7 @@ export async function loadLiveFeatureUsage(params: {
   toIso: string;
   periodLabel: string;
   groupId: string | null;
+  appId?: string | null;
 }): Promise<FeatureUsagePayload> {
   const supabase = getSupabaseServerClient();
   const periodStart = parseIsoDate(params.fromIso, new Date(Date.now() - 24 * 60 * 60 * 1000));
@@ -49,15 +50,26 @@ export async function loadLiveFeatureUsage(params: {
 
   let groupsQuery = supabase
     .from('groups')
-    .select('id, name, family_name, display_name_pending, title_style');
+    .select('id, name, family_name, display_name_pending, title_style, app_id');
   if (params.groupId) {
     groupsQuery = groupsQuery.eq('id', params.groupId);
+  }
+  if (params.appId) {
+    groupsQuery = groupsQuery.eq('app_id', params.appId);
   }
   const { data: groups, error: groupsError } = await groupsQuery;
   if (groupsError) throw groupsError;
 
+  const allowedGroupIds = new Set((groups || []).map((g) => String(g.id)));
+  const filteredRows = ((countRows || []) as FeatureUsageCountRow[]).filter((row) => {
+    if (!row.group_id) return false;
+    if (params.groupId) return String(row.group_id) === params.groupId;
+    if (params.appId) return allowedGroupIds.has(String(row.group_id));
+    return true;
+  });
+
   return assembleFeatureUsage({
-    rows: (countRows || []) as FeatureUsageCountRow[],
+    rows: filteredRows,
     groups: groups || [],
     periodLabel: params.periodLabel,
     periodStart,

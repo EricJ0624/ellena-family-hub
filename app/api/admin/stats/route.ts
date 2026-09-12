@@ -5,7 +5,7 @@ import { ALL_APP_IDS } from '@/lib/apps';
 
 /**
  * 시스템 관리자 대시보드 통계 조회
- * - 전체 합계 + 앱별 그룹/유저/문의 집계
+ * - 전체 합계 + 앱별 그룹/유저/문의/언어·국가/활성 유저 집계
  */
 export async function GET(request: NextRequest) {
   try {
@@ -30,10 +30,12 @@ export async function GET(request: NextRequest) {
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoIso = thirtyDaysAgo.toISOString();
+
     const { count: activeUsers, error: activeUsersError } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
-      .gte('updated_at', thirtyDaysAgo.toISOString());
+      .gte('updated_at', thirtyDaysAgoIso);
     if (activeUsersError) throw activeUsersError;
 
     const { count: totalAdmins, error: adminsError } = await supabase
@@ -44,16 +46,29 @@ export async function GET(request: NextRequest) {
 
     const { data: profileLocaleRows, error: localeError } = await supabase
       .from('profiles')
-      .select('preferred_language, country_code');
+      .select('id, preferred_language, country_code, updated_at');
     if (localeError) throw localeError;
 
     const languageDistribution: Record<string, number> = {};
     const countryDistribution: Record<string, number> = {};
+    const profileById = new Map<
+      string,
+      { language: string; country: string; updatedAt: string | null }
+    >();
+
     for (const row of profileLocaleRows || []) {
-      const langKey = String(row.preferred_language || 'unknown');
-      const countryKey = String(row.country_code || 'unknown');
+      const langKey = String(row.preferred_language || '').trim() || 'unknown';
+      const countryRaw = String(row.country_code ?? '').trim().toUpperCase();
+      const countryKey = countryRaw || 'unknown';
       languageDistribution[langKey] = (languageDistribution[langKey] || 0) + 1;
       countryDistribution[countryKey] = (countryDistribution[countryKey] || 0) + 1;
+      if (row.id) {
+        profileById.set(String(row.id), {
+          language: langKey,
+          country: countryKey,
+          updatedAt: row.updated_at ? String(row.updated_at) : null,
+        });
+      }
     }
 
     const { data: groupRows, error: groupAppError } = await supabase
@@ -94,8 +109,28 @@ export async function GET(request: NextRequest) {
     }
 
     const usersByApp: Record<string, number> = {};
+    const languageDistributionByApp: Record<string, Record<string, number>> = {};
+    const countryDistributionByApp: Record<string, Record<string, number>> = {};
+    const activeUsersByApp: Record<string, number> = {};
+
     for (const [appKey, set] of Object.entries(usersByAppSets)) {
       usersByApp[appKey] = set.size;
+      const langDist: Record<string, number> = {};
+      const countryDist: Record<string, number> = {};
+      let activeCount = 0;
+      for (const userId of set) {
+        const profile = profileById.get(userId);
+        const langKey = profile?.language || 'unknown';
+        const countryKey = profile?.country || 'unknown';
+        langDist[langKey] = (langDist[langKey] || 0) + 1;
+        countryDist[countryKey] = (countryDist[countryKey] || 0) + 1;
+        if (profile?.updatedAt && profile.updatedAt >= thirtyDaysAgoIso) {
+          activeCount += 1;
+        }
+      }
+      languageDistributionByApp[appKey] = langDist;
+      countryDistributionByApp[appKey] = countryDist;
+      activeUsersByApp[appKey] = activeCount;
     }
 
     const countTicketsByApp = async (table: 'support_tickets' | 'member_support_tickets') => {
@@ -131,6 +166,9 @@ export async function GET(request: NextRequest) {
         totalMemberTickets: totalMemberTickets || 0,
         languageDistribution,
         countryDistribution,
+        languageDistributionByApp,
+        countryDistributionByApp,
+        activeUsersByApp,
         groupsByApp,
         usersByApp,
         supportTicketsByApp,
