@@ -718,66 +718,74 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 }
 
 :root[data-ui-theme='highend_glass'] {
-  /* 레퍼런스형: soft orb가 위젯 뒤로 비치도록 대비 강화 (라이트도 딥 베이스) */
+  /* Deep indigo dusk — indigo → slate, soft violet/cyan orbs */
   --app-shell-inner-bg:
-    radial-gradient(ellipse 90% 70% at 8% 12%, rgba(34, 211, 238, 0.55) 0%, transparent 58%),
-    radial-gradient(ellipse 80% 60% at 92% 8%, rgba(244, 114, 182, 0.5) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 55% at 78% 88%, rgba(251, 146, 60, 0.42) 0%, transparent 52%),
-    radial-gradient(ellipse 55% 45% at 30% 75%, rgba(167, 139, 250, 0.45) 0%, transparent 50%),
-    linear-gradient(160deg, #312e81 0%, #1e1b4b 38%, #0f172a 72%, #164e63 100%);
+    radial-gradient(ellipse 85% 65% at 12% 14%, rgba(129, 140, 248, 0.16) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 88% 12%, rgba(34, 211, 238, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 68% 90%, rgba(167, 139, 250, 0.1) 0%, transparent 52%),
+    linear-gradient(165deg, #1e1b4b 0%, #151348 42%, #0f172a 100%);
   --app-shell-outer-bg:
-    radial-gradient(circle at 12% 10%, #22d3ee 0%, transparent 40%),
-    radial-gradient(circle at 88% 16%, #f472b6 0%, transparent 38%),
-    radial-gradient(circle at 70% 90%, #fb923c 0%, transparent 42%),
-    linear-gradient(165deg, #1e1b4b 0%, #0f172a 50%, #083344 100%);
-  --app-shell-canvas: #0f172a;
+    radial-gradient(circle at 14% 12%, rgba(129, 140, 248, 0.12) 0%, transparent 42%),
+    radial-gradient(circle at 86% 18%, rgba(34, 211, 238, 0.08) 0%, transparent 40%),
+    linear-gradient(170deg, #17144a 0%, #1e1b4b 45%, #0f172a 100%);
+  --app-shell-canvas: #1e1b4b;
   /* Widget titles on frosted glass — solid near-white (RGB triplet for rgb()) */
   --section-title-fg: 255 255 255;
   --section-title-icon: 165 243 252; /* cyan-200 */
-  /* 위젯 패널: 일정과 가깝게 더 옅은 반투명으로 통일 */
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-soft-bg: rgba(255, 255, 255, 0.06);
-  --glass-medium-bg: rgba(255, 255, 255, 0.08);
-  --glass-strong-bg: rgba(255, 255, 255, 0.14);
+  /* 더 투명한 유리 — fill 추가 하향, rim으로 윤곽 유지 (blur 없음) */
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-soft-bg: rgba(255, 255, 255, 0.03);
+  --glass-medium-bg: rgba(255, 255, 255, 0.04);
+  --glass-strong-bg: rgba(255, 255, 255, 0.07);
   --glass-soft-blur: 24px;
   --glass-medium-blur: 36px;
   --glass-strong-blur: 48px;
-  --glass-soft-border: rgba(255, 255, 255, 0.22);
-  --glass-medium-border: rgba(255, 255, 255, 0.28);
-  --glass-strong-border: rgba(255, 255, 255, 0.38);
-  --glass-soft-shadow: 0 10px 32px rgba(2, 6, 23, 0.22);
-  --glass-medium-shadow: 0 16px 44px rgba(2, 6, 23, 0.26);
-  --glass-strong-shadow: 0 24px 56px rgba(2, 6, 23, 0.3);
+  --glass-soft-border: rgba(255, 255, 255, 0.28);
+  --glass-medium-border: rgba(255, 255, 255, 0.34);
+  --glass-strong-border: rgba(255, 255, 255, 0.42);
+  --glass-soft-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  --glass-medium-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  --glass-strong-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
 }
 
 .dark[data-ui-theme='highend_glass'] {
   --app-shell-inner-bg:
-    radial-gradient(ellipse 90% 70% at 8% 12%, rgba(34, 211, 238, 0.5) 0%, transparent 58%),
-    radial-gradient(ellipse 80% 60% at 92% 8%, rgba(244, 114, 182, 0.45) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 55% at 78% 88%, rgba(251, 146, 60, 0.38) 0%, transparent 52%),
-    radial-gradient(ellipse 55% 45% at 28% 72%, rgba(129, 140, 248, 0.4) 0%, transparent 50%),
-    linear-gradient(160deg, #020617 0%, #0f172a 40%, #1e1b4b 100%);
+    radial-gradient(ellipse 85% 65% at 12% 14%, rgba(129, 140, 248, 0.14) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 88% 12%, rgba(34, 211, 238, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 68% 90%, rgba(167, 139, 250, 0.09) 0%, transparent 52%),
+    linear-gradient(165deg, #13122e 0%, #1e1b4b 45%, #0f172a 100%);
   --app-shell-outer-bg:
-    radial-gradient(circle at 12% 10%, #22d3ee 0%, transparent 38%),
-    radial-gradient(circle at 88% 16%, #f472b6 0%, transparent 36%),
-    radial-gradient(circle at 72% 88%, #fb923c 0%, transparent 40%),
-    linear-gradient(165deg, #020617 0%, #0c4a6e 50%, #312e81 100%);
-  --app-shell-canvas: #020617;
+    radial-gradient(circle at 14% 12%, rgba(129, 140, 248, 0.1) 0%, transparent 42%),
+    radial-gradient(circle at 86% 18%, rgba(34, 211, 238, 0.07) 0%, transparent 40%),
+    linear-gradient(170deg, #0b0a1c 0%, #1e1b4b 50%, #0f172a 100%);
+  --app-shell-canvas: #13122e;
   --section-title-fg: 255 255 255;
   --section-title-icon: 165 243 252;
-  --glass-bg: rgba(15, 23, 42, 0.22);
-  --glass-soft-bg: rgba(255, 255, 255, 0.05);
-  --glass-medium-bg: rgba(255, 255, 255, 0.07);
-  --glass-strong-bg: rgba(255, 255, 255, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-soft-bg: rgba(255, 255, 255, 0.025);
+  --glass-medium-bg: rgba(255, 255, 255, 0.035);
+  --glass-strong-bg: rgba(255, 255, 255, 0.06);
   --glass-soft-blur: 24px;
   --glass-medium-blur: 36px;
   --glass-strong-blur: 48px;
-  --glass-soft-border: rgba(255, 255, 255, 0.12);
-  --glass-medium-border: rgba(255, 255, 255, 0.18);
-  --glass-strong-border: rgba(255, 255, 255, 0.26);
-  --glass-soft-shadow: 0 10px 32px rgba(2, 6, 23, 0.35);
-  --glass-medium-shadow: 0 16px 48px rgba(2, 6, 23, 0.42);
-  --glass-strong-shadow: 0 24px 60px rgba(2, 6, 23, 0.5);
+  --glass-soft-border: rgba(255, 255, 255, 0.24);
+  --glass-medium-border: rgba(255, 255, 255, 0.3);
+  --glass-strong-border: rgba(255, 255, 255, 0.38);
+  --glass-soft-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  --glass-medium-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  --glass-strong-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 /*
@@ -874,13 +882,41 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 }
 
 /*
- * High-end Glass — Solid light title only (칩/바/그라데이션 없음).
- * 밝은 솔리드 글자 + 미세 shadow. 스타일은 h1 인라인.
+ * High-end Glass — Quiet glass capsule.
+ * Frosted pill보다 낮고 각진 반투명 바 + 얇은 보더. backdrop-filter 없음.
+ * Kids(둥근 글래스+♥)와 구분.
  */
-:root[data-ui-theme='highend_glass'] h1 .align-baseline,
-.dark[data-ui-theme='highend_glass'] h1 .align-baseline {
+:root[data-ui-theme='highend_glass'] .dashboard-highend-title-capsule,
+.dark[data-ui-theme='highend_glass'] .dashboard-highend-title-capsule {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  width: max-content;
+  box-sizing: border-box;
+  padding: 0.22em 0.7em;
+  border-radius: 0.45rem;
+  line-height: 1.2;
+  vertical-align: middle;
+  overflow: hidden;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 6px 18px rgba(2, 6, 23, 0.22);
+}
+
+:root[data-ui-theme='highend_glass'] .dashboard-highend-title-text,
+.dark[data-ui-theme='highend_glass'] .dashboard-highend-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
   color: #f8fafc;
   -webkit-text-fill-color: #f8fafc;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
+  background: none;
 }
 
 :root[data-ui-theme='kids_friendly'] {
@@ -1170,7 +1206,20 @@ select:not(.chalkboard-form-input) {
   }
 
   :root[data-ui-theme='highend_glass'] .app-container::before,
-  .dark[data-ui-theme='highend_glass'] .app-container::before,
+  .dark[data-ui-theme='highend_glass'] .app-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--app-shell-outer-bg);
+    background-repeat: no-repeat;
+    background-size: cover;
+    /* screen은 차콜 베이스를 씻어 밝은 슬레이트처럼 보이게 함 → High-end는 일반 블렌드 */
+    opacity: 0.85;
+    mix-blend-mode: normal;
+  }
+
   :root[data-ui-theme='kids_friendly'] .app-container::before {
     content: '';
     position: absolute;
@@ -1723,64 +1772,68 @@ html[data-ui-theme='default'] body {
 }
 
 /*
- * High-end: 전 위젯 옅은 반투명 통일 (일정만 더 투명하던 편차 해소).
- * rim 보더는 쓰지 않음(곡선 테두리 + 사각 bleed 재발 방지).
+ * High-end: 전 위젯 글래스 패널 통일.
+ * blur 끔. 바깥 drop-shadow는 .widget-chrome에 두고,
+ * content-section은 clip-path로 사각 코너 bleed를 잘라낸다.
  */
+:root[data-ui-theme='highend_glass'] .widget-chrome,
+.dark[data-ui-theme='highend_glass'] .widget-chrome {
+  filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.55));
+}
+
 :root[data-ui-theme='highend_glass'] .content-section,
-.dark[data-ui-theme='highend_glass'] .content-section {
+.dark[data-ui-theme='highend_glass'] .content-section,
+:root[data-ui-theme='highend_glass'] .calendar-widget-section.content-section,
+.dark[data-ui-theme='highend_glass'] .calendar-widget-section.content-section {
   overflow: hidden;
   border-color: transparent;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 58%),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.11) 0%,
+      rgba(255, 255, 255, 0.03) 40%,
+      rgba(255, 255, 255, 0.012) 70%,
+      transparent 100%
+    ),
     var(--glass-medium-bg);
   box-shadow: var(--glass-medium-shadow);
-  /* Windows Chrome: live blur + 모달 오버레이가 메인스레드를 죽임. 반투명 배경만 유지. */
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   clip-path: inset(0 round var(--border-radius-xl));
   isolation: isolate;
 }
 
-/* 캘린더도 동일 패널 톤 사용. blur는 Windows 클릭 멈춤 방지를 위해 계속 끔 */
-:root[data-ui-theme='highend_glass'] .calendar-widget-section.content-section,
-.dark[data-ui-theme='highend_glass'] .calendar-widget-section.content-section {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 58%),
-    var(--glass-medium-bg);
-  box-shadow: var(--glass-medium-shadow);
-}
-
 :root[data-ui-theme='highend_glass'] .glass-panel,
 .dark[data-ui-theme='highend_glass'] .glass-panel {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 55%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 55%),
     var(--glass-medium-bg);
+  box-shadow: var(--glass-medium-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  clip-path: inset(0 round var(--border-radius-lg));
 }
 
 :root[data-ui-theme='highend_glass'] .glass-panel-soft,
 .dark[data-ui-theme='highend_glass'] .glass-panel-soft {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 60%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.05), transparent 60%),
     var(--glass-soft-bg);
+  box-shadow: var(--glass-soft-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  clip-path: inset(0 round var(--border-radius-lg));
 }
 
 :root[data-ui-theme='highend_glass'] .glass-panel-strong,
 .dark[data-ui-theme='highend_glass'] .glass-panel-strong {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.14), transparent 55%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 55%),
     var(--glass-strong-bg);
-}
-
-/*
- * High-end: 캘린더 격자 안쪽만 투명 유지(날짜 칸 가독·합성 부하).
- * 바깥 content-section 패널은 위와 동일 톤.
- */
-:root[data-ui-theme='highend_glass'] .calendar-widget-section--frame,
-.dark[data-ui-theme='highend_glass'] .calendar-widget-section--frame {
-  background-image: none !important;
-  background-color: transparent !important;
+  box-shadow: var(--glass-strong-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  clip-path: inset(0 round var(--border-radius-lg));
 }
 
 :root[data-ui-theme='highend_glass'] .location-map-surface,

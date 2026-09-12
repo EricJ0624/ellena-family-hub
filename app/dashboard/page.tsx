@@ -357,7 +357,7 @@ export default function FamilyHub() {
   const isKidsTheme = groupUiThemeReady && uiTheme === 'kids_friendly';
   /** Neo Brutal (data-ui-theme=default) — 잉크 스탬프 타이틀 칩 */
   const isNeoTheme = groupUiThemeReady && uiTheme === 'default';
-  /** High-end Glass — Solid light title only */
+  /** High-end Glass — Quiet glass capsule 타이틀 */
   const isHighendTheme = groupUiThemeReady && uiTheme === 'highend_glass';
   const { album, albumRef } = useAlbum();
   const stableAlbum = useMemo(
@@ -6591,16 +6591,18 @@ export default function FamilyHub() {
           }
       : isHighendTheme
         ? {
-            /* Solid light title — 칩/그라데이션 없음 */
+            /* Quiet glass capsule(.dashboard-highend-title-capsule) */
             color: '#f8fafc',
             backgroundImage: 'none',
             backgroundColor: 'transparent',
             WebkitBackgroundClip: 'unset',
             WebkitTextFillColor: '#f8fafc',
             backgroundClip: 'unset',
-            textShadow: '0 1px 2px rgba(15, 23, 42, 0.45), 0 0 18px rgba(148, 163, 184, 0.18)',
+            textShadow: 'none',
             fontWeight: 600,
-            letterSpacing: '0.03em',
+            letterSpacing: '0.04em',
+            overflowX: 'visible',
+            overflowY: 'visible',
           }
       : isDefaultDashboardTitle
         ? {
@@ -7163,6 +7165,16 @@ export default function FamilyHub() {
               ) : isNeoTheme ? (
                 <span className="dashboard-neo-title-stamp">
                   <span className="dashboard-neo-title-text">
+                    {isDefaultDashboardTitle ? (
+                      <AppTitleContent title={dashboardTitleText} />
+                    ) : (
+                      dashboardTitleText
+                    )}
+                  </span>
+                </span>
+              ) : isHighendTheme ? (
+                <span className="dashboard-highend-title-capsule">
+                  <span className="dashboard-highend-title-text">
                     {isDefaultDashboardTitle ? (
                       <AppTitleContent title={dashboardTitleText} />
                     ) : (
