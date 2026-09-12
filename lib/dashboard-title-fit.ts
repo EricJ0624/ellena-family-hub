@@ -90,6 +90,42 @@ export function fitKidsGlassTitleFontSize(
   return minPx;
 }
 
+/** Neo 스탬프 — padding 0.72em×2 + border 3px×2 + margin-right 4px + letter-spacing 0.04em */
+const NEO_STAMP_PAD_X_EM = 0.72 * 2;
+const NEO_STAMP_BORDER_PX = 3 * 2;
+const NEO_STAMP_MARGIN_PX = 4;
+const NEO_STAMP_LETTER_SPACING_EM = 0.04;
+
+/**
+ * 잉크 스탬프 칩 안에 타이틀이 들어가게 font-size를 고른다.
+ * (패딩·보더·섀도 여백을 차감한 가용 폭 기준)
+ */
+export function fitNeoStampTitleFontSize(
+  text: string,
+  boxWidthPx: number,
+  minPx: number,
+  maxPx: number,
+  fontFamily: string,
+  fontWeight: string | number = 800,
+  useAppTitleMeasure = false,
+): number {
+  if (!text || boxWidthPx <= 0) return maxPx;
+  for (let size = maxPx; size >= minPx; size -= 1) {
+    const avail =
+      boxWidthPx
+      - NEO_STAMP_PAD_X_EM * size
+      - NEO_STAMP_BORDER_PX
+      - NEO_STAMP_MARGIN_PX;
+    if (avail <= 8) continue;
+    const letterSpacingPx = NEO_STAMP_LETTER_SPACING_EM * size;
+    const width = useAppTitleMeasure
+      ? measureAppTitleWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx)
+      : measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx);
+    if (width <= avail) return size;
+  }
+  return minPx;
+}
+
 export function fitFontSizeToWidth(
   text: string,
   maxWidthPx: number,

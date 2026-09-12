@@ -54,6 +54,7 @@ import {
   fitFontSizeToWidth,
   fitAppTitleFontSizeToWidth,
   fitKidsGlassTitleFontSize,
+  fitNeoStampTitleFontSize,
   shrinkFontSizeToElement,
   CUSTOM_TITLE_FONT_MIN_PX,
   DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
@@ -349,6 +350,8 @@ export default function FamilyHub() {
   const isKidsTheme = uiTheme === 'kids_friendly';
   /** Neo Brutal (data-ui-theme=default) — 잉크 스탬프 타이틀 칩 */
   const isNeoTheme = uiTheme === 'default';
+  /** High-end Glass — frosted pill 타이틀 칩 */
+  const isHighendTheme = uiTheme === 'highend_glass';
   const { album, albumRef } = useAlbum();
   const stableAlbum = useMemo(
     () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))),
@@ -1910,6 +1913,23 @@ export default function FamilyHub() {
         isDefaultDashboardTitle,
       );
     }
+    if (isNeoTheme) {
+      return fitNeoStampTitleFontSize(
+        dashboardTitleText,
+        maxWidth,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin)
+          : CUSTOM_TITLE_FONT_MIN_PX,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait
+            ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
+            : Math.min(customFontSizeCap ?? 68, 68))
+          : titleFitMaxPx,
+        isDefaultDashboardTitle ? titleFont.fontFamily : fontFamily,
+        800,
+        isDefaultDashboardTitle,
+      );
+    }
     if (isDefaultDashboardTitle) {
       return fitAppTitleFontSizeToWidth(
         dashboardTitleText,
@@ -1946,9 +1966,36 @@ export default function FamilyHub() {
     customFontSizeCap,
     getTitleFitMaxWidth,
     isKidsTheme,
+    isNeoTheme,
   ]);
 
   const measureCustomTitleFontSize = useCallback(() => {
+    if (isNeoTheme) {
+      const maxWidth = getTitleFitMaxWidth();
+      if (frameIsPortrait) {
+        setPortraitTitleMaxWidthPx((prev) => (prev === maxWidth ? prev : maxWidth));
+      }
+      const fitted = fitNeoStampTitleFontSize(
+        dashboardTitleText,
+        maxWidth,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin)
+          : CUSTOM_TITLE_FONT_MIN_PX,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait
+            ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
+            : Math.min(customFontSizeCap ?? 68, 68))
+          : titleFitMaxPx,
+        isDefaultDashboardTitle
+          ? titleFont.fontFamily
+          : (effectiveTitleStyle?.fontFamily ?? customTitleFontFamily),
+        800,
+        isDefaultDashboardTitle,
+      );
+      setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
+      return;
+    }
+
     if (!frameIsPortrait && isDefaultDashboardTitle) {
       const maxWidth = Math.max(120, getTitleFitMaxWidth() - 8);
       const letterSpacing = effectiveTitleStyle?.letterSpacing ?? -0.5;
@@ -2045,6 +2092,7 @@ export default function FamilyHub() {
     customFontSizeCap,
     getTitleFitMaxWidth,
     isKidsTheme,
+    isNeoTheme,
   ]);
 
   useLayoutEffect(() => {
@@ -6534,6 +6582,21 @@ export default function FamilyHub() {
             overflowX: 'visible',
             overflowY: 'visible',
           }
+      : isHighendTheme
+        ? {
+            /* Frosted pill(.dashboard-highend-title-pill) — brand gradient 해제 */
+            color: '#f8fafc',
+            backgroundImage: 'none',
+            backgroundColor: 'transparent',
+            WebkitBackgroundClip: 'unset',
+            WebkitTextFillColor: '#f8fafc',
+            backgroundClip: 'unset',
+            textShadow: '0 0 12px rgba(165, 243, 252, 0.22), 0 1px 2px rgba(2, 6, 23, 0.35)',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            overflowX: 'visible',
+            overflowY: 'visible',
+          }
       : isDefaultDashboardTitle
         ? {
             backgroundImage: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
@@ -7095,6 +7158,16 @@ export default function FamilyHub() {
               ) : isNeoTheme ? (
                 <span className="dashboard-neo-title-stamp">
                   <span className="dashboard-neo-title-text">
+                    {isDefaultDashboardTitle ? (
+                      <AppTitleContent title={dashboardTitleText} />
+                    ) : (
+                      dashboardTitleText
+                    )}
+                  </span>
+                </span>
+              ) : isHighendTheme ? (
+                <span className="dashboard-highend-title-pill">
+                  <span className="dashboard-highend-title-text">
                     {isDefaultDashboardTitle ? (
                       <AppTitleContent title={dashboardTitleText} />
                     ) : (
