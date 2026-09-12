@@ -883,27 +883,106 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   --glass-strong-shadow: 0 18px 44px rgba(0, 0, 0, 0.44);
 }
 
-/* Original — 기본 위젯 UI. 모서리는 옅은 흰 보더로 부드럽게 */
+/*
+ * default = Neo Brutalism (all apps: family/couple/biker/camper).
+ * Poster diagonal stripes + ink border + hard shadow. No soft blur/glass.
+ * Shared via data-ui-theme=default — no per-app_id fork.
+ */
 :root[data-ui-theme='default'] {
-  --app-shell-inner-bg: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  --app-shell-outer-bg: radial-gradient(circle at top left, #e2e8f0, #94a3b8);
-  --app-shell-canvas: #f5f7fa;
-  --glass-bg: rgba(255, 255, 255, 0.92);
-  --glass-soft-bg: rgba(255, 255, 255, 0.92);
-  --glass-medium-bg: rgba(255, 255, 255, 0.95);
+  --neo-ink: #0a0a0a;
+  --neo-paper: #f4f4f0;
+  --neo-paper-deep: #e8e8e0;
+  --neo-stripe-a: #f4f4f0;
+  --neo-stripe-b: #0a0a0a;
+  --neo-stripe-size: 40px;
+  --neo-radius: 4px;
+  --neo-border-w: 3px;
+  --neo-shadow: 4px 4px 0 0 var(--neo-ink);
+  --neo-shadow-pressed: 0 0 0 0 var(--neo-ink);
+  --neo-shadow-hover: 2px 2px 0 0 var(--neo-ink);
+  --neo-shadow-panel: 3px 3px 0 0 var(--neo-ink);
+  --section-title-fg: 10 10 10;
+  --section-title-icon: 10 10 10;
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.25rem;
+  --border-radius-lg: 0.25rem;
+  --border-radius-xl: 0.25rem;
+  --app-shell-canvas: var(--neo-paper);
+  --app-shell-inner-bg:
+    repeating-linear-gradient(
+      -45deg,
+      var(--neo-stripe-a) 0 calc(var(--neo-stripe-size) * 0.58),
+      var(--neo-stripe-b) calc(var(--neo-stripe-size) * 0.58) var(--neo-stripe-size)
+    );
+  --app-shell-outer-bg: transparent;
+  --glass-bg: #ffffff;
+  --glass-soft-bg: #ffffff;
+  --glass-medium-bg: #ffffff;
   --glass-strong-bg: #ffffff;
   --glass-soft-blur: 0px;
   --glass-medium-blur: 0px;
-  --glass-strong-blur: 2px;
-  --glass-soft-border: transparent;
-  --glass-medium-border: transparent;
-  --glass-strong-border: transparent;
-  --glass-soft-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-  --glass-medium-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
-  --glass-strong-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  --glass-strong-blur: 0px;
+  --glass-soft-border: var(--neo-ink);
+  --glass-medium-border: var(--neo-ink);
+  --glass-strong-border: var(--neo-ink);
+  --glass-soft-shadow: var(--neo-shadow);
+  --glass-medium-shadow: var(--neo-shadow);
+  --glass-strong-shadow: var(--neo-shadow);
   --chalkboard-border-light: #a88a28;
   --chalkboard-border-mid: #7a5c14;
   --chalkboard-border-dark: #5a4010;
+  /* Fixed flat face colors per widget key */
+  --neo-face-tasks: #fce94f;
+  --neo-face-calendar: #7dd3fc;
+  --neo-face-chat: #f9a8d4;
+  --neo-face-location: #6ee7b7;
+  --neo-face-album: #fb923c;
+  --neo-face-travel: #c4b5fd;
+  --neo-face-piggy: #fbbf24;
+  --neo-face-games: #a3e635;
+  --neo-face-travel-diary: #67e8f9;
+}
+
+.dark[data-ui-theme='default'] {
+  /* Inverted stripes; light hard shadows for contrast on dark bands */
+  --neo-ink: #0a0a0a;
+  --neo-paper: #0a0a0a;
+  --neo-paper-deep: #050505;
+  --neo-stripe-a: #0a0a0a;
+  --neo-stripe-b: #f4f4f0;
+  --neo-stripe-size: 40px;
+  --neo-shadow: 4px 4px 0 0 #f4f4f0;
+  --neo-shadow-pressed: 0 0 0 0 #f4f4f0;
+  --neo-shadow-hover: 2px 2px 0 0 #f4f4f0;
+  --neo-shadow-panel: 3px 3px 0 0 #f4f4f0;
+  --section-title-fg: 10 10 10;
+  --section-title-icon: 10 10 10;
+  --app-shell-canvas: var(--neo-paper);
+  --app-shell-inner-bg:
+    repeating-linear-gradient(
+      -45deg,
+      var(--neo-stripe-a) 0 calc(var(--neo-stripe-size) * 0.58),
+      var(--neo-stripe-b) calc(var(--neo-stripe-size) * 0.58) var(--neo-stripe-size)
+    );
+  --glass-bg: #ffffff;
+  --glass-soft-bg: #ffffff;
+  --glass-medium-bg: #ffffff;
+  --glass-strong-bg: #ffffff;
+  --glass-soft-border: var(--neo-ink);
+  --glass-medium-border: var(--neo-ink);
+  --glass-strong-border: var(--neo-ink);
+  --glass-soft-shadow: var(--neo-shadow);
+  --glass-medium-shadow: var(--neo-shadow);
+  --glass-strong-shadow: var(--neo-shadow);
+  --neo-face-tasks: #fce94f;
+  --neo-face-calendar: #7dd3fc;
+  --neo-face-chat: #f9a8d4;
+  --neo-face-location: #6ee7b7;
+  --neo-face-album: #fb923c;
+  --neo-face-travel: #c4b5fd;
+  --neo-face-piggy: #fbbf24;
+  --neo-face-games: #a3e635;
+  --neo-face-travel-diary: #67e8f9;
 }
 
 * {
@@ -1041,7 +1120,7 @@ select:not(.chalkboard-form-input) {
 
   /*
    * High-end + Kids: orb 배경이 스크롤해도 위젯 뒤로 남도록 고정 + ambient 레이어.
-   * Original 은 기존 bg-app-shell-inner 만 사용.
+   * Neo Brutal(default)은 아래 전용 닷 패턴 규칙을 사용.
    * background-attachment:fixed 는 iOS/Android 크롬에서 하단이 하얗게 남는 버그가 있어
    * 마우스 포인터(데스크톱)에서만 켠다.
    */
@@ -1465,13 +1544,11 @@ select:not(.chalkboard-form-input) {
 }
 
 /*
- * Kids / Original / High-end 공통: 윤곽 스트로크 없음.
- * 형태는 radius + clip + soft shadow 만 사용 (각진 코너 bleed 제거).
+ * Kids / High-end: 윤곽 스트로크 없음.
+ * Neo Brutal(default)은 아래 전용 잉크 보더 규칙을 사용.
  */
 :root[data-ui-theme='kids_friendly'] .content-section,
 .dark[data-ui-theme='kids_friendly'] .content-section,
-:root[data-ui-theme='default'] .content-section,
-.dark[data-ui-theme='default'] .content-section,
 :root[data-ui-theme='highend_glass'] .content-section,
 .dark[data-ui-theme='highend_glass'] .content-section {
   border-color: transparent;
@@ -1483,12 +1560,6 @@ select:not(.chalkboard-form-input) {
 .dark[data-ui-theme='kids_friendly'] .glass-panel,
 .dark[data-ui-theme='kids_friendly'] .glass-panel-soft,
 .dark[data-ui-theme='kids_friendly'] .glass-panel-strong,
-:root[data-ui-theme='default'] .glass-panel,
-:root[data-ui-theme='default'] .glass-panel-soft,
-:root[data-ui-theme='default'] .glass-panel-strong,
-.dark[data-ui-theme='default'] .glass-panel,
-.dark[data-ui-theme='default'] .glass-panel-soft,
-.dark[data-ui-theme='default'] .glass-panel-strong,
 :root[data-ui-theme='highend_glass'] .glass-panel,
 :root[data-ui-theme='highend_glass'] .glass-panel-soft,
 :root[data-ui-theme='highend_glass'] .glass-panel-strong,
@@ -1496,6 +1567,136 @@ select:not(.chalkboard-form-input) {
 .dark[data-ui-theme='highend_glass'] .glass-panel-soft,
 .dark[data-ui-theme='highend_glass'] .glass-panel-strong {
   border-color: transparent;
+}
+
+
+/* ============================================
+   Neo Brutal (data-ui-theme=default) — shell, cards, faces, motion
+   ============================================ */
+
+:root[data-ui-theme='default'] .app-container,
+.dark[data-ui-theme='default'] .app-container,
+html[data-ui-theme='default'],
+html[data-ui-theme='default'] body {
+  background-color: var(--app-shell-canvas);
+  background-image: var(--app-shell-inner-bg);
+  background-size: auto;
+  background-repeat: repeat;
+}
+
+:root[data-ui-theme='default'] .dashboard-widget-grid,
+.dark[data-ui-theme='default'] .dashboard-widget-grid {
+  gap: 1.25rem; /* gap-5; kids/highend keep Tailwind gap-3 */
+}
+
+/* Reserve hard-shadow room inside clipped grid cells (no page.tsx change) */
+:root[data-ui-theme='default'] .widget-chrome,
+.dark[data-ui-theme='default'] .widget-chrome {
+  padding-right: 4px;
+  padding-bottom: 4px;
+  box-sizing: border-box;
+}
+
+:root[data-ui-theme='default'] .content-section,
+.dark[data-ui-theme='default'] .content-section {
+  border: var(--neo-border-w) solid var(--neo-ink);
+  border-color: var(--neo-ink);
+  border-radius: var(--neo-radius);
+  box-shadow: var(--neo-shadow);
+  clip-path: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: var(--glass-medium-bg);
+  background-image: none;
+  overflow: hidden;
+  isolation: isolate;
+  transition: box-shadow 150ms ease-out;
+}
+
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='tasks'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='tasks'] .content-section {
+  background-color: var(--neo-face-tasks) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .content-section {
+  background-color: var(--neo-face-calendar) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='chat'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='chat'] .content-section {
+  background-color: var(--neo-face-chat) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='location'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='location'] .content-section {
+  background-color: var(--neo-face-location) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='album'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='album'] .content-section {
+  background-color: var(--neo-face-album) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel'] .content-section {
+  background-color: var(--neo-face-travel) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .content-section {
+  background-color: var(--neo-face-piggy) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='games'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='games'] .content-section {
+  background-color: var(--neo-face-games) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section {
+  background-color: var(--neo-face-travel-diary) !important;
+  background-image: none !important;
+}
+
+/*
+ * Snap press: shadow-only (no translate on .content-section).
+ * Translating the card on :active moves buttons under the cursor and cancels click
+ * (e.g. Family Tasks "add" on Neo Brutal).
+ */
+@media (hover: hover) and (pointer: fine) {
+  :root[data-ui-theme='default'] .widget-chrome:hover > .widget-scale-root > .content-section,
+  .dark[data-ui-theme='default'] .widget-chrome:hover > .widget-scale-root > .content-section {
+    box-shadow: var(--neo-shadow-hover);
+  }
+}
+
+:root[data-ui-theme='default'] .widget-chrome:active > .widget-scale-root > .content-section,
+.dark[data-ui-theme='default'] .widget-chrome:active > .widget-scale-root > .content-section {
+  box-shadow: var(--neo-shadow-pressed);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui-theme='default'] .content-section,
+  .dark[data-ui-theme='default'] .content-section {
+    transition: none;
+  }
+}
+
+:root[data-ui-theme='default'] .glass-panel,
+:root[data-ui-theme='default'] .glass-panel-soft,
+:root[data-ui-theme='default'] .glass-panel-strong,
+.dark[data-ui-theme='default'] .glass-panel,
+.dark[data-ui-theme='default'] .glass-panel-soft,
+.dark[data-ui-theme='default'] .glass-panel-strong {
+  border: 2px solid var(--neo-ink);
+  border-color: var(--neo-ink);
+  border-radius: var(--neo-radius);
+  box-shadow: var(--neo-shadow-panel);
+  clip-path: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-image: none;
 }
 
 /*
@@ -1590,8 +1791,9 @@ select:not(.chalkboard-form-input) {
   /* 레거시 클래스 잔존 시에도 Family Friendly 스크랩북/파스텔이 아닌 표준 카드 톤 유지 */
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-  background: rgb(var(--card)) !important;
   background-image: none !important;
+  /* face color from --neo-face-travel-diary */
+  
 }
 
 :root[data-ui-theme='default'] .content-section.travel-diary-widget::before,

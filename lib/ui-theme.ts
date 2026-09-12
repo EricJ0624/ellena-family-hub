@@ -1,8 +1,8 @@
 /**
  * 그룹 대시보드 UI 테마.
- * - default: Original (기본 위젯 UI)
+ * - default: Neo Brutalism (포스터 대각 스트라이프; DB 키 default 유지, 전 앱 공통)
  * - kids_friendly: Family Friendly (패밀리/일러스트형 디자인 시스템)
- * - highend_glass: Original 베이스 + 글래스모피즘
+ * - highend_glass: 글래스모피즘
  */
 export type UiTheme = 'default' | 'kids_friendly' | 'highend_glass';
 
