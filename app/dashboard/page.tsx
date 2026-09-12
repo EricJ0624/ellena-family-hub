@@ -347,6 +347,8 @@ export default function FamilyHub() {
   const { lang, setLanguage } = useLanguage();
   const uiTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
   const isKidsTheme = uiTheme === 'kids_friendly';
+  /** Neo Brutal (data-ui-theme=default) — 잉크 스탬프 타이틀 칩 */
+  const isNeoTheme = uiTheme === 'default';
   const { album, albumRef } = useAlbum();
   const stableAlbum = useMemo(
     () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))),
@@ -6517,6 +6519,21 @@ export default function FamilyHub() {
           backgroundClip: 'unset',
           textShadow: '0 0 10px rgba(255, 255, 255, 0.28), 0 1px 2px rgba(15, 23, 42, 0.4)',
         }
+      : isNeoTheme
+        ? {
+            /* 잉크 스탬프 칩(.dashboard-neo-title-stamp) — 그라데이션/클립 해제 */
+            color: '#0a0a0a',
+            backgroundImage: 'none',
+            backgroundColor: 'transparent',
+            WebkitBackgroundClip: 'unset',
+            WebkitTextFillColor: '#0a0a0a',
+            backgroundClip: 'unset',
+            textShadow: 'none',
+            fontWeight: 800,
+            letterSpacing: '0.04em',
+            overflowX: 'visible',
+            overflowY: 'visible',
+          }
       : isDefaultDashboardTitle
         ? {
             backgroundImage: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
@@ -7073,6 +7090,16 @@ export default function FamilyHub() {
                   </span>
                   <span className="dashboard-family-title-deco" aria-hidden="true">
                     ♥
+                  </span>
+                </span>
+              ) : isNeoTheme ? (
+                <span className="dashboard-neo-title-stamp">
+                  <span className="dashboard-neo-title-text">
+                    {isDefaultDashboardTitle ? (
+                      <AppTitleContent title={dashboardTitleText} />
+                    ) : (
+                      dashboardTitleText
+                    )}
                   </span>
                 </span>
               ) : isDefaultDashboardTitle ? (

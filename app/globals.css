@@ -835,6 +835,43 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.55));
 }
 
+/*
+ * Neo Brutal — 대시보드 타이틀 잉크 스탬프 칩 (A안).
+ * 레몬 면 + 3px 잉크 보더 + 하드 섀도. 그라데이션/블러 없음.
+ */
+:root[data-ui-theme='default'] .dashboard-neo-title-stamp,
+.dark[data-ui-theme='default'] .dashboard-neo-title-stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  max-width: 100%;
+  width: max-content;
+  box-sizing: border-box;
+  padding: 0.38em 0.72em;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  border: 3px solid var(--neo-ink, #0a0a0a);
+  border-radius: var(--neo-radius, 4px);
+  line-height: 1.2;
+  vertical-align: middle;
+  overflow: visible;
+  white-space: nowrap;
+  background: #fce94f;
+  box-shadow: 4px 4px 0 0 var(--neo-ink, #0a0a0a);
+}
+
+:root[data-ui-theme='default'] .dashboard-neo-title-text,
+.dark[data-ui-theme='default'] .dashboard-neo-title-text {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: visible;
+  color: #0a0a0a;
+  -webkit-text-fill-color: #0a0a0a;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: none;
+}
+
 :root[data-ui-theme='kids_friendly'] {
   /* 셸 바탕만 highend_glass와 동일. 위젯 패널은 키즈용 불투명 카드 유지 */
   --app-shell-inner-bg:
