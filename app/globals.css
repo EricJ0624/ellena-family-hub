@@ -891,7 +891,6 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 :root[data-ui-theme='default'] {
   --neo-ink: #0a0a0a;
   --neo-paper: #f4f4f0;
-  --neo-paper-deep: #e8e8e0;
   --neo-stripe-a: #f4f4f0;
   --neo-stripe-b: #0a0a0a;
   --neo-stripe-size: 40px;
@@ -944,19 +943,14 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 }
 
 .dark[data-ui-theme='default'] {
-  /* Inverted stripes; light hard shadows for contrast on dark bands */
-  --neo-ink: #0a0a0a;
+  /* Only deltas vs light: inverted stripes + light hard shadows */
   --neo-paper: #0a0a0a;
-  --neo-paper-deep: #050505;
   --neo-stripe-a: #0a0a0a;
   --neo-stripe-b: #f4f4f0;
-  --neo-stripe-size: 40px;
   --neo-shadow: 4px 4px 0 0 #f4f4f0;
   --neo-shadow-pressed: 0 0 0 0 #f4f4f0;
   --neo-shadow-hover: 2px 2px 0 0 #f4f4f0;
   --neo-shadow-panel: 3px 3px 0 0 #f4f4f0;
-  --section-title-fg: 10 10 10;
-  --section-title-icon: 10 10 10;
   --app-shell-canvas: var(--neo-paper);
   --app-shell-inner-bg:
     repeating-linear-gradient(
@@ -964,25 +958,9 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
       var(--neo-stripe-a) 0 calc(var(--neo-stripe-size) * 0.58),
       var(--neo-stripe-b) calc(var(--neo-stripe-size) * 0.58) var(--neo-stripe-size)
     );
-  --glass-bg: #ffffff;
-  --glass-soft-bg: #ffffff;
-  --glass-medium-bg: #ffffff;
-  --glass-strong-bg: #ffffff;
-  --glass-soft-border: var(--neo-ink);
-  --glass-medium-border: var(--neo-ink);
-  --glass-strong-border: var(--neo-ink);
   --glass-soft-shadow: var(--neo-shadow);
   --glass-medium-shadow: var(--neo-shadow);
   --glass-strong-shadow: var(--neo-shadow);
-  --neo-face-tasks: #fce94f;
-  --neo-face-calendar: #7dd3fc;
-  --neo-face-chat: #f9a8d4;
-  --neo-face-location: #6ee7b7;
-  --neo-face-album: #fb923c;
-  --neo-face-travel: #c4b5fd;
-  --neo-face-piggy: #fbbf24;
-  --neo-face-games: #a3e635;
-  --neo-face-travel-diary: #67e8f9;
 }
 
 * {
@@ -1120,7 +1098,7 @@ select:not(.chalkboard-form-input) {
 
   /*
    * High-end + Kids: orb 배경이 스크롤해도 위젯 뒤로 남도록 고정 + ambient 레이어.
-   * Neo Brutal(default)은 아래 전용 닷 패턴 규칙을 사용.
+   * Neo Brutal(default)은 아래 전용 스트라이프 규칙을 사용.
    * background-attachment:fixed 는 iOS/Android 크롬에서 하단이 하얗게 남는 버그가 있어
    * 마우스 포인터(데스크톱)에서만 켠다.
    */
@@ -1594,13 +1572,11 @@ html[data-ui-theme='default'] body {
 .dark[data-ui-theme='default'] .widget-chrome {
   padding-right: 4px;
   padding-bottom: 4px;
-  box-sizing: border-box;
 }
 
 :root[data-ui-theme='default'] .content-section,
 .dark[data-ui-theme='default'] .content-section {
   border: var(--neo-border-w) solid var(--neo-ink);
-  border-color: var(--neo-ink);
   border-radius: var(--neo-radius);
   box-shadow: var(--neo-shadow);
   clip-path: none;
@@ -1690,7 +1666,6 @@ html[data-ui-theme='default'] body {
 .dark[data-ui-theme='default'] .glass-panel-soft,
 .dark[data-ui-theme='default'] .glass-panel-strong {
   border: 2px solid var(--neo-ink);
-  border-color: var(--neo-ink);
   border-radius: var(--neo-radius);
   box-shadow: var(--neo-shadow-panel);
   clip-path: none;
@@ -1783,19 +1758,7 @@ html[data-ui-theme='default'] body {
   background-color: rgba(255, 255, 255, 0.14) !important;
 }
 
-/* Travel Diary — Original/highend는 표준 content-section. kids 스크랩북만 상단 kids 블록 */
-:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
-.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
-:root[data-ui-theme='default'] .content-section.travel-diary-widget,
-.dark[data-ui-theme='default'] .content-section.travel-diary-widget {
-  /* 레거시 클래스 잔존 시에도 Family Friendly 스크랩북/파스텔이 아닌 표준 카드 톤 유지 */
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  background-image: none !important;
-  /* face color from --neo-face-travel-diary */
-  
-}
-
+/* Travel Diary — kill kids scrapbook ::before on Neo Brutal; face color from widget-key rule */
 :root[data-ui-theme='default'] .content-section.travel-diary-widget::before,
 .dark[data-ui-theme='default'] .content-section.travel-diary-widget::before {
   content: none !important;
@@ -5651,46 +5614,6 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   }
 
   /*
-   * Original(default) 위젯 타이틀: highend와 동일 — cqmin 편차(piggy/calendar/공통) 제거.
-   * kids_friendly 전용 타이틀(칠판·이미지 등)은 건드리지 않음.
-   */
-  :root[data-ui-theme='default'] .widget-chrome .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome .section-title,
-  :root[data-ui-theme='default'] .widget-chrome h3.section-title,
-  .dark[data-ui-theme='default'] .widget-chrome h3.section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='tasks'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='tasks'] .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='chat'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='chat'] .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel'] .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='album'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='album'] .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='location'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='location'] .section-title,
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='games'] .section-title,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='games'] .section-title {
-    font-size: clamp(0.88rem, 0.8rem + 0.4vw, 1.1rem) !important;
-    letter-spacing: 0.1em !important;
-    line-height: 1.15 !important;
-    padding-inline-start: 0.2rem !important;
-  }
-
-  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon,
-  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon {
-    width: 1.05em !important;
-    height: 1.05em !important;
-  }
-
-  /*
    * High-end: 여행플래너·앨범·게임 — 좌우만 rem 하한을 두면 위쪽은 4cqmin만 남아
    * 타이틀이 카드 상단에 붙어 보임. 사방 동일하게 맞춤.
    */
@@ -5727,8 +5650,8 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
 }
 
 /*
- * Original(default): 타이틀 크기 + 패널/헤더 여백 전 위젯 통일.
- * (위 블록 밖 top-level — 캘린더 5~6cqmin·채팅 padding-top 1.15rem·location 3cqmin 등 편차 제거)
+ * Neo Brutal(default): 타이틀 크기 + 패널/헤더 여백 전 위젯 통일.
+ * (@layer 밖 top-level — cqmin 편차·채팅 padding-top 등 덮어씀)
  */
 :root[data-ui-theme='default'] .widget-chrome .section-title,
 .dark[data-ui-theme='default'] .widget-chrome .section-title,
@@ -5787,9 +5710,9 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
 }
 
 /*
- * Family Chat 크기 (Kids / Original / High-end 공통).
+ * Family Chat 크기 (Kids / Neo Brutal / High-end 공통).
  * 색·테두리·그라데이션은 위 기본 규칙 유지.
- * Original은 위 default 패딩 규칙이 padding-top 1.15rem을 덮어씀.
+ * Neo Brutal은 위 default 패딩 규칙이 padding-top 1.15rem을 덮어씀.
  */
 .chat-widget-section.chat-widget-section {
   padding-top: 1.15rem;
