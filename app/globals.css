@@ -477,8 +477,8 @@ button.travel-kids-add-trip-submit {
 }
 
 /*
- * Travel Diary — 기본: 핑크~보라 그라데이션.
- * kids: Travel Diary BG.png (종이 투명 처리 + 중간 농도) — 아래 kids 블록.
+ * Travel Diary — kids(Family Friendly) 전용 스크랩북 위젯.
+ * Original/High-end Glass는 표준 .content-section 사용 (아래 kids 블록만 적용).
  */
 .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 .content-section.travel-diary-widget {
@@ -486,7 +486,7 @@ button.travel-kids-add-trip-submit {
   isolation: isolate;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-  background: linear-gradient(145deg, #d4c8fc 0%, #f3d0fe 48%, #fecdd3 100%) !important;
+  background: #ffffff !important;
   box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
   padding: clamp(0.65rem, 4.5cqmin, 0.95rem) clamp(0.7rem, 5cqmin, 1.05rem) !important;
   box-sizing: border-box;
@@ -734,19 +734,20 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   /* Widget titles on frosted glass — solid near-white (RGB triplet for rgb()) */
   --section-title-fg: 255 255 255;
   --section-title-icon: 165 243 252; /* cyan-200 */
-  --glass-bg: rgba(255, 255, 255, 0.14);
-  --glass-soft-bg: rgba(255, 255, 255, 0.1);
-  --glass-medium-bg: rgba(255, 255, 255, 0.16);
-  --glass-strong-bg: rgba(255, 255, 255, 0.24);
+  /* 위젯 패널: 일정과 가깝게 더 옅은 반투명으로 통일 */
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-soft-bg: rgba(255, 255, 255, 0.06);
+  --glass-medium-bg: rgba(255, 255, 255, 0.08);
+  --glass-strong-bg: rgba(255, 255, 255, 0.14);
   --glass-soft-blur: 24px;
   --glass-medium-blur: 36px;
   --glass-strong-blur: 48px;
-  --glass-soft-border: rgba(255, 255, 255, 0.28);
-  --glass-medium-border: rgba(255, 255, 255, 0.38);
-  --glass-strong-border: rgba(255, 255, 255, 0.5);
-  --glass-soft-shadow: 0 12px 40px rgba(2, 6, 23, 0.28);
-  --glass-medium-shadow: 0 22px 56px rgba(2, 6, 23, 0.34);
-  --glass-strong-shadow: 0 32px 72px rgba(2, 6, 23, 0.4);
+  --glass-soft-border: rgba(255, 255, 255, 0.22);
+  --glass-medium-border: rgba(255, 255, 255, 0.28);
+  --glass-strong-border: rgba(255, 255, 255, 0.38);
+  --glass-soft-shadow: 0 10px 32px rgba(2, 6, 23, 0.22);
+  --glass-medium-shadow: 0 16px 44px rgba(2, 6, 23, 0.26);
+  --glass-strong-shadow: 0 24px 56px rgba(2, 6, 23, 0.3);
 }
 
 .dark[data-ui-theme='highend_glass'] {
@@ -764,19 +765,19 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   --app-shell-canvas: #020617;
   --section-title-fg: 255 255 255;
   --section-title-icon: 165 243 252;
-  --glass-bg: rgba(15, 23, 42, 0.35);
-  --glass-soft-bg: rgba(255, 255, 255, 0.08);
-  --glass-medium-bg: rgba(255, 255, 255, 0.12);
-  --glass-strong-bg: rgba(255, 255, 255, 0.18);
+  --glass-bg: rgba(15, 23, 42, 0.22);
+  --glass-soft-bg: rgba(255, 255, 255, 0.05);
+  --glass-medium-bg: rgba(255, 255, 255, 0.07);
+  --glass-strong-bg: rgba(255, 255, 255, 0.12);
   --glass-soft-blur: 24px;
   --glass-medium-blur: 36px;
   --glass-strong-blur: 48px;
-  --glass-soft-border: rgba(255, 255, 255, 0.16);
-  --glass-medium-border: rgba(255, 255, 255, 0.24);
-  --glass-strong-border: rgba(255, 255, 255, 0.34);
-  --glass-soft-shadow: 0 14px 42px rgba(2, 6, 23, 0.45);
-  --glass-medium-shadow: 0 24px 64px rgba(2, 6, 23, 0.55);
-  --glass-strong-shadow: 0 34px 80px rgba(2, 6, 23, 0.65);
+  --glass-soft-border: rgba(255, 255, 255, 0.12);
+  --glass-medium-border: rgba(255, 255, 255, 0.18);
+  --glass-strong-border: rgba(255, 255, 255, 0.26);
+  --glass-soft-shadow: 0 10px 32px rgba(2, 6, 23, 0.35);
+  --glass-medium-shadow: 0 16px 48px rgba(2, 6, 23, 0.42);
+  --glass-strong-shadow: 0 24px 60px rgba(2, 6, 23, 0.5);
 }
 
 /*
@@ -958,7 +959,7 @@ select:not(.chalkboard-form-input) {
 @media (max-width: 768px) {
   .admin-page,
   .group-admin-page {
-    padding: 16px !important;
+    padding: 12px !important;
     overflow-x: hidden;
   }
 
@@ -1498,7 +1499,7 @@ select:not(.chalkboard-form-input) {
 }
 
 /*
- * High-end: 프로스트 재질 + 동일 radius 클립 유지.
+ * High-end: 전 위젯 옅은 반투명 통일 (일정만 더 투명하던 편차 해소).
  * rim 보더는 쓰지 않음(곡선 테두리 + 사각 bleed 재발 방지).
  */
 :root[data-ui-theme='highend_glass'] .content-section,
@@ -1506,7 +1507,7 @@ select:not(.chalkboard-form-input) {
   overflow: hidden;
   border-color: transparent;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.22), transparent 58%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 58%),
     var(--glass-medium-bg);
   box-shadow: var(--glass-medium-shadow);
   /* Windows Chrome: live blur + 모달 오버레이가 메인스레드를 죽임. 반투명 배경만 유지. */
@@ -1516,37 +1517,41 @@ select:not(.chalkboard-form-input) {
   isolation: isolate;
 }
 
-/* 캘린더는 날짜 칸이 많아 glass blur+그림자 합성 시 Windows에서 클릭이 멈춤 */
+/* 캘린더도 동일 패널 톤 사용. blur는 Windows 클릭 멈춤 방지를 위해 계속 끔 */
 :root[data-ui-theme='highend_glass'] .calendar-widget-section.content-section,
 .dark[data-ui-theme='highend_glass'] .calendar-widget-section.content-section {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 58%),
+    var(--glass-medium-bg);
+  box-shadow: var(--glass-medium-shadow);
 }
 
 :root[data-ui-theme='highend_glass'] .glass-panel,
 .dark[data-ui-theme='highend_glass'] .glass-panel {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.24), transparent 55%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 55%),
     var(--glass-medium-bg);
 }
 
 :root[data-ui-theme='highend_glass'] .glass-panel-soft,
 .dark[data-ui-theme='highend_glass'] .glass-panel-soft {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.18), transparent 60%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 60%),
     var(--glass-soft-bg);
 }
 
 :root[data-ui-theme='highend_glass'] .glass-panel-strong,
 .dark[data-ui-theme='highend_glass'] .glass-panel-strong {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.3), transparent 55%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), transparent 55%),
     var(--glass-strong-bg);
 }
 
 /*
- * High-end step 3: 위젯 hard-coded opaque fill 이 유리를 가리지 않게 완화.
- * 컴포넌트 로직/마크업은 유지하고 테마 스코프 CSS 만 적용.
+ * High-end: 캘린더 격자 안쪽만 투명 유지(날짜 칸 가독·합성 부하).
+ * 바깥 content-section 패널은 위와 동일 톤.
  */
 :root[data-ui-theme='highend_glass'] .calendar-widget-section--frame,
 .dark[data-ui-theme='highend_glass'] .calendar-widget-section--frame {
@@ -1577,14 +1582,22 @@ select:not(.chalkboard-form-input) {
   background-color: rgba(255, 255, 255, 0.14) !important;
 }
 
-/* Travel Diary — default: 그라데이션 유지 (kids는 상단 kids 블록, highend는 glass content-section) */
+/* Travel Diary — Original/highend는 표준 content-section. kids 스크랩북만 상단 kids 블록 */
 :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 :root[data-ui-theme='default'] .content-section.travel-diary-widget,
 .dark[data-ui-theme='default'] .content-section.travel-diary-widget {
+  /* 레거시 클래스 잔존 시에도 Family Friendly 스크랩북/파스텔이 아닌 표준 카드 톤 유지 */
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-  background: linear-gradient(145deg, #d4c8fc 0%, #f3d0fe 48%, #fecdd3 100%) !important;
+  background: rgb(var(--card)) !important;
+  background-image: none !important;
+}
+
+:root[data-ui-theme='default'] .content-section.travel-diary-widget::before,
+.dark[data-ui-theme='default'] .content-section.travel-diary-widget::before {
+  content: none !important;
+  display: none !important;
 }
 
 /* Glass Panel Presets - Phase 1 */
@@ -5316,6 +5329,101 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     }
   }
 
+  /*
+   * High-end Glass 위젯 타이틀: cqmin은 칸 크기마다 px가 달라져 통일되지 않음.
+   * rem/vw + !important 로 piggy(5.5cqmin)·calendar(5.25cqmin)·공통(4.5cqmin) 오버라이드.
+   * 대상: 임무·일정·채팅·piggy·여행플래너·앨범·위치·게임·여행다이어리
+   */
+  :root[data-ui-theme='highend_glass'] .widget-chrome .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome h3.section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome h3.section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='piggy'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='piggy'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='calendar'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='calendar'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='tasks'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='tasks'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='chat'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='chat'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_diary'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_diary'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='album'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='album'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='location'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='location'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='games'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='games'] .section-title {
+    font-size: clamp(0.88rem, 0.8rem + 0.4vw, 1.1rem) !important;
+    letter-spacing: 0.1em !important;
+    line-height: 1.15 !important;
+    /* letter-spacing·아이콘 없는 타이틀이 왼쪽 끝으로 붙는 것 보정 (piggy padding-left와 동일 역할) */
+    padding-inline-start: 0.2rem !important;
+  }
+
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon {
+    width: 1.05em !important;
+    height: 1.05em !important;
+  }
+
+  /*
+   * Original(default) 위젯 타이틀: highend와 동일 — cqmin 편차(piggy/calendar/공통) 제거.
+   * kids_friendly 전용 타이틀(칠판·이미지 등)은 건드리지 않음.
+   */
+  :root[data-ui-theme='default'] .widget-chrome .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome .section-title,
+  :root[data-ui-theme='default'] .widget-chrome h3.section-title,
+  .dark[data-ui-theme='default'] .widget-chrome h3.section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='tasks'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='tasks'] .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='chat'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='chat'] .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel'] .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='album'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='album'] .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='location'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='location'] .section-title,
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='games'] .section-title,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='games'] .section-title {
+    font-size: clamp(0.88rem, 0.8rem + 0.4vw, 1.1rem) !important;
+    letter-spacing: 0.1em !important;
+    line-height: 1.15 !important;
+    padding-inline-start: 0.2rem !important;
+  }
+
+  :root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon,
+  .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon {
+    width: 1.05em !important;
+    height: 1.05em !important;
+  }
+
+  /*
+   * High-end: 여행플래너·앨범·게임 — 좌우만 rem 하한을 두면 위쪽은 4cqmin만 남아
+   * 타이틀이 카드 상단에 붙어 보임. 사방 동일하게 맞춤.
+   */
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel'] .content-section,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel'] .content-section,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='album'] .content-section,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='album'] .content-section,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='games'] .content-section,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='games'] .content-section {
+    padding: max(4cqmin, 0.9rem) !important;
+  }
+
 @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -5340,8 +5448,69 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
 }
 
 /*
+ * Original(default): 타이틀 크기 + 패널/헤더 여백 전 위젯 통일.
+ * (위 블록 밖 top-level — 캘린더 5~6cqmin·채팅 padding-top 1.15rem·location 3cqmin 등 편차 제거)
+ */
+:root[data-ui-theme='default'] .widget-chrome .section-title,
+.dark[data-ui-theme='default'] .widget-chrome .section-title,
+html[data-ui-theme='default'] .widget-chrome .section-title,
+:root[data-ui-theme='default'] .widget-chrome h3.section-title,
+.dark[data-ui-theme='default'] .widget-chrome h3.section-title,
+html[data-ui-theme='default'] .widget-chrome h3.section-title,
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .section-title,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .section-title,
+html[data-ui-theme='default'] .widget-chrome[data-widget-key='piggy'] .section-title,
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title,
+html[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title {
+  font-size: clamp(0.88rem, 0.8rem + 0.4vw, 1.1rem) !important;
+  letter-spacing: 0.1em !important;
+  line-height: 1.15 !important;
+  padding-inline-start: 0.2rem !important;
+}
+
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon,
+html[data-ui-theme='default'] .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon {
+  width: 1.05em !important;
+  height: 1.05em !important;
+}
+
+:root[data-ui-theme='default'] .widget-chrome .content-section,
+.dark[data-ui-theme='default'] .widget-chrome .content-section,
+html[data-ui-theme='default'] .widget-chrome .content-section,
+:root[data-ui-theme='default'] .widget-chrome .content-section.calendar-widget-section,
+.dark[data-ui-theme='default'] .widget-chrome .content-section.calendar-widget-section,
+html[data-ui-theme='default'] .widget-chrome .content-section.calendar-widget-section,
+:root[data-ui-theme='default'] .widget-chrome .content-section.location-widget-section,
+.dark[data-ui-theme='default'] .widget-chrome .content-section.location-widget-section,
+html[data-ui-theme='default'] .widget-chrome .content-section.location-widget-section,
+:root[data-ui-theme='default'] .widget-chrome .content-section.chat-widget-section,
+.dark[data-ui-theme='default'] .widget-chrome .content-section.chat-widget-section,
+html[data-ui-theme='default'] .widget-chrome .content-section.chat-widget-section,
+:root[data-ui-theme='default'] .widget-chrome .content-section.games-widget-section,
+.dark[data-ui-theme='default'] .widget-chrome .content-section.games-widget-section,
+html[data-ui-theme='default'] .widget-chrome .content-section.games-widget-section {
+  padding: max(4cqmin, 0.9rem) !important;
+}
+
+:root[data-ui-theme='default'] .widget-chrome .section-header,
+.dark[data-ui-theme='default'] .widget-chrome .section-header,
+html[data-ui-theme='default'] .widget-chrome .section-header,
+:root[data-ui-theme='default'] .widget-chrome .calendar-section-header,
+.dark[data-ui-theme='default'] .widget-chrome .calendar-section-header,
+html[data-ui-theme='default'] .widget-chrome .calendar-section-header,
+:root[data-ui-theme='default'] .widget-chrome .chat-section-header,
+.dark[data-ui-theme='default'] .widget-chrome .chat-section-header,
+html[data-ui-theme='default'] .widget-chrome .chat-section-header {
+  margin-top: 0 !important;
+  margin-bottom: max(2.5cqmin, 0.65rem) !important;
+}
+
+/*
  * Family Chat 크기 (Kids / Original / High-end 공통).
  * 색·테두리·그라데이션은 위 기본 규칙 유지.
+ * Original은 위 default 패딩 규칙이 padding-top 1.15rem을 덮어씀.
  */
 .chat-widget-section.chat-widget-section {
   padding-top: 1.15rem;

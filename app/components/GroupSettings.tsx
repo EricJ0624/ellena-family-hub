@@ -356,40 +356,40 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6">
+    <div className="w-full min-w-0 max-w-full overflow-x-hidden">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Settings className="w-6 h-6 text-purple-600" />
+      <div className="mb-4 flex min-w-0 items-center justify-between gap-2 sm:mb-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="shrink-0 rounded-lg bg-purple-100 p-2">
+            <Settings className="h-6 w-6 text-purple-600" />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">{gst('group_settings_title')}</h2>
-            <p className="text-sm text-gray-500">
+          <div className="min-w-0">
+            <h2 className="truncate text-xl font-bold text-gray-900 sm:text-2xl">{gst('group_settings_title')}</h2>
+            <p className="truncate text-sm text-gray-500">
               {getGroupSelectorLabel(currentGroup, ctApp('app_title'))}
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="rounded-lg p-2 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+          className="shrink-0 rounded-lg p-2 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           aria-label={ct('close')}
         >
-          <X className="w-5 h-5 text-gray-500" />
+          <X className="h-5 w-5 text-gray-500" />
         </button>
       </div>
 
-      <div className="space-y-6">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+      <div className="min-w-0 space-y-6">
+        <div className="min-w-0 overflow-x-hidden">
+          <table className="w-full table-fixed border-collapse">
             <tbody>
               <tr className="border-b border-slate-200">
                 <th
-                  className="w-40 bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
+                  className="w-[6.5rem] bg-slate-50 p-2 text-left text-sm font-semibold text-slate-600 sm:w-36 sm:p-3"
                 >
                   {gst('group_name')}
                 </th>
-                <td className="p-3">
+                <td className="min-w-0 p-2 sm:p-3">
                   <input
                     type="text"
                     value={groupName}
@@ -398,7 +398,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                       setError(null);
                     }}
                     placeholder={gst('group_name_placeholder')}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
+                    className="w-full max-w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                     disabled={saving}
                   />
                   <p className="mt-1.5 text-xs text-slate-500">
@@ -408,28 +408,28 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
               </tr>
               <tr className="border-b border-slate-200">
                 <th
-                  className="w-40 bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
+                  className="w-[6.5rem] bg-slate-50 p-2 text-left text-sm font-semibold text-slate-600 sm:w-36 sm:p-3"
                 >
                   {gst('dashboard_theme_label')}
                 </th>
-                <td className="p-3">
-                  <div className="space-y-3">
+                <td className="min-w-0 p-2 sm:p-3">
+                  <div className="min-w-0 space-y-3">
                     <select
                       value={uiTheme}
                       onChange={(e) => setUiTheme(e.target.value as UiTheme)}
                       disabled={saving}
-                      className="min-w-48 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
+                      className="w-full max-w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 sm:max-w-xs"
                     >
                       <option value="default">{gst('theme_default_label')}</option>
                       <option value="kids_friendly">{gst('theme_kids_friendly_label')}</option>
                       <option value="highend_glass">{gst('theme_highend_glass_label')}</option>
                     </select>
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
                       <button
                         type="button"
                         onClick={() => setUiTheme('default')}
                         disabled={saving}
-                        className={`rounded-xl border p-3 text-left transition-colors ${
+                        className={`min-w-0 rounded-xl border p-3 text-left transition-colors ${
                           uiTheme === 'default'
                             ? 'border-emerald-400 bg-emerald-50'
                             : 'border-slate-200 bg-white hover:bg-slate-50'
@@ -448,7 +448,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                         type="button"
                         onClick={() => setUiTheme('kids_friendly')}
                         disabled={saving}
-                        className={`rounded-xl border p-3 text-left transition-colors ${
+                        className={`min-w-0 rounded-xl border p-3 text-left transition-colors ${
                           uiTheme === 'kids_friendly'
                             ? 'border-amber-400 bg-amber-50'
                             : 'border-slate-200 bg-white hover:bg-slate-50'
@@ -467,7 +467,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                         type="button"
                         onClick={() => setUiTheme('highend_glass')}
                         disabled={saving}
-                        className={`rounded-xl border p-3 text-left transition-colors ${
+                        className={`min-w-0 rounded-xl border p-3 text-left transition-colors ${
                           uiTheme === 'highend_glass'
                             ? 'border-purple-400 bg-purple-50'
                             : 'border-slate-200 bg-white hover:bg-slate-50'
@@ -489,14 +489,14 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                   </div>
                 </td>
               </tr>
-              <tr>
+              <tr className="border-b border-slate-200">
                 <th
-                  className="bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
+                  className="w-[6.5rem] bg-slate-50 p-2 text-left text-sm font-semibold text-slate-600 align-top sm:w-36 sm:p-3"
                 >
                   {gst('invite_code')}
                 </th>
-                <td className="p-3">
-                  <div className="flex flex-col gap-4">
+                <td className="min-w-0 p-2 sm:p-3">
+                  <div className="flex min-w-0 flex-col gap-4">
                     {/* 복사 버튼 + 안내 (다른 버튼들과 왼쪽 정렬) */}
                     <div className="flex flex-col gap-1">
                       <button
@@ -526,7 +526,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                         type="text"
                         value={inviteCode}
                         readOnly
-                        className="max-w-full min-w-[220px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-center font-mono text-base tracking-[0.12em]"
+                        className="w-full max-w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-center font-mono text-base tracking-[0.12em] sm:max-w-xs"
                       />
                     </div>
                     {/* 초대 링크 복사 + 안내 */}
@@ -576,13 +576,13 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
               </tr>
               <tr>
                 <th
-                  className="bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600 align-top"
+                  className="w-[6.5rem] bg-slate-50 p-2 text-left text-sm font-semibold text-slate-600 align-top sm:w-36 sm:p-3"
                 >
                   {gst('email_invite_label')}
                 </th>
-                <td className="p-3">
-                  <div className="flex flex-col gap-2 max-w-md">
-                    <div className="flex flex-wrap items-stretch gap-2">
+                <td className="min-w-0 p-2 sm:p-3">
+                  <div className="flex max-w-full min-w-0 flex-col gap-2 sm:max-w-md">
+                    <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row">
                       <input
                         type="email"
                         value={inviteEmail}
@@ -592,14 +592,14 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                         }}
                         placeholder={gst('email_invite_placeholder')}
                         disabled={inviting}
-                        className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
+                        className="min-w-0 w-full flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                         autoComplete="email"
                       />
                       <button
                         type="button"
                         onClick={() => void handleEmailInvite()}
                         disabled={inviting || !inviteEmail.trim()}
-                        className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-indigo-600 px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-indigo-600 px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {inviting ? (
                           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

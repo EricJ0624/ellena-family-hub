@@ -20,6 +20,7 @@ function shouldSkipPath(pathname: string | null): boolean {
   if (!pathname) return true;
   if (pathname === '/') return true;
   if (pathname.startsWith('/auth')) return true;
+  if (pathname.startsWith('/app-enroll')) return true;
   return false;
 }
 

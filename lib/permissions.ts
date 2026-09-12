@@ -10,32 +10,6 @@ import { isValidUUID } from './validation';
 import { formatUnknownError, isAbortLikeError } from './supabase-error';
 import type { MembershipRole } from '@/types/db';
 
-async function hasActiveDashboardAccessRequest(
-  userId: string,
-  groupId: string
-): Promise<boolean> {
-  const supabase = getSupabaseServerClient();
-  const nowIso = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from('dashboard_access_requests')
-    .select('id')
-    .eq('group_id', groupId)
-    .eq('requested_by', userId)
-    .eq('status', 'approved')
-    .is('revoked_at', null)
-    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error('대시보드 접근 승인 상태 확인 실패:', error);
-    return false;
-  }
-
-  return Boolean(data);
-}
-
 /**
  * 권한 검증 결과 타입
  */
@@ -151,17 +125,15 @@ export async function checkPermission(
       // 멤버가 아니더라도 소유자인지 확인
       const isOwner = group.owner_id === userId;
       if (!isOwner) {
-        // 시스템 관리자 + 승인된 접근 요청이 있는 비멤버는 해당 그룹에서 ADMIN으로 동작
+        // 시스템 관리자: /admin 콘솔 등에서 그룹 관리 가능.
+        // 대시보드 그룹 목록/라우팅은 GroupContext·bootstrap의 앱·멤버십 필터로 계속 격리된다.
         const isAdmin = await isSystemAdmin(userId);
         if (isAdmin) {
-          const hasApprovedAccess = await hasActiveDashboardAccessRequest(userId, groupId);
-          if (hasApprovedAccess) {
-            return {
-              success: true,
-              role: 'ADMIN',
-              isOwner: false,
-            };
-          }
+          return {
+            success: true,
+            role: 'ADMIN',
+            isOwner: false,
+          };
         }
 
         return {

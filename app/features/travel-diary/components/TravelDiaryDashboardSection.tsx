@@ -285,39 +285,16 @@ export function TravelDiaryDashboardSection({
     );
   }
 
-  if (isGlassTheme) {
-    return (
-      <section className="content-section">
-        <div className="section-header">
-          <h3 className="section-title m-0 inline-flex min-w-0 items-center gap-1.5">
-            <span aria-hidden>📔</span>
-            {t.section_title}
-          </h3>
-        </div>
-        <div className="section-body">{bodyContent}</div>
-      </section>
-    );
-  }
-
+  /* Original + High-end Glass: 표준 content-section (Family Friendly 스크랩북/파스텔 배경 미사용) */
   return (
-    <section className="content-section travel-diary-widget relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-gradient-to-br from-[#d4c8fc] via-[#f3d0fe] to-[#fecdd3]"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute bottom-2 right-3 z-[1] select-none text-[2.2rem] leading-none opacity-25"
-      >
-        🌴
-      </span>
-      <div className="section-header relative z-[2]">
-        <h3 className="section-title m-0 inline-flex items-center gap-1.5">
+    <section className="content-section">
+      <div className="section-header">
+        <h3 className="section-title m-0 inline-flex min-w-0 items-center gap-1.5">
           <span aria-hidden>📔</span>
           {t.section_title}
         </h3>
       </div>
-      <div className="section-body relative z-[2]">{bodyContent}</div>
+      <div className="section-body">{bodyContent}</div>
     </section>
   );
 }

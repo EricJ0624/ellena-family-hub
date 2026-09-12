@@ -608,7 +608,7 @@ function GamesPreview() {
   );
 }
 
-// ── Travel diary (kids=스크랩북 / 그 외=기본 그라데이션) ───────
+// ── Travel diary (kids=스크랩북 / Original·Glass=표준 content-section) ───────
 function TravelDiaryPreview() {
   const { tdy, wp } = useWidgetPreviewCopy();
   const { currentGroup } = useGroup();
@@ -639,26 +639,17 @@ function TravelDiaryPreview() {
     );
   }
 
+  /* Original: Family Friendly 스크랩북/파스텔 배경이 아닌 표준 카드 */
   if (!isKidsTheme) {
     return (
-      <section className="content-section travel-diary-widget relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-gradient-to-br from-[#d4c8fc] via-[#f3d0fe] to-[#fecdd3]"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-2 right-3 z-[1] select-none text-[2rem] leading-none opacity-25"
-        >
-          🌴
-        </span>
-        <div className="section-header relative z-[2]">
+      <section className="content-section h-full">
+        <div className="section-header">
           <h3 className="section-title m-0 inline-flex items-center gap-1.5">
             <span aria-hidden>📔</span>
             {tdy('section_title')}
           </h3>
         </div>
-        <div className="section-body relative z-[2]">
+        <div className="section-body">
           <ul className="m-0 list-none space-y-2 p-0">
             <li className="rounded-xl bg-transparent px-0 py-1.5">
               <div className="text-[13px] font-semibold text-slate-800">

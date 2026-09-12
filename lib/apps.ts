@@ -16,6 +16,34 @@ export const APP_IDS = {
 
 export type AppId = (typeof APP_IDS)[keyof typeof APP_IDS];
 
+export const ALL_APP_IDS: AppId[] = Object.values(APP_IDS);
+
+/** 시스템 관리자 콘솔 등에서 쓰는 짧은 앱 표시명 */
+export const APP_ID_LABELS: Record<AppId, string> = {
+  hearth_family: 'Family',
+  hearth_couple: 'Couple',
+  hearth_biker: 'Biker',
+  hearth_camper: 'Camper',
+};
+
+export function getAppIdLabel(appId: string | null | undefined): string {
+  if (appId && isAppId(appId)) return APP_ID_LABELS[appId];
+  return appId || '-';
+}
+
+/** 관리자 콘솔 앱 뱃지 Tailwind 클래스 */
+export const APP_ID_BADGE_CLASS: Record<AppId, string> = {
+  hearth_family: 'bg-sky-100 text-sky-800',
+  hearth_couple: 'bg-rose-100 text-rose-800',
+  hearth_biker: 'bg-amber-100 text-amber-900',
+  hearth_camper: 'bg-emerald-100 text-emerald-800',
+};
+
+export function getAppIdBadgeClass(appId: string | null | undefined): string {
+  if (appId && isAppId(appId)) return APP_ID_BADGE_CLASS[appId];
+  return 'bg-slate-100 text-slate-700';
+}
+
 const APP_ID_SET = new Set<string>(Object.values(APP_IDS));
 
 export function isAppId(value: unknown): value is AppId {

@@ -97,6 +97,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'profile_update_failed' }, { status: 500 });
     }
 
+    try {
+      const { enrollUserInAppAsService } = await import('@/lib/app-enrollment');
+      await enrollUserInAppAsService({ userId: user.id, source: 'signup' });
+    } catch (enrollErr) {
+      console.error('complete-oauth-signup: enrollment failed', enrollErr);
+      return NextResponse.json(
+        {
+          error:
+            enrollErr instanceof Error && enrollErr.message.includes('signups not allowed')
+              ? 'signups_not_allowed'
+              : 'enrollment_failed',
+        },
+        { status: 403 },
+      );
+    }
+
     return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('complete-oauth-signup error:', error);

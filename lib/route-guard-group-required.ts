@@ -7,6 +7,7 @@ import {
   fetchAuthBootstrapWithCache,
   resolveAuthBootstrapSuspendRedirect,
 } from '@/lib/auth-bootstrap';
+import { APP_ENROLL_PATH, needsAppEnrollment } from '@/lib/app-enrollment-routing';
 import {
   parseOpenGroupParam,
   readStoredGroupId,
@@ -138,6 +139,9 @@ export async function runGroupRequiredRouteGuard(options?: {
     : null;
 
   if (bootstrap) {
+    if (needsAppEnrollment(bootstrap)) {
+      return { ok: false, redirectTo: APP_ENROLL_PATH };
+    }
     let hasGroups = bootstrap.hasGroups;
     const suspendRedirect = resolveAuthBootstrapSuspendRedirect(bootstrap, { openGroup, savedGroupId });
     if (suspendRedirect) {
@@ -177,9 +181,21 @@ export async function runGroupRequiredRouteGuard(options?: {
     user_id_param: serverUser.id,
   });
 
+  const { data: enrollmentRow } = await supabase
+    .from('user_app_enrollments')
+    .select('user_id')
+    .eq('user_id', serverUser.id)
+    .eq('app_id', CURRENT_APP_ID)
+    .maybeSingle();
+
   let { hasGroups } = await resolveUserHasGroups(supabase, serverUser.id, {
     flakyRetry: true,
   });
+
+  // bootstrap 실패 폴백: enrollment 없으면 /app-enroll (무그룹 시스템 관리자 제외)
+  if (!enrollmentRow?.user_id && !(isAdmin && !hasGroups)) {
+    return { ok: false, redirectTo: APP_ENROLL_PATH };
+  }
 
   const access = await loadUserGroupAccess(supabase, serverUser.id);
   const suspendRedirect = resolveSuspendRedirect(access, { openGroup, savedGroupId });

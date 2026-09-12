@@ -53,6 +53,11 @@ function readBootstrapFromStorage(
       storage.removeItem(cacheKey(userId));
       return null;
     }
+    // hasAppEnrollment 없는 구버전 캐시 폐기
+    if (typeof parsed.payload?.hasAppEnrollment !== 'boolean') {
+      storage.removeItem(cacheKey(userId));
+      return null;
+    }
     return parsed.payload;
   } catch {
     return null;

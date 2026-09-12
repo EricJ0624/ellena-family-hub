@@ -467,6 +467,54 @@ export interface Database {
           }
         ]
       }
+      app_signup_settings: {
+        Row: {
+          app_id: string
+          signup_enabled: boolean
+          signup_max_users: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          app_id: string
+          signup_enabled?: boolean
+          signup_max_users?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          app_id?: string
+          signup_enabled?: boolean
+          signup_max_users?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      user_app_enrollments: {
+        Row: {
+          user_id: string
+          app_id: string
+          consented_at: string
+          source: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          app_id: string
+          consented_at?: string
+          source?: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          app_id?: string
+          consented_at?: string
+          source?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       admin_stepup_attempts: {
         Row: {
           user_id: string
@@ -1274,7 +1322,17 @@ export interface Database {
         Returns: boolean
       }
       get_signup_availability: {
-        Args: Record<PropertyKey, never>
+        Args: {
+          p_app_id: string
+        }
+        Returns: Json
+      }
+      enroll_user_in_app: {
+        Args: {
+          p_app_id: string
+          p_source?: string
+          p_user_id?: string
+        }
         Returns: Json
       }
       is_group_suspended: {

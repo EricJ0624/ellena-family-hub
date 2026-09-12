@@ -28,6 +28,8 @@ export type AuthBootstrapPayload = {
   /** 이 bootstrap이 계산된 앱 — 클라에서 CURRENT_APP_ID와 불일치 시 폐기 */
   appId: string;
   isSystemAdmin: boolean;
+  /** 현재 앱 가입 동의(enrollment) 여부 */
+  hasAppEnrollment: boolean;
   hasGroups: boolean;
   groupIds: string[];
   accessibleGroupIds: string[];
@@ -81,12 +83,14 @@ function emptyPayload(
   user: BootstrapUserInput,
   adminFlag: boolean,
   lookupFailed: boolean,
+  hasAppEnrollment = false,
 ): AuthBootstrapPayload {
   const userMeta = toUserMeta(user);
   return {
     user: userMeta,
     appId: CURRENT_APP_ID,
     isSystemAdmin: adminFlag,
+    hasAppEnrollment,
     hasGroups: false,
     groupIds: [],
     accessibleGroupIds: [],
@@ -167,7 +171,7 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
   const userId = user.id;
   const userMeta = toUserMeta(user);
 
-  const [adminFlag, membershipsRes, ownedRes] = await Promise.all([
+  const [adminFlag, membershipsRes, ownedRes, enrollmentRes] = await Promise.all([
     isSystemAdmin(userId),
     // groups!inner + groups.app_id: 멤버십 app_id 누락/불일치여도 타 앱 그룹 차단
     supabase
@@ -178,11 +182,22 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
       .eq('user_id', userId)
       .eq('groups.app_id', CURRENT_APP_ID),
     supabase.from('groups').select('*').eq('owner_id', userId).eq('app_id', CURRENT_APP_ID),
+    supabase
+      .from('user_app_enrollments')
+      .select('user_id')
+      .eq('user_id', userId)
+      .eq('app_id', CURRENT_APP_ID)
+      .maybeSingle(),
   ]);
+
+  const hasAppEnrollment = Boolean(enrollmentRes.data?.user_id) && !enrollmentRes.error;
+  if (enrollmentRes.error) {
+    console.error('auth bootstrap enrollment 조회 오류:', enrollmentRes.error);
+  }
 
   if (membershipsRes.error || ownedRes.error) {
     console.error('auth bootstrap 그룹 조회 오류:', membershipsRes.error || ownedRes.error);
-    return emptyPayload(user, adminFlag, true);
+    return emptyPayload(user, adminFlag, true, hasAppEnrollment);
   }
 
   const { summaries, membershipRoles, ownedGroupIds } = buildGroupSummaries(
@@ -194,7 +209,7 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
 
   if (groupIds.length === 0) {
     return {
-      ...emptyPayload(user, adminFlag, false),
+      ...emptyPayload(user, adminFlag, false, hasAppEnrollment),
       user: userMeta,
     };
   }
@@ -209,7 +224,7 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
   if (groupRowsError) {
     console.error('auth bootstrap 그룹 상세 조회 오류:', groupRowsError);
     return {
-      ...emptyPayload(user, adminFlag, true),
+      ...emptyPayload(user, adminFlag, true, hasAppEnrollment),
       user: userMeta,
       hasGroups: true,
       groupIds,
@@ -227,6 +242,7 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
   const base = {
     user: userMeta,
     appId: CURRENT_APP_ID,
+    hasAppEnrollment,
     hasGroups: true,
     groupIds,
     groups: summaries,

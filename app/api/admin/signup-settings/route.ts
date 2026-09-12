@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { getAuditRequestMeta, writeAdminAuditLog } from '@/lib/admin-audit';
-import { loadSignupAvailability } from '@/lib/signup-settings-query';
+import {
+  loadAllSignupAvailabilities,
+  loadSignupAvailability,
+} from '@/lib/signup-settings-query';
 import { parseSignupMaxUsers } from '@/lib/signup-settings';
+import { ALL_APP_IDS, isAppId, type AppId } from '@/lib/apps';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +18,11 @@ export async function GET(request: NextRequest) {
     const adminCheck = await requireSystemAdmin(authResult.user.id);
     if (adminCheck instanceof NextResponse) return adminCheck;
 
-    const data = await loadSignupAvailability();
-    return NextResponse.json({ success: true, data });
+    const list = await loadAllSignupAvailabilities(ALL_APP_IDS);
+    return NextResponse.json({
+      success: true,
+      data: list,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '가입 설정을 불러오지 못했습니다.';
     console.error('가입 설정 조회 오류:', error);
@@ -32,12 +39,17 @@ export async function PATCH(request: NextRequest) {
     if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json().catch(() => ({}));
+    if (!isAppId(body.appId)) {
+      return NextResponse.json({ error: '유효한 appId가 필요합니다.' }, { status: 400 });
+    }
+    const appId = body.appId as AppId;
+
     if (typeof body.signupEnabled !== 'boolean') {
       return NextResponse.json({ error: '가입 허용 여부가 올바르지 않습니다.' }, { status: 400 });
     }
 
     const supabase = getSupabaseServerClient();
-    const before = await loadSignupAvailability();
+    const before = await loadSignupAvailability(appId);
 
     let nextMax = before.signupMaxUsers;
     if (Object.prototype.hasOwnProperty.call(body, 'signupMaxUsers')) {
@@ -52,33 +64,34 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { data: saved, error } = await supabase
-      .from('system_settings')
+      .from('app_signup_settings')
       .upsert(
         {
-          id: 1,
+          app_id: appId,
           signup_enabled: body.signupEnabled,
           signup_max_users: nextMax,
           updated_at: new Date().toISOString(),
           updated_by: user.id,
         },
-        { onConflict: 'id' },
+        { onConflict: 'app_id' },
       )
-      .select('id')
+      .select('app_id')
       .maybeSingle();
 
     if (error) throw error;
-    if (!saved?.id) {
+    if (!saved?.app_id) {
       throw new Error('가입 설정을 저장하지 못했습니다.');
     }
 
-    const data = await loadSignupAvailability();
+    const data = await loadSignupAvailability(appId);
     const meta = getAuditRequestMeta(request);
     await writeAdminAuditLog(supabase, {
       adminId: user.id,
       action: 'UPDATE',
-      resourceType: 'system_settings',
-      resourceId: 'signup',
+      resourceType: 'app_signup_settings',
+      resourceId: appId,
       details: {
+        app_id: appId,
         before: {
           signupEnabled: before.signupEnabled,
           signupMaxUsers: before.signupMaxUsers,

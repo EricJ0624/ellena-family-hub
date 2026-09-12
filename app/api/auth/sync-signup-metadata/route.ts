@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { isValidLang } from '@/lib/language-fonts';
 import { isValidCountryCode } from '@/lib/countries';
+import { enrollUserInAppAsService } from '@/lib/app-enrollment';
 
 export const dynamic = 'force-dynamic';
 
-/** signUp 직후·미인증 재가입 시 metadata·profiles 동기화 (service role) */
+/** signUp 직후·미인증 재가입 시 metadata·profiles 동기화 (service role).
+ * enrollment는 이메일 확인된 계정에만 (미확인 한도 선점 방지).
+ */
 export async function POST(request: NextRequest) {
   let body: {
     user_id?: unknown;
@@ -52,13 +55,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'email_mismatch' }, { status: 403 });
     }
 
-    if (user.email_confirmed_at) {
-      return NextResponse.json(
-        { ok: true, skipped: 'already_confirmed' },
-        { headers: { 'Cache-Control': 'no-store' } },
-      );
-    }
-
     const priorMeta =
       user.user_metadata && typeof user.user_metadata === 'object' ? user.user_metadata : {};
 
@@ -93,7 +89,27 @@ export async function POST(request: NextRequest) {
       console.warn('sync-signup-metadata: profiles upsert failed', profileErr);
     }
 
-    return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } });
+    // 미확인: enrollment 하지 않음 (한도 선점 방지). 확인 후 콜백/재동기화에서 처리.
+    if (!user.email_confirmed_at) {
+      return NextResponse.json({ ok: true, enrolled: false }, { headers: { 'Cache-Control': 'no-store' } });
+    }
+
+    try {
+      await enrollUserInAppAsService({ userId, source: 'signup' });
+    } catch (enrollErr) {
+      console.error('sync-signup-metadata: enrollment failed', enrollErr);
+      return NextResponse.json(
+        {
+          error:
+            enrollErr instanceof Error && enrollErr.message.includes('signups not allowed')
+              ? 'signups_not_allowed'
+              : 'enrollment_failed',
+        },
+        { status: 403 },
+      );
+    }
+
+    return NextResponse.json({ ok: true, enrolled: true }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('sync-signup-metadata error:', error);
     return NextResponse.json({ error: 'server_error' }, { status: 500 });

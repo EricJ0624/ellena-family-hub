@@ -124,6 +124,13 @@ export async function requireGroupAdmin(
   | { role: MembershipRole; isOwner: boolean }
   | NextResponse
 > {
+  // 시스템 관리자: /admin 콘솔에서 전 앱 그룹 관리 허용.
+  // 대시보드·일반 멤버 API(requireGroupMember)의 앱 격리는 유지한다.
+  const sysAdmin = await isSystemAdmin(userId);
+  if (sysAdmin) {
+    return { role: 'ADMIN', isOwner: false };
+  }
+
   const appCheck = await assertGroupBelongsToCurrentApp(groupId);
   if (appCheck) return appCheck;
 
@@ -136,11 +143,8 @@ export async function requireGroupAdmin(
     );
   }
 
-  const sysAdmin = await isSystemAdmin(userId);
-  if (!sysAdmin) {
-    const blocked = await rejectIfGroupSuspended(userId, groupId);
-    if (blocked) return blocked;
-  }
+  const blocked = await rejectIfGroupSuspended(userId, groupId);
+  if (blocked) return blocked;
   
   return {
     role: permissionResult.role,

@@ -26,9 +26,11 @@ interface MemberInfo {
 
 interface MemberManagementProps {
   onClose?: () => void;
+  /** 시스템 관리자 /admin 임베드 등: 그룹 멤버가 아니어도 관리 UI 허용 */
+  forceAdminAccess?: boolean;
 }
 
-const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
+const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdminAccess = false }) => {
   const { lang } = useLanguage();
   const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
     getMemberManagementTranslation(lang, key);
@@ -79,9 +81,8 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
     checkSystemAdmin();
   }, []);
 
-  // ✅ SECURITY: 권한 계층 로직 - 그룹 내 실제 역할에만 의존
-  // 시스템 관리자 여부와 무관하게 해당 그룹에서 소유자 또는 ADMIN 역할이어야 함
-  const isAdmin = userRole === 'ADMIN' || isOwner;
+  // 그룹 ADMIN/소유자, 또는 시스템 관리자 콘솔 임베드(forceAdminAccess)
+  const isAdmin = forceAdminAccess || userRole === 'ADMIN' || isOwner;
 
   // 멤버 목록 로드 (그룹 소유자 보정: 소유자는 항상 목록에 포함·ADMIN으로 표시)
   const loadMembers = useCallback(async () => {

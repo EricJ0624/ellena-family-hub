@@ -3,6 +3,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
+import { isAppId } from '@/lib/apps';
+
+/** null=전역, AppId=해당 앱. invalid면 NextResponse */
+function parseAnnouncementAppId(
+  value: unknown
+): { ok: true; appId: string | null } | { ok: false; response: NextResponse } {
+  if (value === null || value === '' || value === 'all' || value === 'global') {
+    return { ok: true, appId: null };
+  }
+  if (typeof value === 'string' && isAppId(value)) {
+    return { ok: true, appId: value };
+  }
+  return {
+    ok: false,
+    response: NextResponse.json(
+      { error: '유효하지 않은 앱 대상입니다. (전역 또는 hearth_*)' },
+      { status: 400 }
+    ),
+  };
+}
 
 /**
  * 공지사항 목록 조회 (시스템 관리자용)
@@ -59,7 +79,7 @@ export async function POST(request: NextRequest) {
     if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
-    const { title, content, title_i18n, content_i18n, is_active, target } = body;
+    const { title, content, title_i18n, content_i18n, is_active, target, app_id: rawAppId } = body;
 
     const i18n = title_i18n && content_i18n && typeof title_i18n === 'object' && typeof content_i18n === 'object';
     const legacy = title != null && content != null;
@@ -87,12 +107,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const appParsed = parseAnnouncementAppId(rawAppId === undefined ? null : rawAppId);
+    if (!appParsed.ok) return appParsed.response;
+
     const supabase = getSupabaseServerClient();
 
     let insertPayload: Record<string, unknown> = {
       created_by: user.id,
       is_active: is_active !== false,
       target: target || 'ADMIN_ONLY',
+      app_id: appParsed.appId,
     };
 
     if (i18n) {
@@ -161,7 +185,7 @@ export async function PUT(request: NextRequest) {
     if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
-    const { id, title, content, title_i18n, content_i18n, is_active, target } = body;
+    const { id, title, content, title_i18n, content_i18n, is_active, target, app_id: rawAppId } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -204,6 +228,12 @@ export async function PUT(request: NextRequest) {
 
     if (target) {
       updateData.target = target;
+    }
+
+    if (rawAppId !== undefined) {
+      const appParsed = parseAnnouncementAppId(rawAppId);
+      if (!appParsed.ok) return appParsed.response;
+      updateData.app_id = appParsed.appId;
     }
 
     if (i18n) {

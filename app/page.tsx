@@ -11,16 +11,9 @@ import { getLoginTranslation, type LoginTranslations } from '@/lib/translations/
 import { getCommonTranslation } from '@/lib/translations/common';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
 import { cn } from '@/lib/ui/cn';
-import {
-  buildOnboardingPath,
-  getSessionStoredInviteCode,
-  isValidInviteCodeFormat,
-  resolveInviteFromUrlOrSession,
-  setSessionStoredInviteCode,
-} from '@/lib/family-auth-routing';
 import { fetchAuthBootstrapWithCache, getCachedAuthBootstrap, loginViaServerApi, setCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap';
-import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
+import { resolvePostAuthPath } from '@/lib/app-enrollment-routing';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
 import type { SignupBlockReason } from '@/lib/signup-settings';
@@ -28,6 +21,13 @@ import {
   clearPendingGoogleSignupMeta,
   setPendingGoogleSignupMeta,
 } from '@/lib/google-oauth-signup';
+import {
+  buildOnboardingPath,
+  getSessionStoredInviteCode,
+  isValidInviteCodeFormat,
+  resolveInviteFromUrlOrSession,
+  setSessionStoredInviteCode,
+} from '@/lib/family-auth-routing';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
@@ -177,33 +177,11 @@ export default function LoginPage() {
     let cancelled = false;
 
     const routeFromBootstrap = (bootstrap: AuthBootstrapPayload | null | undefined, invite: string | null) => {
-      const onboardingPath = buildOnboardingPath(invite);
-      if (invite) {
-        router.push(onboardingPath);
+      if (!bootstrap) {
+        router.push(buildOnboardingPath(invite));
         return;
       }
-      if (bootstrap?.lookupFailed) {
-        router.push(onboardingPath);
-        return;
-      }
-      if (
-        bootstrap &&
-        bootstrap.groupIds.length > 0 &&
-        bootstrap.accessibleGroupIds.length === 0
-      ) {
-        router.push('/suspended');
-        return;
-      }
-      if (bootstrap?.isSystemAdmin && !bootstrap.hasGroups) {
-        router.push('/admin');
-        return;
-      }
-      // 접근 가능 그룹 1개만 대시보드 직행. 2개 이상은 항상 그룹 선택(온보딩).
-      if (bootstrap?.accessibleGroupIds?.length === 1) {
-        router.push(dashboardHrefWithOpenGroup(bootstrap.accessibleGroupIds[0]));
-        return;
-      }
-      router.push(onboardingPath);
+      router.push(resolvePostAuthPath(bootstrap, invite));
     };
 
     const checkExistingSession = async () => {
@@ -280,7 +258,7 @@ export default function LoginPage() {
     }
   }, [mode, isMounted]);
 
-  /** 로그인/서버가입 후 이메일이 이미 확인된 사용자만 — 온보딩·관리자 라우팅 */
+  /** 로그인/서버가입 후 이메일이 이미 확인된 사용자만 — 온보딩·관리자·앱동의 라우팅 */
   const routeAfterLoginBootstrap = (
     bootstrap: AuthBootstrapPayload | null | undefined,
     emailForStorage: string,
@@ -292,13 +270,11 @@ export default function LoginPage() {
 
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const invite = resolveInviteFromUrlOrSession(params);
-    const onboardingPath = buildOnboardingPath(invite);
-
-    if (bootstrap?.isSystemAdmin) {
-      router.push(bootstrap.hasGroups ? onboardingPath : '/admin');
+    if (!bootstrap) {
+      router.push(buildOnboardingPath(invite));
       return;
     }
-    router.push(onboardingPath);
+    router.push(resolvePostAuthPath(bootstrap, invite));
   };
 
   const completeAuthRoutingAfterConfirmedUser = async (
@@ -649,6 +625,20 @@ export default function LoginPage() {
           const params =
             typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
           const invite = resolveInviteFromUrlOrSession(params);
+          const {
+            data: { session: freshSession },
+          } = await supabase.auth.getSession();
+          if (freshSession?.access_token) {
+            const { fetchAuthBootstrap, invalidateCachedAuthBootstrap, setCachedAuthBootstrap } =
+              await import('@/lib/auth-bootstrap');
+            invalidateCachedAuthBootstrap(freshSession.user.id);
+            const bootstrap = await fetchAuthBootstrap(freshSession.access_token);
+            if (bootstrap) {
+              setCachedAuthBootstrap(freshSession.user.id, bootstrap);
+              router.push(resolvePostAuthPath(bootstrap, invite));
+              return;
+            }
+          }
           router.push(buildOnboardingPath(invite));
         } else {
           setSuccessMsg(t('success_signup_done'));

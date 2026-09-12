@@ -25,6 +25,7 @@ import { messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend
 import { messageFromGroupCreateRpcError } from '@/lib/group-create-rpc';
 import type { BootstrapGroupSummary } from '@/lib/auth-bootstrap-server';
 import { refreshAuthBootstrapCache, invalidateCachedAuthBootstrap } from '@/lib/auth-bootstrap';
+import { APP_ENROLL_PATH, needsAppEnrollment } from '@/lib/app-enrollment-routing';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 import { CURRENT_APP_ID } from '@/lib/apps';
 // 동적 렌더링 강제
@@ -209,6 +210,11 @@ export default function OnboardingPage() {
         // 서버 bootstrap 1회 — RPC·memberships·정지 조회를 PostgREST 큐 밖으로
         const bootstrap = bootstrapResult;
 
+        if (bootstrap && needsAppEnrollment(bootstrap)) {
+          router.replace(APP_ENROLL_PATH);
+          return;
+        }
+
         let isAdmin = false;
         let allGroups: UserGroup[] = [];
         let accessLookupFailed = true;
@@ -240,6 +246,13 @@ export default function OnboardingPage() {
           });
           isAdmin = Boolean(adminData);
 
+          const { data: enrollmentRow } = await supabase
+            .from('user_app_enrollments')
+            .select('user_id')
+            .eq('user_id', user.id)
+            .eq('app_id', CURRENT_APP_ID)
+            .maybeSingle();
+
           const { data: memberships } = await supabase
             .from('memberships')
             .select(
@@ -253,6 +266,14 @@ export default function OnboardingPage() {
             .select('id, name, invite_code, owner_id, display_name_pending')
             .eq('owner_id', user.id)
             .eq('app_id', CURRENT_APP_ID);
+
+          const hasOwnedOrMember =
+            Boolean(ownedGroups && ownedGroups.length > 0) ||
+            Boolean(memberships && memberships.length > 0);
+          if (!enrollmentRow?.user_id && !(isAdmin && !hasOwnedOrMember)) {
+            router.replace(APP_ENROLL_PATH);
+            return;
+          }
 
           const groupIds = new Set<string>();
           allGroups = [];

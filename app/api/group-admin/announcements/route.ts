@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupAdmin, requireGroupMember } from '@/lib/api-guards';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 /**
  * 공지사항 목록 조회 (그룹 관리자용 - 읽음 상태 포함)
+ * 전역(app_id null) + 해당 그룹 앱 공지만
  */
 export async function GET(request: NextRequest) {
   try {
@@ -26,11 +28,19 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
+    const { data: groupRow } = await supabase
+      .from('groups')
+      .select('app_id')
+      .eq('id', groupId)
+      .maybeSingle();
+    const scopeAppId = groupRow?.app_id || CURRENT_APP_ID;
+
     // 공지사항 목록 조회 (활성 공지만, ADMIN_ONLY와 ALL_MEMBERS 모두 포함)
     const { data: announcements, error } = await supabase
       .from('announcements')
       .select('*')
       .eq('is_active', true)
+      .or(`app_id.is.null,app_id.eq.${scopeAppId}`)
       .order('created_at', { ascending: false });
 
     if (error) {

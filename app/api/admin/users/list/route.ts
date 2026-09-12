@@ -91,13 +91,13 @@ export async function GET(request: NextRequest) {
     // 멤버십 일괄 조회 (memberships PK: user_id+group_id, 가입 시각 컬럼: joined_at)
     const { data: allMemberships } = await supabase
       .from('memberships')
-      .select('user_id, group_id, joined_at')
+      .select('user_id, group_id, joined_at, app_id')
       .in('user_id', userIds);
 
-    // 소유 그룹 일괄 조회 (id, owner_id, created_at)
+    // 소유 그룹 일괄 조회 (id, owner_id, created_at, app_id)
     const { data: allOwnedGroups } = await supabase
       .from('groups')
-      .select('id, owner_id, created_at')
+      .select('id, owner_id, created_at, app_id')
       .in('owner_id', userIds);
 
     // 유저별 가장 이른 그룹 소속 시각 맵 구성
@@ -116,15 +116,42 @@ export async function GET(request: NextRequest) {
       if (!cur || t < cur) earliestGroupAtByUser.set(g.owner_id, t);
     }
 
-    // 유저별 그룹 수 맵 구성 (그룹 ID 중복 제거)
+    // 멤버십 app_id 누락 대비: 그룹 메타로 앱 소속 보강
+    const membershipGroupIds = Array.from(
+      new Set((allMemberships ?? []).map((m) => m.group_id).filter(Boolean))
+    );
+    const ownedAppByGroupId = new Map<string, string>();
+    for (const g of allOwnedGroups ?? []) {
+      if (g.app_id) ownedAppByGroupId.set(g.id, g.app_id);
+    }
+    const missingGroupIds = membershipGroupIds.filter((id) => !ownedAppByGroupId.has(id));
+    if (missingGroupIds.length > 0) {
+      const { data: extraGroups } = await supabase
+        .from('groups')
+        .select('id, app_id')
+        .in('id', missingGroupIds);
+      for (const g of extraGroups ?? []) {
+        if (g.app_id) ownedAppByGroupId.set(g.id, g.app_id);
+      }
+    }
+
+    // 유저별 그룹 수·앱 소속 맵 구성 (그룹 ID / app_id 중복 제거)
     const groupIdsByUser = new Map<string, Set<string>>();
+    const appIdsByUser = new Map<string, Set<string>>();
+    const addUserApp = (userId: string, appId: string | null | undefined) => {
+      if (!appId) return;
+      if (!appIdsByUser.has(userId)) appIdsByUser.set(userId, new Set());
+      appIdsByUser.get(userId)!.add(appId);
+    };
     for (const m of allMemberships ?? []) {
       if (!groupIdsByUser.has(m.user_id)) groupIdsByUser.set(m.user_id, new Set());
       groupIdsByUser.get(m.user_id)!.add(m.group_id);
+      addUserApp(m.user_id, m.app_id || ownedAppByGroupId.get(m.group_id));
     }
     for (const g of allOwnedGroups ?? []) {
       if (!groupIdsByUser.has(g.owner_id)) groupIdsByUser.set(g.owner_id, new Set());
       groupIdsByUser.get(g.owner_id)!.add(g.id);
+      addUserApp(g.owner_id, g.app_id);
     }
 
     // 최근 N일 기준 시각
@@ -155,6 +182,8 @@ export async function GET(request: NextRequest) {
         ? authUser.last_sign_in_at >= recentCutoff
         : false;
 
+      const appIds = Array.from(appIdsByUser.get(authUser.id) ?? []).sort();
+
       return {
         id: authUser.id,
         email: authUser.email ?? profile?.email ?? null,
@@ -164,6 +193,7 @@ export async function GET(request: NextRequest) {
         created_at: authUser.created_at ?? new Date().toISOString(),
         last_sign_in_at: authUser.last_sign_in_at ?? null,
         groups_count: groupCount,
+        app_ids: appIds,
         is_active: !isBanned && !isDeleted,
         recent_30day_login: recentLogin,
         // 임시 베타 자격 시각 (순번 계산 후 제거)

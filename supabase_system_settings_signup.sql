@@ -1,3 +1,8 @@
+-- DEPRECATED: 전역 system_settings 가입 한도 원본.
+-- 앱별 설정은 supabase_app_signup_enrollment.sql 을 사용하세요.
+-- 이 파일을 다시 실행하면 get_signup_availability() 무인자·전역 한도 트리거가 되살아나
+-- 앱별 enrollment 정책과 충돌합니다. 운영 DB에는 재적용하지 마세요.
+
 -- 신규 계정 가입 on/off + 인원 한도
 -- 기본값: 가입 허용, 한도 없음
 -- 적용: 이 파일을 SQL Editor에서 실행하거나, 앱 배포와 함께 마이그레이션 적용

@@ -36,18 +36,18 @@ export async function GET(request: NextRequest) {
       new Set((tickets || []).map((ticket: any) => ticket.group_id).filter(Boolean))
     );
 
-    let groupMap = new Map<string, { id: string; name: string }>();
+    let groupMap = new Map<string, { id: string; name: string; app_id: string | null }>();
     if (groupIds.length > 0) {
       const { data: groups, error: groupsError } = await supabase
         .from('groups')
-        .select('id, name')
+        .select('id, name, app_id')
         .in('id', groupIds);
 
       if (groupsError) {
         console.warn('그룹 정보 조회 오류:', groupsError);
       } else {
         (groups || []).forEach((group: any) => {
-          groupMap.set(group.id, { id: group.id, name: group.name });
+          groupMap.set(group.id, { id: group.id, name: group.name, app_id: group.app_id ?? null });
         });
       }
     }
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
     const ticketsWithGroups = (tickets || []).map((ticket: any) => ({
       ...ticket,
       groups: ticket.group_id ? groupMap.get(ticket.group_id) || null : null,
+      app_id: ticket.group_id ? groupMap.get(ticket.group_id)?.app_id ?? null : null,
     }));
 
     return NextResponse.json({

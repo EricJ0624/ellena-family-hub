@@ -890,7 +890,7 @@ export function GroupAdminPanel({
       className={
         isEmbedded
           ? 'group-admin-page w-full min-w-0 max-w-full overflow-x-hidden bg-[var(--surface-base)]'
-          : 'group-admin-page min-h-screen w-full max-w-full overflow-x-hidden bg-[var(--surface-base)] p-5'
+          : 'group-admin-page min-h-screen w-full max-w-full overflow-x-hidden bg-[var(--surface-base)] px-3 py-4 sm:p-4'
       }
     >
       {/* ???�쎌???*/}
@@ -988,7 +988,7 @@ export function GroupAdminPanel({
             <Settings className="mr-2 inline h-[18px] w-[18px] align-middle" />
             {gat('tab_settings')}
           </button>
-          {isOwner && !!effectiveGroupId && (
+          {(isOwner || (isEmbedded && isAuthorized)) && !!effectiveGroupId && (
             <button
               type="button"
               onClick={() => setActiveTab('widgets')}
@@ -1052,7 +1052,7 @@ export function GroupAdminPanel({
       </div>
 
       {/* ??�쎌�??�썲?????�쎌?�占?*/}
-      <div className="group-admin-content glass-panel max-w-full min-w-0 overflow-x-hidden rounded-xl p-4 sm:p-6">
+      <div className="group-admin-content glass-panel max-w-full min-w-0 overflow-x-hidden rounded-xl p-3 sm:p-4">
         {error && (
           <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-red-800">
             <AlertCircle className="h-5 w-5 shrink-0" />
@@ -1172,7 +1172,10 @@ export function GroupAdminPanel({
             {/* 筌롢?�占???�승?????*/}
             {activeTab === 'members' && (
               <div>
-                <MemberManagement onClose={() => setShowMemberManagement(false)} />
+                <MemberManagement
+                  onClose={() => setShowMemberManagement(false)}
+                  forceAdminAccess={isEmbedded && isAuthorized}
+                />
               </div>
             )}
 
@@ -1187,9 +1190,12 @@ export function GroupAdminPanel({
             )}
 
 
-            {activeTab === 'widgets' && isOwner && (
+            {activeTab === 'widgets' && (isOwner || (isEmbedded && isAuthorized)) && (
               <div>
-                <DashboardWidgetSettings groupId={effectiveGroupId} isOwner={isOwner} />
+                <DashboardWidgetSettings
+                  groupId={effectiveGroupId}
+                  isOwner={isOwner || (isEmbedded && isAuthorized)}
+                />
               </div>
             )}
             {/* ??�쎌�??�썲????�승?????*/}

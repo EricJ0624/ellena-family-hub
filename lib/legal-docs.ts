@@ -1,6 +1,6 @@
 /** 이용약관·개인정보 처리방침 본문 (ko / en) */
 
-export const LEGAL_LAST_UPDATED = '2026-08-21';
+export const LEGAL_LAST_UPDATED = '2026-09-12';
 
 export const TERMS_TITLE = { ko: '이용약관', en: 'Terms of Service' } as const;
 export const PRIVACY_TITLE = { ko: '개인정보 처리방침', en: 'Privacy Policy' } as const;
@@ -77,7 +77,15 @@ export const PRIVACY_BODY = {
 6. 처리 위탁
 - 인프라(호스팅·DB 등) 제공을 위해 클라우드 사업자에 처리를 위탁할 수 있으며, 계약을 통해 안전하게 관리합니다.
 
-7. 문의
+7. 운영자(시스템 관리자) 접근
+- 일상적인 그룹 내 멤버↔그룹 관리자 문의·답변은 해당 그룹 관리자만 처리합니다.
+- 시스템 관리자는 멤버 문의 내용을 상시·전역으로 열람하지 않습니다.
+- 다만 다음 목적에 한해, 접근 사유를 기록하고 감사 로그를 남긴 뒤 단건으로만 조회하거나 삭제할 수 있습니다.
+  · 신고·분쟁 처리, 법령에 따른 수사·행정 협조
+  · 그룹 관리자 부재·미사용 등으로 문의 관리가 되지 않는 등 서비스 운영상 특별한 필요
+- 집계된 통계(건수 등)는 개인 대화 내용 없이 운영 목적으로 활용될 수 있습니다.
+
+8. 문의
 - 개인정보 관련 문의는 앱 내 문의·지원 채널을 이용해 주세요.`,
   en: `1. Data we collect
 - Required: email, password (stored encrypted), nickname, display language (preferred_language), country of residence (country_code)
@@ -95,14 +103,23 @@ export const PRIVACY_BODY = {
 - Change display language and country in Dashboard → My Account.
 - Request access, correction, deletion, or restriction via in-app inquiry/support.
 
-5. Third-party disclosure
-- We do not disclose personal data to third parties without consent except as required by law.
+5. Sharing with third parties
+- We do not share personal data with third parties without consent, except where required by law.
 
 6. Processors
-- We may use cloud providers for hosting and databases under contractual safeguards.
+- We may engage cloud providers for hosting/DB under contracts that require appropriate safeguards.
 
-7. Contact
-- For privacy questions, use in-app support or inquiry channels.`,
+7. Operator (system administrator) access
+- Day-to-day member↔group-admin inquiries and replies are handled only by the relevant group administrators.
+- System administrators do not browse member-inquiry contents on a standing, global basis.
+- Exceptionally, they may look up or delete a single inquiry only for purposes such as:
+  · handling reports/disputes or lawful requests from authorities;
+  · operational necessity when group admins are absent or inactive and inquiries cannot be managed;
+  and only after recording a reason and writing an audit log.
+- Aggregated counts (without message contents) may be used for operations.
+
+8. Contact
+- For privacy questions, use in-app inquiry/support channels.`,
 } as const;
 
 export function pickLegalLocale(lang: string): 'ko' | 'en' {

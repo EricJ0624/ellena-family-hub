@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
+import { ALL_APP_IDS } from '@/lib/apps';
 
 /**
  * 시스템 관리자 대시보드 통계 조회
- * - service role 기반 집계로 RLS 영향 없이 일관된 숫자 반환
+ * - 전체 합계 + 앱별 그룹/유저/문의 집계
  */
 export async function GET(request: NextRequest) {
   try {
@@ -55,6 +56,70 @@ export async function GET(request: NextRequest) {
       countryDistribution[countryKey] = (countryDistribution[countryKey] || 0) + 1;
     }
 
+    const { data: groupRows, error: groupAppError } = await supabase
+      .from('groups')
+      .select('id, app_id, owner_id');
+    if (groupAppError) throw groupAppError;
+
+    const groupsByApp: Record<string, number> = {};
+    const groupAppById = new Map<string, string>();
+    const usersByAppSets: Record<string, Set<string>> = {};
+    for (const appId of ALL_APP_IDS) {
+      groupsByApp[appId] = 0;
+      usersByAppSets[appId] = new Set();
+    }
+
+    for (const row of groupRows || []) {
+      const appKey = String(row.app_id || 'unknown');
+      groupsByApp[appKey] = (groupsByApp[appKey] || 0) + 1;
+      if (row.id && row.app_id) {
+        groupAppById.set(row.id, row.app_id);
+        if (!usersByAppSets[row.app_id]) usersByAppSets[row.app_id] = new Set();
+        if (row.owner_id) usersByAppSets[row.app_id].add(row.owner_id);
+      }
+    }
+
+    const { data: membershipRows, error: membershipError } = await supabase
+      .from('memberships')
+      .select('user_id, group_id, app_id');
+    if (membershipError) throw membershipError;
+
+    for (const m of membershipRows || []) {
+      const appKey =
+        m.app_id ||
+        (m.group_id ? groupAppById.get(m.group_id) : null) ||
+        'unknown';
+      if (!usersByAppSets[appKey]) usersByAppSets[appKey] = new Set();
+      if (m.user_id) usersByAppSets[appKey].add(m.user_id);
+    }
+
+    const usersByApp: Record<string, number> = {};
+    for (const [appKey, set] of Object.entries(usersByAppSets)) {
+      usersByApp[appKey] = set.size;
+    }
+
+    const countTicketsByApp = async (table: 'support_tickets' | 'member_support_tickets') => {
+      const { data: rows, error } = await supabase.from(table).select('group_id');
+      if (error) throw error;
+      const byApp: Record<string, number> = {};
+      for (const appId of ALL_APP_IDS) byApp[appId] = 0;
+      for (const row of rows || []) {
+        const appKey = (row.group_id && groupAppById.get(row.group_id)) || 'unknown';
+        byApp[appKey] = (byApp[appKey] || 0) + 1;
+      }
+      return byApp;
+    };
+
+    const supportTicketsByApp = await countTicketsByApp('support_tickets');
+    const memberTicketsByApp = await countTicketsByApp('member_support_tickets');
+
+    const { count: totalSupportTickets } = await supabase
+      .from('support_tickets')
+      .select('*', { count: 'exact', head: true });
+    const { count: totalMemberTickets } = await supabase
+      .from('member_support_tickets')
+      .select('*', { count: 'exact', head: true });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -62,8 +127,14 @@ export async function GET(request: NextRequest) {
         totalGroups: totalGroups || 0,
         activeUsers: activeUsers || 0,
         totalAdmins: totalAdmins || 0,
+        totalSupportTickets: totalSupportTickets || 0,
+        totalMemberTickets: totalMemberTickets || 0,
         languageDistribution,
         countryDistribution,
+        groupsByApp,
+        usersByApp,
+        supportTicketsByApp,
+        memberTicketsByApp,
       },
     });
   } catch (error) {

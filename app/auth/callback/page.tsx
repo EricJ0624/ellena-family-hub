@@ -6,19 +6,19 @@ import { supabase } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { isRecoveryAuthCallback } from '@/lib/auth-callback-routing';
 import {
-  buildOnboardingPath,
-  getSessionStoredInviteCode,
-  isValidInviteCodeFormat,
-} from '@/lib/family-auth-routing';
-import {
   fetchAuthBootstrap,
   invalidateCachedAuthBootstrap,
 } from '@/lib/auth-bootstrap';
-import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
+import { resolvePostAuthPath } from '@/lib/app-enrollment-routing';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
 import { takePendingGoogleSignupMeta } from '@/lib/google-oauth-signup';
 import { isValidLang } from '@/lib/language-fonts';
+import {
+  getSessionStoredInviteCode,
+  isValidInviteCodeFormat,
+  setSessionStoredInviteCode,
+} from '@/lib/family-auth-routing';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -134,11 +134,42 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // 시스템 관리자·그룹 여부는 bootstrap 1회 조회로 판정 (인증 링크 재클릭 시 stale 캐시 방지)
+        // 시스템 관리자·그룹·앱 가입 동의는 bootstrap 1회 조회로 판정
         invalidateCachedAuthBootstrap(user.id);
-        const bootstrap = await fetchAuthBootstrap(session.access_token);
-        const hasGroups = Boolean(bootstrap?.hasGroups);
-        const isAdmin = Boolean(bootstrap?.isSystemAdmin);
+        let bootstrap = await fetchAuthBootstrap(session.access_token);
+
+        // 이메일 신규 가입 인증(type=signup): 현재 앱 enrollment 자동 보장
+        const authType =
+          hashParams.get('type') ||
+          searchParams.get('type') ||
+          '';
+        if (
+          authType === 'signup' &&
+          bootstrap &&
+          !bootstrap.hasAppEnrollment &&
+          !(bootstrap.isSystemAdmin && !bootstrap.hasGroups)
+        ) {
+          try {
+            const enrollRes = await fetch(
+              `${window.location.origin}/api/auth/ensure-signup-enrollment`,
+              {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              },
+            );
+            if (enrollRes.ok) {
+              invalidateCachedAuthBootstrap(user.id);
+              bootstrap = await fetchAuthBootstrap(session.access_token);
+            } else {
+              console.warn(
+                '[Auth callback] ensure-signup-enrollment failed:',
+                enrollRes.status,
+              );
+            }
+          } catch (enrollErr) {
+            console.warn('[Auth callback] ensure-signup-enrollment error:', enrollErr);
+          }
+        }
 
         // 초대 링크로 가입한 경우: API에 임시 저장된 코드 우선 사용 (다른 탭/기기에서 인증해도 동작)
         let invite: string | null = null;
@@ -158,38 +189,16 @@ export default function AuthCallbackPage() {
           if (fromMeta && isValidInviteCodeFormat(String(fromMeta))) invite = String(fromMeta);
           else if (fromStorage) invite = fromStorage;
         }
-        const onboardingPath = buildOnboardingPath(invite);
-
         if (invite) {
-          router.push(onboardingPath);
+          setSessionStoredInviteCode(invite);
+        }
+
+        if (!bootstrap) {
+          router.push('/');
           return;
         }
 
-        if (bootstrap?.lookupFailed) {
-          router.push(onboardingPath);
-          return;
-        }
-
-        if (
-          bootstrap &&
-          bootstrap.groupIds.length > 0 &&
-          bootstrap.accessibleGroupIds.length === 0
-        ) {
-          router.push('/suspended');
-          return;
-        }
-
-        if (isAdmin && !hasGroups) {
-          router.push('/admin');
-          return;
-        }
-
-        if (bootstrap?.accessibleGroupIds?.length === 1) {
-          router.push(dashboardHrefWithOpenGroup(bootstrap.accessibleGroupIds[0]));
-          return;
-        }
-
-        router.push(onboardingPath);
+        router.push(resolvePostAuthPath(bootstrap, invite));
       } catch (err: any) {
         console.error('Auth callback error:', err);
         setError(err.message || act('error_message'));

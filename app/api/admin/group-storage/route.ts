@@ -3,6 +3,10 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { DEFAULT_GROUP_STORAGE_QUOTA_BYTES, getGroupStorageUsedBytes } from '@/lib/storage-quota';
 
+/**
+ * 시스템 관리자 전용: 전 앱 그룹 저장용량 목록/변경.
+ * (일반 사용자·대시보드 그룹 접근은 CURRENT_APP_ID 격리 유지)
+ */
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuthUser(request);
@@ -15,9 +19,9 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     const { data: groupsData, error: groupsError } = await supabase
       .from('groups')
-      .select('id, name, owner_id, created_at, storage_quota_bytes')
+      .select('id, name, owner_id, created_at, storage_quota_bytes, app_id, invite_code')
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(500);
 
     if (groupsError) {
       console.error('그룹 조회 오류:', groupsError);
@@ -55,7 +59,10 @@ export async function GET(request: NextRequest) {
         return {
           id: group.id,
           name: group.name,
+          app_id: group.app_id ?? null,
+          owner_id: group.owner_id,
           owner_email: ownerData?.email || null,
+          invite_code: group.invite_code ?? null,
           member_count: memberCount,
           created_at: group.created_at,
           storage_quota_bytes: group.storage_quota_bytes ?? DEFAULT_GROUP_STORAGE_QUOTA_BYTES,
@@ -113,7 +120,7 @@ export async function PATCH(request: NextRequest) {
       .from('groups')
       .update({ storage_quota_bytes: resolvedQuotaBytes })
       .eq('id', groupId)
-      .select('id, storage_quota_bytes')
+      .select('id, storage_quota_bytes, app_id')
       .single();
 
     if (updateError) {

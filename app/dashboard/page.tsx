@@ -15,6 +15,8 @@ import {
   resolveAuthBootstrapSuspendRedirect,
   getCachedAuthBootstrap,
 } from '@/lib/auth-bootstrap';
+import { APP_ENROLL_PATH, needsAppEnrollment } from '@/lib/app-enrollment-routing';
+import { CURRENT_APP_ID } from '@/lib/apps';
 import { normalizeGroupId } from '@/lib/validation';
 import {
   parseOpenGroupParam,
@@ -1234,6 +1236,10 @@ export default function FamilyHub() {
             : null;
 
         if (bootstrap) {
+          if (needsAppEnrollment(bootstrap)) {
+            router.replace(APP_ENROLL_PATH);
+            return;
+          }
           isAdmin = bootstrap.isSystemAdmin;
           hasGroups = bootstrap.hasGroups;
           if (bootstrap.lookupFailed) {
@@ -1269,15 +1275,26 @@ export default function FamilyHub() {
           }
         } else {
           console.warn('[Dashboard] bootstrap 실패, 클라이언트 조회로 폴백');
-          const [adminRes, groupsRes, access] = await Promise.all([
+          const [adminRes, groupsRes, access, enrollmentRes] = await Promise.all([
             supabase.rpc('is_system_admin', { user_id_param: currentUserId }),
             resolveUserHasGroups(supabase, currentUserId, {
               flakyRetry: !hasOpenGroup,
             }),
             loadUserGroupAccess(supabase, currentUserId),
+            supabase
+              .from('user_app_enrollments')
+              .select('user_id')
+              .eq('user_id', currentUserId)
+              .eq('app_id', CURRENT_APP_ID)
+              .maybeSingle(),
           ]);
           isAdmin = Boolean(adminRes.data);
           hasGroups = groupsRes.hasGroups;
+
+          if (!enrollmentRes.data?.user_id && !(isAdmin && !hasGroups)) {
+            router.replace(APP_ENROLL_PATH);
+            return;
+          }
 
           if (access.lookupFailed) {
             console.warn('[Dashboard] 접근 조회 실패, 정지 확인 스킵하고 진입');

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 /**
  * 공지사항 목록 조회 (일반 멤버용 - ALL_MEMBERS 공지만)
+ * 전역(app_id null) + 현재 앱 공지만
  */
 export async function GET(request: NextRequest) {
   try {
@@ -47,12 +49,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 공지사항 목록 조회 (활성 + 대상이 '모든 멤버' ALL_MEMBERS인 공지, target 미설정(null)도 멤버에게 노출)
+    // 그룹 앱 확인 (배포 CURRENT_APP_ID와 불일치 방어)
+    const { data: groupRow } = await supabase
+      .from('groups')
+      .select('app_id')
+      .eq('id', groupId)
+      .maybeSingle();
+    const scopeAppId = groupRow?.app_id || CURRENT_APP_ID;
+
+    // 활성 + ALL_MEMBERS(+null target) + 전역/해당 앱
     const { data: announcements, error } = await supabase
       .from('announcements')
       .select('*')
       .eq('is_active', true)
       .or('target.eq.ALL_MEMBERS,target.is.null')
+      .or(`app_id.is.null,app_id.eq.${scopeAppId}`)
       .order('created_at', { ascending: false });
 
     if (error) {

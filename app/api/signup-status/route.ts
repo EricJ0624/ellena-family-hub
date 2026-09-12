@@ -4,8 +4,8 @@ import { loadSignupAvailability } from '@/lib/signup-settings-query';
 export const dynamic = 'force-dynamic';
 
 /**
- * 로그인/가입 화면용. 인증 없이 allowed 여부만 반환 (인원 수 비공개).
- * 조회 실패 시 가입을 열어 둔다 (fail-open). 실제 차단은 DB 트리거가 담당.
+ * 로그인/가입 화면용. 인증 없이 현재 앱의 allowed 여부만 반환 (인원 수 비공개).
+ * 조회 실패 시 가입을 열어 둔다 (fail-open). 실제 차단은 enrollment RPC가 담당.
  */
 export async function GET() {
   try {

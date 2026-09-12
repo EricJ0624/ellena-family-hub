@@ -6,6 +6,8 @@ export type SignupAvailability = {
   currentUserCount: number;
   allowed: boolean;
   reason: SignupBlockReason;
+  /** 앱별 설정일 때 포함 */
+  appId?: string;
 };
 
 export function isSignupBlockReason(value: unknown): value is SignupBlockReason {

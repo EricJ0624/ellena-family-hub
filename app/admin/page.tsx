@@ -59,6 +59,7 @@ import { SystemAdminTransferModal } from '@/app/components/admin/SystemAdminTran
 import { getAdminTransferTranslation } from '@/lib/translations/adminTransfer';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 import { userSuspendBadgeKind, type SuspendSummary } from '@/lib/admin-suspend';
+import { ALL_APP_IDS, getAppIdBadgeClass, getAppIdLabel, type AppId } from '@/lib/apps';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -72,6 +73,7 @@ interface UserInfo {
   created_at: string;
   last_sign_in_at: string | null;
   groups_count: number;
+  app_ids: string[];
   is_active: boolean;
   recent_30day_login: boolean;
   beta_rank: number | null;
@@ -90,6 +92,9 @@ type UserSortField =
 interface GroupInfo {
   id: string;
   name: string;
+  app_id?: string | null;
+  owner_id?: string;
+  invite_code?: string | null;
   owner_email: string | null;
   member_count: number;
   created_at: string;
@@ -101,6 +106,12 @@ interface SystemStats {
   totalUsers: number;
   totalGroups: number;
   activeUsers: number;
+  groupsByApp?: Record<string, number>;
+  usersByApp?: Record<string, number>;
+  supportTicketsByApp?: Record<string, number>;
+  memberTicketsByApp?: Record<string, number>;
+  totalSupportTickets?: number;
+  totalMemberTickets?: number;
   totalAdmins: number;
   languageDistribution: Record<string, number>;
   countryDistribution: Record<string, number>;
@@ -162,6 +173,8 @@ interface AnnouncementInfo {
   updated_at: string;
   is_active: boolean;
   target?: 'ADMIN_ONLY' | 'ALL_MEMBERS';
+  /** null/undefined = 전역(모든 앱) */
+  app_id?: string | null;
 }
 
 interface SupportTicketInfo {
@@ -177,9 +190,11 @@ interface SupportTicketInfo {
   message_thread?: unknown;
   created_at: string;
   updated_at: string;
+  app_id?: string | null;
   groups?: {
     id: string;
     name: string;
+    app_id?: string | null;
   };
 }
 
@@ -195,7 +210,8 @@ interface MemberGroupInquiryInfo {
   created_at: string;
   answered_at: string | null;
   message_thread?: unknown;
-  groups?: { id: string; name: string };
+  app_id?: string | null;
+  groups?: { id: string; name: string; app_id?: string | null };
 }
 
 interface DashboardAccessRequestInfo {
@@ -212,9 +228,11 @@ interface DashboardAccessRequestInfo {
   rejection_reason: string | null;
   created_at: string;
   updated_at: string;
+  app_id?: string | null;
   groups?: {
     id: string;
     name: string;
+    app_id?: string | null;
   };
 }
 
@@ -260,6 +278,7 @@ export default function AdminPage() {
   const [manageableGroups, setManageableGroups] = useState<GroupInfo[]>([]); // 관리 가능한 그룹만 (소유자 또는 ADMIN인 그룹)
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [appFilter, setAppFilter] = useState<'all' | 'global' | AppId>('all');
   const [userSortField, setUserSortField] = useState<UserSortField>('created_at_desc');
   const [showBetaOnly, setShowBetaOnly] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -272,14 +291,24 @@ export default function AdminPage() {
   // 공지사항, 문의, 접근 요청 관련 상태
   const [announcements, setAnnouncements] = useState<AnnouncementInfo[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicketInfo[]>([]);
-  const [memberGroupInquiries, setMemberGroupInquiries] = useState<MemberGroupInquiryInfo[]>([]);
   const [deletingMemberInquiryId, setDeletingMemberInquiryId] = useState<string | null>(null);
+  /** 멤버 문의 예외 단건 조회 폼 */
+  const [memberInquiryTicketId, setMemberInquiryTicketId] = useState('');
+  const [memberInquiryReasonCode, setMemberInquiryReasonCode] = useState<
+    'report' | 'dispute' | 'legal' | 'admin_absent' | 'other'
+  >('report');
+  const [memberInquiryReason, setMemberInquiryReason] = useState('');
+  const [memberInquiryLookup, setMemberInquiryLookup] = useState<MemberGroupInquiryInfo | null>(null);
+  const [memberInquiryLookupLoading, setMemberInquiryLookupLoading] = useState(false);
+  const [memberInquiryActionError, setMemberInquiryActionError] = useState<string | null>(null);
   const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
   const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementInfo | null | undefined>(undefined);
   const [editingTicket, setEditingTicket] = useState<SupportTicketInfo | null>(null);
   const [announcementTitleI18n, setAnnouncementTitleI18n] = useState<Record<string, string>>(() => Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
   const [announcementContentI18n, setAnnouncementContentI18n] = useState<Record<string, string>>(() => Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
   const [announcementTarget, setAnnouncementTarget] = useState<'ADMIN_ONLY' | 'ALL_MEMBERS'>('ADMIN_ONLY');
+  /** null = 전역 공지 */
+  const [announcementAppId, setAnnouncementAppId] = useState<string | null>(null);
   const [announcementLangTab, setAnnouncementLangTab] = useState<LangCode>('ko');
   const [announcementExtraEnabled, setAnnouncementExtraEnabled] = useState<Set<LangCode>>(() => new Set());
   const [announcementExtraExpanded, setAnnouncementExtraExpanded] = useState(false);
@@ -301,6 +330,7 @@ export default function AdminPage() {
     resource_type: string;
     resource_id: string | null;
     group_id: string | null;
+    app_id?: string | null;
     target_user_id: string | null;
     details: Record<string, unknown> | null;
     ip_address: string | null;
@@ -316,6 +346,7 @@ export default function AdminPage() {
     resource_type: '',
     admin_id: '',
     group_id: '',
+    app_id: '' as '' | AppId,
   });
   const auditLogLimit = 50;
   const [suspendSummary, setSuspendSummary] = useState<SuspendSummary>({
@@ -331,6 +362,7 @@ export default function AdminPage() {
     setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
     setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
     setAnnouncementTarget('ADMIN_ONLY');
+    setAnnouncementAppId(null);
     setAnnouncementLangTab('ko');
     setAnnouncementExtraEnabled(new Set());
     setAnnouncementExtraExpanded(false);
@@ -348,6 +380,7 @@ export default function AdminPage() {
     setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ti[l] ?? ''])));
     setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ci[l] ?? ''])));
     setAnnouncementTarget(announcement.target || 'ADMIN_ONLY');
+    setAnnouncementAppId(announcement.app_id ?? null);
     setAnnouncementLangTab('ko');
     const extra = new Set<LangCode>();
     for (const l of ANNOUNCEMENT_EXTRA_LANG_CODES) {
@@ -543,8 +576,14 @@ export default function AdminPage() {
         totalGroups: Number(result?.data?.totalGroups || 0),
         activeUsers: Number(result?.data?.activeUsers || 0),
         totalAdmins: Number(result?.data?.totalAdmins || 0),
+        totalSupportTickets: Number(result?.data?.totalSupportTickets || 0),
+        totalMemberTickets: Number(result?.data?.totalMemberTickets || 0),
         languageDistribution: result?.data?.languageDistribution || {},
         countryDistribution: result?.data?.countryDistribution || {},
+        groupsByApp: result?.data?.groupsByApp || {},
+        usersByApp: result?.data?.usersByApp || {},
+        supportTicketsByApp: result?.data?.supportTicketsByApp || {},
+        memberTicketsByApp: result?.data?.memberTicketsByApp || {},
       });
     } catch (err: any) {
       console.error('통계 로드 오류:', err);
@@ -625,6 +664,7 @@ export default function AdminPage() {
         created_at: user.created_at || new Date().toISOString(),
         last_sign_in_at: user.last_sign_in_at ?? null,
         groups_count: user.groups_count || 0,
+        app_ids: Array.isArray(user.app_ids) ? user.app_ids : [],
         is_active: user.is_active !== false,
         recent_30day_login: user.recent_30day_login === true,
         beta_rank: user.beta_rank ?? null,
@@ -676,179 +716,87 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 시스템 관리자가 소유자이거나 멤버인 그룹 조회 (관리 가능한 그룹)
+  // 시스템 관리자 콘솔: 전 앱 그룹을 관리 대상으로 사용 (대시보드 그룹 접속 격리와 별개)
   const loadManageableGroups = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
         setManageableGroups([]);
         return;
       }
 
-      // 1. 소유자인 그룹 조회
-      const { data: ownedGroups, error: ownedError } = await supabase
-        .from('groups')
-        .select('id, name, owner_id, created_at')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (ownedError) {
-        console.error('소유 그룹 조회 오류:', ownedError);
+      const response = await fetch('/api/admin/group-storage', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || at('error_groups'));
       }
-
-      // 2. 멤버로 포함된 그룹 조회 (역할 무관)
-      const { data: memberships, error: memberError } = await supabase
-        .from('memberships')
-        .select('group_id')
-        .eq('user_id', user.id);
-
-      if (memberError) {
-        console.error('멤버십 조회 오류:', memberError);
-      }
-
-      const memberGroupIds = memberships?.map(m => m.group_id) || [];
-      
-      let memberGroups: any[] = [];
-      if (memberGroupIds.length > 0) {
-        const { data, error: memberGroupsError } = await supabase
-          .from('groups')
-          .select('id, name, owner_id, created_at')
-          .in('id', memberGroupIds)
-          .order('created_at', { ascending: false });
-
-        if (memberGroupsError) {
-          console.error('멤버 그룹 조회 오류:', memberGroupsError);
-        } else {
-          memberGroups = data || [];
-        }
-      }
-
-      // 3. 중복 제거 및 병합
-      const allManageableGroupsMap = new Map();
-      (ownedGroups || []).forEach(g => allManageableGroupsMap.set(g.id, g));
-      (memberGroups || []).forEach(g => allManageableGroupsMap.set(g.id, g));
-      const allManageableGroups = Array.from(allManageableGroupsMap.values());
-
-      // 4. 상세 정보 추가 (소유자 이메일, 멤버 수)
-      const groupsWithDetails: GroupInfo[] = await Promise.all(
-        allManageableGroups.map(async (group) => {
-          try {
-            const { data: ownerData } = await supabase
-              .from('profiles')
-              .select('email')
-              .eq('id', group.owner_id)
-              .single();
-
-            let memberCount = 0;
-            try {
-              const { count } = await supabase
-                .from('memberships')
-                .select('*', { count: 'exact', head: true })
-                .eq('group_id', group.id);
-              memberCount = count || 0;
-            } catch (countErr) {
-              console.warn(`그룹 ${group.id} 멤버 수 조회 오류:`, countErr);
-            }
-
-            return {
-              id: group.id,
-              name: group.name,
-              owner_email: ownerData?.email || null,
-              member_count: memberCount,
-              created_at: group.created_at,
-            };
-          } catch (err: any) {
-            console.error(`그룹 ${group.id} 상세 정보 로드 오류:`, err);
-            return {
-              id: group.id,
-              name: group.name,
-              owner_email: null,
-              member_count: 1,
-              created_at: group.created_at,
-            };
-          }
-        })
-      );
-
-      setManageableGroups(groupsWithDetails);
+      setManageableGroups(result.data || []);
     } catch (err: any) {
       console.error('관리 가능한 그룹 로드 오류:', err);
       setManageableGroups([]);
     }
   }, []);
 
-  // 선택된 그룹 정보 로드 (권한 검증 포함)
+  // 선택된 그룹 정보 로드 (시스템 관리자: service role API로 전 앱 허용 — 클라이언트 RLS 우회)
   const loadSelectedGroup = useCallback(async (groupId: string) => {
     try {
-      // 현재 사용자 확인
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
         setError(at('error_auth'));
         setSelectedGroup(null);
         setSelectedGroupId(null);
         return;
       }
 
-      // 그룹 정보 조회
-      const { data: groupData, error: groupError } = await supabase
-        .from('groups')
-        .select('id, name, owner_id, created_at, invite_code')
-        .eq('id', groupId)
-        .single();
+      const fromCache =
+        groups.find((g) => g.id === groupId) ||
+        manageableGroups.find((g) => g.id === groupId);
 
-      if (groupError) throw groupError;
-
-      // 권한 확인: 소유자이거나 ADMIN/멤버인지 확인
-      const isOwner = groupData.owner_id === user.id;
-      let isAdmin = false;
-      let isMember = false;
-      
-      if (!isOwner) {
-        const { data: membership } = await supabase
-          .from('memberships')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('group_id', groupId)
-          .single();
-        
-        isAdmin = membership?.role === 'ADMIN';
-        isMember = !!membership;
+      let groupRow = fromCache;
+      if (!groupRow?.owner_id) {
+        const response = await fetch('/api/admin/group-storage', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || at('error_groups'));
+        }
+        const list: GroupInfo[] = result.data || [];
+        setManageableGroups(list);
+        groupRow = list.find((g) => g.id === groupId);
       }
 
-      // 권한이 없으면 에러
-      if (!isOwner && !isAdmin && !isMember) {
+      if (!groupRow || !groupRow.owner_id) {
         setError(at('error_no_permission'));
         setSelectedGroup(null);
         setSelectedGroupId(null);
         return;
       }
 
-      // 소유자 이메일 조회
-      const { data: ownerData } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', groupData.owner_id)
-        .single();
-
       setSelectedGroup({
-        ...groupData,
-        owner_email: ownerData?.email || null,
+        id: groupRow.id,
+        name: groupRow.name,
+        owner_id: groupRow.owner_id,
+        owner_email: groupRow.owner_email,
+        created_at: groupRow.created_at,
+        invite_code: groupRow.invite_code ?? null,
       });
-      setError(null); // 권한 검증 통과 시 에러 초기화
+      setError(null);
 
-      // 감사: 시스템 관리자 그룹 접근 로그 (API에서 권한 검사 후 기록)
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.access_token) {
-          fetch('/api/admin/audit/dashboard-access', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ group_id: groupId }),
-          }).catch(() => {});
-        }
-      });
+      fetch('/api/admin/audit/dashboard-access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ group_id: groupId }),
+      }).catch(() => {});
     } catch (err: any) {
       console.error('그룹 정보 로드 오류:', err);
       setError(err.message || at('error_group_detail'));
@@ -920,7 +868,8 @@ export default function AdminPage() {
     } else if (activeTab === 'all-support-tickets') {
       loadAllSupportTickets();
     } else if (activeTab === 'member-inquiries') {
-      loadMemberGroupInquiries();
+      setLoadingData(false);
+      setError(null);
     } else if (activeTab === 'support-tickets') {
       loadSupportTickets();
     } else if (activeTab === 'dashboard-access-requests') {
@@ -976,74 +925,117 @@ export default function AdminPage() {
     }
   }, [at]);
 
-  const loadMemberGroupInquiries = useCallback(async () => {
+  const lookupMemberInquiryException = useCallback(async () => {
+    setMemberInquiryActionError(null);
+    const ticketId = memberInquiryTicketId.trim();
+    const reason = memberInquiryReason.trim();
+    if (!ticketId) {
+      setMemberInquiryActionError(adminLang === 'ko' ? '문의 ID를 입력해 주세요.' : 'Enter a ticket ID.');
+      return;
+    }
+    if (reason.length < 10) {
+      setMemberInquiryActionError(
+        adminLang === 'ko' ? '접근 사유를 10자 이상 입력해 주세요.' : 'Enter a reason (at least 10 characters).'
+      );
+      return;
+    }
     try {
-      setLoadingData(true);
-      setError(null);
-
+      setMemberInquiryLookupLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError(at('error_session_expired'));
-        setLoadingData(false);
+        setMemberInquiryActionError(at('error_session_expired'));
         return;
       }
-
       const response = await fetch('/api/admin/member-support-tickets', {
-        method: 'GET',
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          ticket_id: ticketId,
+          reason_code: memberInquiryReasonCode,
+          reason,
+        }),
       });
-
-      const result = await response.json();
-
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(result.error || at('error_member_inquiries'));
-      }
-
-      setMemberGroupInquiries(result.data || []);
-    } catch (err: unknown) {
-      console.error('멤버 문의(전체) 로드 오류:', err);
-      setError(err instanceof Error ? err.message : at('error_member_inquiries'));
-      setMemberGroupInquiries([]);
-    } finally {
-      setLoadingData(false);
-    }
-  }, [at]);
-
-  const handleDeleteMemberGroupInquiry = useCallback(
-    async (ticket: MemberGroupInquiryInfo) => {
-      if (!confirm(at('confirm_delete_member_inquiry'))) return;
-      setDeletingMemberInquiryId(ticket.id);
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          alert(at('error_session_expired'));
-          return;
-        }
-        const res = await fetch(
-          `/api/support-tickets?id=${encodeURIComponent(ticket.id)}&group_id=${encodeURIComponent(ticket.group_id)}`,
-          {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          }
+        setMemberInquiryLookup(null);
+        setMemberInquiryActionError(
+          typeof result.error === 'string' ? result.error : at('error_member_inquiries')
         );
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          alert(typeof json.error === 'string' ? json.error : at('error_member_inquiries'));
-          return;
-        }
-        setMemberGroupInquiries((prev) => prev.filter((t) => t.id !== ticket.id));
-      } catch (e) {
-        console.error('멤버 문의 삭제 오류:', e);
-        alert(at('error_member_inquiries'));
-      } finally {
-        setDeletingMemberInquiryId(null);
+        return;
       }
-    },
-    [at]
-  );
+      setMemberInquiryLookup(result.data || null);
+    } catch (err) {
+      console.error('멤버 문의 예외 조회 오류:', err);
+      setMemberInquiryLookup(null);
+      setMemberInquiryActionError(at('error_member_inquiries'));
+    } finally {
+      setMemberInquiryLookupLoading(false);
+    }
+  }, [adminLang, at, memberInquiryReason, memberInquiryReasonCode, memberInquiryTicketId]);
+
+  const deleteMemberInquiryException = useCallback(async () => {
+    if (!memberInquiryLookup) return;
+    setMemberInquiryActionError(null);
+    const reason = memberInquiryReason.trim();
+    if (reason.length < 10) {
+      setMemberInquiryActionError(
+        adminLang === 'ko' ? '삭제 사유를 10자 이상 입력해 주세요.' : 'Enter a delete reason (at least 10 characters).'
+      );
+      return;
+    }
+    if (
+      !confirm(
+        adminLang === 'ko'
+          ? '이 멤버 문의를 예외 삭제할까요? 사유와 함께 감사 로그에 기록됩니다.'
+          : 'Delete this member inquiry as an exception? Reason will be audit-logged.'
+      )
+    ) {
+      return;
+    }
+    try {
+      setDeletingMemberInquiryId(memberInquiryLookup.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setMemberInquiryActionError(at('error_session_expired'));
+        return;
+      }
+      const response = await fetch('/api/admin/member-support-tickets', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticket_id: memberInquiryLookup.id,
+          reason_code: memberInquiryReasonCode,
+          reason,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setMemberInquiryActionError(
+          typeof result.error === 'string' ? result.error : at('error_member_inquiries')
+        );
+        return;
+      }
+      setMemberInquiryLookup(null);
+      alert(adminLang === 'ko' ? '삭제되었습니다. 감사 로그에 기록되었습니다.' : 'Deleted and audit-logged.');
+    } catch (err) {
+      console.error('멤버 문의 예외 삭제 오류:', err);
+      setMemberInquiryActionError(at('error_member_inquiries'));
+    } finally {
+      setDeletingMemberInquiryId(null);
+    }
+  }, [
+    adminLang,
+    at,
+    memberInquiryLookup,
+    memberInquiryReason,
+    memberInquiryReasonCode,
+  ]);
 
   // 공지사항 로드
   const loadAnnouncements = useCallback(async () => {
@@ -1176,6 +1168,7 @@ export default function AdminPage() {
       if (auditLogFilters.resource_type) params.set('resource_type', auditLogFilters.resource_type);
       if (auditLogFilters.admin_id) params.set('admin_id', auditLogFilters.admin_id);
       if (auditLogFilters.group_id) params.set('group_id', auditLogFilters.group_id);
+      if (auditLogFilters.app_id) params.set('app_id', auditLogFilters.app_id);
 
       const response = await fetch(`/api/admin/audit/logs?${params.toString()}`, {
         method: 'GET',
@@ -1216,6 +1209,7 @@ export default function AdminPage() {
       if (auditLogFilters.resource_type) params.set('resource_type', auditLogFilters.resource_type);
       if (auditLogFilters.admin_id) params.set('admin_id', auditLogFilters.admin_id);
       if (auditLogFilters.group_id) params.set('group_id', auditLogFilters.group_id);
+      if (auditLogFilters.app_id) params.set('app_id', auditLogFilters.app_id);
 
       const response = await fetch(`/api/admin/audit/logs?${params.toString()}`, {
         method: 'GET',
@@ -1268,6 +1262,9 @@ export default function AdminPage() {
   // 검색 필터링 + 정렬
   const filteredUsers = useMemo(() => {
     let list = users.filter((user) => {
+      if (appFilter !== 'all' && appFilter !== 'global' && !(user.app_ids || []).includes(appFilter)) {
+        return false;
+      }
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         if (
@@ -1275,7 +1272,8 @@ export default function AdminPage() {
           !user.nickname?.toLowerCase().includes(q) &&
           !user.id.toLowerCase().includes(q) &&
           !user.preferred_language?.toLowerCase().includes(q) &&
-          !user.country_code?.toLowerCase().includes(q)
+          !user.country_code?.toLowerCase().includes(q) &&
+          !(user.app_ids || []).some((id) => getAppIdLabel(id).toLowerCase().includes(q))
         ) {
           return false;
         }
@@ -1314,24 +1312,104 @@ export default function AdminPage() {
     });
 
     return list;
-  }, [users, searchQuery, showBetaOnly, userSortField]);
+  }, [users, searchQuery, showBetaOnly, userSortField, appFilter]);
 
-  const filteredGroups = groups.filter((group) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      group.name.toLowerCase().includes(query) ||
-      adminGroupLabel(group).toLowerCase().includes(query) ||
-      group.owner_email?.toLowerCase().includes(query) ||
-      group.id.toLowerCase().includes(query)
-    );
-  });
+  const filteredGroups = useMemo(() => {
+    return groups.filter((group) => {
+      if (appFilter !== 'all' && appFilter !== 'global' && group.app_id !== appFilter) return false;
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        group.name.toLowerCase().includes(query) ||
+        adminGroupLabel(group).toLowerCase().includes(query) ||
+        group.owner_email?.toLowerCase().includes(query) ||
+        group.id.toLowerCase().includes(query) ||
+        getAppIdLabel(group.app_id).toLowerCase().includes(query)
+      );
+    });
+  }, [groups, searchQuery, appFilter, adminGroupLabel]);
 
-  // 그룹 관리 탭으로 전환 (권한 검증 포함)
+  /** 그룹 목록을 앱별 섹션으로 묶음 (필터 적용 후) */
+  const groupsByAppSections = useMemo(() => {
+    const known = new Set<string>(ALL_APP_IDS);
+    const sections = ALL_APP_IDS.map((appId) => ({
+      appId: appId as string,
+      label: getAppIdLabel(appId),
+      groups: filteredGroups.filter((g) => g.app_id === appId),
+    })).filter((s) => s.groups.length > 0);
+
+    const other = filteredGroups.filter((g) => !g.app_id || !known.has(g.app_id));
+    if (other.length > 0) {
+      sections.push({
+        appId: 'unknown',
+        label: adminLang === 'ko' ? '기타/미분류' : 'Other',
+        groups: other,
+      });
+    }
+    return sections;
+  }, [filteredGroups, adminLang]);
+
+  const filteredManageableGroups = useMemo(() => {
+    return manageableGroups.filter((group) => {
+      if (appFilter !== 'all' && appFilter !== 'global' && group.app_id !== appFilter) return false;
+      return true;
+    });
+  }, [manageableGroups, appFilter]);
+
+  const matchesScopedApp = useCallback(
+    (appId: string | null | undefined) => {
+      if (appFilter === 'all') return true;
+      if (appFilter === 'global') return !appId;
+      return appId === appFilter;
+    },
+    [appFilter]
+  );
+
+  const filteredAnnouncements = useMemo(
+    () => announcements.filter((a) => matchesScopedApp(a.app_id)),
+    [announcements, matchesScopedApp]
+  );
+
+  const filteredSupportTickets = useMemo(
+    () =>
+      supportTickets.filter((t) =>
+        matchesScopedApp(t.app_id ?? t.groups?.app_id ?? null)
+      ),
+    [supportTickets, matchesScopedApp]
+  );
+
+  const filteredAccessRequests = useMemo(
+    () =>
+      accessRequests.filter((r) =>
+        matchesScopedApp(r.app_id ?? r.groups?.app_id ?? null)
+      ),
+    [accessRequests, matchesScopedApp]
+  );
+
+  const statsForFilter = useMemo(() => {
+    if (!stats) return null;
+    if (appFilter === 'all' || appFilter === 'global') {
+      return {
+        users: stats.totalUsers,
+        groups: stats.totalGroups,
+        activeUsers: stats.activeUsers,
+        supportTickets: stats.totalSupportTickets || 0,
+        memberTickets: stats.totalMemberTickets || 0,
+      };
+    }
+    return {
+      users: stats.usersByApp?.[appFilter] || 0,
+      groups: stats.groupsByApp?.[appFilter] || 0,
+      activeUsers: stats.activeUsers,
+      supportTickets: stats.supportTicketsByApp?.[appFilter] || 0,
+      memberTickets: stats.memberTicketsByApp?.[appFilter] || 0,
+    };
+  }, [stats, appFilter]);
+
+  // 그룹 관리 탭으로 전환 (시스템 관리자: 전 앱 그룹)
   const handleSelectGroupForAdmin = async (groupId: string) => {
-    // 관리 가능한 그룹인지 확인
-    const isManageable = manageableGroups.some(mg => mg.id === groupId);
-    if (!isManageable) {
+    const exists = groups.some((g) => g.id === groupId) || manageableGroups.some((mg) => mg.id === groupId);
+    if (!exists) {
       alert(at('error_no_permission'));
       return;
     }
@@ -1340,6 +1418,65 @@ export default function AdminPage() {
     setActiveTab('group-admin');
     // 그룹 정보 로드 (권한 검증 포함)
     await loadSelectedGroup(groupId);
+  };
+
+  const renderAppFilterChips = (includeGlobal = false) => (
+    <div className="mb-4 flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => setAppFilter('all')}
+        className={`cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
+          appFilter === 'all'
+            ? 'border-purple-600 bg-purple-600 text-white'
+            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+        }`}
+      >
+        {at('filter_all')}
+      </button>
+      {includeGlobal && (
+        <button
+          type="button"
+          onClick={() => setAppFilter('global')}
+          className={`cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
+            appFilter === 'global'
+              ? 'border-slate-800 bg-slate-800 text-white'
+              : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          {adminLang === 'ko' ? '전역' : 'Global'}
+        </button>
+      )}
+      {ALL_APP_IDS.map((id) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => setAppFilter(id)}
+          className={`cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
+            appFilter === id
+              ? 'border-slate-800 bg-slate-800 text-white'
+              : `border-transparent ${getAppIdBadgeClass(id)} hover:opacity-90`
+          }`}
+        >
+          {getAppIdLabel(id)}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderAppBadge = (appId: string | null | undefined, globalLabel = true) => {
+    if (!appId) {
+      if (!globalLabel) return null;
+      return (
+        <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700">
+          {adminLang === 'ko' ? '전역' : 'Global'}
+        </span>
+      );
+    }
+    return (
+      <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${getAppIdBadgeClass(appId)}`}>
+        {getAppIdLabel(appId)}
+      </span>
+    );
   };
 
   if (loading) {
@@ -1521,11 +1658,6 @@ export default function AdminPage() {
           >
             <MessageSquare className="mr-2 inline h-[18px] w-[18px] align-middle" />
             {at('tab_member_inquiries')}
-            {memberGroupInquiries.filter((t) => t.status === 'pending').length > 0 && (
-              <span className="absolute right-2 top-2 rounded-[10px] bg-orange-500 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-                {memberGroupInquiries.filter((t) => t.status === 'pending').length}
-              </span>
-            )}
           </button>
           <button
             onClick={() => setActiveTab('dashboard-access-requests')}
@@ -1578,9 +1710,10 @@ export default function AdminPage() {
             {/* 대시보드 탭 */}
             {activeTab === 'dashboard' && stats && (
               <div>
-                <h2 className="mb-6 text-xl font-semibold text-slate-800">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
                   {at('system_stats')}
                 </h2>
+                {renderAppFilterChips(false)}
                 <div
                   className="admin-grid grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4"
                 >
@@ -1591,9 +1724,10 @@ export default function AdminPage() {
                   >
                     <div className="mb-2 text-sm font-medium text-sky-700">
                       {at('total_users')}
+                      {appFilter !== 'all' && appFilter !== 'global' ? ` (${getAppIdLabel(appFilter)})` : ''}
                     </div>
                     <div className="text-[32px] font-bold text-sky-900">
-                      {stats.totalUsers.toLocaleString()}
+                      {(statsForFilter?.users ?? stats.totalUsers).toLocaleString()}
                     </div>
                   </motion.div>
 
@@ -1619,9 +1753,10 @@ export default function AdminPage() {
                   >
                     <div className="mb-2 text-sm font-medium text-purple-800">
                       {at('total_groups')}
+                      {appFilter !== 'all' && appFilter !== 'global' ? ` (${getAppIdLabel(appFilter)})` : ''}
                     </div>
                     <div className="text-[32px] font-bold text-purple-900">
-                      {stats.totalGroups.toLocaleString()}
+                      {(statsForFilter?.groups ?? stats.totalGroups).toLocaleString()}
                     </div>
                   </motion.div>
 
@@ -1638,7 +1773,59 @@ export default function AdminPage() {
                       {stats.totalAdmins.toLocaleString()}
                     </div>
                   </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 }}
+                    className="rounded-xl border border-orange-200 bg-orange-50 p-6"
+                  >
+                    <div className="mb-2 text-sm font-medium text-orange-800">
+                      {adminLang === 'ko' ? '전체 문의' : 'Support tickets'}
+                    </div>
+                    <div className="text-[32px] font-bold text-orange-900">
+                      {(statsForFilter?.supportTickets ?? 0).toLocaleString()}
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="rounded-xl border border-teal-200 bg-teal-50 p-6"
+                  >
+                    <div className="mb-2 text-sm font-medium text-teal-800">
+                      {adminLang === 'ko' ? '멤버 문의' : 'Member inquiries'}
+                    </div>
+                    <div className="text-[32px] font-bold text-teal-900">
+                      {(statsForFilter?.memberTickets ?? 0).toLocaleString()}
+                    </div>
+                  </motion.div>
                 </div>
+
+                {stats.groupsByApp && Object.keys(stats.groupsByApp).length > 0 && (
+                  <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+                    <h3 className="mb-4 text-base font-semibold text-slate-800">
+                      {adminLang === 'ko' ? '앱별 요약' : 'By app'}
+                    </h3>
+                    <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                      {ALL_APP_IDS.map((appId) => (
+                        <li
+                          key={appId}
+                          className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                        >
+                          <span className={`rounded px-2 py-0.5 text-[12px] font-bold ${getAppIdBadgeClass(appId)}`}>
+                            {getAppIdLabel(appId)}
+                          </span>
+                          <span>{adminLang === 'ko' ? '그룹' : 'Groups'}: <strong>{(stats.groupsByApp?.[appId] || 0).toLocaleString()}</strong></span>
+                          <span>{adminLang === 'ko' ? '유저' : 'Users'}: <strong>{(stats.usersByApp?.[appId] || 0).toLocaleString()}</strong></span>
+                          <span>{adminLang === 'ko' ? '문의' : 'Tickets'}: <strong>{(stats.supportTicketsByApp?.[appId] || 0).toLocaleString()}</strong></span>
+                          <span>{adminLang === 'ko' ? '멤버문의' : 'Member'}: <strong>{(stats.memberTicketsByApp?.[appId] || 0).toLocaleString()}</strong></span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <SignupSettingsSection lang={adminLang} />
 
@@ -1759,13 +1946,11 @@ export default function AdminPage() {
             {/* 회원 관리 탭 */}
             {activeTab === 'users' && (
               <div>
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
                     {fat('user_list_count_title', { count: filteredUsers.length })}
                   </h2>
-                  <div
-                    className="admin-search relative w-[300px]"
-                  >
+                  <div className="admin-search relative w-[300px] max-w-full">
                     <Search className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
@@ -1775,6 +1960,34 @@ export default function AdminPage() {
                       className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm"
                     />
                   </div>
+                </div>
+
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAppFilter('all')}
+                    className={`cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
+                      appFilter === 'all'
+                        ? 'border-purple-600 bg-purple-600 text-white'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {at('filter_all')}
+                  </button>
+                  {ALL_APP_IDS.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setAppFilter(id)}
+                      className={`cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
+                        appFilter === id
+                          ? 'border-slate-800 bg-slate-800 text-white'
+                          : `border-transparent ${getAppIdBadgeClass(id)} hover:opacity-90`
+                      }`}
+                    >
+                      {getAppIdLabel(id)}
+                    </button>
+                  ))}
                 </div>
 
                 {/* 정렬 컨트롤 + 베타 필터 */}
@@ -1825,6 +2038,9 @@ export default function AdminPage() {
                           {at('email')}
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
+                          {adminLang === 'ko' ? '앱 소속' : 'Apps'}
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold text-slate-600">
                           {at('nickname')}
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
@@ -1873,6 +2089,24 @@ export default function AdminPage() {
                           </td>
                           <td className="p-3 text-sm text-slate-800">
                             {user.email || '-'}
+                          </td>
+                          <td className="p-3 text-sm text-slate-500">
+                            <div className="flex flex-wrap gap-1">
+                              {(user.app_ids || []).length === 0 ? (
+                                <span className="text-[12px] text-slate-300">
+                                  {adminLang === 'ko' ? '미소속' : 'None'}
+                                </span>
+                              ) : (
+                                (user.app_ids || []).map((id) => (
+                                  <span
+                                    key={id}
+                                    className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${getAppIdBadgeClass(id)}`}
+                                  >
+                                    {getAppIdLabel(id)}
+                                  </span>
+                                ))
+                              )}
+                            </div>
                           </td>
                           <td className="p-3 text-sm text-slate-800">
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -2033,13 +2267,11 @@ export default function AdminPage() {
             {/* 그룹 관리 탭 */}
             {activeTab === 'groups' && (
               <div>
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
                     {at('tab_groups')} ({filteredGroups.length})
                   </h2>
-                  <div
-                    className="admin-search relative w-[300px]"
-                  >
+                  <div className="admin-search relative w-[300px] max-w-full">
                     <Search className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
@@ -2051,10 +2283,49 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div
-                  className="admin-grid grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4"
-                >
-                  {filteredGroups.map((group, index) => {
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAppFilter('all')}
+                    className={`cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
+                      appFilter === 'all'
+                        ? 'border-purple-600 bg-purple-600 text-white'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {at('filter_all')}
+                  </button>
+                  {ALL_APP_IDS.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setAppFilter(id)}
+                      className={`cursor-pointer rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
+                        appFilter === id
+                          ? 'border-slate-800 bg-slate-800 text-white'
+                          : `border-transparent ${getAppIdBadgeClass(id)} hover:opacity-90`
+                      }`}
+                    >
+                      {getAppIdLabel(id)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-8">
+                  {groupsByAppSections.map((section) => (
+                    <section key={section.appId} className="min-w-0">
+                      <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
+                        <span
+                          className={`rounded px-2 py-1 text-sm font-bold ${getAppIdBadgeClass(section.appId)}`}
+                        >
+                          {section.label}
+                        </span>
+                        <span className="text-sm font-medium text-slate-500">
+                          {section.groups.length}
+                        </span>
+                      </div>
+                      <div className="admin-grid grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+                        {section.groups.map((group, index) => {
                     const usedBytes = group.storage_used_bytes || 0;
                     const quotaBytes = group.storage_quota_bytes || 0;
                     const percent = getStoragePercent(usedBytes, quotaBytes);
@@ -2070,6 +2341,11 @@ export default function AdminPage() {
                       <div className="mb-3 flex items-center justify-between gap-2">
                         <h3 className="m-0 flex min-w-0 flex-wrap items-center gap-2 text-lg font-semibold text-slate-800">
                           <span className="min-w-0 truncate">{adminGroupLabel(group)}</span>
+                          {group.app_id && (
+                            <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${getAppIdBadgeClass(group.app_id)}`}>
+                              {getAppIdLabel(group.app_id)}
+                            </span>
+                          )}
                           {suspendedGroupIds.has(group.id) && (
                             <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold bg-red-100 text-red-800">
                               {st('badge_suspended')}
@@ -2143,21 +2419,19 @@ export default function AdminPage() {
                           >
                             {at('set_quota')}
                           </button>
-                        {/* 관리 가능한 그룹에만 "관리하기" 버튼 표시 */}
-                        {manageableGroups.some(mg => mg.id === group.id) && (
-                          <button
+                        {/* 시스템 관리자: 전 앱 그룹 관리 가능 */}
+                        <button
                             className="flex-1 cursor-pointer rounded-lg border-none bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                             onClick={() => handleSelectGroupForAdmin(group.id)}
                           >
 {at('manage_btn')}
                             </button>
-                        )}
                         <button
                           className={`cursor-pointer rounded-lg border-none px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                             suspendedGroupIds.has(group.id)
                               ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 focus-visible:ring-emerald-400/70'
                               : 'bg-orange-100 text-orange-800 hover:bg-orange-200 focus-visible:ring-orange-400/70'
-                          } ${manageableGroups.some(mg => mg.id === group.id) ? 'flex-1' : 'flex-[1_1_120px]'}`}
+                          } flex-1`}
                           onClick={() => {
                             setSuspendTarget({
                               kind: 'group',
@@ -2216,6 +2490,9 @@ export default function AdminPage() {
                     </motion.div>
                     );
                   })}
+                      </div>
+                    </section>
+                  ))}
                 </div>
 
                 {filteredGroups.length === 0 && (
@@ -2232,31 +2509,45 @@ export default function AdminPage() {
               <div>
                 {/* 그룹 선택 드롭다운 */}
                 <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <label className="mb-2 block text-sm font-semibold text-slate-600">
-                    {at('select_group_label')}
-                  </label>
-                  <select
-                    value={selectedGroupId || ''}
-                    onChange={async (e) => {
-                      const groupId = e.target.value;
-                      setSelectedGroupId(groupId || null);
-                      if (groupId) {
-                        await loadSelectedGroup(groupId);
-                      } else {
-                        setSelectedGroup(null);
-                      }
-                    }}
-                    className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-                  >
-                    <option value="">{at('select_group_option')}</option>
-                    {/* 관리 가능한 그룹만 표시 */}
-                    {manageableGroups.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {getGroupSelectorLabel(group, ct('app_title'))} ({fat('count_suffix', { count: group.member_count })})
-                      </option>
-                    ))}
-                  </select>
-                  {manageableGroups.length === 0 && (
+                  <div className="mb-3 flex flex-wrap items-end gap-3">
+                    <div className="min-w-[160px] flex-1">
+                      <label className="mb-2 block text-sm font-semibold text-slate-600">
+                        {at('select_group_label')}
+                      </label>
+                      <select
+                        value={selectedGroupId || ''}
+                        onChange={async (e) => {
+                          const groupId = e.target.value;
+                          setSelectedGroupId(groupId || null);
+                          if (groupId) {
+                            await loadSelectedGroup(groupId);
+                          } else {
+                            setSelectedGroup(null);
+                          }
+                        }}
+                        className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+                      >
+                        <option value="">{at('select_group_option')}</option>
+                        {filteredManageableGroups.map((group) => (
+                          <option key={group.id} value={group.id}>
+                            [{getAppIdLabel(group.app_id)}] {getGroupSelectorLabel(group, ct('app_title'))} ({fat('count_suffix', { count: group.member_count })})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <select
+                      value={appFilter}
+                      onChange={(e) => setAppFilter(e.target.value as 'all' | AppId)}
+                      className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-2.5 text-[13px] text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+                      aria-label={adminLang === 'ko' ? '앱 필터' : 'App filter'}
+                    >
+                      <option value="all">{at('filter_all')}</option>
+                      {ALL_APP_IDS.map((id) => (
+                        <option key={id} value={id}>{getAppIdLabel(id)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {filteredManageableGroups.length === 0 && (
                     <p className="mt-2 text-[13px] italic text-amber-500">
                       {at('no_manageable_groups')}
                     </p>
@@ -2304,9 +2595,16 @@ export default function AdminPage() {
                   </button>
                 </div>
 
+                {renderAppFilterChips(true)}
+                <p className="mb-4 text-[13px] text-slate-500">
+                  {adminLang === 'ko'
+                    ? '전역 공지는 모든 앱에, 앱 지정 공지는 해당 앱에만 노출됩니다.'
+                    : 'Global notices appear in all apps; app-targeted notices only in that app.'}
+                </p>
+
                 {/* 공지 목록 */}
                 <div className="flex flex-col gap-4">
-                  {announcements.map((announcement) => (
+                  {filteredAnnouncements.map((announcement) => (
                     <motion.div
                       key={announcement.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -2319,10 +2617,11 @@ export default function AdminPage() {
                     >
                       <div className="mb-3 flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-2">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
                             <h3 className="m-0 text-lg font-semibold text-slate-800">
                               {getAnnouncementTexts(announcement, adminLang).title}
                             </h3>
+                            {renderAppBadge(announcement.app_id)}
                             {!announcement.is_active && (
                               <span className="rounded bg-red-200 px-2 py-1 text-[11px] font-semibold text-red-800">
                                 {at('disabled_label')}
@@ -2447,7 +2746,7 @@ export default function AdminPage() {
                       </div>
                     </motion.div>
                   ))}
-                  {announcements.length === 0 && (
+                  {filteredAnnouncements.length === 0 && (
                     <div className="p-12 text-center text-slate-400">
                       <Megaphone className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>{at('no_announcements')}</p>
@@ -2463,7 +2762,7 @@ export default function AdminPage() {
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
-                    {fat('support_all_pending_title', { count: supportTickets.filter(t => t.status === 'pending').length })}
+                    {fat('support_all_pending_title', { count: filteredSupportTickets.filter(t => t.status === 'pending').length })}
                   </h2>
                   <div className="flex gap-2">
                     <select
@@ -2483,8 +2782,10 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {renderAppFilterChips(false)}
+
                 <div className="flex flex-col gap-4">
-                  {supportTickets.map((ticket) => (
+                  {filteredSupportTickets.map((ticket) => (
                     <motion.div
                       key={ticket.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -2515,6 +2816,7 @@ export default function AdminPage() {
                                 📁 {ticket.groups.name}
                               </span>
                             )}
+                            {renderAppBadge(ticket.app_id ?? ticket.groups?.app_id, false)}
                           </div>
                           <p className="mb-3 mt-0 whitespace-pre-wrap text-sm text-slate-500">
                             {ticket.content}
@@ -2621,100 +2923,190 @@ export default function AdminPage() {
 
             {activeTab === 'member-inquiries' && (
               <div>
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
-                    {at('tab_member_inquiries')} ({memberGroupInquiries.filter((t) => t.status === 'pending').length} {at('status_pending')})
+                    {at('tab_member_inquiries')}
                   </h2>
+                  <p className="mt-2 mb-0 max-w-3xl text-sm leading-relaxed text-slate-500">
+                    {adminLang === 'ko'
+                      ? '일상적인 멤버 문의는 그룹 관리자만 처리합니다. 시스템 관리자는 신고·분쟁·법령 협조·그룹 관리자 부재 등 예외 사유가 있을 때만, 문의 ID로 단건 조회·삭제할 수 있습니다. 모든 접근은 감사 로그에 기록됩니다.'
+                      : 'Day-to-day member inquiries are handled by group admins only. System admins may look up or delete a single ticket by ID only for exception reasons (report, dispute, legal, absent admin, etc.). Every access is audit-logged.'}
+                  </p>
                 </div>
 
-                <div className="flex flex-col gap-4">
-                  {memberGroupInquiries.map((ticket) => (
-                    <motion.div
-                      key={ticket.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`rounded-xl border p-5 ${
-                        ticket.status === 'pending' ? 'border-orange-200 bg-orange-50' : 'border-slate-200 bg-slate-50'
-                      }`}
+                <div className="mb-6 max-w-xl space-y-4 rounded-xl border border-amber-200 bg-amber-50/80 p-5">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700" htmlFor="member-inquiry-ticket-id">
+                      {adminLang === 'ko' ? '문의 ID (UUID)' : 'Ticket ID (UUID)'}
+                    </label>
+                    <input
+                      id="member-inquiry-ticket-id"
+                      type="text"
+                      value={memberInquiryTicketId}
+                      onChange={(e) => setMemberInquiryTicketId(e.target.value)}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 font-mono text-sm text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700" htmlFor="member-inquiry-reason-code">
+                      {adminLang === 'ko' ? '사유 유형' : 'Reason type'}
+                    </label>
+                    <select
+                      id="member-inquiry-reason-code"
+                      value={memberInquiryReasonCode}
+                      onChange={(e) =>
+                        setMemberInquiryReasonCode(
+                          e.target.value as typeof memberInquiryReasonCode
+                        )
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-200"
                     >
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="mb-2 flex flex-wrap items-center gap-3">
-                            <h3 className="m-0 text-lg font-semibold text-slate-800">
-                              {ticket.title}
-                            </h3>
-                            {ticket.groups && (
-                              <span className="rounded-md bg-gray-100 px-2 py-1 text-[13px] font-medium text-gray-600">
-                                📁 {ticket.groups.name}
-                              </span>
-                            )}
-                            <span
-                              className={`rounded-xl px-3 py-1 text-xs font-semibold text-white ${
-                                ticket.status === 'pending'
-                                  ? 'bg-orange-500'
-                                  : ticket.status === 'answered'
-                                    ? 'bg-emerald-500'
-                                    : 'bg-slate-400'
-                              }`}
-                            >
-                              {ticket.status === 'pending' ? at('status_pending') : ticket.status === 'answered' ? at('status_answered') : at('status_closed')}
-                            </span>
-                          </div>
-                          <p className="mb-3 mt-0 whitespace-pre-wrap text-sm text-slate-500">
-                            {ticket.content}
-                          </p>
-                          {ticket.answer && (
-                            <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3.5">
-                              <div className="mb-1.5 text-xs font-semibold text-sky-700">
-                                {at('answer_label')}
-                              </div>
-                              <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
-                                {ticket.answer}
-                              </p>
-                            </div>
-                          )}
-                          {parseMemberSupportMessageThread(ticket.message_thread).map((entry, idx) => (
-                            <div
-                              key={`mgi-${entry.created_at}-${idx}`}
-                              className={`mt-2.5 rounded-lg border p-3 ${
-                                entry.role === 'member' ? 'border-amber-200 bg-amber-50' : 'border-sky-200 bg-sky-50'
-                              }`}
-                            >
-                              <div className={`mb-1 text-xs font-semibold ${entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'}`}>
-                                {entry.role === 'member' ? gat('thread_role_follow_up') : at('answer_label')}
-                              </div>
-                              <p className="m-0 whitespace-pre-wrap text-[13px] text-slate-800">
-                                {entry.body}
-                              </p>
-                            </div>
-                          ))}
+                      <option value="report">{adminLang === 'ko' ? '신고 처리' : 'Report'}</option>
+                      <option value="dispute">{adminLang === 'ko' ? '분쟁 처리' : 'Dispute'}</option>
+                      <option value="legal">{adminLang === 'ko' ? '법령·수사 협조' : 'Legal / authority'}</option>
+                      <option value="admin_absent">{adminLang === 'ko' ? '그룹 관리자 부재·미사용' : 'Group admin absent'}</option>
+                      <option value="other">{adminLang === 'ko' ? '기타(사유 상세 필수)' : 'Other (detail required)'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700" htmlFor="member-inquiry-reason">
+                      {adminLang === 'ko' ? '접근 사유 (10자 이상)' : 'Access reason (min. 10 chars)'}
+                    </label>
+                    <textarea
+                      id="member-inquiry-reason"
+                      value={memberInquiryReason}
+                      onChange={(e) => setMemberInquiryReason(e.target.value)}
+                      rows={3}
+                      className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-200"
+                      placeholder={
+                        adminLang === 'ko'
+                          ? '예: 그룹 관리자 미응답으로 방치된 문의 확인 (티켓 신고 #…)'
+                          : 'e.g. Review orphaned ticket after group admin inactivity (case #…)'
+                      }
+                    />
+                  </div>
+                  {memberInquiryActionError && (
+                    <p className="m-0 text-sm font-medium text-red-600">{memberInquiryActionError}</p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={memberInquiryLookupLoading}
+                    onClick={() => void lookupMemberInquiryException()}
+                    className={`rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white ${
+                      memberInquiryLookupLoading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-purple-700'
+                    }`}
+                  >
+                    {memberInquiryLookupLoading
+                      ? '…'
+                      : adminLang === 'ko'
+                        ? '사유 기록 후 단건 조회'
+                        : 'Look up (audit-logged)'}
+                  </button>
+                </div>
+
+                {memberInquiryLookup && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`max-w-3xl rounded-xl border p-5 ${
+                      memberInquiryLookup.status === 'pending'
+                        ? 'border-orange-200 bg-orange-50'
+                        : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div className="mb-3 flex flex-wrap items-center gap-3">
+                      <h3 className="m-0 text-lg font-semibold text-slate-800">
+                        {memberInquiryLookup.title}
+                      </h3>
+                      {memberInquiryLookup.groups && (
+                        <span className="rounded-md bg-gray-100 px-2 py-1 text-[13px] font-medium text-gray-600">
+                          📁 {memberInquiryLookup.groups.name}
+                        </span>
+                      )}
+                      {renderAppBadge(
+                        memberInquiryLookup.app_id ?? memberInquiryLookup.groups?.app_id,
+                        false
+                      )}
+                      <span
+                        className={`rounded-xl px-3 py-1 text-xs font-semibold text-white ${
+                          memberInquiryLookup.status === 'pending'
+                            ? 'bg-orange-500'
+                            : memberInquiryLookup.status === 'answered'
+                              ? 'bg-emerald-500'
+                              : 'bg-slate-400'
+                        }`}
+                      >
+                        {memberInquiryLookup.status === 'pending'
+                          ? at('status_pending')
+                          : memberInquiryLookup.status === 'answered'
+                            ? at('status_answered')
+                            : at('status_closed')}
+                      </span>
+                    </div>
+                    <p className="mb-1 font-mono text-xs text-slate-400">{memberInquiryLookup.id}</p>
+                    <p className="mb-3 mt-0 whitespace-pre-wrap text-sm text-slate-500">
+                      {memberInquiryLookup.content}
+                    </p>
+                    {memberInquiryLookup.answer && (
+                      <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3.5">
+                        <div className="mb-1.5 text-xs font-semibold text-sky-700">
+                          {at('answer_label')}
                         </div>
+                        <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
+                          {memberInquiryLookup.answer}
+                        </p>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-xs text-slate-400">
-                          {at('written_at')} {new Date(ticket.created_at).toLocaleString(adminLocale)}
-                          {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString(adminLocale)}`}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={deletingMemberInquiryId === ticket.id}
-                          onClick={() => void handleDeleteMemberGroupInquiry(ticket)}
-                          className={`rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-[13px] font-semibold text-red-700 ${
-                            deletingMemberInquiryId === ticket.id ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
+                    )}
+                    {parseMemberSupportMessageThread(memberInquiryLookup.message_thread).map(
+                      (entry, idx) => (
+                        <div
+                          key={`mgi-ex-${entry.created_at}-${idx}`}
+                          className={`mt-2.5 rounded-lg border p-3 ${
+                            entry.role === 'member'
+                              ? 'border-amber-200 bg-amber-50'
+                              : 'border-sky-200 bg-sky-50'
                           }`}
                         >
-                          {deletingMemberInquiryId === ticket.id ? '…' : ct('delete')}
-                        </button>
+                          <div
+                            className={`mb-1 text-xs font-semibold ${
+                              entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'
+                            }`}
+                          >
+                            {entry.role === 'member' ? gat('thread_role_follow_up') : at('answer_label')}
+                          </div>
+                          <p className="m-0 whitespace-pre-wrap text-[13px] text-slate-800">
+                            {entry.body}
+                          </p>
+                        </div>
+                      )
+                    )}
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs text-slate-400">
+                        {at('written_at')}{' '}
+                        {new Date(memberInquiryLookup.created_at).toLocaleString(adminLocale)}
+                        {memberInquiryLookup.answered_at &&
+                          ` | ${at('answered_at')} ${new Date(memberInquiryLookup.answered_at).toLocaleString(adminLocale)}`}
                       </div>
-                    </motion.div>
-                  ))}
-
-                  {memberGroupInquiries.length === 0 && !loadingData && (
-                    <div className="p-12 text-center text-slate-400">
-                      <p>{at('no_inquiries')}</p>
+                      <button
+                        type="button"
+                        disabled={deletingMemberInquiryId === memberInquiryLookup.id}
+                        onClick={() => void deleteMemberInquiryException()}
+                        className={`rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-[13px] font-semibold text-red-700 ${
+                          deletingMemberInquiryId === memberInquiryLookup.id
+                            ? 'cursor-not-allowed opacity-70'
+                            : 'cursor-pointer opacity-100'
+                        }`}
+                      >
+                        {deletingMemberInquiryId === memberInquiryLookup.id
+                          ? '…'
+                          : adminLang === 'ko'
+                            ? '예외 삭제 (감사 기록)'
+                            : 'Exception delete (audit)'}
+                      </button>
                     </div>
-                  )}
-                </div>
+                  </motion.div>
+                )}
               </div>
             )}
 
@@ -2865,7 +3257,7 @@ export default function AdminPage() {
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
-                    {fat('access_requests_pending_title', { count: accessRequests.filter(r => r.status === 'pending').length })}
+                    {fat('access_requests_pending_title', { count: filteredAccessRequests.filter(r => r.status === 'pending').length })}
                   </h2>
                   <button
                     onClick={() => {
@@ -2880,8 +3272,10 @@ export default function AdminPage() {
                   </button>
                 </div>
 
+                {renderAppFilterChips(false)}
+
                 <div className="flex flex-col gap-4">
-                  {accessRequests.map((request) => (
+                  {filteredAccessRequests.map((request) => (
                     <motion.div
                       key={request.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -2896,12 +3290,13 @@ export default function AdminPage() {
                     >
                       <div className="mb-3 flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="mb-2 flex items-center gap-3">
+                          <div className="mb-2 flex flex-wrap items-center gap-3">
                             {request.groups && (
                               <h3 className="m-0 text-lg font-semibold text-slate-800">
                                 {request.groups.name}
                               </h3>
                             )}
+                            {renderAppBadge(request.app_id ?? request.groups?.app_id, false)}
                             <span
                               className={`rounded-xl px-3 py-1 text-xs font-semibold text-white ${
                                 request.status === 'pending'
@@ -3082,7 +3477,7 @@ console.error(at('error_revoke_failed'), error);
                       </div>
                     </motion.div>
                   ))}
-                  {accessRequests.length === 0 && (
+                  {filteredAccessRequests.length === 0 && (
                     <div className="p-12 text-center text-slate-400">
                       <KeyRound className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>{at('no_access_requests')}</p>
@@ -3113,6 +3508,21 @@ console.error(at('error_revoke_failed'), error);
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, to: e.target.value }))}
                     className="rounded-md border border-slate-200 px-3 py-2 text-sm"
                   />
+                  <select
+                    value={auditLogFilters.app_id}
+                    onChange={(e) =>
+                      setAuditLogFilters((f) => ({
+                        ...f,
+                        app_id: e.target.value as '' | AppId,
+                      }))
+                    }
+                    className="min-w-[120px] cursor-pointer rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="">{adminLang === 'ko' ? '앱: 전체' : 'App: All'}</option>
+                    {ALL_APP_IDS.map((id) => (
+                      <option key={id} value={id}>{getAppIdLabel(id)}</option>
+                    ))}
+                  </select>
                   <select
                     value={auditLogFilters.resource_type}
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, resource_type: e.target.value }))}
@@ -3190,7 +3600,12 @@ console.error(at('error_revoke_failed'), error);
                             <td className="px-3 py-2.5">{log.resource_type}</td>
                             <td className="px-3 py-2.5 font-mono text-xs">{log.resource_id || '-'}</td>
                             <td className="px-3 py-2.5 font-mono text-xs">{log.admin_id}</td>
-                            <td className="px-3 py-2.5 font-mono text-xs">{log.group_id || '-'}</td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-mono text-xs">{log.group_id || '-'}</span>
+                                {log.app_id ? renderAppBadge(log.app_id, false) : null}
+                              </div>
+                            </td>
                             <td className="px-3 py-2.5 font-mono text-xs">{log.target_user_id || '-'}</td>
                             <td className="max-w-[200px] overflow-hidden text-ellipsis px-3 py-2.5">
                               {log.details ? JSON.stringify(log.details) : '-'}
@@ -3362,6 +3777,29 @@ console.error(at('error_revoke_failed'), error);
         </div>
         <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <label className="mb-3 block text-sm font-semibold text-slate-700">
+            {adminLang === 'ko' ? '앱 대상' : 'App scope'}
+          </label>
+          <select
+            value={announcementAppId ?? 'global'}
+            onChange={(e) => {
+              const v = e.target.value;
+              setAnnouncementAppId(v === 'global' ? null : v);
+            }}
+            className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+          >
+            <option value="global">{adminLang === 'ko' ? '전역 (모든 앱)' : 'Global (all apps)'}</option>
+            {ALL_APP_IDS.map((id) => (
+              <option key={id} value={id}>{getAppIdLabel(id)}</option>
+            ))}
+          </select>
+          <p className="mb-0 mt-2 text-xs text-slate-500">
+            {adminLang === 'ko'
+              ? '전역은 4개 앱 모두에 표시됩니다. 특정 앱을 고르면 그 앱에만 표시됩니다.'
+              : 'Global shows in all 4 apps. A specific app only shows there.'}
+          </p>
+        </div>
+        <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <label className="mb-3 block text-sm font-semibold text-slate-700">
             {at('announcement_target_label')}
           </label>
           <div className="flex gap-4">
@@ -3461,6 +3899,7 @@ console.error(at('error_revoke_failed'), error);
                       content_i18n: contentObj,
                       is_active: true,
                       target: announcementTarget,
+                      app_id: announcementAppId,
                     }),
                   });
 
@@ -3483,6 +3922,7 @@ console.error(at('error_revoke_failed'), error);
                       content_i18n: contentObj,
                       is_active: true,
                       target: announcementTarget,
+                      app_id: announcementAppId,
                     }),
                   });
 
@@ -3660,7 +4100,7 @@ console.error(at('error_revoke_failed'), error);
             <option value="">{at('select_group_option')}</option>
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
-                {adminGroupLabel(group)}
+                [{getAppIdLabel(group.app_id)}] {adminGroupLabel(group)}
               </option>
             ))}
           </select>
