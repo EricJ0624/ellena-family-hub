@@ -30,6 +30,8 @@ export type UnifiedItineraryItem = {
   place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  field_record_kind?: 'checkin' | 'route' | null;
+  field_track_id?: string | null;
   transport_type?: 'air' | 'train' | 'car' | 'bike';
   show_in_itinerary: boolean;
 };
@@ -157,6 +159,8 @@ export function buildUnifiedItineraries(params: {
       place_id: null,
       latitude: i.latitude,
       longitude: i.longitude,
+      field_record_kind: i.field_record_kind ?? null,
+      field_track_id: i.field_track_id ?? null,
       show_in_itinerary: true,
     });
   }

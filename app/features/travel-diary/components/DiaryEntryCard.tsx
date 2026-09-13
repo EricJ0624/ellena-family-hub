@@ -30,6 +30,7 @@ import { DiaryPhotoCollage } from './DiaryPhotoCollage';
 import { DiaryPhotoFocusModal } from './DiaryPhotoFocusModal';
 import { DiaryPhotoGalleryModal } from './DiaryPhotoGalleryModal';
 import { DiaryPlaceMapPreview } from './DiaryPlaceMapPreview';
+import { FieldTrackRouteMap } from '@/app/features/travel-planner/components/FieldTrackRouteMap';
 import { FamilyAlbumPickerModal } from './FamilyAlbumPickerModal';
 
 const MOOD_OPTIONS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'];
@@ -439,7 +440,13 @@ export function DiaryEntryCard({
     latitude: slot.latitude,
     longitude: slot.longitude,
   };
-  const canShowMap = canShowDiaryPlaceMap(placeRef, slot.source_kind);
+  const routeTrackId =
+    slot.field_record_kind === 'route' && slot.field_track_id
+      ? String(slot.field_track_id)
+      : null;
+  const canShowMap = routeTrackId
+    ? true
+    : canShowDiaryPlaceMap(placeRef, slot.source_kind);
   const displayMap = showMapPref && canShowMap;
   const showRatingBlock = Boolean(slot.source_kind) && (rating != null || isRevisit);
   const showLeftMeta = selectedMoods.length > 0 || (displayMap && showRatingBlock);
@@ -515,7 +522,11 @@ export function DiaryEntryCard({
                 ) : null}
               </div>
               {displayMap ? (
-                <DiaryPlaceMapPreview place={placeRef} sourceKind={slot.source_kind} />
+                routeTrackId ? (
+                  <FieldTrackRouteMap groupId={groupId} trackId={routeTrackId} />
+                ) : (
+                  <DiaryPlaceMapPreview place={placeRef} sourceKind={slot.source_kind} />
+                )
               ) : null}
             </div>
           ) : null}
@@ -605,7 +616,11 @@ export function DiaryEntryCard({
               </div>
             </div>
             {displayMap ? (
-              <DiaryPlaceMapPreview place={placeRef} sourceKind={slot.source_kind} />
+              routeTrackId ? (
+                <FieldTrackRouteMap groupId={groupId} trackId={routeTrackId} />
+              ) : (
+                <DiaryPlaceMapPreview place={placeRef} sourceKind={slot.source_kind} />
+              )
             ) : null}
           </div>
 

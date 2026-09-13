@@ -32,7 +32,7 @@ export async function GET(
     const supabase = getSupabaseServerClient();
     const { data: track, error: trackErr } = await supabase
       .from('travel_field_tracks')
-      .select('id, group_id')
+      .select('id, group_id, start_lat, start_lng, end_lat, end_lng')
       .eq('id', trackId)
       .eq('group_id', groupId)
       .maybeSingle();
@@ -52,7 +52,16 @@ export async function GET(
       return NextResponse.json({ error: '포인트 조회에 실패했습니다.' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: points ?? [] });
+    return NextResponse.json({
+      success: true,
+      data: points ?? [],
+      meta: {
+        start_lat: track.start_lat ?? null,
+        start_lng: track.start_lng ?? null,
+        end_lat: track.end_lat ?? null,
+        end_lng: track.end_lng ?? null,
+      },
+    });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '서버 오류';
     console.error('GET field-tracks points:', e);

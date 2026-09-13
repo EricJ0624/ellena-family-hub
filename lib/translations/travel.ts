@@ -278,6 +278,11 @@ export type TravelTranslations = {
   field_pick_create: string;
   field_pick_attach: string;
   field_pick_cancel: string;
+  field_pick_new_trip: string;
+  field_pick_existing_trip: string;
+  quick_record_title: string;
+  quick_record_checkin: string;
+  quick_record_route: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -557,6 +562,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: '새 일정으로 저장',
     field_pick_attach: '기존 일정에 붙이기',
     field_pick_cancel: '취소',
+    field_pick_new_trip: '새 여행으로 저장',
+    field_pick_existing_trip: '기존 여행에 일정 추가',
+    quick_record_title: '빠른 여행 기록',
+    quick_record_checkin: '내 위치 기록',
+    quick_record_route: '루트 기록',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -834,6 +844,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: 'Save as new schedule',
     field_pick_attach: 'Attach to existing schedule',
     field_pick_cancel: 'Cancel',
+    field_pick_new_trip: 'Save as new trip',
+    field_pick_existing_trip: 'Add to existing trip',
+    quick_record_title: 'Quick travel log',
+    quick_record_checkin: 'Log my location',
+    quick_record_route: 'Record route',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -1111,6 +1126,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: '新しい予定として保存',
     field_pick_attach: '既存の予定に追加',
     field_pick_cancel: 'キャンセル',
+    field_pick_new_trip: '新しい旅行として保存',
+    field_pick_existing_trip: '既存の旅行に予定を追加',
+    quick_record_title: 'クイック旅行記録',
+    quick_record_checkin: '現在地を記録',
+    quick_record_route: 'ルート記録',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -1388,6 +1408,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: '保存为新行程',
     field_pick_attach: '添加到已有行程',
     field_pick_cancel: '取消',
+    field_pick_new_trip: '保存为新旅行',
+    field_pick_existing_trip: '添加到已有旅行',
+    quick_record_title: '快速旅行记录',
+    quick_record_checkin: '记录我的位置',
+    quick_record_route: '记录路线',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -1665,6 +1690,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: '另存為新行程',
     field_pick_attach: '加到既有行程',
     field_pick_cancel: '取消',
+    field_pick_new_trip: '另存為新旅行',
+    field_pick_existing_trip: '加到既有旅行',
+    quick_record_title: '快速旅行記錄',
+    quick_record_checkin: '記錄我的位置',
+    quick_record_route: '記錄路線',
   },
   es: {
     auth_required: 'Se requiere autenticación.',
@@ -1941,6 +1971,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: 'Save as new schedule',
     field_pick_attach: 'Attach to existing schedule',
     field_pick_cancel: 'Cancel',
+    field_pick_new_trip: 'Save as new trip',
+    field_pick_existing_trip: 'Add to existing trip',
+    quick_record_title: 'Quick travel log',
+    quick_record_checkin: 'Log my location',
+    quick_record_route: 'Record route',
   },
   fr: {
     auth_required: 'Authentification requise.',
@@ -2217,6 +2252,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: 'Save as new schedule',
     field_pick_attach: 'Attach to existing schedule',
     field_pick_cancel: 'Cancel',
+    field_pick_new_trip: 'Save as new trip',
+    field_pick_existing_trip: 'Add to existing trip',
+    quick_record_title: 'Quick travel log',
+    quick_record_checkin: 'Log my location',
+    quick_record_route: 'Record route',
   },
   de: {
     auth_required: 'Authentifizierung erforderlich.',
@@ -2493,6 +2533,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: 'Save as new schedule',
     field_pick_attach: 'Attach to existing schedule',
     field_pick_cancel: 'Cancel',
+    field_pick_new_trip: 'Save as new trip',
+    field_pick_existing_trip: 'Add to existing trip',
+    quick_record_title: 'Quick travel log',
+    quick_record_checkin: 'Log my location',
+    quick_record_route: 'Record route',
   },
   it: {
     auth_required: 'Autenticazione richiesta.',
@@ -2769,6 +2814,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: 'Save as new schedule',
     field_pick_attach: 'Attach to existing schedule',
     field_pick_cancel: 'Cancel',
+    field_pick_new_trip: 'Save as new trip',
+    field_pick_existing_trip: 'Add to existing trip',
+    quick_record_title: 'Quick travel log',
+    quick_record_checkin: 'Log my location',
+    quick_record_route: 'Record route',
   },
   pt: {
     auth_required: 'Autenticação necessária.',
@@ -3045,6 +3095,11 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_pick_create: 'Save as new schedule',
     field_pick_attach: 'Attach to existing schedule',
     field_pick_cancel: 'Cancel',
+    field_pick_new_trip: 'Save as new trip',
+    field_pick_existing_trip: 'Add to existing trip',
+    quick_record_title: 'Quick travel log',
+    quick_record_checkin: 'Log my location',
+    quick_record_route: 'Record route',
   },
 };
 

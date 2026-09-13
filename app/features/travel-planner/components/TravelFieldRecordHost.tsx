@@ -14,6 +14,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { formatLocalDayDate } from '@/lib/modules/travel-planner/field-match';
+import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import { TravelFieldRecordBar, type TravelFieldRecordBarLabels } from './TravelFieldRecordBar';
 import {
   TravelFieldTargetPicker,
@@ -39,6 +40,12 @@ type Props = {
   /** Widget: existing trips for picker (empty → auto-create trip) */
   trips?: FieldWidgetTripOption[];
   toolbar?: boolean;
+  /** widget UI: toolbar pills | default row | circular hero buttons */
+  barLayout?: 'default' | 'toolbar' | 'circles';
+  /** Default trip title when creating from widget */
+  newTripTitle?: string;
+  /** When creating a trip from widget, also enable diary write access */
+  enableDiaryOnCreate?: boolean;
   labels: TravelFieldRecordBarLabels;
   pickLabels?: FieldTargetPickLabels;
   enabled?: boolean;
@@ -65,6 +72,9 @@ export function TravelFieldRecordHost({
   mode,
   trips = [],
   toolbar = false,
+  barLayout,
+  newTripTitle = '빠른 여행 기록',
+  enableDiaryOnCreate = false,
   labels,
   pickLabels,
   enabled = true,
@@ -72,6 +82,8 @@ export function TravelFieldRecordHost({
 }: Props) {
   const resolvedPickLabels =
     pickLabels ?? (mode === 'widget' ? DEFAULT_PICK_WIDGET : DEFAULT_PICK_PAGE);
+  const resolvedBarLayout =
+    barLayout ?? (toolbar ? 'toolbar' : 'default');
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -110,19 +122,31 @@ export function TravelFieldRecordHost({
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         groupId,
-        title: '현장 기록',
+        title: newTripTitle,
         start_date: today,
         end_date: today,
+        ...(enableDiaryOnCreate ? { diary_enabled: true } : {}),
       }),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error || '여행 생성에 실패했습니다.');
     const id = json.data?.id as string | undefined;
     if (!id) throw new Error('여행 생성에 실패했습니다.');
+    if (enableDiaryOnCreate) {
+      void fetch('/api/v1/travel/widgets/enable-travel-diary', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId }),
+      })
+        .then((r) => {
+          if (r.ok) dispatchWidgetConfigsUpdated();
+        })
+        .catch(() => undefined);
+    }
     setLocalTripId(id);
     onSaved?.();
     return id;
-  }, [groupId, getAuthHeaders, onSaved]);
+  }, [groupId, getAuthHeaders, onSaved, newTripTitle, enableDiaryOnCreate]);
 
   /** Only when no trip yet (0 trips / first use) */
   const ensureTripId = useCallback(async () => {
@@ -280,6 +304,7 @@ export function TravelFieldRecordHost({
       <TravelFieldRecordBar
         mode={mode}
         toolbar={toolbar}
+        layout={resolvedBarLayout}
         disabled={!canUse}
         busy={recorder.busy}
         recording={recorder.recording}

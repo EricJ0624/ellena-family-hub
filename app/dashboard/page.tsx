@@ -106,6 +106,7 @@ import { FamilyLocationNavMapModal } from '@/app/features/family-location/compon
 import { openNavMapApp, isLocationInSouthKorea, type NavMapApp } from '@/lib/nav-map-apps';
 import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
 import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
+import { TravelQuickRecordSection } from '@/app/features/travel-planner/components/TravelQuickRecordSection';
 import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
 import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
 import { TravelDiaryDashboardSection } from '@/app/features/travel-diary/components/TravelDiaryDashboardSection';
@@ -482,6 +483,7 @@ export default function FamilyHub() {
       piggy: dt('piggy_section_admin_title'),
       games: gt('section_title'),
       travel_diary: tdy('section_title'),
+      travel_quick_record: tt('quick_record_title'),
     }),
     [lang],
   );
@@ -6768,12 +6770,31 @@ export default function FamilyHub() {
               trips_loading: tt('dashboard_trips_loading'),
               empty_state: tt('dashboard_card_empty'),
             }}
+          />
+        );
+      case 'travel_quick_record':
+        return (
+          <TravelQuickRecordSection
+            trips={travelTrips}
+            currentGroupId={currentGroupId}
+            uiTheme={uiTheme}
+            translations={{
+              section_title: tt('quick_record_title'),
+              select_group: tt('dashboard_select_group'),
+              new_trip_title: tt('quick_record_title'),
+            }}
             fieldLabels={{
-              checkin: tt('field_checkin'),
-              route_start: tt('field_route_start'),
+              checkin: tt('quick_record_checkin'),
+              route_start: tt('quick_record_route'),
               route_stop: tt('field_route_stop'),
               need_active_trip: tt('field_need_active_trip'),
               recording: tt('field_recording'),
+            }}
+            pickLabels={{
+              title: tt('field_pick_title'),
+              create: tt('field_pick_new_trip'),
+              attach_hint: tt('field_pick_existing_trip'),
+              cancel: tt('field_pick_cancel'),
             }}
             onFieldSaved={reloadTravelTrips}
           />
@@ -6795,14 +6816,6 @@ export default function FamilyHub() {
               open_diary: tdy('open_diary'),
               start_trip_diary: tdy('start_trip_diary'),
             }}
-            fieldLabels={{
-              checkin: tt('field_checkin'),
-              route_start: tt('field_route_start'),
-              route_stop: tt('field_route_stop'),
-              need_active_trip: tt('field_need_active_trip'),
-              recording: tt('field_recording'),
-            }}
-            onFieldSaved={reloadTravelTrips}
           />
         );
       case 'piggy':

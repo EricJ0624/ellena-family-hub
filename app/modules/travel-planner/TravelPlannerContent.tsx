@@ -22,6 +22,7 @@ import { normalizePackingChecklist } from '@/lib/modules/travel-planner/document
 import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
 import { buildStaticMapUrl, collectTripMapPoints } from '@/lib/modules/travel-planner/static-map-url';
 import { buildGoogleMapsViewUrl, formatPlaceCoords } from '@/lib/modules/travel-planner/google-maps-embed';
+import { fetchFieldTrackPath } from '@/lib/modules/travel-planner/field-track-path';
 import { ItineraryDocument, printItineraryDocumentPreview } from '@/app/modules/travel-planner/components/ItineraryDocument';
 import {
   canUserOptInDiaryForTrip,
@@ -850,11 +851,17 @@ export function TravelPlannerContent() {
 
     const mapEl = document.getElementById('travel-planner-map');
     if (!mapEl) return;
+
     let cancelled = false;
+    const ac = new AbortController();
+    const runId = Symbol('travel-map-draw');
+    (travelMapMarkersRef as { __runId?: symbol }).__runId = runId;
+    const isCurrent = () =>
+      !cancelled && (travelMapMarkersRef as { __runId?: symbol }).__runId === runId;
 
     const initMapAndMarkers = async () => {
       const g = getGoogleMapsNs();
-      if (!g?.Map) return;
+      if (!g?.Map || !g.Polyline) return;
 
       if (!travelMapRef.current) {
         const center = { lat: 37.5665, lng: 126.978 };
@@ -868,6 +875,8 @@ export function TravelPlannerContent() {
       }
 
       const map = travelMapRef.current;
+      if (!isCurrent() || !map) return;
+
       travelMapMarkersRef.current.forEach((m) => m.setMap(null));
       travelMapMarkersRef.current = [];
       travelMapPolylinesRef.current.forEach((p) => p.setMap(null));
@@ -876,7 +885,6 @@ export function TravelPlannerContent() {
       const bounds = new g.LatLngBounds();
       let hasAny = false;
 
-      // 이모지 마커: 🏨 숙소 🍽️ 식당 🏛️ 관광지 📍 위치 🛤️ 경로 📌 기타
       const addMarker = (lat: number, lng: number, title: string, emoji?: string) => {
         const nLat = Number(lat);
         const nLng = Number(lng);
@@ -893,6 +901,7 @@ export function TravelPlannerContent() {
         });
         travelMapMarkersRef.current.push(marker);
       };
+
       accommodations.forEach((a) => {
         if (a.latitude != null && a.longitude != null) {
           addMarker(a.latitude, a.longitude, shortItineraryTitle('accommodation', a.name, a.address), '🏨');
@@ -908,10 +917,12 @@ export function TravelPlannerContent() {
           addMarker(a.latitude, a.longitude, shortItineraryTitle('attraction', a.name, a.address), '🏛️');
         }
       });
+
+      // Non-route itineraries: pin. Route pins drawn after path (start/end).
       itineraries.forEach((i) => {
+        if (i.field_record_kind === 'route' && i.field_track_id) return;
         if (i.latitude != null && i.longitude != null) {
-          const emoji =
-            i.field_record_kind === 'route' ? '🛤️' : i.field_record_kind === 'checkin' ? '📍' : '📌';
+          const emoji = i.field_record_kind === 'checkin' ? '📍' : '📌';
           addMarker(i.latitude, i.longitude, shortItineraryTitle('other', i.title, i.address), emoji);
         }
       });
@@ -920,70 +931,79 @@ export function TravelPlannerContent() {
         const trackIds = [
           ...new Set(
             itineraries
-              .map((i) => (i.field_track_id ? String(i.field_track_id) : ''))
-              .filter(Boolean),
+              .filter((i) => i.field_record_kind === 'route' && i.field_track_id)
+              .map((i) => String(i.field_track_id)),
           ),
         ];
         try {
           const headers = await getAuthHeaders();
+          // GET must not force JSON content-type quirks on some stacks
+          const { 'Content-Type': _ct, ...getHeaders } = headers as Record<string, string> & {
+            'Content-Type'?: string;
+          };
           for (const trackId of trackIds) {
-            if (cancelled) return;
-            const res = await fetch(
-              `/api/v1/travel/field-tracks/${trackId}/points?groupId=${encodeURIComponent(currentGroupId)}`,
-              { headers },
-            );
-            const json = await res.json().catch(() => ({}));
-            if (!res.ok || !Array.isArray(json.data)) continue;
-            const path = (json.data as Array<{ latitude?: number; longitude?: number }>)
-              .map((p) => {
-                const lat = Number(p.latitude);
-                const lng = Number(p.longitude);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-                return { lat, lng };
-              })
-              .filter((p): p is { lat: number; lng: number } => p != null);
-            if (path.length < 2 || cancelled) continue;
-            path.forEach((p) => bounds.extend(p));
-            hasAny = true;
-            const poly = new g.Polyline({
-              path,
-              geodesic: true,
-              strokeColor: '#2563eb',
-              strokeOpacity: 0.85,
-              strokeWeight: 4,
-              map,
-            });
-            travelMapPolylinesRef.current.push(poly);
+            if (!isCurrent()) return;
+            const path = await fetchFieldTrackPath(trackId, currentGroupId, getHeaders, ac.signal);
+            if (!isCurrent() || path.length === 0) continue;
+
+            if (path.length >= 2) {
+              path.forEach((p) => bounds.extend(p));
+              hasAny = true;
+              const poly = new g.Polyline({
+                path,
+                geodesic: true,
+                strokeColor: '#2563eb',
+                strokeOpacity: 0.9,
+                strokeWeight: 5,
+                zIndex: 2,
+                map,
+              });
+              travelMapPolylinesRef.current.push(poly);
+              const start = path[0]!;
+              const end = path[path.length - 1]!;
+              addMarker(start.lat, start.lng, '경로 시작', '🟢');
+              addMarker(end.lat, end.lng, '경로 종료', '🏁');
+            } else {
+              addMarker(path[0]!.lat, path[0]!.lng, '경로 기록', '🛤️');
+            }
           }
-        } catch {
-          /* ignore polyline load errors */
+        } catch (e) {
+          if ((e as { name?: string })?.name !== 'AbortError') {
+            console.warn('field track polyline:', e);
+          }
         }
       }
 
-      if (!cancelled && hasAny && map) map.fitBounds(bounds);
+      if (isCurrent() && hasAny && map) {
+        map.fitBounds(bounds, 48);
+      }
+    };
+
+    const start = () => {
+      void initMapAndMarkers();
     };
 
     if (getGoogleMapsNs()?.Map) {
-      void initMapAndMarkers();
+      start();
+    } else if (travelMapScriptLoadedRef.current) {
+      start();
+    } else {
+      const t = setInterval(() => {
+        if (getGoogleMapsNs()?.Map) {
+          clearInterval(t);
+          start();
+        }
+      }, 100);
       return () => {
         cancelled = true;
-      };
-    }
-    if (travelMapScriptLoadedRef.current) {
-      void initMapAndMarkers();
-      return () => {
-        cancelled = true;
-      };
-    }
-    const t = setInterval(() => {
-      if (getGoogleMapsNs()?.Map) {
+        ac.abort();
         clearInterval(t);
-        void initMapAndMarkers();
-      }
-    }, 100);
+      };
+    }
+
     return () => {
       cancelled = true;
-      clearInterval(t);
+      ac.abort();
     };
   }, [
     showTravelMap,

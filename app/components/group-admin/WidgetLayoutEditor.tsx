@@ -30,6 +30,7 @@ import {
   Plane,
   Dices,
   BookOpen,
+  Navigation,
   type LucideIcon,
 } from 'lucide-react';
 import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types';
@@ -94,6 +95,7 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
   piggy:    { icon: null, emoji: '🐷', bg: 'bg-red-500',  fg: 'text-white' },
   games:        { icon: Dices,    bg: 'bg-amber-500',   fg: 'text-white' },
   travel_diary: { icon: BookOpen, bg: 'bg-violet-600',  fg: 'text-white' },
+  travel_quick_record: { icon: Navigation, bg: 'bg-emerald-600', fg: 'text-white' },
 };
 
 

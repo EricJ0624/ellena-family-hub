@@ -1,8 +1,5 @@
 /**
  * 가족 여행 플래너 — 대시보드 위젯
- *
- * Check in / Record = Import / Add trip 과 같은 툴바(위젯 본체)
- * 여행 목록(bottom)에는 절대 넣지 않음
  */
 
 'use client';
@@ -11,8 +8,6 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { TravelTrip } from '../types';
-import { TravelFieldRecordHost } from './TravelFieldRecordHost';
-import type { TravelFieldRecordBarLabels } from './TravelFieldRecordBar';
 
 interface TravelPlannerSectionProps {
   trips: TravelTrip[];
@@ -30,8 +25,6 @@ interface TravelPlannerSectionProps {
     trips_loading: string;
     empty_state: string;
   };
-  fieldLabels: TravelFieldRecordBarLabels;
-  onFieldSaved?: () => void;
 }
 
 export function TravelPlannerSection({
@@ -43,28 +36,8 @@ export function TravelPlannerSection({
   onImportClick,
   uiTheme,
   translations: t,
-  fieldLabels,
-  onFieldSaved,
 }: TravelPlannerSectionProps) {
   const isKidsTheme = uiTheme === 'kids_friendly';
-
-  const fieldToolbar = currentGroupId ? (
-    <TravelFieldRecordHost
-      groupId={currentGroupId}
-      tripId={null}
-      trips={trips.map((t) => ({
-        id: t.id,
-        title: t.title,
-        start_date: t.start_date,
-        end_date: t.end_date,
-      }))}
-      mode="widget"
-      toolbar
-      enabled={Boolean(currentGroupId)}
-      labels={fieldLabels}
-      onSaved={onFieldSaved}
-    />
-  ) : null;
 
   if (isKidsTheme) {
     return (
@@ -91,7 +64,6 @@ export function TravelPlannerSection({
                   <Plus className="travel-kids-widget-add-icon" aria-hidden />
                   {t.add_trip}
                 </button>
-                {fieldToolbar}
               </div>
             ) : null}
             <div className="travel-kids-widget-bottom">
@@ -151,7 +123,6 @@ export function TravelPlannerSection({
               <Plus style={{ width: '4.5cqmin', height: '4.5cqmin' }} />
               {t.add_trip}
             </button>
-            {fieldToolbar}
           </div>
         ) : null}
       </div>

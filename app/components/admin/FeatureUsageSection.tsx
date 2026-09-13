@@ -71,6 +71,8 @@ function widgetLabel(lang: LangCode, key: DashboardWidgetKey): string {
       return getGamesTranslation(lang, 'section_title');
     case 'travel_diary':
       return getTravelTranslation(lang, 'diary_modal_title');
+    case 'travel_quick_record':
+      return getTravelTranslation(lang, 'quick_record_title');
     default:
       return key;
   }

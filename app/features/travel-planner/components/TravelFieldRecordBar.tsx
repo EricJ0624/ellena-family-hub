@@ -3,6 +3,7 @@
  * - page: larger buttons
  * - widget: default full-width
  * - widget + toolbar: Import/Add 와 같은 필 툴바용 (일정 목록과 분리)
+ * - circles: 빠른 여행 기록 위젯용 원형 버튼
  */
 
 'use client';
@@ -22,6 +23,7 @@ type Props = {
   mode: 'widget' | 'page';
   /** widget only: render as compact pills for toolbar next to Import/Add */
   toolbar?: boolean;
+  layout?: 'default' | 'toolbar' | 'circles';
   disabled?: boolean;
   busy?: boolean;
   recording?: boolean;
@@ -35,6 +37,7 @@ type Props = {
 export function TravelFieldRecordBar({
   mode,
   toolbar = false,
+  layout,
   disabled,
   busy,
   recording,
@@ -45,9 +48,9 @@ export function TravelFieldRecordBar({
   onToggleRoute,
 }: Props) {
   const isWidget = mode === 'widget';
-  const isToolbar = isWidget && toolbar;
+  const resolvedLayout = layout ?? (isWidget && toolbar ? 'toolbar' : 'default');
 
-  if (isToolbar) {
+  if (resolvedLayout === 'toolbar') {
     return (
       <div className="contents" data-travel-field-bar="toolbar">
         <button
@@ -86,6 +89,65 @@ export function TravelFieldRecordBar({
         ) : null}
         {message ? <span className="travel-kids-widget-field-hint travel-kids-widget-field-hint--ok">{message}</span> : null}
         {error ? <span className="travel-kids-widget-field-hint travel-kids-widget-field-hint--err">{error}</span> : null}
+      </div>
+    );
+  }
+
+  if (resolvedLayout === 'circles') {
+    const circleBtn =
+      'travel-quick-record-circle inline-flex aspect-square w-[min(28cqmin,7.5rem)] shrink-0 cursor-pointer flex-col items-center justify-center gap-[1.5cqmin] border-0 px-[2cqmin] text-center font-bold transition-[transform,box-shadow,background-color] disabled:cursor-not-allowed disabled:opacity-55';
+    const iconCls = 'travel-quick-record-circle-icon h-[7cqmin] w-[7cqmin] max-h-7 max-w-7 shrink-0';
+    const labelCls =
+      'travel-quick-record-circle-label max-w-full text-[3.6cqmin] leading-tight [word-break:keep-all]';
+
+    return (
+      <div className="flex w-full min-w-0 flex-col gap-[1.5cqmin]" data-travel-field-bar="circles">
+        <div className="flex w-full min-w-0 items-center justify-evenly gap-[2cqmin] py-[1cqmin]">
+          <button
+            type="button"
+            onClick={onCheckIn}
+            disabled={busy || disabled}
+            className={`${circleBtn} travel-quick-record-circle--checkin`}
+            title={disabled ? labels.need_active_trip : labels.checkin}
+          >
+            <MapPin className={iconCls} aria-hidden />
+            <span className={labelCls}>{labels.checkin}</span>
+          </button>
+          <button
+            type="button"
+            onClick={onToggleRoute}
+            disabled={busy || disabled}
+            className={`${circleBtn} ${
+              recording
+                ? 'travel-quick-record-circle--recording'
+                : 'travel-quick-record-circle--route'
+            }`}
+            title={disabled ? labels.need_active_trip : recording ? labels.route_stop : labels.route_start}
+          >
+            {recording ? (
+              <Square className={iconCls} aria-hidden />
+            ) : (
+              <Navigation className={iconCls} aria-hidden />
+            )}
+            <span className={labelCls}>{recording ? labels.route_stop : labels.route_start}</span>
+          </button>
+        </div>
+        {disabled ? (
+          <p className="travel-quick-record-hint m-0 text-center text-[3.8cqmin] leading-snug [word-break:keep-all]">
+            {labels.need_active_trip}
+          </p>
+        ) : null}
+        {recording && !disabled ? (
+          <p className="travel-quick-record-status m-0 text-center text-[3.8cqmin] font-semibold">
+            {labels.recording}
+          </p>
+        ) : null}
+        {message ? (
+          <p className="travel-quick-record-ok m-0 text-center text-[3.8cqmin] font-medium">{message}</p>
+        ) : null}
+        {error ? (
+          <p className="travel-quick-record-err m-0 text-center text-[3.8cqmin] font-medium">{error}</p>
+        ) : null}
       </div>
     );
   }

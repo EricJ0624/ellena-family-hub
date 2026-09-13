@@ -452,6 +452,142 @@ button.travel-kids-add-trip-submit {
   color: #b91c1c;
 }
 
+/* ── 빠른 여행 기록: 원형 버튼 (테마별 스킨) ───────────────────── */
+.travel-quick-record-circle {
+  border-radius: 9999px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.18);
+}
+.travel-quick-record-circle:not(:disabled):hover {
+  transform: scale(1.03);
+}
+.travel-quick-record-circle:not(:disabled):active {
+  transform: scale(0.98);
+}
+.travel-quick-record-circle:disabled:hover {
+  transform: none;
+}
+.travel-quick-record-circle--checkin {
+  background-color: #059669;
+}
+.travel-quick-record-circle--route {
+  background-color: #7c3aed;
+}
+.travel-quick-record-circle--recording {
+  background-color: #e11d48;
+}
+.travel-quick-record-hint {
+  color: #64748b;
+}
+.travel-quick-record-status {
+  color: #e11d48;
+}
+.travel-quick-record-ok {
+  color: #047857;
+}
+.travel-quick-record-err {
+  color: #b91c1c;
+}
+
+/* Neo Brutal (default) */
+:root[data-ui-theme='default'] .travel-quick-record-circle,
+.dark[data-ui-theme='default'] .travel-quick-record-circle {
+  border: var(--neo-border-w) solid var(--neo-ink);
+  border-radius: 9999px;
+  color: var(--neo-ink);
+  box-shadow: var(--neo-shadow);
+  transition: box-shadow 120ms ease-out, transform 120ms ease-out;
+}
+:root[data-ui-theme='default'] .travel-quick-record-circle:not(:disabled):hover,
+.dark[data-ui-theme='default'] .travel-quick-record-circle:not(:disabled):hover {
+  transform: none;
+  box-shadow: var(--neo-shadow-hover);
+}
+:root[data-ui-theme='default'] .travel-quick-record-circle:not(:disabled):active,
+.dark[data-ui-theme='default'] .travel-quick-record-circle:not(:disabled):active {
+  transform: none;
+  box-shadow: var(--neo-shadow-pressed);
+}
+:root[data-ui-theme='default'] .travel-quick-record-circle--checkin,
+.dark[data-ui-theme='default'] .travel-quick-record-circle--checkin {
+  background-color: #a3e635;
+  background-image: none;
+}
+:root[data-ui-theme='default'] .travel-quick-record-circle--route,
+.dark[data-ui-theme='default'] .travel-quick-record-circle--route {
+  background-color: #c4b5fd;
+  background-image: none;
+}
+:root[data-ui-theme='default'] .travel-quick-record-circle--recording,
+.dark[data-ui-theme='default'] .travel-quick-record-circle--recording {
+  background-color: #fb7185;
+  background-image: none;
+}
+:root[data-ui-theme='default'] .travel-quick-record-hint,
+.dark[data-ui-theme='default'] .travel-quick-record-hint {
+  color: var(--neo-ink);
+  opacity: 0.72;
+}
+:root[data-ui-theme='default'] .travel-quick-record-status,
+.dark[data-ui-theme='default'] .travel-quick-record-status {
+  color: #9f1239;
+}
+:root[data-ui-theme='default'] .travel-quick-record-ok,
+.dark[data-ui-theme='default'] .travel-quick-record-ok {
+  color: #166534;
+}
+:root[data-ui-theme='default'] .travel-quick-record-err,
+.dark[data-ui-theme='default'] .travel-quick-record-err {
+  color: #9f1239;
+}
+
+/* High-end Glass */
+:root[data-ui-theme='highend_glass'] .travel-quick-record-circle,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-circle {
+  border: 1px solid rgb(255 255 255 / 0.42);
+  color: #fff;
+  box-shadow:
+    0 8px 24px rgb(15 23 42 / 0.22),
+    inset 0 1px 0 rgb(255 255 255 / 0.35);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+:root[data-ui-theme='highend_glass'] .travel-quick-record-circle:not(:disabled):hover,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-circle:not(:disabled):hover {
+  transform: scale(1.04);
+  box-shadow:
+    0 10px 28px rgb(15 23 42 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.45);
+}
+:root[data-ui-theme='highend_glass'] .travel-quick-record-circle--checkin,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-circle--checkin {
+  background: linear-gradient(145deg, rgb(34 211 238 / 0.72), rgb(16 185 129 / 0.55));
+}
+:root[data-ui-theme='highend_glass'] .travel-quick-record-circle--route,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-circle--route {
+  background: linear-gradient(145deg, rgb(167 139 250 / 0.75), rgb(244 114 182 / 0.55));
+}
+:root[data-ui-theme='highend_glass'] .travel-quick-record-circle--recording,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-circle--recording {
+  background: linear-gradient(145deg, rgb(251 113 133 / 0.82), rgb(244 63 94 / 0.62));
+}
+:root[data-ui-theme='highend_glass'] .travel-quick-record-hint,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-hint {
+  color: rgb(226 232 240 / 0.88);
+}
+:root[data-ui-theme='highend_glass'] .travel-quick-record-status,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-status {
+  color: #fda4af;
+}
+:root[data-ui-theme='highend_glass'] .travel-quick-record-ok,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-ok {
+  color: #6ee7b7;
+}
+:root[data-ui-theme='highend_glass'] .travel-quick-record-err,
+.dark[data-ui-theme='highend_glass'] .travel-quick-record-err {
+  color: #fda4af;
+}
+
 .travel-kids-widget-add-icon {
   width: 3.2cqmin;
   height: 3.2cqmin;
@@ -1116,6 +1252,7 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   --neo-face-piggy: #fbbf24;
   --neo-face-games: #a3e635;
   --neo-face-travel-diary: #67e8f9;
+  --neo-face-travel-quick-record: #86efac;
 }
 
 .dark[data-ui-theme='default'] {
@@ -1821,6 +1958,11 @@ html[data-ui-theme='default'] body {
 :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section,
 .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section {
   background-color: var(--neo-face-travel-diary) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .content-section {
+  background-color: var(--neo-face-travel-quick-record) !important;
   background-image: none !important;
 }
 
@@ -5787,6 +5929,8 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel'] .section-title,
   :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_diary'] .section-title,
   .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_diary'] .section-title,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_quick_record'] .section-title,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_quick_record'] .section-title,
   :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='album'] .section-title,
   .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='album'] .section-title,
   :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='location'] .section-title,
@@ -5812,6 +5956,8 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
    */
   :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel'] .content-section,
   .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel'] .content-section,
+  :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_quick_record'] .content-section,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_quick_record'] .content-section,
   :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='album'] .content-section,
   .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='album'] .content-section,
   :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='games'] .content-section,

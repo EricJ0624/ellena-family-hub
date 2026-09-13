@@ -34,8 +34,8 @@ export type FieldAttachChoice = {
 };
 
 const STORAGE_KEY = 'travel_field_active_track_v1';
-const FLUSH_EVERY_MS = 15000;
-const MIN_MOVE_M = 12;
+const FLUSH_EVERY_MS = 10000;
+const MIN_MOVE_M = 5;
 
 function haversineM(a: FieldGeoPoint, b: FieldGeoPoint): number {
   const R = 6371000;
@@ -333,13 +333,14 @@ export function useTravelFieldRecorder({
       ];
       lastKeptRef.current = bufferRef.current[0];
       startWatch(id, groupId);
+      void flushPoints(id, groupId);
       setMessage('경로 기록을 시작했습니다.');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '경로 시작에 실패했습니다.');
     } finally {
       setBusy(false);
     }
-  }, [groupId, busy, recording, getAuthHeaders, startWatch, resolveTripId]);
+  }, [groupId, busy, recording, getAuthHeaders, startWatch, resolveTripId, flushPoints]);
 
   const stopRoute = useCallback(async (choice: FieldAttachChoice = { attachMode: 'create' }) => {
     if (!groupId || !trackId || busy) return;

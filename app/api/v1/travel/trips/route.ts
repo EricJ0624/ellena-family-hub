@@ -51,13 +51,22 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json().catch(() => ({}));
-    const { groupId, title, destination, start_date, end_date, currency: bodyCurrency } = body as {
+    const {
+      groupId,
+      title,
+      destination,
+      start_date,
+      end_date,
+      currency: bodyCurrency,
+      diary_enabled: bodyDiaryEnabled,
+    } = body as {
       groupId?: string;
       title?: string;
       destination?: string;
       start_date?: string;
       end_date?: string;
       currency?: string;
+      diary_enabled?: boolean;
     };
 
     if (!groupId || !title || !start_date || !end_date) {
@@ -99,6 +108,8 @@ export async function POST(request: NextRequest) {
       /* ignore */
     }
 
+    const enableDiary = bodyDiaryEnabled === true;
+
     const { data, error } = await supabase
       .from('travel_trips')
       .insert({
@@ -111,7 +122,8 @@ export async function POST(request: NextRequest) {
         currency: tripCurrency,
         status: initialStatus,
         status_source: 'auto',
-        diary_enabled: false,
+        diary_enabled: enableDiary,
+        ...(enableDiary ? { diary_invite_status: 'accepted' } : {}),
         emergency_contacts: buildEmergencyContactsFromDestination(
           dest,
           [String(title).trim()],

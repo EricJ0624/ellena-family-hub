@@ -66,6 +66,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       piggy: dt('piggy_section_admin_title'),
       games: gt('section_title'),
       travel_diary: tdy('section_title'),
+      travel_quick_record: tt('quick_record_title'),
     }),
     [lang]
   );

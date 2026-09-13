@@ -706,6 +706,27 @@ function TravelDiaryPreview() {
   );
 }
 
+function TravelQuickRecordPreview() {
+  const { tt } = useWidgetPreviewCopy();
+  return (
+    <section className="content-section travel-quick-record-widget">
+      <div className="section-header">
+        <h3 className="section-title m-0">{tt('quick_record_title')}</h3>
+      </div>
+      <div className="section-body">
+        <div className="flex w-full items-center justify-evenly gap-2 py-1">
+          <div className="flex aspect-square w-14 flex-col items-center justify-center rounded-full bg-emerald-600 px-1 text-center text-[9px] font-bold text-white">
+            {tt('quick_record_checkin')}
+          </div>
+          <div className="flex aspect-square w-14 flex-col items-center justify-center rounded-full bg-violet-600 px-1 text-center text-[9px] font-bold text-white">
+            {tt('quick_record_route')}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── 통합 레코드 ──────────────────────────────────────────────────
 export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNode> = {
   tasks:    () => <TasksPreview />,
@@ -717,4 +738,5 @@ export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNod
   piggy:    () => <PiggyPreview />,
   games:        () => <GamesPreview />,
   travel_diary: () => <TravelDiaryPreview />,
+  travel_quick_record: () => <TravelQuickRecordPreview />,
 };

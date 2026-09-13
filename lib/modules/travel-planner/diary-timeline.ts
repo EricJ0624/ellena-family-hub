@@ -12,6 +12,8 @@ export type DiaryTimelineSlot = {
   place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  field_record_kind?: 'checkin' | 'route' | null;
+  field_track_id?: string | null;
   entry: TravelDiaryEntry | null;
 };
 
@@ -61,6 +63,8 @@ export function buildDiaryTimelineSlots(
       place_id: u.place_id ?? null,
       latitude: u.latitude ?? null,
       longitude: u.longitude ?? null,
+      field_record_kind: u.field_record_kind ?? null,
+      field_track_id: u.field_track_id ?? null,
       entry: entryBySource.get(k) ?? null,
     };
   });
@@ -120,6 +124,8 @@ export function buildHiddenDiarySlots(
       place_id: u?.place_id ?? null,
       latitude: u?.latitude ?? null,
       longitude: u?.longitude ?? null,
+      field_record_kind: u?.field_record_kind ?? null,
+      field_track_id: u?.field_track_id ?? null,
       entry: e,
     });
   }
