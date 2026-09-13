@@ -46,6 +46,13 @@ export type MemberManagementTranslations = {
   family_role_saved: string;
   family_role_save_failed: string;
   family_role_modal_description: string; // 가입 후 "가족에서 나를 어떻게 표시할까요? (선택사항)"
+  pending_join_title: string;
+  pending_join_approve: string;
+  pending_join_reject: string;
+  pending_join_empty: string;
+  pending_join_approved: string;
+  pending_join_rejected: string;
+  pending_join_failed: string;
 };
 
 const memberManagement: Record<LangCode, MemberManagementTranslations> = {
@@ -93,6 +100,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: '가족 표시가 저장되었습니다.',
     family_role_save_failed: '저장에 실패했습니다.',
     family_role_modal_description: '가족에서 나를 어떻게 표시할까요? (선택사항)',
+    pending_join_title: "가입 승인 대기",
+    pending_join_approve: "승인",
+    pending_join_reject: "거절",
+    pending_join_empty: "대기 중인 가입 요청이 없습니다.",
+    pending_join_approved: "가입을 승인했습니다.",
+    pending_join_rejected: "가입을 거절했습니다.",
+    pending_join_failed: "처리에 실패했습니다.",
   },
   en: {
     member_list_with_count: 'Members ({count})',
@@ -138,6 +152,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: 'Family role saved.',
     family_role_save_failed: 'Failed to save.',
     family_role_modal_description: 'How would you like to be shown in the family? (Optional)',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   },
   ja: {
     member_list_with_count: '会員一覧（{count}名）',
@@ -183,6 +204,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: '家族の表示を保存しました。',
     family_role_save_failed: '保存に失敗しました。',
     family_role_modal_description: '家族でどのように表示しますか？（任意）',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   },
   'zh-CN': {
     member_list_with_count: '成员列表（{count}人）',
@@ -228,6 +256,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: '家庭显示已保存。',
     family_role_save_failed: '保存失败。',
     family_role_modal_description: '您希望在家庭中如何显示？（选填）',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   },
   'zh-TW': {
     member_list_with_count: '成員列表（{count}人）',
@@ -273,6 +308,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: '家庭顯示已儲存。',
     family_role_save_failed: '儲存失敗。',
     family_role_modal_description: '您希望在家庭中如何顯示？（選填）',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   },
   es: {
     member_list_with_count: 'Miembros ({count})',
@@ -318,6 +360,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: 'Papel familiar salvado.',
     family_role_save_failed: 'No se pudo guardar.',
     family_role_modal_description: '¿Cómo te gustaría que te mostraran en la familia? (Opcional)',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   },
   fr: {
     member_list_with_count: 'Membres ({count})',
@@ -363,6 +412,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: 'Rôle familial enregistré.',
     family_role_save_failed: 'Échec de l\'enregistrement.',
     family_role_modal_description: 'Comment aimeriez-vous être montré dans la famille ? (Facultatif)',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   },
   de: {
     member_list_with_count: 'Mitglieder ({count})',
@@ -408,6 +464,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: 'Familienrolle gespeichert.',
     family_role_save_failed: 'Speichern fehlgeschlagen.',
     family_role_modal_description: 'Wie möchten Sie in der Familie dargestellt werden? (Optional)',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   },
   it: {
     member_list_with_count: 'Membri ({count})',
@@ -453,6 +516,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: 'Ruolo familiare salvato.',
     family_role_save_failed: 'Impossibile salvare.',
     family_role_modal_description: 'Come vorresti essere mostrato in famiglia? (Opzionale)',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   },
   pt: {
     member_list_with_count: 'Membros ({count})',
@@ -498,6 +568,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_saved: 'Papel na família salvo.',
     family_role_save_failed: 'Falha ao salvar.',
     family_role_modal_description: 'Como você gostaria de aparecer na família? (Opcional)',
+    pending_join_title: "Pending join requests",
+    pending_join_approve: "Approve",
+    pending_join_reject: "Reject",
+    pending_join_empty: "No pending join requests.",
+    pending_join_approved: "Join request approved.",
+    pending_join_rejected: "Join request rejected.",
+    pending_join_failed: "Could not process the request.",
   }
 };
 

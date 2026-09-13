@@ -82,6 +82,10 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
   const [refreshing, setRefreshing] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
+  const [shortInviteCode, setShortInviteCode] = useState<string | null>(null);
+  const [shortInviteExpiresAt, setShortInviteExpiresAt] = useState<string | null>(null);
+  const [creatingShortInvite, setCreatingShortInvite] = useState(false);
+  const [copiedShortInvite, setCopiedShortInvite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
@@ -139,6 +143,45 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       setUiTheme(resolveUiTheme((currentGroup as { ui_theme?: unknown }).ui_theme));
     }
   }, [currentGroup]);
+
+  // 승인형 4자리 초대 코드 로드
+  useEffect(() => {
+    if (!currentGroupId || !isAdmin) {
+      setShortInviteCode(null);
+      setShortInviteExpiresAt(null);
+      return;
+    }
+    let cancelled = false;
+    const loadShortInvite = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch(
+          `/api/group/short-invite-codes?groupId=${encodeURIComponent(currentGroupId)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok || cancelled) return;
+        const json = await res.json().catch(() => ({}));
+        const data = json?.data;
+        if (data?.code) {
+          setShortInviteCode(String(data.code));
+          setShortInviteExpiresAt(typeof data.expires_at === 'string' ? data.expires_at : null);
+        } else {
+          setShortInviteCode(null);
+          setShortInviteExpiresAt(null);
+        }
+      } catch (err) {
+        console.warn('short invite load:', err);
+      }
+    };
+    void loadShortInvite();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentGroupId, isAdmin]);
 
   // 설정 화면에서 선택한 테마를 즉시 미리보기로 반영하고, 닫히면 그룹 저장값으로 복원
   useEffect(() => {
@@ -344,6 +387,65 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       setError(gst('email_invite_failed'));
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleCreateShortInvite = async () => {
+    if (!currentGroupId || !isAdmin || creatingShortInvite) return;
+    if (shortInviteCode) {
+      const ok = window.confirm(gst('short_invite_replaced_warning'));
+      if (!ok) return;
+    }
+
+    setCreatingShortInvite(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setError(gst('session_error'));
+        return;
+      }
+
+      const res = await fetch('/api/group/short-invite-codes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ group_id: currentGroupId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof json.error === 'string' ? json.error : gst('short_invite_create_failed'));
+        return;
+      }
+
+      const data = json?.data;
+      setShortInviteCode(data?.code ? String(data.code) : null);
+      setShortInviteExpiresAt(typeof data?.expires_at === 'string' ? data.expires_at : null);
+      setSuccess(gst('short_invite_created'));
+      setTimeout(() => setSuccess(null), 2500);
+    } catch (err) {
+      console.error('short invite create:', err);
+      setError(gst('short_invite_create_failed'));
+    } finally {
+      setCreatingShortInvite(false);
+    }
+  };
+
+  const handleCopyShortInvite = async () => {
+    if (!shortInviteCode) return;
+    try {
+      await navigator.clipboard.writeText(shortInviteCode);
+      setCopiedShortInvite(true);
+      setTimeout(() => setCopiedShortInvite(false), 2000);
+    } catch (err) {
+      console.error('short invite copy:', err);
+      setError(gst('copy_failed'));
     }
   };
 
@@ -672,6 +774,72 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                         {gst('invite_refresh_hint')}
                       </p>
                     </div>
+                  </div>
+                </td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <th
+                  className="w-[6.5rem] bg-slate-50 p-2 text-left text-sm font-semibold text-slate-600 align-top sm:w-36 sm:p-3"
+                >
+                  {gst('short_invite_label')}
+                </th>
+                <td className="min-w-0 p-2 sm:p-3">
+                  <div className="flex min-w-0 flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => void handleCreateShortInvite()}
+                        disabled={creatingShortInvite}
+                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-amber-600 px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 disabled:cursor-not-allowed disabled:opacity-60"
+                        aria-label={gst('short_invite_create_btn')}
+                      >
+                        {creatingShortInvite ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : null}
+                        {creatingShortInvite
+                          ? gst('short_invite_creating')
+                          : gst('short_invite_create_btn')}
+                      </button>
+                      <p className="m-0 text-xs text-slate-500">{gst('short_invite_hint')}</p>
+                    </div>
+                    {shortInviteCode ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          value={shortInviteCode}
+                          readOnly
+                          className="w-28 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-center font-mono text-lg tracking-[0.2em]"
+                          aria-label={gst('short_invite_label')}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void handleCopyShortInvite()}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-blue-600 px-3 py-2 text-[13px] font-semibold text-white hover:bg-blue-700"
+                        >
+                          {copiedShortInvite ? (
+                            <>
+                              <CheckCircle className="h-4 w-4" />
+                              {gst('copied')}
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4" />
+                              {gst('short_invite_copy_btn')}
+                            </>
+                          )}
+                        </button>
+                        {shortInviteExpiresAt ? (
+                          <p className="m-0 text-xs text-slate-500">
+                            {gst('short_invite_expires')}:{' '}
+                            {new Date(shortInviteExpiresAt).toLocaleString()}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="m-0 text-xs font-medium text-slate-500">
+                        {gst('short_invite_none')}
+                      </p>
+                    )}
                   </div>
                 </td>
               </tr>

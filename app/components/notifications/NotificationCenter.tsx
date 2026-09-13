@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import {
@@ -17,6 +17,7 @@ const WIDGET_LABELS: Record<NotifiableWidgetKey, string> = {
   travel: '여행 플래너',
   piggy: '저금통',
   games: '가족 게임',
+  group: '그룹',
 };
 
 interface PrefRow {
@@ -51,6 +52,7 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [panelPos, setPanelPos] = useState<{ top: number; right: number } | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
 
   const loadList = useCallback(async () => {
@@ -183,6 +185,60 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
     }
   };
 
+  const approveJoinRequest = async (item: NotificationRow, e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const requestId =
+      (typeof item.payload?.requestId === 'string' && item.payload.requestId) ||
+      item.entity_id;
+    if (!requestId || !groupId) return;
+
+    const headers = await authHeaders();
+    if (!headers) return;
+
+    setApprovingId(item.id);
+    try {
+      const res = await fetch(`/api/group/join-requests/${encodeURIComponent(requestId)}/approve`, {
+        method: 'POST',
+        headers,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(typeof json.error === 'string' ? json.error : '승인에 실패했습니다.');
+        return;
+      }
+      if (!item.read_at) {
+        void fetch('/api/notifications', {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ groupId, ids: [item.id] }),
+        });
+        setItems((prev) =>
+          prev.map((n) => (n.id === item.id ? { ...n, read_at: new Date().toISOString() } : n)),
+        );
+        setUnreadCount((c) => Math.max(0, c - 1));
+      }
+      setItems((prev) =>
+        prev.map((n) =>
+          n.id === item.id
+            ? {
+                ...n,
+                title: '그룹 가입 승인 완료',
+                body: '가입 요청을 승인했습니다.',
+                event_type: 'GROUP_JOIN_RESOLVED',
+                payload: { ...(n.payload || {}), status: 'approved', action: null },
+              }
+            : n,
+        ),
+      );
+    } catch (err) {
+      console.error('approve join from notification:', err);
+      alert('승인 처리 중 오류가 발생했습니다.');
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
   const togglePref = (widgetKey: NotifiableWidgetKey, field: 'push_enabled' | 'inapp_enabled') => {
     setPrefs((prev) => {
       const existing = prev.find((p) => p.widget_key === widgetKey);
@@ -290,23 +346,45 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
                   {items.length === 0 ? (
                     <li className="px-3 py-8 text-center text-sm text-slate-400">알림이 없습니다</li>
                   ) : (
-                    items.map((item) => (
+                    items.map((item) => {
+                      const canApproveJoin =
+                        item.event_type === 'GROUP_JOIN_REQUEST' &&
+                        item.payload?.action === 'approve_join' &&
+                        (typeof item.payload?.requestId === 'string' || !!item.entity_id) &&
+                        item.payload?.status !== 'approved';
+
+                      return (
                       <li key={item.id}>
-                        <button
-                          type="button"
-                          onClick={() => void openItem(item)}
-                          className={`flex w-full flex-col gap-0.5 border-b border-slate-50 px-3 py-2.5 text-left hover:bg-slate-50 ${
+                        <div
+                          className={`flex w-full flex-col gap-1.5 border-b border-slate-50 px-3 py-2.5 text-left ${
                             item.read_at ? 'opacity-70' : 'bg-sky-50/60'
                           }`}
                         >
-                          <span className="text-[11px] font-medium text-slate-500">
-                            {WIDGET_LABELS[item.widget_key as NotifiableWidgetKey] || item.widget_key}
-                          </span>
-                          <span className="text-sm font-semibold text-slate-800">{item.title}</span>
-                          <span className="line-clamp-2 text-xs text-slate-600">{item.body}</span>
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => void openItem(item)}
+                            className="flex w-full flex-col gap-0.5 text-left hover:opacity-90"
+                          >
+                            <span className="text-[11px] font-medium text-slate-500">
+                              {WIDGET_LABELS[item.widget_key as NotifiableWidgetKey] || item.widget_key}
+                            </span>
+                            <span className="text-sm font-semibold text-slate-800">{item.title}</span>
+                            <span className="line-clamp-2 text-xs text-slate-600">{item.body}</span>
+                          </button>
+                          {canApproveJoin ? (
+                            <button
+                              type="button"
+                              disabled={approvingId === item.id}
+                              onClick={(e) => void approveJoinRequest(item, e)}
+                              className="self-start rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              {approvingId === item.id ? '처리 중…' : '승인'}
+                            </button>
+                          ) : null}
+                        </div>
                       </li>
-                    ))
+                      );
+                    })
                   )}
                 </ul>
               ) : (

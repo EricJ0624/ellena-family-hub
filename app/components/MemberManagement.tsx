@@ -49,6 +49,17 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [systemAdminMemberIds, setSystemAdminMemberIds] = useState<Set<string>>(new Set());
   const [checkingPermissions, setCheckingPermissions] = useState<boolean>(true);
+  const [pendingJoins, setPendingJoins] = useState<
+    Array<{
+      id: string;
+      requester_user_id: string;
+      email: string | null;
+      nickname: string | null;
+      created_at: string;
+    }>
+  >([]);
+  const [pendingJoinsLoading, setPendingJoinsLoading] = useState(false);
+  const [resolvingJoinId, setResolvingJoinId] = useState<string | null>(null);
 
   // ✅ SECURITY: 시스템 관리자 권한 확인 (시스템 관리자는 모든 그룹의 ADMIN 권한 자동 상속)
   useEffect(() => {
@@ -177,6 +188,76 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
       setLoading(false);
     }
   }, [currentGroupId]);
+
+  const loadPendingJoins = useCallback(async () => {
+    if (!currentGroupId || !isAdmin) {
+      setPendingJoins([]);
+      return;
+    }
+    setPendingJoinsLoading(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(
+        `/api/group/join-requests?groupId=${encodeURIComponent(currentGroupId)}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) return;
+      const json = await res.json().catch(() => ({}));
+      setPendingJoins(Array.isArray(json.data) ? json.data : []);
+    } catch (err) {
+      console.warn('pending joins load:', err);
+    } finally {
+      setPendingJoinsLoading(false);
+    }
+  }, [currentGroupId, isAdmin]);
+
+  const resolvePendingJoin = useCallback(
+    async (requestId: string, action: 'approve' | 'reject') => {
+      if (!currentGroupId || resolvingJoinId) return;
+      setResolvingJoinId(requestId);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          alert(mmt('session_expired'));
+          return;
+        }
+        const res = await fetch(
+          `/api/group/join-requests/${encodeURIComponent(requestId)}/${action}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(typeof json.error === 'string' ? json.error : mmt('pending_join_failed'));
+          return;
+        }
+        alert(action === 'approve' ? mmt('pending_join_approved') : mmt('pending_join_rejected'));
+        setPendingJoins((prev) => prev.filter((r) => r.id !== requestId));
+        if (action === 'approve') {
+          await loadMembers();
+          await refreshMemberships();
+        }
+      } catch (err) {
+        console.error('resolve pending join:', err);
+        alert(mmt('pending_join_failed'));
+      } finally {
+        setResolvingJoinId(null);
+      }
+    },
+    [currentGroupId, resolvingJoinId, mmt, loadMembers, refreshMemberships],
+  );
 
   // 멤버 추방
   const handleRemoveMember = useCallback(async (memberUserId: string) => {
@@ -345,6 +426,10 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
     loadMembers();
   }, [loadMembers]);
 
+  useEffect(() => {
+    void loadPendingJoins();
+  }, [loadPendingJoins]);
+
   // Realtime 구독 (멤버 변경 감지)
   useEffect(() => {
     if (!currentGroupId) return;
@@ -448,6 +533,62 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
             <AlertCircle className="w-5 h-5" />
             <p>{error}</p>
           </div>
+        </div>
+      )}
+
+      {/* 가입 승인 대기 */}
+      {isAdmin && (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/70 p-4">
+          <h3 className="m-0 mb-3 text-sm font-semibold text-amber-900">
+            {mmt('pending_join_title')}
+            {pendingJoins.length > 0 ? ` (${pendingJoins.length})` : ''}
+          </h3>
+          {pendingJoinsLoading ? (
+            <div className="flex items-center gap-2 text-sm text-amber-800">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {mmt('loading_members')}
+            </div>
+          ) : pendingJoins.length === 0 ? (
+            <p className="m-0 text-sm text-amber-800/80">{mmt('pending_join_empty')}</p>
+          ) : (
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {pendingJoins.map((req) => (
+                <li
+                  key={req.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2"
+                >
+                  <div className="min-w-0 text-sm text-slate-800">
+                    <div className="font-medium">{req.nickname || req.email || req.requester_user_id}</div>
+                    {req.email && req.nickname ? (
+                      <div className="text-xs text-slate-500">{req.email}</div>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={resolvingJoinId === req.id}
+                      onClick={() => void resolvePendingJoin(req.id, 'approve')}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {resolvingJoinId === req.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        mmt('pending_join_approve')
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={resolvingJoinId === req.id}
+                      onClick={() => void resolvePendingJoin(req.id, 'reject')}
+                      className="rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-300 disabled:opacity-50"
+                    >
+                      {mmt('pending_join_reject')}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

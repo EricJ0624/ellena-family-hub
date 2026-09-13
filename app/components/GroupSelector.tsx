@@ -15,6 +15,7 @@ import { normalizeGroupIdFromRpc } from '@/lib/validation';
 import { checkUserSuspendedInGroup, messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
 import { sameGroupId } from '@/lib/group-id-resolve';
 import { CURRENT_APP_ID } from '@/lib/apps';
+import { isShortInviteCode, GROUP_SHORT_INVITE_ERROR } from '@/lib/group-short-invite';
 
 const GroupSelector: React.FC = () => {
   const router = useRouter();
@@ -135,7 +136,7 @@ const GroupSelector: React.FC = () => {
     }
   };
 
-  // 초대 코드로 가입
+  // 초대 코드로 가입 (12자=즉시 / 4자리=승인 요청)
   const handleJoinGroup = async () => {
     if (!inviteCode.trim()) {
       setError(ot('error_invite_required'));
@@ -147,8 +148,51 @@ const GroupSelector: React.FC = () => {
     setSuccess(null);
 
     try {
+      const code = inviteCode.trim();
+
+      if (isShortInviteCode(code)) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          throw new Error(ot('error_join_failed'));
+        }
+
+        const res = await fetch('/api/group/join-requests', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ code }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const errCode = typeof json.code === 'string' ? json.code : '';
+          if (errCode === GROUP_SHORT_INVITE_ERROR.RATE_LIMITED) {
+            throw new Error(ot('error_short_invite_rate'));
+          }
+          if (errCode === GROUP_SHORT_INVITE_ERROR.ALREADY_PENDING) {
+            throw new Error(ot('error_short_invite_pending'));
+          }
+          if (errCode === GROUP_SHORT_INVITE_ERROR.GROUP_SUSPENDED) {
+            throw new Error(ot('error_target_group_suspended'));
+          }
+          throw new Error(
+            typeof json.error === 'string' ? json.error : ot('error_join_failed'),
+          );
+        }
+
+        setInviteCode('');
+        setSuccess(ot('success_join_pending'));
+        setShowJoinModal(false);
+        setTimeout(() => setSuccess(null), 3500);
+        return;
+      }
+
       const { data: joinedGroupIdData, error: joinError } = await supabase.rpc('join_group_by_invite_code', {
-        invite_code_param: inviteCode.trim(),
+        invite_code_param: code,
         p_app_id: CURRENT_APP_ID,
       });
 
@@ -419,6 +463,7 @@ const GroupSelector: React.FC = () => {
                           }
                         }}
                       />
+                      <p className="mt-2 text-xs text-gray-500">{ot('invite_code_short_hint')}</p>
                     </div>
 
                     {error && (
@@ -871,6 +916,7 @@ const GroupSelector: React.FC = () => {
                           }
                         }}
                       />
+                      <p className="mt-2 text-xs text-gray-500">{ot('invite_code_short_hint')}</p>
                     </div>
 
                     {error && (

@@ -7,6 +7,7 @@ export const NOTIFIABLE_WIDGET_KEYS = [
   'travel',
   'piggy',
   'games',
+  'group',
 ] as const;
 
 export type NotifiableWidgetKey = (typeof NOTIFIABLE_WIDGET_KEYS)[number];
@@ -35,7 +36,9 @@ export type NotificationEventType =
   | 'GAME_SESSION_CREATED'
   | 'GAME_LOBBY_JOINED'
   | 'TRAVEL_TRIP_CREATED'
-  | 'TRAVEL_DETAIL_CHANGED';
+  | 'TRAVEL_DETAIL_CHANGED'
+  | 'GROUP_JOIN_REQUEST'
+  | 'GROUP_JOIN_RESOLVED';
 
 export interface NotifyFamilyInput {
   groupId: string;
