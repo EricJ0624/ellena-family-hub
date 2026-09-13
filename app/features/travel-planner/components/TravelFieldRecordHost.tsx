@@ -11,7 +11,7 @@
 
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { formatLocalDayDate } from '@/lib/modules/travel-planner/field-match';
 import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
@@ -39,9 +39,8 @@ type Props = {
   mode: 'widget' | 'page';
   /** Widget: existing trips for picker (empty → auto-create trip) */
   trips?: FieldWidgetTripOption[];
-  toolbar?: boolean;
-  /** widget UI: toolbar pills | default row | circular hero buttons */
-  barLayout?: 'default' | 'toolbar' | 'circles';
+  /** widget UI: circular hero buttons (default = page row) */
+  barLayout?: 'default' | 'circles';
   /** Default trip title when creating from widget */
   newTripTitle?: string;
   /** When creating a trip from widget, also enable diary write access */
@@ -71,8 +70,7 @@ export function TravelFieldRecordHost({
   tripId,
   mode,
   trips = [],
-  toolbar = false,
-  barLayout,
+  barLayout = 'default',
   newTripTitle = '빠른 여행 기록',
   enableDiaryOnCreate = false,
   labels,
@@ -82,8 +80,6 @@ export function TravelFieldRecordHost({
 }: Props) {
   const resolvedPickLabels =
     pickLabels ?? (mode === 'widget' ? DEFAULT_PICK_WIDGET : DEFAULT_PICK_PAGE);
-  const resolvedBarLayout =
-    barLayout ?? (toolbar ? 'toolbar' : 'default');
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -303,8 +299,7 @@ export function TravelFieldRecordHost({
     <>
       <TravelFieldRecordBar
         mode={mode}
-        toolbar={toolbar}
-        layout={resolvedBarLayout}
+        layout={barLayout}
         disabled={!canUse}
         busy={recorder.busy}
         recording={recorder.recording}

@@ -319,6 +319,93 @@ button.travel-kids-add-trip-submit {
   content: none;
 }
 
+/*
+ * 빠른 여행 기록 — Family(kids) 전용 셸
+ * travel-kids-widget(플래너 배너)를 쓰지 않음.
+ * content-section glass(bg/blur)를 끄고 지도 원본을 직접 배경으로 사용.
+ */
+.content-section.travel-quick-record-widget.travel-quick-record-widget--kids {
+  --travel-quick-record-kids-bg: url('/travel-quick-record/widget-bg.jpg?v=4');
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--widget-scale-box-h, var(--widget-min-h, 0px));
+  overflow: hidden;
+  /* 다이어리 위젯과 동일 여백 — travel-kids-widget(padding:0)와 분리 */
+  padding: clamp(0.65rem, 4.5cqmin, 0.95rem) clamp(0.7rem, 5cqmin, 1.05rem) !important;
+  border: 0;
+  border-radius: var(--border-radius-xl, 1rem);
+  box-sizing: border-box;
+  container-type: inline-size;
+  /* glass-medium / backdrop-blur 잔상 제거 → 지도 원본 색 */
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-color: transparent !important;
+  background-image: var(--travel-quick-record-kids-bg) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: cover !important;
+  box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
+}
+
+.content-section.travel-quick-record-widget.travel-quick-record-widget--kids::before,
+.content-section.travel-quick-record-widget.travel-quick-record-widget--kids::after {
+  content: none !important;
+}
+
+.content-section.travel-quick-record-widget.travel-quick-record-widget--kids > .travel-quick-record-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 칩·스크림 없음 — 소프트 섀도우로만 지도 위 가독성 */
+.content-section.travel-quick-record-widget.travel-quick-record-widget--kids .travel-kids-widget-title {
+  pointer-events: none;
+  margin-bottom: 0.4rem;
+  align-self: flex-start;
+  max-width: calc(100% - 0.5rem);
+  padding: 0;
+  border-radius: 0;
+  color: #0f172a;
+  background: transparent;
+  box-shadow: none;
+  text-shadow:
+    0 0 0.35rem rgb(255 255 255 / 0.95),
+    0 0 0.7rem rgb(255 255 255 / 0.75),
+    0 1px 2px rgb(255 255 255 / 0.9);
+}
+
+.travel-quick-record-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0;
+  min-height: 0;
+}
+
+.travel-quick-record-empty {
+  margin: 0;
+  font-size: clamp(0.58rem, 3.6cqmin, 0.82rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: #475569;
+  word-break: keep-all;
+  text-align: center;
+}
+
 .content-section.travel-kids-widget > .travel-kids-widget-stage {
   position: relative;
   z-index: 2;
@@ -375,10 +462,7 @@ button.travel-kids-add-trip-submit {
 }
 
 .travel-kids-widget-import,
-.travel-kids-widget-add,
-.travel-kids-widget-field-checkin,
-.travel-kids-widget-field-route,
-.travel-kids-widget-field-route-stop {
+.travel-kids-widget-add {
   display: inline-flex;
   flex-shrink: 1;
   align-items: center;
@@ -405,51 +489,6 @@ button.travel-kids-add-trip-submit {
 .travel-kids-widget-add {
   background: #7c3aed;
   color: #fff;
-}
-
-.travel-kids-widget-field-checkin {
-  background: #059669;
-  color: #fff;
-}
-
-.travel-kids-widget-field-route {
-  background: #6d28d9;
-  color: #fff;
-}
-
-.travel-kids-widget-field-route-stop {
-  background: #e11d48;
-  color: #fff;
-}
-
-.travel-kids-widget-field-checkin:disabled,
-.travel-kids-widget-field-route:disabled,
-.travel-kids-widget-field-route-stop:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.travel-kids-widget-field-hint {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: clamp(0.42rem, 2.6cqmin, 0.62rem);
-  font-weight: 500;
-  line-height: 1.25;
-  color: #64748b;
-  word-break: keep-all;
-}
-
-.travel-kids-widget-field-hint--rec {
-  color: #e11d48;
-  font-weight: 700;
-}
-
-.travel-kids-widget-field-hint--ok {
-  color: #047857;
-}
-
-.travel-kids-widget-field-hint--err {
-  color: #b91c1c;
 }
 
 /* ── 빠른 여행 기록: 원형 버튼 (테마별 스킨) ───────────────────── */
@@ -487,6 +526,28 @@ button.travel-kids-add-trip-submit {
 }
 .travel-quick-record-err {
   color: #b91c1c;
+}
+
+/* Neo: 타이틀+하드 섀도우 여유 — 원형·그림자가 위젯 하단에서 잘리지 않게 */
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .content-section.travel-quick-record-widget,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .content-section.travel-quick-record-widget {
+  padding-bottom: 0.55rem;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .section-body,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .section-body {
+  overflow: hidden;
+  justify-content: center;
+  padding-bottom: 0.35rem;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .travel-quick-record-circle-row,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .travel-quick-record-circle-row {
+  /* --neo-shadow 4px + 여유 */
+  padding-bottom: calc(4px + 0.2rem);
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .travel-quick-record-circle,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .travel-quick-record-circle {
+  width: min(38cqmin, 9.5rem);
+  max-height: 100%;
 }
 
 /* Neo Brutal (default) */
@@ -542,6 +603,12 @@ button.travel-kids-add-trip-submit {
 }
 
 /* High-end Glass */
+:root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_quick_record'] .section-body,
+.dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_quick_record'] .section-body {
+  justify-content: center;
+  padding-top: 0.35rem;
+  padding-bottom: 0.55rem;
+}
 :root[data-ui-theme='highend_glass'] .travel-quick-record-circle,
 .dark[data-ui-theme='highend_glass'] .travel-quick-record-circle {
   border: 1px solid rgb(255 255 255 / 0.42);
@@ -605,48 +672,6 @@ button.travel-kids-add-trip-submit {
   overflow: visible;
   pointer-events: auto;
   background: transparent;
-}
-
-.travel-diary-widget-actions {
-  display: flex;
-  max-width: 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1.4cqmin;
-  margin-top: 1.2cqmin;
-  pointer-events: auto;
-}
-
-.travel-diary-widget-actions .travel-kids-widget-field-checkin,
-.travel-diary-widget-actions .travel-kids-widget-field-route,
-.travel-diary-widget-actions .travel-kids-widget-field-route-stop {
-  display: inline-flex;
-  flex-shrink: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 0.8cqmin;
-  overflow: hidden;
-  border: 0;
-  border-radius: 999px;
-  padding: 1.2cqmin 2.6cqmin;
-  font-size: clamp(0.48rem, 3cqmin, 0.72rem);
-  font-weight: 700;
-  line-height: 1.1;
-  white-space: nowrap;
-  cursor: pointer;
-  color: #fff;
-}
-
-.travel-diary-widget-actions .travel-kids-widget-field-checkin {
-  background: #059669;
-}
-
-.travel-diary-widget-actions .travel-kids-widget-field-route {
-  background: #6d28d9;
-}
-
-.travel-diary-widget-actions .travel-kids-widget-field-route-stop {
-  background: #e11d48;
 }
 
 .travel-kids-widget-empty {

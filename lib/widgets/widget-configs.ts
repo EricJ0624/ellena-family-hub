@@ -7,6 +7,7 @@ import {
   DASHBOARD_WIDGET_KEYS,
   DEFAULT_WIDGET_CONFIGS,
   TRAVEL_M_LAYOUT_H,
+  TRAVEL_QUICK_RECORD_M_LAYOUT_H,
   WIDGET_LAYOUT_PRESETS,
   parseWidgetSize,
   type DashboardWidgetKey,
@@ -87,6 +88,14 @@ function adoptTravelDefaultHeight(h: number | null): number | null {
   return h === WIDGET_LAYOUT_PRESETS.M.h ? TRAVEL_M_LAYOUT_H : h;
 }
 
+/** travel(6)/전역 M(8)/이전 짧은 기본(4) → 현재 기본 높이로 채택. 커스텀은 유지. */
+function adoptTravelQuickRecordDefaultHeight(h: number | null): number | null {
+  if (h === WIDGET_LAYOUT_PRESETS.M.h || h === TRAVEL_M_LAYOUT_H || h === 4) {
+    return TRAVEL_QUICK_RECORD_M_LAYOUT_H;
+  }
+  return h;
+}
+
 function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const rowMap = new Map<DashboardWidgetKey, WidgetConfigRow>();
   for (const row of rows) rowMap.set(row.widget_key, row);
@@ -95,6 +104,13 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
     const found = rowMap.get(base.widget_key);
     if (!found) return { ...base };
     const isTravel = found.widget_key === 'travel';
+    const isQuick = found.widget_key === 'travel_quick_record';
+    const adoptH = (raw: number | null | undefined) => {
+      const clamped = clampNumeric(raw, 0.001, 9999);
+      if (isTravel) return adoptTravelDefaultHeight(clamped);
+      if (isQuick) return adoptTravelQuickRecordDefaultHeight(clamped);
+      return clamped;
+    };
     return {
       widget_key: found.widget_key,
       is_enabled: found.is_enabled,
@@ -108,24 +124,16 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
       layoutX: clampNumeric(found.layout_x, 0, 12),
       layoutY: clampNumeric(found.layout_y, 0, 9999),
       layoutW: clampNumeric(found.layout_w, 0.001, 12),
-      layoutH: isTravel
-        ? adoptTravelDefaultHeight(clampNumeric(found.layout_h, 0.001, 9999))
-        : clampNumeric(found.layout_h, 0.001, 9999),
+      layoutH: adoptH(found.layout_h),
       layoutVersion: clampInt(found.layout_version ?? 1, 1, 9999),
-      // portrait (12열 × 24행)
       layoutPortraitX: clampNumeric(found.layout_portrait_x, 0, 12),
       layoutPortraitY: clampNumeric(found.layout_portrait_y, 0, 9999),
       layoutPortraitW: clampNumeric(found.layout_portrait_w, 0.001, 12),
-      layoutPortraitH: isTravel
-        ? adoptTravelDefaultHeight(clampNumeric(found.layout_portrait_h, 0.001, 9999))
-        : clampNumeric(found.layout_portrait_h, 0.001, 9999),
-      // landscape (24열 × 12행)
+      layoutPortraitH: adoptH(found.layout_portrait_h),
       layoutLandscapeX: clampNumeric(found.layout_landscape_x, 0, 24),
       layoutLandscapeY: clampNumeric(found.layout_landscape_y, 0, 9999),
       layoutLandscapeW: clampNumeric(found.layout_landscape_w, 0.001, 24),
-      layoutLandscapeH: isTravel
-        ? adoptTravelDefaultHeight(clampNumeric(found.layout_landscape_h, 0.001, 9999))
-        : clampNumeric(found.layout_landscape_h, 0.001, 9999),
+      layoutLandscapeH: adoptH(found.layout_landscape_h),
     };
   }).sort((a, b) => {
     if (a.display_order !== b.display_order) return a.display_order - b.display_order;
@@ -135,7 +143,7 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   return compactDraftsLayoutCoordinates(sorted);
 }
 
-const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v4_';
+const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v6_';
 
 function cacheKey(groupId: string): string {
   return `${WIDGET_CONFIG_CACHE_PREFIX}${groupId}`;

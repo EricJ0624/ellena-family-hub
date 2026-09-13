@@ -1,12 +1,11 @@
 /**
  * 대시보드 — 빠른 여행 기록 위젯 (위치 / 루트 원형 버튼)
- * - kids_friendly: travel-kids-widget 셸
+ * - kids_friendly: 전용 셸 + 모험 지도 BG (플래너 kids 배너와 분리)
  * - default (Neo Brutal) / highend_glass: content-section + 테마 CSS 원형 버튼
  */
 
 'use client';
 
-import React from 'react';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { TravelTrip } from '../types';
 import { TravelFieldRecordHost } from './TravelFieldRecordHost';
@@ -44,7 +43,7 @@ export function TravelQuickRecordSection({
     <p
       className={
         isKidsTheme
-          ? 'travel-kids-widget-empty'
+          ? 'travel-quick-record-empty'
           : isGlassTheme
             ? 'm-0 text-slate-200/90'
             : isNeoTheme
@@ -78,12 +77,10 @@ export function TravelQuickRecordSection({
 
   if (isKidsTheme) {
     return (
-      <section className="content-section travel-kids-widget travel-quick-record-widget">
-        <div className="travel-kids-widget-stage">
-          <div className="travel-kids-widget-head">
-            <h3 className="travel-kids-widget-title">{t.section_title}</h3>
-            <div className="travel-kids-widget-bottom">{body}</div>
-          </div>
+      <section className="content-section travel-quick-record-widget travel-quick-record-widget--kids">
+        <div className="travel-quick-record-stage">
+          <h3 className="travel-kids-widget-title">{t.section_title}</h3>
+          <div className="travel-quick-record-body">{body}</div>
         </div>
       </section>
     );

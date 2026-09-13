@@ -14,6 +14,7 @@
 import {
   WIDGET_LAYOUT_PRESETS,
   TRAVEL_M_LAYOUT_H,
+  TRAVEL_QUICK_RECORD_M_LAYOUT_H,
   LOCATION_M_LAYOUT_H,
   WIDGET_DEFAULT_SIZE,
   WIDGET_DEFAULT_ORDER,
@@ -65,6 +66,9 @@ export function getPresetLayout(
   const preset = { ...WIDGET_LAYOUT_PRESETS[size] };
   if (key === 'travel' && size === 'M') {
     preset.h = TRAVEL_M_LAYOUT_H;
+  }
+  if (key === 'travel_quick_record' && size === 'M') {
+    preset.h = TRAVEL_QUICK_RECORD_M_LAYOUT_H;
   }
   if (key === 'location' && size === 'M') {
     preset.h = LOCATION_M_LAYOUT_H;
