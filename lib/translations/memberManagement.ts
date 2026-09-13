@@ -596,22 +596,39 @@ export function formatMemberManagementTranslation(
   return text;
 }
 
+/** 가족 표시 역할 — 권한(ADMIN/MEMBER)과 무관하게 전원 동일 옵션 */
+export const FAMILY_ROLE_VALUES = ['mom', 'dad', 'son', 'daughter', 'grandpa', 'grandma', 'other'] as const;
+export type FamilyRoleSelectValue = (typeof FAMILY_ROLE_VALUES)[number];
+
 /** 가족 표시 역할 값을 다국어 라벨로 변환 (앱 전반 표시용) */
 export function getFamilyRoleLabel(
   lang: LangCode,
-  role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
+  role: FamilyRoleSelectValue | null
 ): string {
   if (!role) return '';
   const key = `family_role_${role}` as keyof MemberManagementTranslations;
   return getMemberManagementTranslation(lang, key);
 }
 
+/** select용 옵션 목록 (미설정 포함) */
+export function getFamilyRoleSelectOptions(
+  lang: LangCode,
+): { value: FamilyRoleSelectValue | ''; label: string }[] {
+  return [
+    { value: '', label: getMemberManagementTranslation(lang, 'family_role_none') },
+    ...FAMILY_ROLE_VALUES.map((role) => ({
+      value: role as FamilyRoleSelectValue,
+      label: getFamilyRoleLabel(lang, role),
+    })),
+  ];
+}
+
 /** 가족 표시 역할 → 이모지 (위치 공유·지도 마커용) */
 export function getFamilyRoleEmoji(
-  role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
+  role: FamilyRoleSelectValue | null
 ): string {
   if (!role) return '👤';
-  const map: Record<string, string> = {
+  const map: Record<FamilyRoleSelectValue, string> = {
     mom: '👩',
     dad: '👨',
     son: '👦',

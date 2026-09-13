@@ -9,9 +9,9 @@ const VALID_FAMILY_ROLES: (FamilyRole | null)[] = [null, 'mom', 'dad', 'son', 'd
 
 /**
  * 가족 표시 역할(family_role) 설정 API
- * - 소유자/관리자: mom, dad 만 허용
- * - 멤버: son, daughter, other 만 허용
+ * - family_role은 권한(ADMIN/MEMBER)과 무관하게 동일 옵션 허용
  * - null(미설정) 항상 허용
+ * - 본인 또는 관리자만 변경 가능 (ADMIN/MEMBER 권한 모델은 유지)
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -78,15 +78,9 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    const { data: group } = await supabase
-      .from('groups')
-      .select('owner_id')
-      .eq('id', groupId)
-      .single();
-
     const { data: membership } = await supabase
       .from('memberships')
-      .select('role')
+      .select('user_id')
       .eq('user_id', targetUserId)
       .eq('group_id', groupId)
       .single();
@@ -98,23 +92,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const isOwnerOrAdmin = group?.owner_id === targetUserId || membership.role === 'ADMIN';
     const value = familyRole === undefined ? null : familyRole;
-
-    if (value !== null) {
-      if (isOwnerOrAdmin && !['mom', 'dad'].includes(value)) {
-        return NextResponse.json(
-          { error: '소유자/관리자는 엄마(mom) 또는 아빠(dad)만 선택할 수 있습니다.' },
-          { status: 400 }
-        );
-      }
-      if (!isOwnerOrAdmin && !['son', 'daughter', 'grandpa', 'grandma', 'other'].includes(value)) {
-        return NextResponse.json(
-          { error: '멤버는 아들(son), 딸(daughter), 할아버지(grandpa), 할머니(grandma), 기타(other)만 선택할 수 있습니다.' },
-          { status: 400 }
-        );
-      }
-    }
 
     const { error: updateError } = await supabase
       .from('memberships')

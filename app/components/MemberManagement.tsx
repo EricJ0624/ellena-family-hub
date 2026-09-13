@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import {
+  getFamilyRoleSelectOptions,
   formatMemberManagementTranslation,
   getMemberManagementTranslation,
 } from '@/lib/translations/memberManagement';
@@ -628,21 +629,10 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
                 const isUpdatingRole = updatingRoleUserId === member.user_id;
                 const isUpdatingFamilyRole = updatingFamilyRoleUserId === member.user_id;
                 const roleLabel = isOwnerMember ? mmt('role_owner') : member.role === 'ADMIN' ? mmt('role_admin') : mmt('role_member');
-                const isOwnerOrAdmin = isOwnerMember || member.role === 'ADMIN';
-                const familyRoleOptions: { value: FamilyRole | ''; label: string }[] = isOwnerOrAdmin
-                  ? [
-                      { value: '', label: mmt('family_role_none') },
-                      { value: 'mom', label: mmt('family_role_mom') },
-                      { value: 'dad', label: mmt('family_role_dad') },
-                    ]
-                  : [
-                      { value: '', label: mmt('family_role_none') },
-                      { value: 'son', label: mmt('family_role_son') },
-                      { value: 'daughter', label: mmt('family_role_daughter') },
-                      { value: 'grandpa', label: mmt('family_role_grandpa') },
-                      { value: 'grandma', label: mmt('family_role_grandma') },
-                      { value: 'other', label: mmt('family_role_other') },
-                    ];
+                const familyRoleOptions = getFamilyRoleSelectOptions(lang).map((opt) => ({
+                  value: opt.value as FamilyRole | '',
+                  label: opt.label,
+                }));
 
                 return (
                   <motion.tr

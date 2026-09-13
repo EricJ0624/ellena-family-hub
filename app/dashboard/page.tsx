@@ -75,7 +75,12 @@ import { getLoginTranslation } from '@/lib/translations/login';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
-import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
+import {
+  getFamilyRoleEmoji,
+  getFamilyRoleLabel,
+  getFamilyRoleSelectOptions,
+  getMemberManagementTranslation,
+} from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import NotificationCenter from '@/app/components/notifications/NotificationCenter';
 import { getAnnouncementTexts, isAnnouncementVisibleForLang } from '@/lib/announcement-i18n';
@@ -7096,21 +7101,9 @@ export default function FamilyHub() {
                   value={nicknameModalFamilyRole ?? ''}
                   onChange={(e) => setNicknameModalFamilyRole(e.target.value === '' ? null : e.target.value as 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
                 >
-                  <option value="">{getMemberManagementTranslation(lang, 'family_role_none')}</option>
-                  {(groupIsOwner || groupUserRole === 'ADMIN') ? (
-                    <>
-                      <option value="mom">{getMemberManagementTranslation(lang, 'family_role_mom')}</option>
-                      <option value="dad">{getMemberManagementTranslation(lang, 'family_role_dad')}</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="son">{getMemberManagementTranslation(lang, 'family_role_son')}</option>
-                      <option value="daughter">{getMemberManagementTranslation(lang, 'family_role_daughter')}</option>
-                      <option value="grandpa">{getMemberManagementTranslation(lang, 'family_role_grandpa')}</option>
-                      <option value="grandma">{getMemberManagementTranslation(lang, 'family_role_grandma')}</option>
-                      <option value="other">{getMemberManagementTranslation(lang, 'family_role_other')}</option>
-                    </>
-                  )}
+                  {getFamilyRoleSelectOptions(lang).map((opt) => (
+                    <option key={opt.value || 'none'} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="form-field">

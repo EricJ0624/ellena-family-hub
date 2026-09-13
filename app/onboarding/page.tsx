@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback, isTransientAuthNetworkError } from '@/lib/auth-session-resilience';
@@ -10,7 +9,11 @@ import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } f
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
-import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
+import {
+  getFamilyRoleSelectOptions,
+  getMemberManagementTranslation,
+  type FamilyRoleSelectValue,
+} from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { normalizeGroupId, normalizeGroupIdFromRpc } from '@/lib/validation';
@@ -99,10 +102,9 @@ export default function OnboardingPage() {
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
   const [inviteCodeConfirmed, setInviteCodeConfirmed] = useState(false);
   
-  const [createFamilyRole, setCreateFamilyRole] = useState<'' | 'mom' | 'dad'>('');
+  const [createFamilyRole, setCreateFamilyRole] = useState<'' | FamilyRoleSelectValue>('');
   const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
-  const [joinFamilyRole, setJoinFamilyRole] = useState<'' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other'>('');
-  const [showJoinFamilyRoleModal, setShowJoinFamilyRoleModal] = useState(false);
+  const [joinFamilyRole, setJoinFamilyRole] = useState<'' | FamilyRoleSelectValue>('');
 
   // 초대 코드 가입 관련 상태
   const [inviteCode, setInviteCode] = useState('');
@@ -709,7 +711,6 @@ export default function OnboardingPage() {
       if (groupId) {
         setJoinedGroupId(groupId);
         setCurrentGroupId(groupId);
-        setShowJoinFamilyRoleModal(false);
         try {
           clearSessionStoredInviteCode();
         } catch (_) {}
@@ -720,7 +721,6 @@ export default function OnboardingPage() {
       } else if (groupPreview?.id) {
         setJoinedGroupId(groupPreview.id);
         setCurrentGroupId(groupPreview.id);
-        setShowJoinFamilyRoleModal(false);
         try {
           clearSessionStoredInviteCode();
         } catch (_) {}
@@ -1025,19 +1025,19 @@ export default function OnboardingPage() {
                       />
                     </div>
 
-                    {/* 가족 표시 (생성자: 아빠/엄마/선택 안함) */}
+                    {/* 가족 표시 (권한과 무관하게 동일 옵션) */}
                     <div className="mb-5">
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
                         {mmt('family_role_label')}
                       </label>
                       <select
                         value={createFamilyRole}
-                        onChange={(e) => setCreateFamilyRole(e.target.value as '' | 'mom' | 'dad')}
+                        onChange={(e) => setCreateFamilyRole((e.target.value || '') as '' | FamilyRoleSelectValue)}
                         className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                       >
-                        <option value="">{mmt('family_role_none')}</option>
-                        <option value="mom">{mmt('family_role_mom')}</option>
-                        <option value="dad">{mmt('family_role_dad')}</option>
+                        {getFamilyRoleSelectOptions(lang).map((opt) => (
+                          <option key={opt.value || 'none'} value={opt.value}>{opt.label}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -1227,7 +1227,7 @@ export default function OnboardingPage() {
                         </div>
                       </div>
 
-                      {/* You've joined 페이지: 가족 표시 선택 (일반 멤버: 아들/딸/기타) */}
+                      {/* You've joined 페이지: 가족 표시 선택 (권한과 무관하게 동일 옵션) */}
                       {joinFlowReady && (
                         <div className="mt-4 border-t border-slate-200 pt-4">
                           <label className="mb-1.5 block text-xs font-semibold text-slate-500">
@@ -1235,16 +1235,13 @@ export default function OnboardingPage() {
                           </label>
                           <select
                             value={joinFamilyRole}
-                            onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
+                            onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | FamilyRoleSelectValue)}
                             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900"
                             aria-label={mmt('family_role_label')}
                           >
-                            <option value="">{mmt('family_role_none')}</option>
-                            <option value="son">{mmt('family_role_son')}</option>
-                            <option value="daughter">{mmt('family_role_daughter')}</option>
-                            <option value="grandpa">{mmt('family_role_grandpa')}</option>
-                            <option value="grandma">{mmt('family_role_grandma')}</option>
-                            <option value="other">{mmt('family_role_other')}</option>
+                            {getFamilyRoleSelectOptions(lang).map((opt) => (
+                              <option key={opt.value || 'none'} value={opt.value}>{opt.label}</option>
+                            ))}
                           </select>
                           {joinFamilyRole && (
                             <button
@@ -1478,115 +1475,6 @@ export default function OnboardingPage() {
             <span>2 / 2</span>
           </div>
         )}
-
-        {/* 가입 후 가족 표시 선택 모달 (일반 멤버: 아들/딸/기타) - body에 포탈로 렌더 */}
-        {typeof document !== 'undefined' && showJoinFamilyRoleModal && joinedGroupId &&
-          createPortal(
-            <AnimatePresence>
-              <>
-                  <div
-                    className="fixed inset-0 bg-black/50 z-[100]"
-                    onClick={() => {
-                      const gid = joinedGroupId;
-                      setShowJoinFamilyRoleModal(false);
-                      setJoinedGroupId(null);
-                      setJoinFamilyRole('');
-                      router.push(dashboardHrefWithOpenGroup(gid));
-                    }}
-                    aria-hidden="true"
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="fixed inset-0 z-[101] flex items-center justify-center p-4"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">{mmt('family_role_label')}</h3>
-                        <button
-                          onClick={() => {
-                            const gid = joinedGroupId;
-                            setShowJoinFamilyRoleModal(false);
-                            setJoinedGroupId(null);
-                            setJoinFamilyRole('');
-                            router.push(dashboardHrefWithOpenGroup(gid));
-                          }}
-                          className="text-gray-400 hover:text-gray-600"
-                          aria-label={ct('close')}
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-4">{mmt('family_role_modal_description')}</p>
-                      <div className="space-y-4">
-                        <select
-                          value={joinFamilyRole}
-                          onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">{mmt('family_role_none')}</option>
-                          <option value="son">{mmt('family_role_son')}</option>
-                          <option value="daughter">{mmt('family_role_daughter')}</option>
-                          <option value="grandpa">{mmt('family_role_grandpa')}</option>
-                          <option value="grandma">{mmt('family_role_grandma')}</option>
-                          <option value="other">{mmt('family_role_other')}</option>
-                        </select>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              const gid = joinedGroupId;
-                              setShowJoinFamilyRoleModal(false);
-                              setJoinedGroupId(null);
-                              setJoinFamilyRole('');
-                              router.push(dashboardHrefWithOpenGroup(gid));
-                            }}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                          >
-                            {ct('skip')}
-                          </button>
-                          <button
-                            onClick={async () => {
-                              const { data: { user } } = await supabase.auth.getUser();
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!user || !session?.access_token || !joinedGroupId) {
-                                const gid = joinedGroupId;
-                                setShowJoinFamilyRoleModal(false);
-                                setJoinedGroupId(null);
-                                router.push(dashboardHrefWithOpenGroup(gid));
-                                return;
-                              }
-                              if (joinFamilyRole) {
-                                try {
-                                  const res = await fetch('/api/groups/members/family-role', {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-                                    body: JSON.stringify({ targetUserId: user.id, groupId: joinedGroupId, familyRole: joinFamilyRole }),
-                                  });
-                                  if (!res.ok) console.warn('가족 표시 저장 실패');
-                                } catch (e) {
-                                  console.warn('가족 표시 저장 실패', e);
-                                }
-                              }
-                              const gid = joinedGroupId;
-                              setShowJoinFamilyRoleModal(false);
-                              setJoinedGroupId(null);
-                              setJoinFamilyRole('');
-                              router.push(dashboardHrefWithOpenGroup(gid));
-                            }}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                          >
-                            {ct('save')}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                </>
-            </AnimatePresence>,
-            document.body
-          )}
       </div>
 
     </div>
