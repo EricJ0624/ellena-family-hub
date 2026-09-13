@@ -2,6 +2,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { getGroupDisplayNameRaw } from '@/lib/group-display-name';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { isSystemAdmin } from '@/lib/permissions';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 import type { SuspendAction, SuspendScope, UserGroupSuspendRow } from '@/lib/admin-suspend';
 import { notifySuspendAction } from '@/lib/moderation-notify';
 
@@ -132,7 +133,7 @@ export async function applySuspendAction(params: {
     throw new Error('그룹 정지는 그룹만 지정합니다.');
   }
   if (params.action === 'suspend' && params.userId && (await isSystemAdmin(params.userId))) {
-    throw new Error('시스템 관리자는 정지할 수 없습니다.');
+    throw new Error(brandSystemAdminCopy('시스템 관리자는 정지할 수 없습니다.'));
   }
   if (params.action === 'suspend' && params.userId && params.userId === params.adminId) {
     throw new Error('본인 계정은 정지할 수 없습니다.');

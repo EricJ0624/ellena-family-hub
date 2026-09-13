@@ -5,6 +5,7 @@ import {
 } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 /**
  * 회원탈퇴 API
@@ -33,7 +34,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'ADMIN_ACCOUNT',
-          message: '시스템 관리자는 회원탈퇴할 수 없습니다. 먼저 관리자 권한을 해제하거나 후임자를 지정해주세요.',
+          message: brandSystemAdminCopy('시스템 관리자는 회원탈퇴할 수 없습니다. 먼저 관리자 권한을 해제하거나 후임자를 지정해주세요.'),
           isSystemAdmin: true
         },
         { status: 403 }

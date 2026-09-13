@@ -9,6 +9,7 @@ import { authenticateUser, getSupabaseServerClient } from './api-helpers';
 import { checkPermission, isSystemAdmin } from './permissions';
 import { GROUP_SUSPENDED_CODE } from './account-suspend-access';
 import { CURRENT_APP_ID } from './apps';
+import { brandSystemAdminCopy } from './system-admin-brand';
 import type { MembershipRole } from '@/types/db';
 
 /**
@@ -46,7 +47,7 @@ export async function requireSystemAdmin(userId: string): Promise<void | NextRes
   const isAdmin = await isSystemAdmin(userId);
   if (!isAdmin) {
     return NextResponse.json(
-      { error: '시스템 관리자 권한이 필요합니다.' },
+      { error: brandSystemAdminCopy('시스템 관리자 권한이 필요합니다.') },
       { status: 403 }
     );
   }

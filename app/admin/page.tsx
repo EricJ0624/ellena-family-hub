@@ -58,6 +58,7 @@ import { AdminForceLeaveModal, type AdminForceLeaveTarget } from '@/app/componen
 import { SystemAdminTransferModal } from '@/app/components/admin/SystemAdminTransferModal';
 import { getAdminTransferTranslation } from '@/lib/translations/adminTransfer';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 import { userSuspendBadgeKind, type SuspendSummary } from '@/lib/admin-suspend';
 import { ALL_APP_IDS, getAppIdBadgeClass, getAppIdLabel, type AppId } from '@/lib/apps';
 
@@ -3019,9 +3020,11 @@ export default function AdminPage() {
                     {at('tab_member_inquiries')}
                   </h2>
                   <p className="mt-2 mb-0 max-w-3xl text-sm leading-relaxed text-slate-500">
-                    {adminLang === 'ko'
-                      ? '일상적인 멤버 문의는 그룹 관리자만 처리합니다. 시스템 관리자는 신고·분쟁·법령 협조·그룹 관리자 부재 등 예외 사유가 있을 때만, 문의 ID로 단건 조회·삭제할 수 있습니다. 모든 접근은 감사 로그에 기록됩니다.'
-                      : 'Day-to-day member inquiries are handled by group admins only. System admins may look up or delete a single ticket by ID only for exception reasons (report, dispute, legal, absent admin, etc.). Every access is audit-logged.'}
+                    {brandSystemAdminCopy(
+                      adminLang === 'ko'
+                        ? '일상적인 멤버 문의는 그룹 관리자만 처리합니다. 시스템 관리자는 신고·분쟁·법령 협조·그룹 관리자 부재 등 예외 사유가 있을 때만, 문의 ID로 단건 조회·삭제할 수 있습니다. 모든 접근은 감사 로그에 기록됩니다.'
+                        : 'Day-to-day member inquiries are handled by group admins only. System admins may look up or delete a single ticket by ID only for exception reasons (report, dispute, legal, absent admin, etc.). Every access is audit-logged.',
+                    )}
                   </p>
                 </div>
 

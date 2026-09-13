@@ -1,4 +1,5 @@
 import type { LangCode } from '@/lib/language-fonts';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 export type GroupAdminTranslations = {
   checking_permission: string;
@@ -1690,6 +1691,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
 };
 
 export function getGroupAdminTranslation(lang: LangCode, key: keyof GroupAdminTranslations): string {
-  return groupAdmin[lang]?.[key] ?? groupAdmin.en[key] ?? (groupAdmin.ko[key] as string) ?? key;
+  return brandSystemAdminCopy(
+    groupAdmin[lang]?.[key] ?? groupAdmin.en[key] ?? (groupAdmin.ko[key] as string) ?? key,
+  );
 }
 

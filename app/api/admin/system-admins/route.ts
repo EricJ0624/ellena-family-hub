@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 /** 시스템 관리자 목록 조회. 승격/해제는 /api/admin/system-admins/transfer 만 사용한다. */
 export async function GET(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('시스템 관리자 목록 조회 오류:', error);
       return NextResponse.json(
-        { error: '시스템 관리자 목록 조회에 실패했습니다.' },
+        { error: brandSystemAdminCopy('시스템 관리자 목록 조회에 실패했습니다.') },
         { status: 500 }
       );
     }
@@ -62,7 +63,9 @@ export async function GET(request: NextRequest) {
       count: admins?.length || 0,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '시스템 관리자 목록 조회 중 오류가 발생했습니다.';
+    const errorMessage = brandSystemAdminCopy(
+      error instanceof Error ? error.message : '시스템 관리자 목록 조회 중 오류가 발생했습니다.',
+    );
     console.error('시스템 관리자 목록 조회 오류:', error);
     return NextResponse.json(
       { error: errorMessage },

@@ -1,4 +1,5 @@
 import type { LangCode } from '@/lib/language-fonts';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 export type AccountSuspendNoticeTranslations = {
   title: string;
@@ -173,5 +174,5 @@ export function getAccountSuspendNoticeTranslation(
   lang: LangCode,
   key: keyof AccountSuspendNoticeTranslations,
 ): string {
-  return t[lang]?.[key] ?? t.en[key] ?? t.ko[key] ?? key;
+  return brandSystemAdminCopy(t[lang]?.[key] ?? t.en[key] ?? t.ko[key] ?? key);
 }

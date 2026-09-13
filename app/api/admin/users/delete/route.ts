@@ -4,6 +4,7 @@ import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { isSystemAdmin } from '@/lib/permissions';
 import { isAdminStepUpError, requireAdminStepUpPassword } from '@/lib/admin-stepup';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function DELETE(request: NextRequest) {
 
     if (await isSystemAdmin(userId)) {
       return NextResponse.json(
-        { error: '시스템 관리자는 강제 탈퇴할 수 없습니다.' },
+        { error: brandSystemAdminCopy('시스템 관리자는 강제 탈퇴할 수 없습니다.') },
         { status: 403 }
       );
     }

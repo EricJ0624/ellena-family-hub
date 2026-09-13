@@ -95,10 +95,15 @@ const NEO_STAMP_PAD_X_EM = 0.72 * 2;
 const NEO_STAMP_BORDER_PX = 3 * 2;
 const NEO_STAMP_MARGIN_PX = 4;
 const NEO_STAMP_LETTER_SPACING_EM = 0.04;
+/** canvas/DOM 측정·서브픽셀 오차 여유 */
+const NEO_STAMP_SAFETY_SLACK_PX = 6;
+/** 긴 제목+관리자 버튼에서도 스탬프 안에 들어가게 허용하는 절대 하한 */
+export const NEO_STAMP_TITLE_MIN_PX = 12;
 
 /**
  * 잉크 스탬프 칩 안에 타이틀이 들어가게 font-size를 고른다.
- * (패딩·보더·섀도 여백을 차감한 가용 폭 기준)
+ * (패딩·보더·여백·측정 오차를 차감한 가용 폭 기준)
+ * 호출부 min(titleFontMin 등)이 높아도 스탬프 절대 하한까지 더 줄일 수 있다.
  */
 export function fitNeoStampTitleFontSize(
   text: string,
@@ -110,12 +115,15 @@ export function fitNeoStampTitleFontSize(
   useAppTitleMeasure = false,
 ): number {
   if (!text || boxWidthPx <= 0) return maxPx;
-  for (let size = maxPx; size >= minPx; size -= 1) {
+  // 호출부 min이 titleFontMin(33)처럼 높아도 스탬프 절대 하한까지 축소 허용
+  const lowPx = Math.min(minPx, NEO_STAMP_TITLE_MIN_PX);
+  for (let size = maxPx; size >= lowPx; size -= 1) {
     const avail =
       boxWidthPx
       - NEO_STAMP_PAD_X_EM * size
       - NEO_STAMP_BORDER_PX
-      - NEO_STAMP_MARGIN_PX;
+      - NEO_STAMP_MARGIN_PX
+      - NEO_STAMP_SAFETY_SLACK_PX;
     if (avail <= 8) continue;
     const letterSpacingPx = NEO_STAMP_LETTER_SPACING_EM * size;
     const width = useAppTitleMeasure
@@ -123,7 +131,7 @@ export function fitNeoStampTitleFontSize(
       : measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx);
     if (width <= avail) return size;
   }
-  return minPx;
+  return lowPx;
 }
 
 export function fitFontSizeToWidth(

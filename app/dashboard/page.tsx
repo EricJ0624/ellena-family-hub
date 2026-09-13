@@ -17,6 +17,7 @@ import {
 } from '@/lib/auth-bootstrap';
 import { APP_ENROLL_PATH, needsAppEnrollment } from '@/lib/app-enrollment-routing';
 import { CURRENT_APP_ID } from '@/lib/apps';
+import { systemAdminButtonLabel } from '@/lib/system-admin-brand';
 import { normalizeGroupId } from '@/lib/validation';
 import {
   parseOpenGroupParam,
@@ -57,6 +58,7 @@ import {
   fitNeoStampTitleFontSize,
   shrinkFontSizeToElement,
   CUSTOM_TITLE_FONT_MIN_PX,
+  NEO_STAMP_TITLE_MIN_PX,
   DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
   DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
   customTitleMaxFontSize,
@@ -1860,7 +1862,13 @@ export default function FamilyHub() {
     if (!row) return Math.max(80, DASHBOARD_TITLE_MAX_WIDTH[titleRole] - kidsGlassInsetPx);
     const adminBtn = row.querySelector('[data-dashboard-admin-btn]') as HTMLElement | null;
     const notifEl = row.querySelector('[data-notification-center]') as HTMLElement | null;
-    const btnWidth = (adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0)
+    const hasAdminButton = !!adminBtn || isAdminTitleContext;
+    const btnWidth =
+      (adminBtn
+        ? adminBtn.getBoundingClientRect().width + 12
+        : hasAdminButton
+          ? DASHBOARD_TITLE_ADMIN_RESERVE_PX
+          : 0)
       + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
     return Math.max(120, row.clientWidth - btnWidth - 16 - kidsGlassInsetPx);
   }, [frameIsPortrait, titleRole, isAdminTitleContext, isKidsTheme]);
@@ -2141,11 +2149,18 @@ export default function FamilyHub() {
       return;
     }
 
-    if (!frameIsPortrait && isDefaultDashboardTitle) return;
+    if (!frameIsPortrait && isDefaultDashboardTitle && !isNeoTheme) return;
 
-    const minPx = CUSTOM_TITLE_FONT_MIN_PX;
+    // Neo: h1이 아니라 스탬프/텍스트 기준으로 실측 (overflow:hidden 칩 보정)
+    const neoTarget =
+      isNeoTheme
+        ? ((el.querySelector('.dashboard-neo-title-text') as HTMLElement | null)
+          ?? (el.querySelector('.dashboard-neo-title-stamp') as HTMLElement | null)
+          ?? el)
+        : el;
+    const minPx = isNeoTheme ? NEO_STAMP_TITLE_MIN_PX : CUSTOM_TITLE_FONT_MIN_PX;
     const startPx = customTitleFontSizeRef.current ?? estimatedCustomTitleFontSize ?? titleFitMaxPx;
-    const fitted = shrinkFontSizeToElement(el, startPx, minPx);
+    const fitted = shrinkFontSizeToElement(neoTarget, startPx, minPx);
     setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
   }, [
     frameIsPortrait,
@@ -2154,6 +2169,7 @@ export default function FamilyHub() {
     dashboardTitleText,
     titleFitMaxPx,
     customFontSizeCap,
+    isNeoTheme,
   ]);
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
@@ -7227,7 +7243,11 @@ export default function FamilyHub() {
                   aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
                 >
                   <span className="text-sm">⚙️</span>
-                  {adminNavPending ? '…' : ct('admin')}
+                  {adminNavPending
+                    ? '…'
+                    : isSystemAdmin
+                      ? systemAdminButtonLabel(ct('admin'))
+                      : ct('admin')}
                 </Link>
               ) : null}
             </div>

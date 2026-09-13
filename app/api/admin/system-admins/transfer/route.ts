@@ -3,12 +3,17 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { isAdminStepUpError, requireAdminStepUpPassword } from '@/lib/admin-stepup';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 function messageFromTransferError(raw: string | null | undefined): string {
   const text = String(raw || '');
   if (text.includes('CANNOT_TRANSFER_TO_SELF')) return '본인을 후임자로 지정할 수 없습니다.';
-  if (text.includes('NOT_SYSTEM_ADMIN')) return '시스템 관리자 권한이 필요합니다.';
-  if (text.includes('ALREADY_SYSTEM_ADMIN')) return '선택한 사용자는 이미 시스템 관리자입니다.';
+  if (text.includes('NOT_SYSTEM_ADMIN')) {
+    return brandSystemAdminCopy('시스템 관리자 권한이 필요합니다.');
+  }
+  if (text.includes('ALREADY_SYSTEM_ADMIN')) {
+    return brandSystemAdminCopy('선택한 사용자는 이미 시스템 관리자입니다.');
+  }
   if (text.includes('SUCCESSOR_NOT_FOUND')) return '후임자를 찾을 수 없습니다.';
   if (text.includes('TRANSFER_FAILED') || text.includes('INVALID_USER')) return '권한 이양에 실패했습니다.';
   return '권한 이양에 실패했습니다.';
@@ -90,7 +95,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${successorProfile.nickname || successorProfile.email}님에게 시스템 관리자 권한을 넘겼습니다.`,
+      message: brandSystemAdminCopy(
+        `${successorProfile.nickname || successorProfile.email}님에게 시스템 관리자 권한을 넘겼습니다.`,
+      ),
     });
   } catch (error) {
     if (isAdminStepUpError(error)) {

@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { LEGAL_LAST_UPDATED, PRIVACY_BODY, PRIVACY_TITLE, pickLegalLocale } from '@/lib/legal-docs';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 export default function PrivacyPage() {
   const { lang } = useLanguage();
   const locale = pickLegalLocale(lang);
   const title = PRIVACY_TITLE[locale];
-  const body = PRIVACY_BODY[locale];
+  const body = brandSystemAdminCopy(PRIVACY_BODY[locale]);
   const updatedLabel = locale === 'ko' ? '최종 업데이트' : 'Last updated';
 
   return (

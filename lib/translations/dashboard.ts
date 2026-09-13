@@ -1,4 +1,5 @@
 import type { LangCode } from '@/lib/language-fonts';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 export type DashboardTranslations = {
   // Todo modal
@@ -3228,5 +3229,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
 };
 
 export function getDashboardTranslation(lang: LangCode, key: keyof DashboardTranslations): string {
-  return dashboard[lang]?.[key] ?? dashboard.en[key] ?? (dashboard.ko[key] as string) ?? key;
+  return brandSystemAdminCopy(
+    dashboard[lang]?.[key] ?? dashboard.en[key] ?? (dashboard.ko[key] as string) ?? key,
+  );
 }

@@ -1,4 +1,5 @@
 import type { LangCode } from '@/lib/language-fonts';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 export type MemberManagementTranslations = {
   /** {count} = number only; suffix is in the string per locale (e.g. 3명 / 3 members) */
@@ -501,7 +502,9 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
 };
 
 export function getMemberManagementTranslation(lang: LangCode, key: keyof MemberManagementTranslations): string {
-  return memberManagement[lang]?.[key] ?? memberManagement.en[key] ?? (memberManagement.ko[key] as string) ?? key;
+  return brandSystemAdminCopy(
+    memberManagement[lang]?.[key] ?? memberManagement.en[key] ?? (memberManagement.ko[key] as string) ?? key,
+  );
 }
 
 export function formatMemberManagementTranslation(

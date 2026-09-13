@@ -1,4 +1,5 @@
 import type { LangCode } from '@/lib/language-fonts';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 export type AdminTransferTranslations = {
   title: string;
@@ -195,5 +196,5 @@ export function getAdminTransferTranslation(
   lang: LangCode,
   key: keyof AdminTransferTranslations,
 ): string {
-  return t[lang]?.[key] ?? t.en[key] ?? t.ko[key] ?? key;
+  return brandSystemAdminCopy(t[lang]?.[key] ?? t.en[key] ?? t.ko[key] ?? key);
 }

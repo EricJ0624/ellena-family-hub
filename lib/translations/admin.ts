@@ -1,4 +1,5 @@
 import type { LangCode } from '@/lib/language-fonts';
+import { brandSystemAdminCopy } from '@/lib/system-admin-brand';
 
 export type AdminTranslations = {
   page_title: string;
@@ -2396,7 +2397,7 @@ const admin: Record<LangCode, AdminTranslations> = {
 export function getAdminTranslation(lang: LangCode, key: keyof AdminTranslations): string {
   const val = admin[lang]?.[key] ?? admin.en[key] ?? (admin.ko[key] as string);
   if (Array.isArray(val)) return (val as string[]).join(','); // caller should use audit_headers separately
-  return (val as string) ?? key;
+  return brandSystemAdminCopy((val as string) ?? key);
 }
 
 export function getAdminAuditHeaders(lang: LangCode): string[] {
