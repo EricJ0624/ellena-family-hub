@@ -24,6 +24,8 @@ import { buildDiaryTimelineSlots, buildHiddenDiarySlots } from '@/lib/modules/tr
 import { canWriteDiary } from '@/lib/modules/travel-planner/diary-eligibility';
 import { DiaryEntryCard } from '@/app/features/travel-diary/components/DiaryEntryCard';
 import { DiaryHiddenSlotList } from '@/app/features/travel-diary/components/DiaryHiddenSlotList';
+import { TravelFieldRecordHost } from '@/app/features/travel-planner/components/TravelFieldRecordHost';
+import { getTravelTranslation } from '@/lib/translations/travel';
 
 const API = '/api/v1/travel';
 
@@ -385,6 +387,27 @@ export function TravelDiaryPageContent() {
             {trip.title} · {currentGroup?.name}
           </p>
         )}
+
+        <TravelFieldRecordHost
+          groupId={currentGroupId}
+          tripId={tripIdParam}
+          mode="page"
+          enabled={Boolean(tripIdParam)}
+          labels={{
+            checkin: getTravelTranslation(lang, 'field_checkin'),
+            route_start: getTravelTranslation(lang, 'field_route_start'),
+            route_stop: getTravelTranslation(lang, 'field_route_stop'),
+            need_active_trip: getTravelTranslation(lang, 'field_need_active_trip'),
+            recording: getTravelTranslation(lang, 'field_recording'),
+          }}
+          pickLabels={{
+            title: getTravelTranslation(lang, 'field_pick_title'),
+            create: getTravelTranslation(lang, 'field_pick_create'),
+            attach_hint: getTravelTranslation(lang, 'field_pick_attach'),
+            cancel: getTravelTranslation(lang, 'field_pick_cancel'),
+          }}
+          onSaved={() => void loadAll()}
+        />
 
         {loading ? (
           <p className="mt-8 text-sm text-slate-500">{t('loading')}</p>

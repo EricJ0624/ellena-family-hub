@@ -58,6 +58,8 @@ export type ExpandedPlannerItineraryItem = {
   place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  field_record_kind?: 'checkin' | 'route' | null;
+  field_track_id?: string | null;
   category?: string | null;
   departure?: string | null;
   arrival?: string | null;
@@ -87,6 +89,8 @@ function expandTimedRangeItem(params: {
   place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  field_record_kind?: 'checkin' | 'route' | null;
+  field_track_id?: string | null;
   departure?: string | null;
   arrival?: string | null;
   distance_km?: number | null;
@@ -126,6 +130,8 @@ function expandTimedRangeItem(params: {
       place_id: params.place_id,
       latitude: params.latitude,
       longitude: params.longitude,
+      field_record_kind: params.field_record_kind ?? null,
+      field_track_id: params.field_track_id ?? null,
       departure: params.departure,
       arrival: params.arrival,
       distance_km: params.distance_km ?? null,
@@ -298,6 +304,8 @@ export function buildExpandedPlannerItinerary(params: {
         place_id: null,
         latitude: i.latitude,
         longitude: i.longitude,
+        field_record_kind: i.field_record_kind ?? null,
+        field_track_id: i.field_track_id ?? null,
         trip_start: trip_start_date,
         trip_end: trip_end_date,
       }),

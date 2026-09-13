@@ -42,6 +42,10 @@ export function buildGoogleMapsViewUrl(item: GoogleMapsPlaceRef): string | null 
     const query = textQuery || coordQuery || pid;
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${encodeURIComponent(pid)}`;
   }
+  // Bare GPS / field check-in: prefer coords over generic titles like "위치 기록"
+  if (lat != null && lng != null && !addr) {
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+  }
   if (textQuery) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(textQuery)}`;
   }

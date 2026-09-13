@@ -367,14 +367,18 @@ button.travel-kids-add-trip-submit {
 .travel-kids-widget-actions {
   display: flex;
   max-width: 100%;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-start;
   gap: 1.6cqmin;
+  pointer-events: auto;
 }
 
 .travel-kids-widget-import,
-.travel-kids-widget-add {
+.travel-kids-widget-add,
+.travel-kids-widget-field-checkin,
+.travel-kids-widget-field-route,
+.travel-kids-widget-field-route-stop {
   display: inline-flex;
   flex-shrink: 1;
   align-items: center;
@@ -388,6 +392,8 @@ button.travel-kids-add-trip-submit {
   white-space: nowrap;
   pointer-events: auto;
   cursor: pointer;
+  gap: 0.8cqmin;
+  border: 0;
 }
 
 .travel-kids-widget-import {
@@ -397,10 +403,53 @@ button.travel-kids-add-trip-submit {
 }
 
 .travel-kids-widget-add {
-  gap: 0.8cqmin;
-  border: 0;
   background: #7c3aed;
   color: #fff;
+}
+
+.travel-kids-widget-field-checkin {
+  background: #059669;
+  color: #fff;
+}
+
+.travel-kids-widget-field-route {
+  background: #6d28d9;
+  color: #fff;
+}
+
+.travel-kids-widget-field-route-stop {
+  background: #e11d48;
+  color: #fff;
+}
+
+.travel-kids-widget-field-checkin:disabled,
+.travel-kids-widget-field-route:disabled,
+.travel-kids-widget-field-route-stop:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.travel-kids-widget-field-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: clamp(0.42rem, 2.6cqmin, 0.62rem);
+  font-weight: 500;
+  line-height: 1.25;
+  color: #64748b;
+  word-break: keep-all;
+}
+
+.travel-kids-widget-field-hint--rec {
+  color: #e11d48;
+  font-weight: 700;
+}
+
+.travel-kids-widget-field-hint--ok {
+  color: #047857;
+}
+
+.travel-kids-widget-field-hint--err {
+  color: #b91c1c;
 }
 
 .travel-kids-widget-add-icon {
@@ -409,16 +458,59 @@ button.travel-kids-add-trip-submit {
   flex-shrink: 0;
 }
 
+/* 일정 목록만 — 툴바와 분리 */
 .travel-kids-widget-bottom {
   position: relative;
   z-index: 2;
   flex: 0 0 auto;
   width: 100%;
-  margin-top: 1.5cqmin;
+  margin-top: 2.4cqmin;
   padding: 0;
   overflow: visible;
   pointer-events: auto;
   background: transparent;
+}
+
+.travel-diary-widget-actions {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.4cqmin;
+  margin-top: 1.2cqmin;
+  pointer-events: auto;
+}
+
+.travel-diary-widget-actions .travel-kids-widget-field-checkin,
+.travel-diary-widget-actions .travel-kids-widget-field-route,
+.travel-diary-widget-actions .travel-kids-widget-field-route-stop {
+  display: inline-flex;
+  flex-shrink: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8cqmin;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  padding: 1.2cqmin 2.6cqmin;
+  font-size: clamp(0.48rem, 3cqmin, 0.72rem);
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  color: #fff;
+}
+
+.travel-diary-widget-actions .travel-kids-widget-field-checkin {
+  background: #059669;
+}
+
+.travel-diary-widget-actions .travel-kids-widget-field-route {
+  background: #6d28d9;
+}
+
+.travel-diary-widget-actions .travel-kids-widget-field-route-stop {
+  background: #e11d48;
 }
 
 .travel-kids-widget-empty {

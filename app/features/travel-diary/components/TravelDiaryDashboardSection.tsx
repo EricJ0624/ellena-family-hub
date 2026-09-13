@@ -11,6 +11,8 @@ import {
   getViewedAlbumPhotoUrls,
   subscribeViewedAlbumPhotoUrls,
 } from '@/lib/album-viewed-photo-urls';
+import { TravelFieldRecordHost } from '@/app/features/travel-planner/components/TravelFieldRecordHost';
+import type { TravelFieldRecordBarLabels } from '@/app/features/travel-planner/components/TravelFieldRecordBar';
 
 type Props = {
   trips: TravelTrip[];
@@ -27,6 +29,8 @@ type Props = {
     open_diary: string;
     start_trip_diary: string;
   };
+  fieldLabels: TravelFieldRecordBarLabels;
+  onFieldSaved?: () => void;
 };
 
 type SlotRect = { left: number; top: number; width: number; height: number };
@@ -148,11 +152,31 @@ export function TravelDiaryDashboardSection({
   onStartTrip,
   uiTheme,
   translations: t,
+  fieldLabels,
+  onFieldSaved,
 }: Props) {
   const isKidsTheme = uiTheme === 'kids_friendly';
   const isGlassTheme = uiTheme === 'highend_glass';
   /** 다이어리 켠 여행만 — 없으면 전체 trips로 폴백하지 않음(전체삭제 후 잔상 방지) */
   const list = trips.filter((x) => x.diary_enabled === true);
+  /** 다이어리 목록이 비어도, 그룹에 여행만 있으면 대시보드에서 기록 가능 */
+  const fieldToolbar = currentGroupId ? (
+    <TravelFieldRecordHost
+      groupId={currentGroupId}
+      tripId={null}
+      trips={trips.map((t) => ({
+        id: t.id,
+        title: t.title,
+        start_date: t.start_date,
+        end_date: t.end_date,
+      }))}
+      mode="widget"
+      toolbar
+      enabled={Boolean(currentGroupId)}
+      labels={fieldLabels}
+      onSaved={onFieldSaved}
+    />
+  ) : null;
 
   const handleTripActivate = (trip: TravelTrip) => {
     if (trip.diary_enabled) {
@@ -271,6 +295,10 @@ export function TravelDiaryDashboardSection({
             </span>
             {t.section_title}
           </h3>
+          {/* 제목 바로 아래 툴바만 — 일정 목록과 분리 */}
+          {currentGroupId ? (
+            <div className="travel-diary-widget-actions pointer-events-auto">{fieldToolbar}</div>
+          ) : null}
         </div>
         <div className="section-body relative z-[2]">
           {!currentGroupId || loading || list.length === 0 ? (
@@ -285,14 +313,17 @@ export function TravelDiaryDashboardSection({
     );
   }
 
-  /* Original + High-end Glass: 표준 content-section (Family Friendly 스크랩북/파스텔 배경 미사용) */
+  /* Original + High-end Glass */
   return (
     <section className="content-section">
-      <div className="section-header">
+      <div className="section-header flex flex-col gap-[1.5cqmin]">
         <h3 className="section-title m-0 inline-flex min-w-0 items-center gap-1.5">
           <span aria-hidden>📔</span>
           {t.section_title}
         </h3>
+        {currentGroupId ? (
+          <div className="flex flex-wrap items-center gap-[1.5cqmin]">{fieldToolbar}</div>
+        ) : null}
       </div>
       <div className="section-body">{bodyContent}</div>
     </section>

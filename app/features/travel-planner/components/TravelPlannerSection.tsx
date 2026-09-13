@@ -1,6 +1,8 @@
 /**
- * 가족 여행 플래너(Travel Planner) 섹션 컴포넌트
- * Dashboard용 여행 목록 카드 뷰
+ * 가족 여행 플래너 — 대시보드 위젯
+ *
+ * Check in / Record = Import / Add trip 과 같은 툴바(위젯 본체)
+ * 여행 목록(bottom)에는 절대 넣지 않음
  */
 
 'use client';
@@ -9,6 +11,8 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { TravelTrip } from '../types';
+import { TravelFieldRecordHost } from './TravelFieldRecordHost';
+import type { TravelFieldRecordBarLabels } from './TravelFieldRecordBar';
 
 interface TravelPlannerSectionProps {
   trips: TravelTrip[];
@@ -26,6 +30,8 @@ interface TravelPlannerSectionProps {
     trips_loading: string;
     empty_state: string;
   };
+  fieldLabels: TravelFieldRecordBarLabels;
+  onFieldSaved?: () => void;
 }
 
 export function TravelPlannerSection({
@@ -37,8 +43,28 @@ export function TravelPlannerSection({
   onImportClick,
   uiTheme,
   translations: t,
+  fieldLabels,
+  onFieldSaved,
 }: TravelPlannerSectionProps) {
   const isKidsTheme = uiTheme === 'kids_friendly';
+
+  const fieldToolbar = currentGroupId ? (
+    <TravelFieldRecordHost
+      groupId={currentGroupId}
+      tripId={null}
+      trips={trips.map((t) => ({
+        id: t.id,
+        title: t.title,
+        start_date: t.start_date,
+        end_date: t.end_date,
+      }))}
+      mode="widget"
+      toolbar
+      enabled={Boolean(currentGroupId)}
+      labels={fieldLabels}
+      onSaved={onFieldSaved}
+    />
+  ) : null;
 
   if (isKidsTheme) {
     return (
@@ -65,6 +91,7 @@ export function TravelPlannerSection({
                   <Plus className="travel-kids-widget-add-icon" aria-hidden />
                   {t.add_trip}
                 </button>
+                {fieldToolbar}
               </div>
             ) : null}
             <div className="travel-kids-widget-bottom">
@@ -102,34 +129,31 @@ export function TravelPlannerSection({
   return (
     <section className="content-section">
       <div className="section-header flex-wrap" style={{ gap: '1.5cqmin 2.5cqmin' }}>
-        <h3 className="section-title m-0 min-w-0 flex-1">
-          {t.section_title}
-        </h3>
-        <div className={`flex w-full flex-col gap-[1.5cqmin] sm:w-auto sm:flex-row ${currentGroupId ? '' : 'min-w-0'}`}>
-          {currentGroupId ? (
-            <>
-              {onImportClick ? (
-                <button
-                  type="button"
-                  onClick={onImportClick}
-                  className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-violet-300 bg-white font-bold text-violet-800 transition-colors hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 sm:w-auto"
-                  style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '5cqmin' }}
-                >
-                  {t.import_open_button}
-                </button>
-              ) : null}
+        <h3 className="section-title m-0 min-w-0 flex-1">{t.section_title}</h3>
+        {currentGroupId ? (
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-[1.5cqmin]">
+            {onImportClick ? (
               <button
                 type="button"
-                onClick={onAddClick}
-                className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border-none bg-[#9333ea] font-bold text-white transition-colors hover:bg-[#7e22ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 sm:w-auto"
-                style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '5cqmin' }}
+                onClick={onImportClick}
+                className="inline-flex cursor-pointer items-center justify-center rounded-full border border-violet-300 bg-white font-bold text-violet-800"
+                style={{ gap: '1cqmin', padding: '1.5cqmin 2.5cqmin', fontSize: '4.5cqmin' }}
               >
-                <Plus style={{ width: '5cqmin', height: '5cqmin' }} />
-                {t.add_trip}
+                {t.import_open_button}
               </button>
-            </>
-          ) : null}
-        </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={onAddClick}
+              className="inline-flex cursor-pointer items-center justify-center rounded-full border-none bg-[#9333ea] font-bold text-white"
+              style={{ gap: '1cqmin', padding: '1.5cqmin 2.5cqmin', fontSize: '4.5cqmin' }}
+            >
+              <Plus style={{ width: '4.5cqmin', height: '4.5cqmin' }} />
+              {t.add_trip}
+            </button>
+            {fieldToolbar}
+          </div>
+        ) : null}
       </div>
       <div className="section-body">
         {!currentGroupId ? (

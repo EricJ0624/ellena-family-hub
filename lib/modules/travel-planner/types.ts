@@ -147,6 +147,9 @@ export interface TravelItinerary {
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  /** Field recording: checkin | route */
+  field_record_kind?: 'checkin' | 'route' | null;
+  field_track_id?: string | null;
   created_at: string;
   updated_at: string;
   created_by?: string | null;

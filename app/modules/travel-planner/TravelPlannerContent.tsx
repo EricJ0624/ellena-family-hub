@@ -21,13 +21,14 @@ import type {
 import { normalizePackingChecklist } from '@/lib/modules/travel-planner/document-meta';
 import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
 import { buildStaticMapUrl, collectTripMapPoints } from '@/lib/modules/travel-planner/static-map-url';
-import { formatPlaceCoords } from '@/lib/modules/travel-planner/google-maps-embed';
+import { buildGoogleMapsViewUrl, formatPlaceCoords } from '@/lib/modules/travel-planner/google-maps-embed';
 import { ItineraryDocument, printItineraryDocumentPreview } from '@/app/modules/travel-planner/components/ItineraryDocument';
 import {
   canUserOptInDiaryForTrip,
   showDiaryCompletedInviteHint,
 } from '@/lib/modules/travel-planner/diary-eligibility';
 import { normalizeTripStatus, type TravelTripStatus } from '@/lib/modules/travel-planner/trip-status';
+import { TravelFieldRecordHost } from '@/app/features/travel-planner/components/TravelFieldRecordHost';
 import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import {
   buildExpandedPlannerItinerary,
@@ -244,6 +245,7 @@ export function TravelPlannerContent() {
   selectedTripIdRef.current = selectedTrip?.id ?? null;
   const travelMapRef = useRef<google.maps.Map | null>(null);
   const travelMapMarkersRef = useRef<google.maps.Marker[]>([]);
+  const travelMapPolylinesRef = useRef<google.maps.Polyline[]>([]);
   const travelMapScriptLoadedRef = useRef(false);
   /** 숙소·먹거리·관광지: Places Autocomplete는 이름 입력란에 연결 */
   const accNameInputRef = useRef<HTMLInputElement>(null);
@@ -471,7 +473,7 @@ export function TravelPlannerContent() {
 
   /**
    * 구글 지도 웹(소비자용) 링크 — Maps Platform API 호출·과금 없음.
-   * 업체 시트가 열리도록 place_id 또는 이름+주소 검색을 우선하고, 좌표 URL은 최후 수단.
+   * 공통 buildGoogleMapsViewUrl 사용 (주소 없을 때 좌표 우선).
    */
   const getGoogleMapsUrl = useCallback(
     (item: {
@@ -482,26 +484,15 @@ export function TravelPlannerContent() {
       latitude?: number | null;
       longitude?: number | null;
     }) => {
-      const pid = typeof item.place_id === 'string' ? item.place_id.trim() : '';
-      const label = (typeof item.name === 'string' ? item.name.trim() : '') || (typeof item.title === 'string' ? item.title.trim() : '');
-      const addr = typeof item.address === 'string' ? item.address.trim() : '';
-      const textQuery = [label, addr].filter(Boolean).join(' ').trim();
-      const coordQuery =
-        item.latitude != null && item.longitude != null ? `${item.latitude},${item.longitude}` : '';
-
-      // Maps URLs: search에는 query가 필수이며 query_place_id와 병행 시 정확히 해당 장소로 연결됨
-      // (query=place_id:... 단독은 웹에서 검색어로 처리되어 "찾을 수 없음"이 자주 남)
-      if (pid) {
-        const query = textQuery || coordQuery || pid;
-        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${encodeURIComponent(pid)}`;
-      }
-      if (textQuery) {
-        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(textQuery)}`;
-      }
-      if (item.latitude != null && item.longitude != null) {
-        return `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
-      }
-      return null;
+      const name = typeof item.name === 'string' ? item.name.trim() : '';
+      const title = typeof item.title === 'string' ? item.title.trim() : '';
+      return buildGoogleMapsViewUrl({
+        title: name || title || null,
+        address: item.address,
+        place_id: item.place_id,
+        latitude: item.latitude,
+        longitude: item.longitude,
+      });
     },
     [],
   );
@@ -845,11 +836,13 @@ export function TravelPlannerContent() {
     transportDirectInputMode,
   ]);
 
-  // 여행 플래너 지도: 사용할 때만 초기화/표시. 숙소·먹거리·일정(관광지) 위치 표시
+  // 여행 플래너 지도: 사용할 때만 초기화/표시. 숙소·먹거리·일정(관광지) 위치 + 현장 경로
   useEffect(() => {
     if (!showTravelMap || typeof window === 'undefined' || !selectedTrip) {
       travelMapMarkersRef.current.forEach((m) => m.setMap(null));
       travelMapMarkersRef.current = [];
+      travelMapPolylinesRef.current.forEach((p) => p.setMap(null));
+      travelMapPolylinesRef.current = [];
       travelMapRef.current = null;
       return;
     }
@@ -857,8 +850,9 @@ export function TravelPlannerContent() {
 
     const mapEl = document.getElementById('travel-planner-map');
     if (!mapEl) return;
+    let cancelled = false;
 
-    const initMapAndMarkers = () => {
+    const initMapAndMarkers = async () => {
       const g = getGoogleMapsNs();
       if (!g?.Map) return;
 
@@ -876,13 +870,18 @@ export function TravelPlannerContent() {
       const map = travelMapRef.current;
       travelMapMarkersRef.current.forEach((m) => m.setMap(null));
       travelMapMarkersRef.current = [];
+      travelMapPolylinesRef.current.forEach((p) => p.setMap(null));
+      travelMapPolylinesRef.current = [];
 
       const bounds = new g.LatLngBounds();
       let hasAny = false;
 
-      // 이모지 마커: 🏨 숙소 🍽️ 식당 🏛️ 관광지 ✈️ 비행기 🚗 자동차 🚲 바이크
+      // 이모지 마커: 🏨 숙소 🍽️ 식당 🏛️ 관광지 📍 위치 🛤️ 경로 📌 기타
       const addMarker = (lat: number, lng: number, title: string, emoji?: string) => {
-        const pos = { lat, lng };
+        const nLat = Number(lat);
+        const nLng = Number(lng);
+        if (!Number.isFinite(nLat) || !Number.isFinite(nLng)) return;
+        const pos = { lat: nLat, lng: nLng };
         bounds.extend(pos);
         hasAny = true;
         const marker = new g.Marker({
@@ -909,32 +908,94 @@ export function TravelPlannerContent() {
           addMarker(a.latitude, a.longitude, shortItineraryTitle('attraction', a.name, a.address), '🏛️');
         }
       });
-      // transports: 출발/도착 텍스트만 있고 좌표가 없어 마커는 생략
       itineraries.forEach((i) => {
         if (i.latitude != null && i.longitude != null) {
-          addMarker(i.latitude, i.longitude, shortItineraryTitle('other', i.title, i.address), '📌');
+          const emoji =
+            i.field_record_kind === 'route' ? '🛤️' : i.field_record_kind === 'checkin' ? '📍' : '📌';
+          addMarker(i.latitude, i.longitude, shortItineraryTitle('other', i.title, i.address), emoji);
         }
       });
 
-      if (hasAny && map) map.fitBounds(bounds);
+      if (currentGroupId) {
+        const trackIds = [
+          ...new Set(
+            itineraries
+              .map((i) => (i.field_track_id ? String(i.field_track_id) : ''))
+              .filter(Boolean),
+          ),
+        ];
+        try {
+          const headers = await getAuthHeaders();
+          for (const trackId of trackIds) {
+            if (cancelled) return;
+            const res = await fetch(
+              `/api/v1/travel/field-tracks/${trackId}/points?groupId=${encodeURIComponent(currentGroupId)}`,
+              { headers },
+            );
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || !Array.isArray(json.data)) continue;
+            const path = (json.data as Array<{ latitude?: number; longitude?: number }>)
+              .map((p) => {
+                const lat = Number(p.latitude);
+                const lng = Number(p.longitude);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+                return { lat, lng };
+              })
+              .filter((p): p is { lat: number; lng: number } => p != null);
+            if (path.length < 2 || cancelled) continue;
+            path.forEach((p) => bounds.extend(p));
+            hasAny = true;
+            const poly = new g.Polyline({
+              path,
+              geodesic: true,
+              strokeColor: '#2563eb',
+              strokeOpacity: 0.85,
+              strokeWeight: 4,
+              map,
+            });
+            travelMapPolylinesRef.current.push(poly);
+          }
+        } catch {
+          /* ignore polyline load errors */
+        }
+      }
+
+      if (!cancelled && hasAny && map) map.fitBounds(bounds);
     };
 
     if (getGoogleMapsNs()?.Map) {
-      initMapAndMarkers();
-      return;
+      void initMapAndMarkers();
+      return () => {
+        cancelled = true;
+      };
     }
     if (travelMapScriptLoadedRef.current) {
-      initMapAndMarkers();
-      return;
+      void initMapAndMarkers();
+      return () => {
+        cancelled = true;
+      };
     }
     const t = setInterval(() => {
       if (getGoogleMapsNs()?.Map) {
         clearInterval(t);
-        initMapAndMarkers();
+        void initMapAndMarkers();
       }
     }, 100);
-    return () => clearInterval(t);
-  }, [showTravelMap, selectedTrip, accommodations, dining, attractions, itineraries, placesApiReady]);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [
+    showTravelMap,
+    selectedTrip,
+    accommodations,
+    dining,
+    attractions,
+    itineraries,
+    placesApiReady,
+    currentGroupId,
+    getAuthHeaders,
+  ]);
 
   const attachPlacesAutocomplete = useCallback((params: {
     enabled: boolean;
@@ -2630,7 +2691,8 @@ export function TravelPlannerContent() {
       if (addr || formatPlaceCoords(i)) {
         rows.push({
           key: `iti-${i.id}`,
-          emoji: '📌',
+          emoji:
+            i.field_record_kind === 'route' ? '🛤️' : i.field_record_kind === 'checkin' ? '📍' : '📌',
           name: i.title,
           address: i.address,
           latitude: i.latitude,
@@ -2801,6 +2863,28 @@ export function TravelPlannerContent() {
                   {showDiaryCompletedInviteHint(selectedTrip) && (
                     <p className="m-0 mt-1.5 text-[12px] text-violet-700">{tt('diary_completed_invite_hint')}</p>
                   )}
+                  <TravelFieldRecordHost
+                    groupId={currentGroupId}
+                    tripId={selectedTrip.id}
+                    mode="page"
+                    enabled={Boolean(selectedTrip.id)}
+                    labels={{
+                      checkin: tt('field_checkin'),
+                      route_start: tt('field_route_start'),
+                      route_stop: tt('field_route_stop'),
+                      need_active_trip: tt('field_need_active_trip'),
+                      recording: tt('field_recording'),
+                    }}
+                    pickLabels={{
+                      title: tt('field_pick_title'),
+                      create: tt('field_pick_create'),
+                      attach_hint: tt('field_pick_attach'),
+                      cancel: tt('field_pick_cancel'),
+                    }}
+                    onSaved={() => {
+                      if (selectedTrip?.id) fetchItineraries(selectedTrip.id);
+                    }}
+                  />
                   <p className="m-0 mt-1 text-xs text-slate-500">
                     {tt('label_trip_currency')}: <strong className="text-slate-700">{tripCurrencyCode}</strong>
                   </p>
@@ -3156,9 +3240,23 @@ export function TravelPlannerContent() {
                                                         : i.transport_type === 'bike'
                                                           ? '🚲'
                                                           : '🚗'
-                                                  : '📌'}
+                                                  : i.field_record_kind === 'route'
+                                                    ? '🛤️'
+                                                    : i.field_record_kind === 'checkin'
+                                                      ? '📍'
+                                                      : '📌'}
                                         </span>
                                         {shortItineraryTitle(i.type, i.title, i.address)}
+                                        {i.field_record_kind === 'checkin' ? (
+                                          <span className="ml-1.5 inline-block rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                                            {tt('field_badge_checkin')}
+                                          </span>
+                                        ) : null}
+                                        {i.field_record_kind === 'route' ? (
+                                          <span className="ml-1.5 inline-block rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-800">
+                                            {tt('field_badge_route')}
+                                          </span>
+                                        ) : null}
                                       </div>
                                       {(i.start_time || i.end_time) && (
                                         <div className="mt-1 text-xs text-slate-500">
@@ -3263,9 +3361,23 @@ export function TravelPlannerContent() {
                                                       : i.transport_type === 'bike'
                                                         ? '🚲'
                                                         : '🚗'
-                                                : '📌'}
+                                                : i.field_record_kind === 'route'
+                                                  ? '🛤️'
+                                                  : i.field_record_kind === 'checkin'
+                                                    ? '📍'
+                                                    : '📌'}
                                       </span>
                                       {shortItineraryTitle(i.type, i.title, i.address)}
+                                      {i.field_record_kind === 'checkin' ? (
+                                        <span className="ml-1.5 inline-block rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                                          {tt('field_badge_checkin')}
+                                        </span>
+                                      ) : null}
+                                      {i.field_record_kind === 'route' ? (
+                                        <span className="ml-1.5 inline-block rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-800">
+                                          {tt('field_badge_route')}
+                                        </span>
+                                      ) : null}
                                     </div>
                                     {(i.start_time || i.end_time) && (
                                       <div className="mt-1 text-xs text-slate-500">

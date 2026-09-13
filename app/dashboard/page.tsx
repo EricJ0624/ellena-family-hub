@@ -6768,6 +6768,14 @@ export default function FamilyHub() {
               trips_loading: tt('dashboard_trips_loading'),
               empty_state: tt('dashboard_card_empty'),
             }}
+            fieldLabels={{
+              checkin: tt('field_checkin'),
+              route_start: tt('field_route_start'),
+              route_stop: tt('field_route_stop'),
+              need_active_trip: tt('field_need_active_trip'),
+              recording: tt('field_recording'),
+            }}
+            onFieldSaved={reloadTravelTrips}
           />
         );
       case 'travel_diary':
@@ -6787,6 +6795,14 @@ export default function FamilyHub() {
               open_diary: tdy('open_diary'),
               start_trip_diary: tdy('start_trip_diary'),
             }}
+            fieldLabels={{
+              checkin: tt('field_checkin'),
+              route_start: tt('field_route_start'),
+              route_stop: tt('field_route_stop'),
+              need_active_trip: tt('field_need_active_trip'),
+              recording: tt('field_recording'),
+            }}
+            onFieldSaved={reloadTravelTrips}
           />
         );
       case 'piggy':

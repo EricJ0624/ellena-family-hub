@@ -266,6 +266,18 @@ export type TravelTranslations = {
   import_other_hint: string;
   import_applying: string;
   import_apply_failed: string;
+  /** 현장 위치/경로 기록 */
+  field_checkin: string;
+  field_route_start: string;
+  field_route_stop: string;
+  field_need_active_trip: string;
+  field_recording: string;
+  field_badge_checkin: string;
+  field_badge_route: string;
+  field_pick_title: string;
+  field_pick_create: string;
+  field_pick_attach: string;
+  field_pick_cancel: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -532,6 +544,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: '분류 불명',
     import_applying: '적용 중…',
     import_apply_failed: '일정 적용에 실패했습니다.',
+
+    field_checkin: '지금 여기',
+    field_route_start: '경로 기록',
+    field_route_stop: '기록 종료',
+    field_need_active_trip: '여행을 추가하면 위치·경로를 기록할 수 있어요.',
+    field_recording: '경로 기록 중…',
+    field_badge_checkin: '위치',
+    field_badge_route: '경로',
+
+    field_pick_title: '어디에 저장할까요?',
+    field_pick_create: '새 일정으로 저장',
+    field_pick_attach: '기존 일정에 붙이기',
+    field_pick_cancel: '취소',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -796,6 +821,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: 'Unclassified',
     import_applying: 'Applying…',
     import_apply_failed: 'Failed to apply itinerary.',
+
+    field_checkin: 'Check in here',
+    field_route_start: 'Record route',
+    field_route_stop: 'Stop recording',
+    field_need_active_trip: 'Add a trip to record location and routes.',
+    field_recording: 'Recording route…',
+    field_badge_checkin: 'Check-in',
+    field_badge_route: 'Route',
+
+    field_pick_title: 'Where should we save this?',
+    field_pick_create: 'Save as new schedule',
+    field_pick_attach: 'Attach to existing schedule',
+    field_pick_cancel: 'Cancel',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -1060,6 +1098,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: '分類不明',
     import_applying: '適用中…',
     import_apply_failed: '日程の適用に失敗しました。',
+
+    field_checkin: 'いまここ',
+    field_route_start: 'ルート記録',
+    field_route_stop: '記録終了',
+    field_need_active_trip: '進行中の旅行があるときに使えます。',
+    field_recording: 'ルート記録中…',
+    field_badge_checkin: '位置',
+    field_badge_route: 'ルート',
+
+    field_pick_title: 'どこに保存しますか？',
+    field_pick_create: '新しい予定として保存',
+    field_pick_attach: '既存の予定に追加',
+    field_pick_cancel: 'キャンセル',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -1324,6 +1375,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: '未分类',
     import_applying: '应用中…',
     import_apply_failed: '应用行程失败。',
+
+    field_checkin: '现在这里',
+    field_route_start: '记录路线',
+    field_route_stop: '结束记录',
+    field_need_active_trip: '有进行中的旅行时可用。',
+    field_recording: '正在记录路线…',
+    field_badge_checkin: '位置',
+    field_badge_route: '路线',
+
+    field_pick_title: '要保存到哪里？',
+    field_pick_create: '保存为新行程',
+    field_pick_attach: '添加到已有行程',
+    field_pick_cancel: '取消',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -1588,6 +1652,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: '未分類',
     import_applying: '套用中…',
     import_apply_failed: '套用行程失敗。',
+
+    field_checkin: '現在這裡',
+    field_route_start: '記錄路線',
+    field_route_stop: '結束記錄',
+    field_need_active_trip: '有進行中的旅行時可用。',
+    field_recording: '正在記錄路線…',
+    field_badge_checkin: '位置',
+    field_badge_route: '路線',
+
+    field_pick_title: '要儲存到哪裡？',
+    field_pick_create: '另存為新行程',
+    field_pick_attach: '加到既有行程',
+    field_pick_cancel: '取消',
   },
   es: {
     auth_required: 'Se requiere autenticación.',
@@ -1851,6 +1928,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: 'Sin clasificar',
     import_applying: 'Aplicando…',
     import_apply_failed: 'Error al aplicar el itinerario.',
+
+    field_checkin: 'Aquí ahora',
+    field_route_start: 'Grabar ruta',
+    field_route_stop: 'Detener',
+    field_need_active_trip: 'Disponible con un viaje en curso.',
+    field_recording: 'Grabando ruta…',
+    field_badge_checkin: 'Ubicación',
+    field_badge_route: 'Ruta',
+
+    field_pick_title: 'Where should we save this?',
+    field_pick_create: 'Save as new schedule',
+    field_pick_attach: 'Attach to existing schedule',
+    field_pick_cancel: 'Cancel',
   },
   fr: {
     auth_required: 'Authentification requise.',
@@ -2114,6 +2204,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: 'Non classé',
     import_applying: 'Application…',
     import_apply_failed: 'Échec de l\'application de l\'itinéraire.',
+
+    field_checkin: 'Ici maintenant',
+    field_route_start: 'Enregistrer le trajet',
+    field_route_stop: 'Arrêter',
+    field_need_active_trip: 'Disponible pendant un voyage en cours.',
+    field_recording: 'Enregistrement…',
+    field_badge_checkin: 'Lieu',
+    field_badge_route: 'Trajet',
+
+    field_pick_title: 'Where should we save this?',
+    field_pick_create: 'Save as new schedule',
+    field_pick_attach: 'Attach to existing schedule',
+    field_pick_cancel: 'Cancel',
   },
   de: {
     auth_required: 'Authentifizierung erforderlich.',
@@ -2377,6 +2480,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: 'Unklassifiziert',
     import_applying: 'Wird angewendet…',
     import_apply_failed: 'Reiseplan konnte nicht angewendet werden.',
+
+    field_checkin: 'Hier jetzt',
+    field_route_start: 'Route aufzeichnen',
+    field_route_stop: 'Stoppen',
+    field_need_active_trip: 'Verfügbar bei aktiver Reise.',
+    field_recording: 'Route wird aufgezeichnet…',
+    field_badge_checkin: 'Ort',
+    field_badge_route: 'Route',
+
+    field_pick_title: 'Where should we save this?',
+    field_pick_create: 'Save as new schedule',
+    field_pick_attach: 'Attach to existing schedule',
+    field_pick_cancel: 'Cancel',
   },
   it: {
     auth_required: 'Autenticazione richiesta.',
@@ -2640,6 +2756,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: 'Non classificato',
     import_applying: 'Applicazione…',
     import_apply_failed: 'Impossibile applicare l\'itinerario.',
+
+    field_checkin: 'Qui ora',
+    field_route_start: 'Registra percorso',
+    field_route_stop: 'Interrompi',
+    field_need_active_trip: 'Disponibile con un viaggio in corso.',
+    field_recording: 'Registrazione in corso…',
+    field_badge_checkin: 'Posizione',
+    field_badge_route: 'Percorso',
+
+    field_pick_title: 'Where should we save this?',
+    field_pick_create: 'Save as new schedule',
+    field_pick_attach: 'Attach to existing schedule',
+    field_pick_cancel: 'Cancel',
   },
   pt: {
     auth_required: 'Autenticação necessária.',
@@ -2903,6 +3032,19 @@ const travel: Record<LangCode, TravelTranslations> = {
     import_other_hint: 'Não classificado',
     import_applying: 'Aplicando…',
     import_apply_failed: 'Falha ao aplicar o roteiro.',
+
+    field_checkin: 'Aqui agora',
+    field_route_start: 'Gravar rota',
+    field_route_stop: 'Parar',
+    field_need_active_trip: 'Disponível com uma viagem em andamento.',
+    field_recording: 'Gravando rota…',
+    field_badge_checkin: 'Local',
+    field_badge_route: 'Rota',
+
+    field_pick_title: 'Where should we save this?',
+    field_pick_create: 'Save as new schedule',
+    field_pick_attach: 'Attach to existing schedule',
+    field_pick_cancel: 'Cancel',
   },
 };
 
