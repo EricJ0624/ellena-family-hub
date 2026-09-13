@@ -441,60 +441,145 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                       <option value="highend_glass">{gst('theme_highend_glass_label')}</option>
                     </select>
                     <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
+                      {/* Neo Brutal — 잉크 보더·하드 섀도·플랫 페이스 */}
                       <button
                         type="button"
                         onClick={() => setUiTheme('default')}
                         disabled={saving}
-                        className={`min-w-0 rounded-xl border p-3 text-left transition-colors ${
+                        aria-pressed={uiTheme === 'default'}
+                        className={`min-w-0 overflow-hidden rounded-xl border-2 p-0 text-left transition-[box-shadow,border-color] ${
                           uiTheme === 'default'
-                            ? 'border-emerald-400 bg-emerald-50'
-                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                            ? 'border-[#0a0a0a] shadow-[4px_4px_0_0_#0a0a0a]'
+                            : 'border-slate-200 shadow-sm hover:border-slate-400'
                         }`}
                       >
-                        <p className="text-sm font-semibold text-slate-800">{gst('theme_default_label')}</p>
-                        <p className="mt-1 text-xs text-slate-500">{gst('theme_default_desc')}</p>
-                        <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 p-2">
-                          <div className="rounded-md border border-slate-200 bg-white p-2 shadow-sm">
-                            <div className="h-2 w-16 rounded bg-sky-300/80" />
-                            <div className="mt-2 h-1.5 w-24 rounded bg-slate-300/80" />
+                        <div className="bg-[#f4f4f0] bg-[repeating-linear-gradient(-45deg,#f4f4f0_0_23px,#0a0a0a_23px_40px)] p-3">
+                          <div className="rounded-[4px] border-[3px] border-[#0a0a0a] bg-[#7dd3fc] p-2.5 shadow-[4px_4px_0_0_#0a0a0a]">
+                            <p className="text-sm font-black tracking-tight text-[#0a0a0a]">
+                              {gst('theme_default_label')}
+                            </p>
+                            <p className="mt-1 text-[11px] leading-snug text-[#0a0a0a]/80">
+                              {gst('theme_default_desc')}
+                            </p>
+                            <div className="mt-2.5 space-y-1.5">
+                              <div className="h-2 w-[4.5rem] rounded-[2px] bg-[#0a0a0a]" />
+                              <div className="h-1.5 w-full rounded-[2px] bg-[#0a0a0a]/25" />
+                              <div className="h-1.5 w-3/4 rounded-[2px] bg-[#0a0a0a]/18" />
+                            </div>
+                            <div className="mt-2.5 flex gap-1.5" aria-hidden>
+                              <span className="h-3.5 w-3.5 border-2 border-[#0a0a0a] bg-[#fce94f] shadow-[2px_2px_0_0_#0a0a0a]" />
+                              <span className="h-3.5 w-3.5 border-2 border-[#0a0a0a] bg-[#f9a8d4] shadow-[2px_2px_0_0_#0a0a0a]" />
+                              <span className="h-3.5 w-3.5 border-2 border-[#0a0a0a] bg-[#6ee7b7] shadow-[2px_2px_0_0_#0a0a0a]" />
+                              <span className="h-3.5 w-3.5 border-2 border-[#0a0a0a] bg-[#fb923c] shadow-[2px_2px_0_0_#0a0a0a]" />
+                            </div>
                           </div>
                         </div>
                       </button>
+
+                      {/* Family Friendly — 컬러 셸 + 부드러운 불투명 카드 */}
                       <button
                         type="button"
                         onClick={() => setUiTheme('kids_friendly')}
                         disabled={saving}
-                        className={`min-w-0 rounded-xl border p-3 text-left transition-colors ${
+                        aria-pressed={uiTheme === 'kids_friendly'}
+                        className={`min-w-0 overflow-hidden rounded-xl border-2 p-0 text-left transition-[box-shadow,border-color] ${
                           uiTheme === 'kids_friendly'
-                            ? 'border-amber-400 bg-amber-50'
-                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                            ? 'border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.35)]'
+                            : 'border-slate-200 shadow-sm hover:border-amber-200'
                         }`}
                       >
-                        <p className="text-sm font-semibold text-slate-800">{gst('theme_kids_friendly_label')}</p>
-                        <p className="mt-1 text-xs text-slate-500">{gst('theme_kids_friendly_desc')}</p>
-                        <div className="mt-3 overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-br from-amber-100 via-sky-100 to-rose-100 p-2">
-                          <div className="rounded-md border-2 border-amber-300/80 bg-amber-50 p-2 shadow-sm">
-                            <div className="h-2 w-16 rounded bg-rose-300" />
-                            <div className="mt-2 h-1.5 w-24 rounded bg-sky-300/90" />
+                        <div className="bg-[radial-gradient(ellipse_90%_70%_at_8%_12%,rgba(34,211,238,0.55)_0%,transparent_58%),radial-gradient(ellipse_80%_60%_at_92%_8%,rgba(244,114,182,0.5)_0%,transparent_55%),radial-gradient(ellipse_70%_55%_at_78%_88%,rgba(251,146,60,0.42)_0%,transparent_52%),linear-gradient(160deg,#312e81_0%,#1e1b4b_38%,#0f172a_72%,#164e63_100%)] p-3">
+                          <div className="relative overflow-hidden rounded-2xl bg-[rgba(255,251,235,0.97)] p-2.5 shadow-[0_10px_28px_rgba(15,23,42,0.18)] ring-1 ring-white/70">
+                            {/* calendar / chat kids emoji accents — inside card */}
+                            <img
+                              src="/family-calendar/emojis/star.png"
+                              alt=""
+                              aria-hidden
+                              className="pointer-events-none absolute left-2 top-2 z-[1] h-3.5 w-3.5 select-none opacity-90"
+                            />
+                            <img
+                              src="/family-calendar/emojis/earth.png"
+                              alt=""
+                              aria-hidden
+                              className="pointer-events-none absolute right-2 top-1.5 z-[1] h-5 w-5 select-none opacity-90"
+                            />
+                            <img
+                              src="/family-chat/emojis/balloon.png"
+                              alt=""
+                              aria-hidden
+                              className="pointer-events-none absolute bottom-2 right-2 z-[1] h-5 w-5 select-none opacity-90"
+                            />
+                            <img
+                              src="/family-chat/emojis/rocket.png"
+                              alt=""
+                              aria-hidden
+                              className="pointer-events-none absolute right-2 top-[42%] z-[1] h-5 w-5 -translate-y-1/2 rotate-12 select-none opacity-90"
+                            />
+                            <p className="relative z-[2] pr-6 text-sm font-semibold text-slate-800">
+                              {gst('theme_kids_friendly_label')}
+                            </p>
+                            <p className="relative z-[2] mt-1 text-[11px] leading-snug text-slate-500">
+                              {gst('theme_kids_friendly_desc')}
+                            </p>
+                            <div className="relative z-[2] mt-2.5 space-y-1.5">
+                              <div className="h-2.5 w-[4.5rem] rounded-full bg-gradient-to-r from-rose-300 to-amber-300" />
+                              <div className="h-1.5 w-full rounded-full bg-sky-200/90" />
+                              <div className="h-1.5 w-3/4 rounded-full bg-violet-200/80" />
+                            </div>
+                            <div
+                              className="relative z-[2] mt-2.5 flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-[#d4c8fc]/70 via-[#f3d0fe]/60 to-[#fecdd3]/70 px-2 py-1.5"
+                              aria-hidden
+                            >
+                              <img
+                                src="/family-calendar/emojis/palette.png"
+                                alt=""
+                                className="h-4 w-4 shrink-0 object-contain"
+                              />
+                              <img
+                                src="/family-chat/emojis/cake.png"
+                                alt=""
+                                className="h-4 w-4 shrink-0 object-contain"
+                              />
+                              <div className="h-1.5 flex-1 rounded-full bg-white/85" />
+                            </div>
                           </div>
                         </div>
                       </button>
+
+                      {/* High-end Glass — 인디고 셸 + 글래스 패널 */}
                       <button
                         type="button"
                         onClick={() => setUiTheme('highend_glass')}
                         disabled={saving}
-                        className={`min-w-0 rounded-xl border p-3 text-left transition-colors ${
+                        aria-pressed={uiTheme === 'highend_glass'}
+                        className={`min-w-0 overflow-hidden rounded-xl border-2 p-0 text-left transition-[box-shadow,border-color] ${
                           uiTheme === 'highend_glass'
-                            ? 'border-purple-400 bg-purple-50'
-                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                            ? 'border-cyan-300/80 shadow-[0_0_0_3px_rgba(165,243,252,0.28)]'
+                            : 'border-slate-200 shadow-sm hover:border-indigo-300'
                         }`}
                       >
-                        <p className="text-sm font-semibold text-slate-800">{gst('theme_highend_glass_label')}</p>
-                        <p className="mt-1 text-xs text-slate-500">{gst('theme_highend_glass_desc')}</p>
-                        <div className="mt-3 overflow-hidden rounded-lg border border-white/80 bg-gradient-to-br from-indigo-900 via-fuchsia-800 to-cyan-700 p-2">
-                          <div className="rounded-md border border-white/40 bg-white/20 p-2 shadow-[0_12px_24px_rgba(15,23,42,0.35)] backdrop-blur-[12px]">
-                            <div className="h-2 w-16 rounded bg-white/80" />
-                            <div className="mt-2 h-1.5 w-24 rounded bg-white/50" />
+                        <div className="relative overflow-hidden bg-[radial-gradient(ellipse_85%_65%_at_12%_14%,rgba(129,140,248,0.28)_0%,transparent_58%),radial-gradient(ellipse_75%_55%_at_88%_12%,rgba(34,211,238,0.2)_0%,transparent_55%),radial-gradient(ellipse_70%_50%_at_68%_90%,rgba(167,139,250,0.22)_0%,transparent_52%),linear-gradient(165deg,#1e1b4b_0%,#151348_42%,#0f172a_100%)] p-3">
+                          {/* soft orbs so translucency reads through the glass panel */}
+                          <div
+                            aria-hidden
+                            className="pointer-events-none absolute -left-4 top-2 h-16 w-16 rounded-full bg-indigo-400/35 blur-2xl"
+                          />
+                          <div
+                            aria-hidden
+                            className="pointer-events-none absolute -right-2 bottom-1 h-14 w-14 rounded-full bg-cyan-400/30 blur-2xl"
+                          />
+                          <div className="relative rounded-xl border border-white/20 bg-white/[0.06] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_0_0_1px_rgba(255,255,255,0.1),0_16px_28px_rgba(0,0,0,0.45)] backdrop-blur-md">
+                            <p className="text-sm font-semibold text-white">
+                              {gst('theme_highend_glass_label')}
+                            </p>
+                            <p className="mt-1 text-[11px] leading-snug text-white/70">
+                              {gst('theme_highend_glass_desc')}
+                            </p>
+                            <div className="mt-2.5 space-y-1.5">
+                              <div className="h-2 w-[4.5rem] rounded-md bg-cyan-200/60" />
+                              <div className="h-6 w-full rounded-lg border border-white/15 bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur-sm" />
+                              <div className="h-4 w-3/4 rounded-lg border border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-sm" />
+                            </div>
                           </div>
                         </div>
                       </button>
