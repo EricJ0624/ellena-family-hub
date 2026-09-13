@@ -1157,7 +1157,7 @@ export default function OnboardingPage() {
                       <label className="mb-2 block text-sm font-semibold text-slate-600">
                         {ot('invite_code')}
                       </label>
-                      <div className="flex gap-2">
+                      <div className="flex min-w-0 gap-2">
                         <input
                           type="text"
                           value={inviteCode}
@@ -1167,7 +1167,7 @@ export default function OnboardingPage() {
                           }}
                           placeholder={ot('invite_placeholder')}
                           maxLength={12}
-                          className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3.5 text-center font-mono text-lg font-bold tracking-[2px] outline-none transition-all duration-200 ease-in-out focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(102,126,234,0.1)]"
+                          className="min-w-0 flex-1 rounded-xl border-2 border-slate-200 px-4 py-3.5 text-center font-mono text-lg font-bold tracking-[2px] outline-none transition-all duration-200 ease-in-out focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(102,126,234,0.1)]"
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && !verifying && inviteCode.trim()) {
                               handleVerifyInviteCode();
@@ -1178,7 +1178,7 @@ export default function OnboardingPage() {
                         <button
                           onClick={handleVerifyInviteCode}
                           disabled={verifying || !inviteCode.trim()}
-                          className={`flex items-center justify-center rounded-xl border-none px-5 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out ${
+                          className={`flex shrink-0 items-center justify-center rounded-xl border-none px-5 py-3.5 text-sm font-semibold whitespace-nowrap text-white transition-all duration-300 ease-in-out ${
                             verifying || !inviteCode.trim()
                               ? 'cursor-not-allowed bg-slate-400 shadow-none'
                               : 'cursor-pointer bg-indigo-500 shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
