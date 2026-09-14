@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_group_short_invite_codes_lookup
   ON public.group_short_invite_codes (app_id, code, status, expires_at);
 
 COMMENT ON TABLE public.group_short_invite_codes IS
-  '관리자 승인형 4자리 초대 코드. 그룹당 active 1개, 24시간 TTL.';
+  '관리자 입력형 4자리 초대 코드. 그룹당 active 1개, 24시간 TTL, 가입 시 관리자 승인 필요.';
 
 -- ---------------------------------------------------------------------------
 -- 2) 가입 요청 (승인 대기)
@@ -105,19 +105,8 @@ GRANT ALL ON TABLE public.group_join_requests TO service_role;
 GRANT ALL ON TABLE public.group_short_invite_attempts TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE public.group_short_invite_attempts_id_seq TO service_role;
 
--- 관리자: 본인 그룹 active 코드 조회 (표시용)
+-- 평문 코드: authenticated SELECT 정책 없음 (RPC/service_role만)
 DROP POLICY IF EXISTS "short_invite_codes_select_admin" ON public.group_short_invite_codes;
-CREATE POLICY "short_invite_codes_select_admin" ON public.group_short_invite_codes
-  FOR SELECT
-  USING (
-    public.is_admin_of_group(group_id)
-    OR EXISTS (
-      SELECT 1 FROM public.groups g
-      WHERE g.id = group_id AND g.owner_id = auth.uid()
-    )
-  );
-
-GRANT SELECT ON TABLE public.group_short_invite_codes TO authenticated;
 
 -- 관리자: pending 요청 조회 / 본인 요청 조회
 DROP POLICY IF EXISTS "join_requests_select_admin_or_self" ON public.group_join_requests;
@@ -153,11 +142,15 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 6) 코드 생성 (ADMIN/owner만, 기존 active 폐기, 24h)
+-- 6) 코드 등록 (ADMIN/owner만, 관리자 입력 4자리, 기존 active 폐기, 24h)
 -- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.create_group_short_invite_code(UUID, TEXT);
+DROP FUNCTION IF EXISTS public.get_active_group_short_invite_code(UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION public.create_group_short_invite_code(
   p_group_id UUID,
-  p_app_id TEXT
+  p_app_id TEXT,
+  p_code TEXT
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -168,9 +161,7 @@ DECLARE
   current_uid UUID;
   v_group_app TEXT;
   v_owner UUID;
-  new_code TEXT;
-  exists_active BOOLEAN;
-  tries INT := 0;
+  normalized TEXT;
   row_rec public.group_short_invite_codes%ROWTYPE;
 BEGIN
   current_uid := auth.uid();
@@ -179,6 +170,11 @@ BEGIN
   END IF;
 
   PERFORM public.assert_valid_app_id(p_app_id);
+
+  normalized := trim(p_code);
+  IF normalized !~ '^\d{4}$' THEN
+    RAISE EXCEPTION 'Invalid short invite code';
+  END IF;
 
   SELECT g.app_id, g.owner_id INTO v_group_app, v_owner
   FROM public.groups g
@@ -206,7 +202,25 @@ BEGIN
     RAISE EXCEPTION 'GROUP_SUSPENDED';
   END IF;
 
-  -- 기존 active 폐기 + 대기 중 가입 요청 취소 (코드 교체)
+  UPDATE public.group_short_invite_codes
+  SET status = 'expired'
+  WHERE app_id = p_app_id
+    AND code = normalized
+    AND status = 'active'
+    AND expires_at <= NOW();
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.group_short_invite_codes c
+    WHERE c.app_id = p_app_id
+      AND c.code = normalized
+      AND c.status = 'active'
+      AND c.expires_at > NOW()
+      AND c.group_id <> p_group_id
+  ) THEN
+    RAISE EXCEPTION 'Short invite code already in use';
+  END IF;
+
   UPDATE public.group_short_invite_codes
   SET status = 'revoked', revoked_at = NOW()
   WHERE group_id = p_group_id
@@ -217,131 +231,30 @@ BEGIN
   WHERE group_id = p_group_id
     AND status = 'pending';
 
-  LOOP
-    tries := tries + 1;
-    IF tries > 40 THEN
-      RAISE EXCEPTION 'Failed to generate unique short invite code';
-    END IF;
-
-    new_code := lpad(
-      (
-        (
-          (get_byte(gen_random_bytes(2), 0)::int * 256)
-          + get_byte(gen_random_bytes(2), 1)::int
-        ) % 10000
-      )::text,
-      4,
-      '0'
-    );
-
-    SELECT EXISTS (
-      SELECT 1
-      FROM public.group_short_invite_codes c
-      WHERE c.app_id = p_app_id
-        AND c.code = new_code
-        AND c.status = 'active'
-        AND c.expires_at > NOW()
-    ) INTO exists_active;
-
-    EXIT WHEN NOT exists_active;
-  END LOOP;
-
   INSERT INTO public.group_short_invite_codes (
     group_id, app_id, code, status, created_by, expires_at
   )
   VALUES (
-    p_group_id, p_app_id, new_code, 'active', current_uid, NOW() + INTERVAL '24 hours'
+    p_group_id, p_app_id, normalized, 'active', current_uid, NOW() + INTERVAL '24 hours'
   )
   RETURNING * INTO row_rec;
 
+  -- 평문 코드는 응답에 포함하지 않음 (관리자가 이미 입력한 값)
   RETURN json_build_object(
     'id', row_rec.id,
-    'code', row_rec.code,
     'expires_at', row_rec.expires_at,
-    'group_id', row_rec.group_id
+    'group_id', row_rec.group_id,
+    'status', 'created'
   );
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.create_group_short_invite_code(UUID, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.create_group_short_invite_code(UUID, TEXT) FROM anon;
-GRANT EXECUTE ON FUNCTION public.create_group_short_invite_code(UUID, TEXT) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.create_group_short_invite_code(UUID, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_group_short_invite_code(UUID, TEXT, TEXT) FROM anon;
+GRANT EXECUTE ON FUNCTION public.create_group_short_invite_code(UUID, TEXT, TEXT) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
--- 7) active 코드 조회 (ADMIN)
--- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.get_active_group_short_invite_code(
-  p_group_id UUID,
-  p_app_id TEXT
-)
-RETURNS JSON
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = pg_catalog, public
-AS $$
-DECLARE
-  current_uid UUID;
-  v_group_app TEXT;
-  v_owner UUID;
-  row_rec public.group_short_invite_codes%ROWTYPE;
-BEGIN
-  current_uid := auth.uid();
-  IF current_uid IS NULL THEN
-    RAISE EXCEPTION 'User must be authenticated';
-  END IF;
-
-  PERFORM public.assert_valid_app_id(p_app_id);
-
-  SELECT g.app_id, g.owner_id INTO v_group_app, v_owner
-  FROM public.groups g
-  WHERE g.id = p_group_id;
-
-  IF v_group_app IS NULL OR v_group_app <> p_app_id THEN
-    RETURN NULL;
-  END IF;
-
-  IF NOT (
-    public.is_admin_of_group(p_group_id)
-    OR v_owner = current_uid
-    OR public.is_system_admin(current_uid)
-  ) THEN
-    RAISE EXCEPTION 'Only ADMIN can view short invite code';
-  END IF;
-
-  -- 만료된 active → expired 마킹
-  UPDATE public.group_short_invite_codes
-  SET status = 'expired'
-  WHERE group_id = p_group_id
-    AND status = 'active'
-    AND expires_at <= NOW();
-
-  SELECT * INTO row_rec
-  FROM public.group_short_invite_codes
-  WHERE group_id = p_group_id
-    AND status = 'active'
-    AND expires_at > NOW()
-  ORDER BY created_at DESC
-  LIMIT 1;
-
-  IF row_rec.id IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  RETURN json_build_object(
-    'id', row_rec.id,
-    'code', row_rec.code,
-    'expires_at', row_rec.expires_at,
-    'group_id', row_rec.group_id
-  );
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.get_active_group_short_invite_code(UUID, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_active_group_short_invite_code(UUID, TEXT) FROM anon;
-GRANT EXECUTE ON FUNCTION public.get_active_group_short_invite_code(UUID, TEXT) TO authenticated, service_role;
-
--- ---------------------------------------------------------------------------
--- 8) 가입 요청 (인증 사용자, rate limit, 즉시 멤버십 X)
+-- 7) 가입 요청 (인증 사용자, rate limit, 즉시 멤버십 X)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.request_join_by_short_invite_code(
   p_code TEXT,

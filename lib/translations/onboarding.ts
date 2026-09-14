@@ -55,6 +55,7 @@ export type OnboardingTranslations = {
   success_join_pending: string;
   error_short_invite_rate: string;
   error_short_invite_pending: string;
+  error_short_invite_already_member: string;
   invite_code_short_hint: string;
   success_copied: string;
   role_owner: string;
@@ -140,6 +141,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "가입 요청이 전송되었습니다. 관리자 승인 후 가입됩니다.",
     error_short_invite_rate: "시도 횟수가 너무 많습니다. 잠시 후 다시 시도해주세요.",
     error_short_invite_pending: "이미 가입 승인 대기 중입니다.",
+    error_short_invite_already_member: "이미 가입된 그룹입니다.",
     invite_code_short_hint: "12자 초대코드는 즉시 가입, 4자리 숫자는 관리자 승인 후 가입됩니다.",
     success_copied: '초대 코드가 복사되었습니다!',
     role_owner: '소유자',
@@ -217,6 +219,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: 'Invite code copied!',
     role_owner: 'Owner',
@@ -292,6 +295,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: '招待コードをコピーしました！',
     role_owner: 'オーナー',
@@ -366,6 +370,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: '邀请码已复制！',
     role_owner: '所有者',
@@ -440,6 +445,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: '邀請碼已複製！',
     role_owner: '擁有者',
@@ -514,6 +520,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: '¡Código de invitación copiado!',
     role_owner: 'Propietario',
@@ -588,6 +595,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: 'Code d\'invitation copié!',
     role_owner: 'Propriétaire',
@@ -662,6 +670,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: 'Einladungscode kopiert!',
     role_owner: 'Eigentümer',
@@ -736,6 +745,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: 'Codice invito copiato!',
     role_owner: 'Proprietario',
@@ -810,6 +820,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     success_join_pending: "Join request sent. You will join after admin approval.",
     error_short_invite_rate: "Too many attempts. Please try again later.",
     error_short_invite_pending: "A join request is already pending.",
+    error_short_invite_already_member: "You are already a member of this group.",
     invite_code_short_hint: "12-character codes join immediately; 4-digit codes require admin approval.",
     success_copied: 'Código de convite copiado!',
     role_owner: 'Proprietário',

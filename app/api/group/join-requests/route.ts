@@ -6,6 +6,7 @@ import {
   extractBearerToken,
   isShortInviteCode,
   mapShortInviteRpcError,
+  GROUP_SHORT_INVITE_ERROR,
 } from '@/lib/group-short-invite';
 import { getGroupAdminUserIds, notifyFamily } from '@/lib/notifications/notify';
 
@@ -105,24 +106,21 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     if (!checkRateLimit(`join:${user.id}`)) {
-      return NextResponse.json(
-        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.', code: 'RATE_LIMITED' },
-        { status: 429 },
-      );
+      return NextResponse.json({ code: GROUP_SHORT_INVITE_ERROR.RATE_LIMITED }, { status: 429 });
     }
 
     const body = await request.json().catch(() => ({}));
     const code = typeof body?.code === 'string' ? body.code.trim() : '';
     if (!isShortInviteCode(code)) {
       return NextResponse.json(
-        { error: '유효하지 않거나 만료된 초대 코드입니다.', code: 'INVALID_OR_EXPIRED' },
+        { code: GROUP_SHORT_INVITE_ERROR.INVALID_OR_EXPIRED },
         { status: 400 },
       );
     }
 
     const token = extractBearerToken(request);
     if (!token) {
-      return NextResponse.json({ error: '인증 토큰이 필요합니다.' }, { status: 401 });
+      return NextResponse.json({ code: GROUP_SHORT_INVITE_ERROR.UNAUTHENTICATED }, { status: 401 });
     }
 
     const supabase = getSupabaseClientForAccessToken(token);
@@ -133,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       const mapped = mapShortInviteRpcError(error.message || '');
-      return NextResponse.json({ error: mapped.error, code: mapped.code }, { status: mapped.status });
+      return NextResponse.json({ code: mapped.code }, { status: mapped.status });
     }
 
     const result = (data || {}) as {

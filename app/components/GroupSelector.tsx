@@ -182,12 +182,16 @@ const GroupSelector: React.FC = () => {
           if (errCode === GROUP_SHORT_INVITE_ERROR.ALREADY_PENDING) {
             throw new Error(ot('error_short_invite_pending'));
           }
+          if (errCode === GROUP_SHORT_INVITE_ERROR.ALREADY_MEMBER) {
+            throw new Error(ot('error_short_invite_already_member'));
+          }
           if (errCode === GROUP_SHORT_INVITE_ERROR.GROUP_SUSPENDED) {
             throw new Error(ot('error_target_group_suspended'));
           }
-          throw new Error(
-            typeof json.error === 'string' ? json.error : ot('error_join_failed'),
-          );
+          if (errCode === GROUP_SHORT_INVITE_ERROR.INVALID_OR_EXPIRED) {
+            throw new Error(ot('error_join_failed'));
+          }
+          throw new Error(ot('error_join_failed'));
         }
 
         setInviteCode('');

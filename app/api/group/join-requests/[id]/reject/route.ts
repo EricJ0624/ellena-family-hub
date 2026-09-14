@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (error) {
       const mapped = mapShortInviteRpcError(error.message || '');
-      return NextResponse.json({ error: mapped.error, code: mapped.code }, { status: mapped.status });
+      return NextResponse.json({ code: mapped.code }, { status: mapped.status });
     }
 
     try {
