@@ -21,21 +21,21 @@ type Outcome = {
   notificationId?: string | null;
 };
 
-function ackKey(requestId: string) {
-  return `join-outcome-acked:${requestId}`;
+function ackKey(userId: string, requestId: string) {
+  return `join-outcome-acked:${userId}:${requestId}`;
 }
 
-function isAcked(requestId: string) {
+function isAcked(userId: string, requestId: string) {
   try {
-    return sessionStorage.getItem(ackKey(requestId)) === '1';
+    return localStorage.getItem(ackKey(userId, requestId)) === '1';
   } catch {
     return false;
   }
 }
 
-function markAcked(requestId: string) {
+function markAcked(userId: string, requestId: string) {
   try {
-    sessionStorage.setItem(ackKey(requestId), '1');
+    localStorage.setItem(ackKey(userId, requestId), '1');
   } catch {
     // ignore
   }
@@ -66,13 +66,17 @@ type Props = {
   userId: string | null;
 };
 
-/** 가입 요청자용: 승인/거절 결과 팝업 */
+/** 가입 요청자용: 승인/거절 결과 팝업 (미읽음 알림 1회만) */
 export default function JoinRequestOutcomeModalHost({ userId }: Props) {
   const { lang } = useLanguage();
   const t = copy(lang);
   const router = useRouter();
   const pathname = usePathname();
-  const { setCurrentGroupId, refreshGroups } = useGroup();
+  const { setCurrentGroupId, refreshGroups, groups, loading: groupsLoading } = useGroup();
+  const groupsRef = useRef(groups);
+  useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
 
   const [mounted, setMounted] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -98,13 +102,45 @@ export default function JoinRequestOutcomeModalHost({ userId }: Props) {
     return tokenRef.current;
   }, []);
 
-  const showOutcome = useCallback((next: Outcome) => {
-    if (isAcked(next.requestId)) return;
-    setWaiting(false);
-    setOutcome((prev) => {
-      if (prev?.requestId === next.requestId && prev.status === next.status) return prev;
-      return next;
-    });
+  const showOutcome = useCallback(
+    (next: Outcome) => {
+      if (!userId || isAcked(userId, next.requestId)) return;
+      setWaiting(false);
+      setOutcome((prev) => {
+        if (prev?.requestId === next.requestId && prev.status === next.status) return prev;
+        return next;
+      });
+    },
+    [userId],
+  );
+
+  const markOutcomeRead = useCallback(async (token: string, current: Outcome) => {
+    await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        groupId: current.groupId,
+        entityIds: [current.requestId],
+        eventType: 'GROUP_JOIN_RESOLVED',
+      }),
+    }).catch((err) => console.warn('mark join outcome read:', err));
+
+    if (current.notificationId) {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groupId: current.groupId,
+          ids: [current.notificationId],
+        }),
+      }).catch(() => {});
+    }
   }, []);
 
   const refreshMine = useCallback(async () => {
@@ -135,6 +171,25 @@ export default function JoinRequestOutcomeModalHost({ userId }: Props) {
           (typeof n.payload?.requestId === 'string' && n.payload.requestId) ||
           '';
         if (!status || !requestId || typeof n.group_id !== 'string') continue;
+
+        const alreadyMember = groupsRef.current.some(
+          (g) => String(g.id).toLowerCase() === String(n.group_id).toLowerCase(),
+        );
+
+        // 이미 확인했거나, 승인된 그룹에 이미 소속이면 팝업 없이 읽음만 처리
+        if (isAcked(userId, requestId) || (status === 'approved' && alreadyMember)) {
+          markAcked(userId, requestId);
+          void markOutcomeRead(token, {
+            requestId,
+            groupId: n.group_id,
+            groupName: null,
+            status,
+            notificationId: typeof n.id === 'string' ? n.id : null,
+          });
+          setOutcome((prev) => (prev?.requestId === requestId ? null : prev));
+          continue;
+        }
+
         showOutcome({
           requestId,
           groupId: n.group_id,
@@ -144,35 +199,21 @@ export default function JoinRequestOutcomeModalHost({ userId }: Props) {
         });
         return;
       }
-
-      const recent = Array.isArray(data.recentResolved) ? data.recentResolved : [];
-      for (const row of recent) {
-        if (row.status !== 'approved' && row.status !== 'rejected') continue;
-        if (typeof row.id !== 'string' || typeof row.group_id !== 'string') continue;
-        if (isAcked(row.id)) continue;
-        const resolvedAt = row.resolved_at ? Date.parse(row.resolved_at) : 0;
-        if (resolvedAt && Date.now() - resolvedAt < 2 * 60 * 60 * 1000) {
-          showOutcome({
-            requestId: row.id,
-            groupId: row.group_id,
-            groupName: typeof row.group_name === 'string' ? row.group_name : null,
-            status: row.status,
-            notificationId: null,
-          });
-          break;
-        }
-      }
     } catch (err) {
       console.warn('join outcome refresh:', err);
     }
-  }, [userId, getToken, showOutcome]);
+  }, [userId, getToken, showOutcome, markOutcomeRead]);
 
   useEffect(() => {
     tokenRef.current = null;
     setOutcome(null);
     setWaiting(false);
-    if (userId) void refreshMine();
-  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps -- remount on user change only
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || groupsLoading) return;
+    void refreshMine();
+  }, [userId, groupsLoading, groups, refreshMine]);
 
   useEffect(() => {
     if (!userId) return;
@@ -260,37 +301,14 @@ export default function JoinRequestOutcomeModalHost({ userId }: Props) {
   }, [userId, showOutcome]);
 
   const confirm = async () => {
-    if (!outcome || confirming) return;
+    if (!outcome || !userId || confirming) return;
     setConfirming(true);
     try {
       const token = await getToken();
-      markAcked(outcome.requestId);
+      markAcked(userId, outcome.requestId);
 
-      if (token && outcome.notificationId) {
-        void fetch('/api/notifications', {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            groupId: outcome.groupId,
-            ids: [outcome.notificationId],
-          }),
-        });
-      } else if (token) {
-        void fetch('/api/notifications', {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            groupId: outcome.groupId,
-            entityIds: [outcome.requestId],
-            eventType: 'GROUP_JOIN_RESOLVED',
-          }),
-        });
+      if (token) {
+        await markOutcomeRead(token, outcome);
       }
 
       if (outcome.status === 'approved') {

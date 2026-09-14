@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
       .select('id, group_id, entity_id, title, body, payload, created_at, read_at')
       .eq('recipient_user_id', user.id)
       .eq('event_type', 'GROUP_JOIN_RESOLVED')
+      .eq('app_id', CURRENT_APP_ID)
       .is('read_at', null)
       .order('created_at', { ascending: false })
       .limit(10);
