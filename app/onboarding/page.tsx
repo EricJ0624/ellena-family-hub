@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback, isTransientAuthNetworkError } from '@/lib/auth-session-resilience';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +16,7 @@ import {
   type FamilyRoleSelectValue,
 } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { getAccountTranslation } from '@/lib/translations/account';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { normalizeGroupId, normalizeGroupIdFromRpc } from '@/lib/validation';
 import { dashboardHrefWithOpenGroup, sameGroupId } from '@/lib/group-id-resolve';
@@ -1534,6 +1536,12 @@ export default function OnboardingPage() {
                   <Users className="h-4 w-4 shrink-0" />
                   <span className="whitespace-nowrap">{ot('join_invite')}</span>
                 </button>
+                <Link
+                  href="/account"
+                  className="mt-1 block w-full text-center text-xs font-medium text-slate-500 no-underline hover:text-slate-800"
+                >
+                  {getAccountTranslation(lang, 'account_link')}
+                </Link>
               </div>
             </motion.div>
           )}

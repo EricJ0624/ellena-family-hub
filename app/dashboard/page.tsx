@@ -74,7 +74,7 @@ import { getDashboardTranslation, type DashboardTranslations } from '@/lib/trans
 import { getLoginTranslation } from '@/lib/translations/login';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
-import { getOnboardingTranslation } from '@/lib/translations/onboarding';
+import { getAccountTranslation } from '@/lib/translations/account';
 import {
   getFamilyRoleEmoji,
   getFamilyRoleLabel,
@@ -145,7 +145,6 @@ import {
 import { WIDGET_CONFIGS_UPDATED_EVENT, dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
 import { WidgetMagnifyModal } from '@/app/components/dashboard/WidgetMagnifyModal';
-import { SystemAdminTransferModal } from '@/app/components/admin/SystemAdminTransferModal';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -520,7 +519,6 @@ export default function FamilyHub() {
   const [onlineUsers, setOnlineUsers] = useState<Array<{ id: string; name: string; isCurrentUser: boolean }>>([]);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [adminStatusResolved, setAdminStatusResolved] = useState(false);
-  const [showSuccessorModal, setShowSuccessorModal] = useState(false);
   const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; nickname: string | null }>>([]);
   const [eventAuthorNames, setEventAuthorNames] = useState<Record<string, string>>({});
   const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
@@ -5804,138 +5802,62 @@ export default function FamilyHub() {
     setPendingComeHereAccept(null);
   };
 
-  // 회원탈퇴 Handler
-  const handleDeleteAccount = async (confirmGroupDeletion: boolean = false) => {
-    // 첫 번째 확인 (그룹 삭제 확인이 아닌 경우만)
-    if (!confirmGroupDeletion) {
-      const firstConfirm = confirm(dt('delete_confirm_1'));
-      if (!firstConfirm) return;
-
-      const secondConfirm = confirm(dt('delete_confirm_2'));
-      if (!secondConfirm) return;
+  // 그룹 탈퇴 (계정은 /account 에서 회원 탈퇴)
+  const handleLeaveGroup = async () => {
+    if (!currentGroupId) return;
+    if (groupIsOwner) {
+      alert(getAccountTranslation(lang, 'leave_owner_blocked'));
+      return;
     }
+    if (!confirm(getAccountTranslation(lang, 'leave_confirm'))) return;
 
     try {
-      // 인증 토큰 가져오기
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) {
         alert(dt('auth_fetch_failed'));
         return;
       }
 
-      // 회원탈퇴 API 호출
-      const response = await fetch('/api/account/delete', {
-        method: 'DELETE',
+      const res = await fetch('/api/groups/leave', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          confirm_group_deletion: confirmGroupDeletion 
-        }),
+        body: JSON.stringify({ group_id: currentGroupId }),
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        // 시스템 관리자인 경우 후임자 지정 모달 표시
-        if (result.error === 'ADMIN_ACCOUNT' && result.isSystemAdmin) {
-          alert(result.message);
-          
-          // 모든 사용자 목록 로드
-          const usersResponse = await fetch('/api/admin/users/list', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (usersResponse.ok) {
-            const usersResult = await usersResponse.json();
-            if (usersResult.success && usersResult.data) {
-              // 본인 제외
-              const { data: { user: currentUser } } = await supabase.auth.getUser();
-              const otherUsers = usersResult.data.filter((u: any) => u.id !== currentUser?.id);
-              setAllUsers(otherUsers);
-              setShowSuccessorModal(true);
-            }
-          }
-          return;
-        }
-
-        // 그룹 소유자인 경우 경고 모달 표시
-        if (result.error === 'GROUP_OWNER_CONFIRMATION_REQUIRED' && result.requireConfirmation) {
-          const ownedGroups = result.ownedGroups || [];
-          
-          // 그룹 정보 포맷팅
-          const memberSuffix = getOnboardingTranslation(lang, 'member_count_suffix');
-          const groupInfo = ownedGroups.map((g: any) => 
-            `• ${g.name} (${ct('member')} ${g.memberCount}${memberSuffix})`
-          ).join('\n');
-
-          const warningMessage = `${dt('delete_warning_owner_title')}\n\n${dt('delete_warning_owner_groups')}\n${groupInfo}\n\n${dt('delete_warning_owner_deleted')}\n\n${dt('delete_warning_owner_final')}`;
-
-          if (confirm(warningMessage)) {
-            // 그룹 삭제 확인 후 재시도
-            handleDeleteAccount(true);
-          }
-          return;
-        }
-
-        throw new Error(result.error || dt('delete_failed'));
-      }
-
-      // 성공 시 모든 데이터 정리 및 로그아웃
-      alert(dt('delete_success'));
-      
-      // 모든 localStorage 및 sessionStorage 데이터 정리
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Supabase 세션 종료
-      await supabase.auth.signOut();
-      
-      // 로그인 페이지로 리다이렉트
-      router.push('/');
-    } catch (error: any) {
-      console.error('회원탈퇴 오류:', error);
-      alert(error.message || dt('delete_error'));
-    }
-  };
-
-  // 후임자 지정 성공 후 회원탈퇴 처리
-  const handleDeleteAfterAdminTransfer = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        alert(dt('delete_transfer_auth_failed'));
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(typeof json.error === 'string' ? json.error : getAccountTranslation(lang, 'leave_failed'));
         return;
       }
 
-      const deleteResponse = await fetch('/api/account/delete', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      alert(
+        typeof json.message === 'string'
+          ? json.message
+          : getAccountTranslation(lang, 'leave_success'),
+      );
 
-      const deleteResult = await deleteResponse.json();
-
-      if (!deleteResponse.ok) {
-        throw new Error(deleteResult.error || '회원탈퇴에 실패했습니다.');
+      const leftId = currentGroupId;
+      const remaining = (groupList || []).filter(
+        (g) => String(g.id).toLowerCase() !== String(leftId).toLowerCase(),
+      );
+      await refreshGroups?.();
+      if (remaining.length > 0) {
+        const nextId = String(remaining[0].id);
+        setCurrentGroupId?.(nextId);
+        writeStoredGroupId(nextId);
+        router.push('/dashboard');
+      } else {
+        setCurrentGroupId?.(null);
+        writeStoredGroupId(null);
+        router.push('/onboarding');
       }
-
-      alert(dt('delete_success'));
-      
-      localStorage.clear();
-      sessionStorage.clear();
-      await supabase.auth.signOut();
-      router.push('/');
-    } catch (error: any) {
-      console.error('후임자 지정 후 탈퇴 오류:', error);
-      alert(error.message || '처리 중 오류가 발생했습니다.');
+    } catch (error: unknown) {
+      console.error('그룹 탈퇴 오류:', error);
+      alert(error instanceof Error ? error.message : getAccountTranslation(lang, 'leave_failed'));
     }
   };
 
@@ -7596,19 +7518,7 @@ export default function FamilyHub() {
         }
       `}</style>
 
-      <SystemAdminTransferModal
-        open={showSuccessorModal}
-        lang={lang}
-        candidates={allUsers}
-        intent="delete_account"
-        onClose={() => setShowSuccessorModal(false)}
-        onTransferred={async () => {
-          setShowSuccessorModal(false);
-          await handleDeleteAfterAdminTransfer();
-        }}
-      />
-
-      {/* 하단 고정: 일반 멤버 문의 + 회원탈퇴 (작게·간격 축소·모서리에 붙여 지도 가림 최소화) */}
+      {/* 하단 고정: 문의 + 그룹 탈퇴 + 계정(회원 탈퇴) */}
       <div
         className="pointer-events-none fixed bottom-[calc(4px+env(safe-area-inset-bottom,0px))] right-[calc(6px+env(safe-area-inset-right,0px))] z-[1000] flex flex-col items-end gap-1.5"
       >
@@ -7632,14 +7542,26 @@ export default function FamilyHub() {
             )}
           </button>
         )}
-        <button
-          onClick={() => handleDeleteAccount()}
-          className="pointer-events-auto flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-[rgba(139,69,19,0.9)] px-[9px] py-[5px] text-[11px] font-semibold leading-[1.25] text-white shadow-[0_2px_8px_rgba(139,69,19,0.32)] transition-all duration-200 ease-in-out hover:bg-[rgba(139,69,19,1)] hover:shadow-[0_3px_10px_rgba(139,69,19,0.45)]"
-          aria-label={dt('delete_account_aria')}
+        {!groupIsOwner && currentGroupId ? (
+          <button
+            type="button"
+            onClick={() => void handleLeaveGroup()}
+            className="pointer-events-auto flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-[rgba(139,69,19,0.9)] px-[9px] py-[5px] text-[11px] font-semibold leading-[1.25] text-white shadow-[0_2px_8px_rgba(139,69,19,0.32)] transition-all duration-200 ease-in-out hover:bg-[rgba(139,69,19,1)] hover:shadow-[0_3px_10px_rgba(139,69,19,0.45)]"
+            aria-label={getAccountTranslation(lang, 'leave_group_aria')}
+          >
+            <span className="text-xs leading-none" aria-hidden>
+              🚪
+            </span>
+            {getAccountTranslation(lang, 'leave_group_btn')}
+          </button>
+        ) : null}
+        <Link
+          href="/account"
+          className="pointer-events-auto flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border border-slate-300 bg-white/95 px-[9px] py-[5px] text-[11px] font-semibold leading-[1.25] text-slate-700 no-underline shadow-sm hover:bg-white"
+          aria-label={getAccountTranslation(lang, 'account_link_aria')}
         >
-          <span className="text-xs leading-none" aria-hidden>🗑️</span>
-          {dt('delete_account_btn')}
-        </button>
+          {getAccountTranslation(lang, 'account_link')}
+        </Link>
       </div>
     </div>
     </>
