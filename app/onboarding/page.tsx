@@ -31,6 +31,7 @@ import { refreshAuthBootstrapCache, invalidateCachedAuthBootstrap } from '@/lib/
 import { APP_ENROLL_PATH, needsAppEnrollment } from '@/lib/app-enrollment-routing';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 import { CURRENT_APP_ID } from '@/lib/apps';
+import { isShortInviteCode, GROUP_SHORT_INVITE_ERROR } from '@/lib/group-short-invite';
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
 
@@ -355,50 +356,53 @@ export default function OnboardingPage() {
         }
 
         // 초대 링크로 진입한 경우: join 단계로 이동, 코드 채우기, 그룹 미리보기 자동 검증
+        // 4자리 승인형은 미리보기 없이 코드만 채움 (확인 시 가입 요청)
         if (inviteParam) {
           setStep('join');
           setInviteCode(inviteParam);
           setError(null);
           setSuccess(null);
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            let token = session?.access_token ?? null;
-            if (token) {
-              let res = await fetch('/api/group/preview-by-invite-code', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ invite_code: inviteParam }),
-              });
-              if (res.status === 401) {
-                const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
-                if (!refreshErr && refreshed.session?.access_token) {
-                  token = refreshed.session.access_token;
-                  res = await fetch('/api/group/preview-by-invite-code', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ invite_code: inviteParam }),
+          if (!isShortInviteCode(inviteParam)) {
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              let token = session?.access_token ?? null;
+              if (token) {
+                let res = await fetch('/api/group/preview-by-invite-code', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ invite_code: inviteParam }),
+                });
+                if (res.status === 401) {
+                  const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+                  if (!refreshErr && refreshed.session?.access_token) {
+                    token = refreshed.session.access_token;
+                    res = await fetch('/api/group/preview-by-invite-code', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({ invite_code: inviteParam }),
+                    });
+                  }
+                }
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.id) {
+                  setGroupPreview({
+                    id: data.id,
+                    name: data.name,
+                    member_count: data.member_count ?? 0,
+                    invite_code: data.invite_code,
                   });
+                  setSuccess(ot('success_found'));
                 }
               }
-              const data = await res.json().catch(() => ({}));
-              if (res.ok && data.id) {
-                setGroupPreview({
-                  id: data.id,
-                  name: data.name,
-                  member_count: data.member_count ?? 0,
-                  invite_code: data.invite_code,
-                });
-                setSuccess(ot('success_found'));
-              }
+            } catch (_) {
+              // 검증 실패해도 코드는 채워진 상태로 join 단계 표시
             }
-          } catch (_) {
-            // 검증 실패해도 코드는 채워진 상태로 join 단계 표시
           }
         }
 
@@ -585,6 +589,7 @@ export default function OnboardingPage() {
   };
 
   // 초대 코드 검증 (비멤버는 groups RLS로 읽을 수 없으므로 서버 API 사용, service role로 RLS 우회)
+  // 4자리 승인형 코드는 미리보기 없이 가입 요청 API로 바로 전송
   const handleVerifyInviteCode = async () => {
     if (!inviteCode.trim()) {
       setError(ot('error_invite_required'));
@@ -593,6 +598,7 @@ export default function OnboardingPage() {
 
     setVerifying(true);
     setError(null);
+    setSuccess(null);
     setGroupPreview(null);
 
     try {
@@ -603,6 +609,42 @@ export default function OnboardingPage() {
         return;
       }
 
+      const code = inviteCode.trim();
+
+      if (isShortInviteCode(code)) {
+        const res = await fetch('/api/group/join-requests', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ code }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const errCode = typeof json.code === 'string' ? json.code : '';
+          if (errCode === GROUP_SHORT_INVITE_ERROR.RATE_LIMITED) {
+            throw new Error(ot('error_short_invite_rate'));
+          }
+          if (errCode === GROUP_SHORT_INVITE_ERROR.ALREADY_PENDING) {
+            throw new Error(ot('error_short_invite_pending'));
+          }
+          if (errCode === GROUP_SHORT_INVITE_ERROR.ALREADY_MEMBER) {
+            throw new Error(ot('error_short_invite_already_member'));
+          }
+          if (errCode === GROUP_SHORT_INVITE_ERROR.GROUP_SUSPENDED) {
+            throw new Error(ot('error_target_group_suspended'));
+          }
+          if (errCode === GROUP_SHORT_INVITE_ERROR.INVALID_OR_EXPIRED) {
+            throw new Error(ot('error_invalid_invite'));
+          }
+          throw new Error(ot('error_join_failed'));
+        }
+
+        setSuccess(ot('success_join_pending'));
+        return;
+      }
+
       let accessToken = session.access_token;
       let res = await fetch('/api/group/preview-by-invite-code', {
         method: 'POST',
@@ -610,7 +652,7 @@ export default function OnboardingPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ invite_code: inviteCode.trim() }),
+        body: JSON.stringify({ invite_code: code }),
       });
 
       if (res.status === 401) {
@@ -623,7 +665,7 @@ export default function OnboardingPage() {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${accessToken}`,
             },
-            body: JSON.stringify({ invite_code: inviteCode.trim() }),
+            body: JSON.stringify({ invite_code: code }),
           });
         }
       }
@@ -861,16 +903,16 @@ export default function OnboardingPage() {
               </div>
 
               {/* 선택 카드 */}
-              <div className="mb-6 grid grid-cols-2 gap-4">
+              <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4">
                 {/* 그룹 생성 카드 */}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setStep('create')}
-                  className="cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-6 py-8 text-center shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 ease-in-out hover:border-indigo-500 hover:shadow-[0_8px_24px_rgba(102,126,234,0.2)]"
+                  className="cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-3 py-8 text-center shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 ease-in-out hover:border-indigo-500 hover:shadow-[0_8px_24px_rgba(102,126,234,0.2)] sm:px-6"
                 >
                   <div className="mb-3 text-5xl">🏠</div>
-                  <h3 className="m-0 mb-2 text-lg font-bold text-slate-900">
+                  <h3 className="m-0 mb-2 whitespace-nowrap text-base font-bold text-slate-900 sm:text-lg">
                     {ot('create_group')}
                   </h3>
                   <p className="m-0 text-sm leading-6 text-slate-500">
@@ -883,10 +925,10 @@ export default function OnboardingPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setStep('join')}
-                  className="cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-6 py-8 text-center shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 ease-in-out hover:border-indigo-500 hover:shadow-[0_8px_24px_rgba(102,126,234,0.2)]"
+                  className="cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-3 py-8 text-center shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 ease-in-out hover:border-indigo-500 hover:shadow-[0_8px_24px_rgba(102,126,234,0.2)] sm:px-6"
                 >
                   <div className="mb-3 text-5xl">👥</div>
-                  <h3 className="m-0 mb-2 text-lg font-bold text-slate-900">
+                  <h3 className="m-0 mb-2 whitespace-nowrap text-base font-bold text-slate-900 sm:text-lg">
                     {ot('join_invite')}
                   </h3>
                   <p className="m-0 text-sm leading-6 text-slate-500">
@@ -1192,12 +1234,21 @@ export default function OnboardingPage() {
                         </button>
                       </div>
                     </div>
+                    <p className="mb-4 text-xs leading-5 text-slate-500">
+                      {ot('invite_code_short_hint')}
+                    </p>
 
                     {/* 에러 메시지 */}
                     {error && (
                       <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
                         <AlertCircle className="h-4 w-4 shrink-0" />
                         <span>{error}</span>
+                      </div>
+                    )}
+                    {success && !groupPreview && (
+                      <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                        <CheckCircle className="h-4 w-4 shrink-0" />
+                        <span>{success}</span>
                       </div>
                     )}
                   </>
@@ -1461,7 +1512,7 @@ export default function OnboardingPage() {
                   className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-2 border-emerald-500 bg-white px-5 py-3 text-center text-[13px] font-semibold text-emerald-500 transition-all duration-200 hover:bg-emerald-50"
                 >
                   <Users className="h-4 w-4 shrink-0" />
-                  <span>{ot('join_invite')}</span>
+                  <span className="whitespace-nowrap">{ot('join_invite')}</span>
                 </button>
               </div>
             </motion.div>
