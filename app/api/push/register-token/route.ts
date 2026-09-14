@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuthUser } from '@/lib/api-guards';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,24 +48,44 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 기존 토큰 확인
-    const { data: existingToken, error: checkError } = await supabase
+    // 1) 현재 앱으로 이미 등록된 토큰
+    const { data: existingForApp, error: checkError } = await supabase
       .from('push_tokens')
       .select('id')
       .eq('user_id', userId)
       .eq('token', token)
-      .single();
+      .eq('app_id', CURRENT_APP_ID)
+      .maybeSingle();
 
-    if (existingToken) {
-      // 기존 토큰 업데이트 (활성화 및 업데이트 시간 갱신)
+    if (checkError) {
+      console.error('Push 토큰 조회 오류:', checkError);
+    }
+
+    // 2) 레거시(app_id NULL) 동일 토큰 → 현재 앱으로 귀속
+    let existingLegacy: { id: string } | null = null;
+    if (!existingForApp) {
+      const { data } = await supabase
+        .from('push_tokens')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('token', token)
+        .is('app_id', null)
+        .maybeSingle();
+      existingLegacy = data;
+    }
+
+    const existingId = existingForApp?.id || existingLegacy?.id || null;
+
+    if (existingId) {
       const { error: updateError } = await supabase
         .from('push_tokens')
         .update({
           is_active: true,
           updated_at: new Date().toISOString(),
-          device_info: deviceInfo || null
+          device_info: deviceInfo || null,
+          app_id: CURRENT_APP_ID,
         })
-        .eq('id', existingToken.id);
+        .eq('id', existingId);
 
       if (updateError) {
         console.error('Push 토큰 업데이트 오류:', updateError);
@@ -80,17 +101,42 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 새 토큰 등록
+    // 3) 새 행 등록 (같은 endpoint라도 앱이 다르면 별도 행)
     const { error: insertError } = await supabase
       .from('push_tokens')
       .insert({
         user_id: userId,
         token: token,
         is_active: true,
-        device_info: deviceInfo || null
+        device_info: deviceInfo || null,
+        app_id: CURRENT_APP_ID,
       });
 
     if (insertError) {
+      // 동시 요청 등으로 유니크 충돌 시 재조회 후 업데이트
+      if (String(insertError.message || '').includes('duplicate key') || insertError.code === '23505') {
+        const { data: raced } = await supabase
+          .from('push_tokens')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('token', token)
+          .eq('app_id', CURRENT_APP_ID)
+          .maybeSingle();
+        if (raced?.id) {
+          await supabase
+            .from('push_tokens')
+            .update({
+              is_active: true,
+              updated_at: new Date().toISOString(),
+              device_info: deviceInfo || null,
+            })
+            .eq('id', raced.id);
+          return NextResponse.json({
+            success: true,
+            message: 'Push 토큰이 업데이트되었습니다.',
+          });
+        }
+      }
       console.error('Push 토큰 등록 오류:', insertError);
       return NextResponse.json(
         { error: '토큰 등록에 실패했습니다.', details: insertError.message },
@@ -144,12 +190,13 @@ export async function DELETE(request: NextRequest) {
       }
     });
 
-    // 토큰 비활성화
+    // 토큰 비활성화 (현재 앱)
     const { error } = await supabase
       .from('push_tokens')
       .update({ is_active: false })
       .eq('user_id', userId)
-      .eq('token', token);
+      .eq('token', token)
+      .eq('app_id', CURRENT_APP_ID);
 
     if (error) {
       console.error('Push 토큰 삭제 오류:', error);

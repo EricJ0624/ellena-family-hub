@@ -70,14 +70,19 @@ export async function PATCH(request: NextRequest) {
     const groupId = typeof body.groupId === 'string' ? body.groupId.trim() : '';
     const markAll = body.markAll === true;
     const ids = Array.isArray(body.ids) ? body.ids.map((id: unknown) => String(id)) : [];
+    const entityIds = Array.isArray(body.entityIds)
+      ? body.entityIds.map((id: unknown) => String(id)).filter(Boolean)
+      : [];
+    const eventType =
+      typeof body.eventType === 'string' && body.eventType.trim()
+        ? body.eventType.trim()
+        : null;
 
     if (!groupId) {
       return NextResponse.json({ error: 'groupId가 필요합니다.' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMember(user.id, groupId);
-    if (memberCheck instanceof NextResponse) return memberCheck;
-
+    // 본인 수신 알림만 갱신 — 거절된 가입 요청자처럼 멤버가 아니어도 읽음 처리 가능
     const supabase = getSupabaseServerClient();
     const now = new Date().toISOString();
 
@@ -89,10 +94,21 @@ export async function PATCH(request: NextRequest) {
       .is('read_at', null);
 
     if (!markAll) {
-      if (ids.length === 0) {
-        return NextResponse.json({ error: 'ids 또는 markAll이 필요합니다.' }, { status: 400 });
+      if (ids.length === 0 && entityIds.length === 0) {
+        return NextResponse.json(
+          { error: 'ids, entityIds 또는 markAll이 필요합니다.' },
+          { status: 400 },
+        );
       }
-      query = query.in('id', ids);
+      if (ids.length > 0) {
+        query = query.in('id', ids);
+      }
+      if (entityIds.length > 0) {
+        query = query.in('entity_id', entityIds);
+      }
+      if (eventType) {
+        query = query.eq('event_type', eventType);
+      }
     }
 
     const { error } = await query;

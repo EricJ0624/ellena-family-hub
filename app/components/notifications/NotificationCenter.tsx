@@ -8,6 +8,11 @@ import {
   type NotifiableWidgetKey,
   type NotificationRow,
 } from '@/lib/notifications/types';
+import {
+  GROUP_JOIN_RESOLVED_EVENT,
+  type GroupJoinResolvedDetail,
+} from '@/lib/notifications/join-request-events';
+import { syncAfterAdminJoinResolve } from '@/lib/notifications/join-request-client';
 
 const WIDGET_LABELS: Record<NotifiableWidgetKey, string> = {
   tasks: '가족 임무',
@@ -93,6 +98,36 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
     if (!groupId || !userId) return;
     void loadList();
   }, [groupId, userId, loadList]);
+
+  useEffect(() => {
+    const onResolved = (event: Event) => {
+      const detail = (event as CustomEvent<GroupJoinResolvedDetail>).detail;
+      if (!detail || detail.groupId !== groupId) return;
+
+      setItems((prev) => {
+        let unreadRemoved = 0;
+        const next = prev.filter((n) => {
+          const matchesRequest =
+            n.entity_id === detail.requestId ||
+            (typeof n.payload?.requestId === 'string' &&
+              n.payload.requestId === detail.requestId);
+          const isJoinNotif =
+            n.event_type === 'GROUP_JOIN_REQUEST' || n.event_type === 'GROUP_JOIN_RESOLVED';
+          if (!(matchesRequest && isJoinNotif)) return true;
+          if (n.event_type === 'GROUP_JOIN_REQUEST' && !n.read_at) unreadRemoved += 1;
+          return false;
+        });
+        if (unreadRemoved > 0) {
+          queueMicrotask(() => {
+            setUnreadCount((c) => Math.max(0, c - unreadRemoved));
+          });
+        }
+        return next;
+      });
+    };
+    window.addEventListener(GROUP_JOIN_RESOLVED_EVENT, onResolved);
+    return () => window.removeEventListener(GROUP_JOIN_RESOLVED_EVENT, onResolved);
+  }, [groupId]);
 
   useEffect(() => {
     if (!groupId || !userId) return;
@@ -195,6 +230,11 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
 
     const headers = await authHeaders();
     if (!headers) return;
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return;
 
     setApprovingId(item.id);
     try {
@@ -207,30 +247,27 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
         alert(typeof json.error === 'string' ? json.error : '승인에 실패했습니다.');
         return;
       }
+      await syncAfterAdminJoinResolve({
+        accessToken: token,
+        groupId,
+        requestId,
+        status: 'approved',
+      });
+      // 이벤트 리스너가 목록에서 제거하지만, 즉시 반영
+      setItems((prev) =>
+        prev.filter((n) => {
+          const matches =
+            n.entity_id === requestId ||
+            (typeof n.payload?.requestId === 'string' && n.payload.requestId === requestId);
+          return !(
+            matches &&
+            (n.event_type === 'GROUP_JOIN_REQUEST' || n.event_type === 'GROUP_JOIN_RESOLVED')
+          );
+        }),
+      );
       if (!item.read_at) {
-        void fetch('/api/notifications', {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ groupId, ids: [item.id] }),
-        });
-        setItems((prev) =>
-          prev.map((n) => (n.id === item.id ? { ...n, read_at: new Date().toISOString() } : n)),
-        );
         setUnreadCount((c) => Math.max(0, c - 1));
       }
-      setItems((prev) =>
-        prev.map((n) =>
-          n.id === item.id
-            ? {
-                ...n,
-                title: '그룹 가입 승인 완료',
-                body: '가입 요청을 승인했습니다.',
-                event_type: 'GROUP_JOIN_RESOLVED',
-                payload: { ...(n.payload || {}), status: 'approved', action: null },
-              }
-            : n,
-        ),
-      );
     } catch (err) {
       console.error('approve join from notification:', err);
       alert('승인 처리 중 오류가 발생했습니다.');

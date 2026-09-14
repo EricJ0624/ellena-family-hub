@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle, Shield, Search } from 'lucide-react';
+import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle, Shield, Search, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -15,6 +15,7 @@ import { getCommonTranslation } from '@/lib/translations/common';
 import type { MembershipRole, FamilyRole } from '@/types/db';
 import GroupSettings from './GroupSettings';
 import { intlLocaleForLang } from '@/lib/language-fonts';
+import { syncAfterAdminJoinResolve } from '@/lib/notifications/join-request-client';
 
 interface MemberInfo {
   user_id: string;
@@ -93,8 +94,8 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
     checkSystemAdmin();
   }, []);
 
-  // 그룹 ADMIN/소유자, 또는 시스템 관리자 콘솔 임베드(forceAdminAccess)
-  const isAdmin = forceAdminAccess || userRole === 'ADMIN' || isOwner;
+  // 그룹 ADMIN/소유자, 시스템 관리자, 또는 콘솔 임베드(forceAdminAccess)
+  const isAdmin = forceAdminAccess || isSystemAdmin || userRole === 'ADMIN' || isOwner;
 
   // 멤버 목록 로드 (그룹 소유자 보정: 소유자는 항상 목록에 포함·ADMIN으로 표시)
   const loadMembers = useCallback(async () => {
@@ -201,20 +202,33 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) return;
+      if (!token) {
+        setPendingJoins([]);
+        return;
+      }
       const res = await fetch(
         `/api/group/join-requests?groupId=${encodeURIComponent(currentGroupId)}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      if (!res.ok) return;
       const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.warn('pending joins load failed:', res.status, json);
+        setPendingJoins([]);
+        setError(
+          typeof json.error === 'string'
+            ? json.error
+            : getMemberManagementTranslation(lang, 'pending_join_failed'),
+        );
+        return;
+      }
       setPendingJoins(Array.isArray(json.data) ? json.data : []);
     } catch (err) {
       console.warn('pending joins load:', err);
+      setPendingJoins([]);
     } finally {
       setPendingJoinsLoading(false);
     }
-  }, [currentGroupId, isAdmin]);
+  }, [currentGroupId, isAdmin, lang]);
 
   const resolvePendingJoin = useCallback(
     async (requestId: string, action: 'approve' | 'reject') => {
@@ -244,6 +258,12 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
           alert(typeof json.error === 'string' ? json.error : mmt('pending_join_failed'));
           return;
         }
+        await syncAfterAdminJoinResolve({
+          accessToken: token,
+          groupId: currentGroupId,
+          requestId,
+          status: action === 'approve' ? 'approved' : 'rejected',
+        });
         alert(action === 'approve' ? mmt('pending_join_approved') : mmt('pending_join_rejected'));
         setPendingJoins((prev) => prev.filter((r) => r.id !== requestId));
         if (action === 'approve') {
@@ -431,12 +451,12 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
     void loadPendingJoins();
   }, [loadPendingJoins]);
 
-  // Realtime 구독 (멤버 변경 감지)
+  // Realtime 구독 (멤버 + 가입 요청 변경 감지)
   useEffect(() => {
     if (!currentGroupId) return;
 
     const channel = supabase
-      .channel(`memberships_${currentGroupId}`)
+      .channel(`memberships_joins_${currentGroupId}`)
       .on(
         'postgres_changes',
         {
@@ -448,14 +468,26 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
         () => {
           loadMembers();
           refreshMemberships();
-        }
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'group_join_requests',
+          filter: `group_id=eq.${currentGroupId}`,
+        },
+        () => {
+          void loadPendingJoins();
+        },
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentGroupId, loadMembers, refreshMemberships]);
+  }, [currentGroupId, loadMembers, loadPendingJoins, refreshMemberships]);
 
   if (!currentGroupId) {
     return (
@@ -540,9 +572,24 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
       {/* 가입 승인 대기 */}
       {isAdmin && (
         <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/70 p-4">
-          <h3 className="m-0 mb-3 text-sm font-semibold text-amber-900">
-            {mmt('pending_join_title')}
-            {pendingJoins.length > 0 ? ` (${pendingJoins.length})` : ''}
+          <h3 className="m-0 mb-3 flex items-center justify-between gap-2 text-sm font-semibold text-amber-900">
+            <span>
+              {mmt('pending_join_title')}
+              {pendingJoins.length > 0 ? ` (${pendingJoins.length})` : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => void loadPendingJoins()}
+              disabled={pendingJoinsLoading}
+              className="inline-flex cursor-pointer items-center justify-center rounded-md border border-amber-200 bg-white p-1.5 text-amber-900 hover:bg-amber-50 disabled:opacity-60"
+              aria-label={mmt('pending_join_title')}
+            >
+              {pendingJoinsLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+            </button>
           </h3>
           {pendingJoinsLoading ? (
             <div className="flex items-center gap-2 text-sm text-amber-800">

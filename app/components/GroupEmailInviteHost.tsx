@@ -157,7 +157,7 @@ export function GroupEmailInviteHost({ userId }: GroupEmailInviteHostProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/45 p-4">
+    <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/45 p-4">
       <div
         role="dialog"
         aria-modal="true"

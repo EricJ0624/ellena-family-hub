@@ -43,8 +43,14 @@ export async function GET(request: NextRequest) {
     const adminCheck = await requireGroupAdmin(user.id, groupId);
     if (adminCheck instanceof NextResponse) return adminCheck;
 
-    const supabase = getSupabaseServerClient();
-    const { data: requests, error } = await supabase
+    const token = extractBearerToken(request);
+    if (!token) {
+      return NextResponse.json({ error: 'Auth token required' }, { status: 401 });
+    }
+
+    // 관리자 JWT로 조회 (RLS: join_requests_select_admin_or_self)
+    const userClient = getSupabaseClientForAccessToken(token);
+    const { data: requests, error } = await userClient
       .from('group_join_requests')
       .select('id, group_id, requester_user_id, status, created_at')
       .eq('group_id', groupId)
@@ -63,7 +69,8 @@ export async function GET(request: NextRequest) {
 
     let profileMap = new Map<string, { email: string | null; nickname: string | null }>();
     if (userIds.length > 0) {
-      const { data: profiles } = await supabase
+      const service = getSupabaseServerClient();
+      const { data: profiles } = await service
         .from('profiles')
         .select('id, email, nickname')
         .in('id', userIds);
@@ -171,6 +178,7 @@ export async function POST(request: NextRequest) {
             requesterUserId: user.id,
           },
           tag: `group-join-request:${result.request_id}`,
+          appId: CURRENT_APP_ID,
         });
       } catch (notifyErr) {
         console.warn('join request notify:', notifyErr);

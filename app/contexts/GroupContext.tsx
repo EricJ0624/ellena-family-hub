@@ -18,6 +18,7 @@ import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 import { GroupEmailInviteHost } from '@/app/components/GroupEmailInviteHost';
+import JoinRequestOutcomeModalHost from '@/app/components/JoinRequestOutcomeModalHost';
 import { DEFAULT_UI_THEME, isExplicitUiTheme, resolveEffectiveUiTheme, resolveUiTheme, type UiTheme } from '@/lib/ui-theme';
 import {
   readStoredUiTheme,
@@ -480,6 +481,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       <LanguageProvider>
         <DocumentTitle />
         <GroupEmailInviteHost userId={userId} />
+        <JoinRequestOutcomeModalHost userId={userId} />
         {children}
       </LanguageProvider>
     </GroupContext.Provider>

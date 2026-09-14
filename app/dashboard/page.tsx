@@ -83,6 +83,7 @@ import {
 } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import NotificationCenter from '@/app/components/notifications/NotificationCenter';
+import GroupJoinRequestModalHost from '@/app/components/GroupJoinRequestModalHost';
 import { getAnnouncementTexts, isAnnouncementVisibleForLang } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7518,6 +7519,11 @@ export default function FamilyHub() {
             isChatWidget={expandedWidget === 'chat'}
             closeLabel={dt('widgets_magnify_close')}
             onClose={handleMagnifyClose}
+          />
+
+          <GroupJoinRequestModalHost
+            groupId={currentGroupId}
+            enabled={Boolean(currentGroupId)}
           />
 
           <FamilyLocationRequestModal

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, ChevronDown, Loader2, Plus, UserPlus, X, AlertCircle, CheckCircle, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,7 @@ import { checkUserSuspendedInGroup, messageFromSuspendRpcError, suspendedPath } 
 import { sameGroupId } from '@/lib/group-id-resolve';
 import { CURRENT_APP_ID } from '@/lib/apps';
 import { isShortInviteCode, GROUP_SHORT_INVITE_ERROR } from '@/lib/group-short-invite';
+import { JOIN_REQUEST_PENDING_EVENT } from '@/lib/notifications/join-request-events';
 
 const GroupSelector: React.FC = () => {
   const router = useRouter();
@@ -40,6 +41,7 @@ const GroupSelector: React.FC = () => {
   const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
   const [joinFamilyRole, setJoinFamilyRole] = useState<'' | FamilyRoleSelectValue>('');
   const [showJoinFamilyRoleModal, setShowJoinFamilyRoleModal] = useState(false);
+  const joinInProgressRef = useRef(false);
 
   const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
     getMemberManagementTranslation(lang, key);
@@ -148,6 +150,8 @@ const GroupSelector: React.FC = () => {
       setError(ot('error_invite_required'));
       return;
     }
+    if (joinInProgressRef.current) return;
+    joinInProgressRef.current = true;
 
     setJoining(true);
     setError(null);
@@ -189,7 +193,7 @@ const GroupSelector: React.FC = () => {
             throw new Error(ot('error_target_group_suspended'));
           }
           if (errCode === GROUP_SHORT_INVITE_ERROR.INVALID_OR_EXPIRED) {
-            throw new Error(ot('error_join_failed'));
+            throw new Error(ot('error_invalid_invite'));
           }
           throw new Error(ot('error_join_failed'));
         }
@@ -197,6 +201,22 @@ const GroupSelector: React.FC = () => {
         setInviteCode('');
         setSuccess(ot('success_join_pending'));
         setShowJoinModal(false);
+        const requestId =
+          typeof json.data?.request_id === 'string' ? json.data.request_id : null;
+        const joinedGroupId =
+          typeof json.data?.group_id === 'string' ? json.data.group_id : null;
+        if (requestId && joinedGroupId && typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent(JOIN_REQUEST_PENDING_EVENT, {
+              detail: {
+                requestId,
+                groupId: joinedGroupId,
+                groupName:
+                  typeof json.data?.group_name === 'string' ? json.data.group_name : null,
+              },
+            }),
+          );
+        }
         setTimeout(() => setSuccess(null), 3500);
         return;
       }
@@ -233,6 +253,7 @@ const GroupSelector: React.FC = () => {
       );
     } finally {
       setJoining(false);
+      joinInProgressRef.current = false;
     }
   };
 

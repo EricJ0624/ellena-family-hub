@@ -32,6 +32,7 @@ import { APP_ENROLL_PATH, needsAppEnrollment } from '@/lib/app-enrollment-routin
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 import { CURRENT_APP_ID } from '@/lib/apps';
 import { isShortInviteCode, GROUP_SHORT_INVITE_ERROR } from '@/lib/group-short-invite';
+import { JOIN_REQUEST_PENDING_EVENT } from '@/lib/notifications/join-request-events';
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
 
@@ -126,6 +127,8 @@ export default function OnboardingPage() {
 
   // 가입 버튼 연타 방지 (가입 성공 후 두 번째 요청이 'Already a member'로 에러 뜨는 것 방지)
   const joinInProgressRef = useRef(false);
+  // 초대 코드 확인(4자리 요청 포함) 연타 방지
+  const verifyInProgressRef = useRef(false);
   // 그룹 생성 연타·인증 링크 재진입 시 중복 생성 방지
   const createInProgressRef = useRef(false);
 
@@ -595,6 +598,8 @@ export default function OnboardingPage() {
       setError(ot('error_invite_required'));
       return;
     }
+    if (verifyInProgressRef.current) return;
+    verifyInProgressRef.current = true;
 
     setVerifying(true);
     setError(null);
@@ -605,7 +610,6 @@ export default function OnboardingPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         setError(ot('error_login_required'));
-        setVerifying(false);
         return;
       }
 
@@ -642,6 +646,21 @@ export default function OnboardingPage() {
         }
 
         setSuccess(ot('success_join_pending'));
+        const requestId =
+          typeof json.data?.request_id === 'string' ? json.data.request_id : null;
+        const groupId = typeof json.data?.group_id === 'string' ? json.data.group_id : null;
+        if (requestId && groupId && typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent(JOIN_REQUEST_PENDING_EVENT, {
+              detail: {
+                requestId,
+                groupId,
+                groupName:
+                  typeof json.data?.group_name === 'string' ? json.data.group_name : null,
+              },
+            }),
+          );
+        }
         return;
       }
 
@@ -694,6 +713,7 @@ export default function OnboardingPage() {
       setGroupPreview(null);
     } finally {
       setVerifying(false);
+      verifyInProgressRef.current = false;
     }
   };
 

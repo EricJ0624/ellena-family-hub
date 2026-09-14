@@ -52,6 +52,8 @@ export interface NotifyFamilyInput {
   entityId?: string | null;
   payload?: Record<string, unknown>;
   tag?: string;
+  /** 알림/푸시 앱 격리. 미지정 시 CURRENT_APP_ID */
+  appId?: string;
 }
 
 export interface NotifyFamilyResult {

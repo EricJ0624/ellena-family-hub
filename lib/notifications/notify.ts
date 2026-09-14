@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { sendWebPushToUser } from './send-web-push';
 import type { NotifiableWidgetKey, NotifyFamilyInput, NotifyFamilyResult } from './types';
 import { isNotifiableWidgetKey } from './types';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 function getServiceSupabase(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -122,6 +123,7 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
     }
 
     if (inappRecipients.length > 0) {
+      const appId = input.appId || CURRENT_APP_ID;
       const rows = inappRecipients.map((recipientUserId) => ({
         group_id: input.groupId,
         recipient_user_id: recipientUserId,
@@ -133,14 +135,16 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
         url: input.url,
         entity_id: input.entityId ?? null,
         payload: input.payload ?? null,
+        app_id: appId,
       }));
 
       const { error: insertError } = await supabase.from('notifications').insert(rows);
       if (insertError) {
         console.error('[notifyFamily] notifications insert 실패:', insertError.message);
-      } else {
-        result.notified = inappRecipients.length;
+        // 인앱 기록 실패 시 푸시도 보내지 않음 (잘못된/불완전 알림 확산 방지)
+        return result;
       }
+      result.notified = inappRecipients.length;
     }
 
     // 미확인 알림이 이미 있는 수신자에게는 OS 푸시를 보내지 않음 (인앱 목록만 누적)
@@ -172,6 +176,7 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
       }
     }
 
+    const pushAppId = input.appId || CURRENT_APP_ID;
     await Promise.all(
       pushRecipients.map(async (userId) => {
         const pushResult = await sendWebPushToUser(
@@ -185,10 +190,12 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
               widgetKey: input.widgetKey,
               entityId: input.entityId,
               url: input.url,
+              appId: pushAppId,
               ...(input.payload || {}),
             },
           },
           supabase,
+          pushAppId,
         );
         result.pushSent += pushResult.sent || 0;
         result.pushFailed += pushResult.failed || 0;

@@ -530,8 +530,24 @@ REVOKE ALL ON FUNCTION public.reject_group_join_request(UUID, TEXT) FROM anon;
 GRANT EXECUTE ON FUNCTION public.reject_group_join_request(UUID, TEXT) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
--- 11) 알림 preferences widget_key에 group 추가
+-- 11) 알림 widget_key에 group 추가 (notifications + preferences)
 -- ---------------------------------------------------------------------------
+ALTER TABLE public.notifications
+  DROP CONSTRAINT IF EXISTS notifications_widget_key_check;
+
+ALTER TABLE public.notifications
+  ADD CONSTRAINT notifications_widget_key_check
+  CHECK (widget_key = ANY (ARRAY[
+    'tasks'::text,
+    'calendar'::text,
+    'chat'::text,
+    'location'::text,
+    'travel'::text,
+    'piggy'::text,
+    'games'::text,
+    'group'::text
+  ]));
+
 ALTER TABLE public.notification_preferences
   DROP CONSTRAINT IF EXISTS notification_preferences_widget_key_check;
 

@@ -66,6 +66,7 @@ export async function sendWebPushToUser(
   userId: string,
   payload: WebPushPayload,
   supabaseClient?: SupabaseClient,
+  appId?: string,
 ): Promise<SendWebPushResult> {
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
@@ -77,13 +78,20 @@ export async function sendWebPushToUser(
   }
 
   const supabase = supabaseClient ?? getServiceSupabase();
-  const { data: tokens, error: tokenError } = await supabase
+  let tokenQuery = supabase
     .from('push_tokens')
     .select('token')
     .eq('user_id', userId)
     .eq('is_active', true)
     .order('updated_at', { ascending: false })
     .limit(20);
+
+  // 앱 스코프: 해당 앱에서 등록된 토큰만 (레거시 NULL은 제외해 타 앱 누수 방지)
+  if (appId) {
+    tokenQuery = tokenQuery.eq('app_id', appId);
+  }
+
+  const { data: tokens, error: tokenError } = await tokenQuery;
 
   if (tokenError || !tokens || tokens.length === 0) {
     console.warn('[sendWebPush] Push 토큰 없음:', userId, tokenError?.message);
