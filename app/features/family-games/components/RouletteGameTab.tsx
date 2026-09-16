@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { getMemberNickname } from './MemberSelect';
 import { areParticipantSlotsReady, ParticipantSetupPicker } from './ParticipantSetupPicker';
+import { GameResultCelebration } from './GameResultCelebration';
 
 type RouletteTranslations = {
   roulette_participants: string;
@@ -35,6 +36,8 @@ type RouletteTranslations = {
   games_cancel: string;
   games_add_member: string;
   games_remove_member: string;
+  games_congrats_title: string;
+  games_congrats_dismiss: string;
 };
 
 type RouletteGameTabBaseProps = {
@@ -86,6 +89,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
+  const [celebrationDismissedKey, setCelebrationDismissedKey] = useState<string | null>(null);
 
   const selectedIds = mpConfig?.selectedIds ?? [];
   const totalSlots = mpConfig ? resolveRouletteTotalSlots(mpConfig) : setupTotalSlots;
@@ -248,6 +252,16 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
 
   return (
     <div className="grid" style={{ gap: '2.5cqmin' }}>
+      <GameResultCelebration
+        open={Boolean(winner) && !spinning && celebrationDismissedKey !== `${mpSession?.id ?? ''}:${mpConfig?.spinStartedAt ?? ''}`}
+        celebrationKey={`${mpSession?.id ?? ''}:${mpConfig?.spinStartedAt ?? ''}`}
+        title={t.games_congrats_title}
+        message={winner ? formatText(t.roulette_result, { name: winner }) : ''}
+        dismissLabel={t.games_congrats_dismiss}
+        onDismiss={() =>
+          setCelebrationDismissedKey(`${mpSession?.id ?? ''}:${mpConfig?.spinStartedAt ?? ''}`)
+        }
+      />
       {isSetupPhase && (
         <>
           <div>

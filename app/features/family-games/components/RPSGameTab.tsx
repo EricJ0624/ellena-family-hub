@@ -6,6 +6,7 @@ import { asRPSConfig } from '@/lib/family-games/session-types';
 import type { FamilyGameSessionBundle, GameSessionAction } from '@/lib/family-games/session-types';
 import { resolveRPS, type RPSChoice, type RPSLaunchConfig } from '../types';
 import { getMemberNickname, MemberSelect } from './MemberSelect';
+import { GameResultCelebration } from './GameResultCelebration';
 
 type RPSTranslations = {
   rps_player1: string;
@@ -28,6 +29,8 @@ type RPSTranslations = {
   duplicate_member: string;
   ladder_you: string;
   games_cancel: string;
+  games_congrats_title: string;
+  games_congrats_dismiss: string;
 };
 
 type RPSGameTabBaseProps = {
@@ -81,6 +84,8 @@ export function RPSGameTab(props: RPSGameTabProps) {
   const [revealed, setRevealed] = useState(false);
   const [resultText, setResultText] = useState<string | null>(null);
   const [localSubmitted, setLocalSubmitted] = useState(false);
+  const [celebrationDismissedKey, setCelebrationDismissedKey] = useState<string | null>(null);
+  const [celebrationIsDraw, setCelebrationIsDraw] = useState(false);
 
   const activeP1 = mpConfig?.p1UserId ?? p1UserId;
   const activeP2 = mpConfig?.p2UserId ?? p2UserId;
@@ -121,12 +126,14 @@ export function RPSGameTab(props: RPSGameTabProps) {
       const outcome = resolveRPS(p1Choice, p2Choice);
       if (outcome === 'draw') {
         setResultText(t.rps_result_draw);
+        setCelebrationIsDraw(true);
       } else {
         setResultText(
           formatText(t.rps_result_win, {
             winner: outcome === 'p1' ? p1Name : p2Name,
           }),
         );
+        setCelebrationIsDraw(false);
       }
       setAnimating(false);
       setRevealed(true);
@@ -211,8 +218,20 @@ export function RPSGameTab(props: RPSGameTabProps) {
     );
   }
 
+  const celebrationKey = `${mpSession?.id ?? ''}:${mpConfig?.revealStartedAt ?? ''}`;
+  const showCelebration = Boolean(resultText) && celebrationDismissedKey !== celebrationKey;
+
   return (
     <div className="grid" style={{ gap: '2.5cqmin' }}>
+      <GameResultCelebration
+        open={showCelebration}
+        celebrationKey={celebrationKey}
+        title={t.games_congrats_title}
+        message={resultText ?? ''}
+        dismissLabel={t.games_congrats_dismiss}
+        onDismiss={() => setCelebrationDismissedKey(celebrationKey)}
+        celebrate={!celebrationIsDraw}
+      />
       <div className="grid sm:grid-cols-2" style={{ gap: '2.5cqmin' }}>
         <div className="glass-panel-soft rounded-xl" style={{ padding: '2.5cqmin' }}>
           <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>

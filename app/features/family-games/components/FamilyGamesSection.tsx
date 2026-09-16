@@ -60,6 +60,7 @@ export interface FamilyGamesSectionProps {
     ladder_start: string;
     ladder_reset: string;
     ladder_result_title: string;
+    ladder_result_announce: string;
     ladder_path_result: string;
     ladder_pick_lane: string;
     ladder_lane_empty: string;
@@ -102,6 +103,8 @@ export interface FamilyGamesSectionProps {
     games_lobby_you_host: string;
     games_lobby_wrong_tab: string;
     games_lobby_wrong_game: string;
+    games_congrats_title: string;
+    games_congrats_dismiss: string;
   };
 }
 
@@ -163,6 +166,7 @@ export function FamilyGamesSection({
       setModalOpen(false);
       return;
     }
+    // Keep play modal open for every participant through reveal/result so celebration is visible.
     if (!isLobbyPhase(bundle.session) && isParticipant) {
       setModalOpen(true);
     }

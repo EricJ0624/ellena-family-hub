@@ -6904,6 +6904,7 @@ export default function FamilyHub() {
               ladder_start: gt('ladder_start'),
               ladder_reset: gt('ladder_reset'),
               ladder_result_title: gt('ladder_result_title'),
+              ladder_result_announce: gt('ladder_result_announce'),
               ladder_path_result: gt('ladder_path_result'),
               ladder_pick_lane: gt('ladder_pick_lane'),
               ladder_lane_empty: gt('ladder_lane_empty'),
@@ -6953,6 +6954,8 @@ export default function FamilyHub() {
               games_lobby_you_host: gt('games_lobby_you_host'),
               games_lobby_wrong_tab: gt('games_lobby_wrong_tab'),
               games_lobby_wrong_game: gt('games_lobby_wrong_game'),
+              games_congrats_title: gt('games_congrats_title'),
+              games_congrats_dismiss: gt('games_congrats_dismiss'),
             }}
           />
         );

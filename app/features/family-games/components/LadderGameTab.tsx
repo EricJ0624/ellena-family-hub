@@ -17,6 +17,7 @@ import {
 } from '../types';
 import { getMemberNickname, MemberSelect } from './MemberSelect';
 import { areParticipantSlotsReady, ParticipantSetupPicker } from './ParticipantSetupPicker';
+import { GameResultCelebration } from './GameResultCelebration';
 import {
   allStartLanesAssigned,
   collectStartLanesFromParticipants,
@@ -46,6 +47,7 @@ type LadderTranslations = {
   ladder_start: string;
   ladder_reset: string;
   ladder_result_title: string;
+  ladder_result_announce: string;
   ladder_path_result: string;
   ladder_pick_lane: string;
   ladder_lane_empty: string;
@@ -54,6 +56,8 @@ type LadderTranslations = {
   games_cancel: string;
   games_add_member: string;
   games_remove_member: string;
+  games_congrats_title: string;
+  games_congrats_dismiss: string;
 };
 
 type LadderGameTabBaseProps = {
@@ -140,6 +144,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
   const [showPaths, setShowPaths] = useState(false);
   const [verticalRevealDone, setVerticalRevealDone] = useState(true);
   const [verticalDrawActive, setVerticalDrawActive] = useState(true);
+  const [celebrationDismissedKey, setCelebrationDismissedKey] = useState<string | null>(null);
 
   const configDestinationsKey = mpConfig?.destinations.join('|') ?? '';
   const configParticipantIdsKey = mpConfig?.participantIds.join('|') ?? '';
@@ -802,8 +807,18 @@ export function LadderGameTab(props: LadderGameTabProps) {
     const rungsToShow = isLiveReveal
       ? displayRungs
       : finalRungs;
+    const celebrationKey = `${mpSession?.id ?? ''}:${mpConfig?.revealStartedAt ?? 'done'}`;
+    const showCelebration = showPaths && celebrationDismissedKey !== celebrationKey;
     return (
       <div className="grid" style={{ gap: '2cqmin' }}>
+        <GameResultCelebration
+          open={showCelebration}
+          celebrationKey={celebrationKey}
+          title={t.games_congrats_title}
+          message={t.ladder_result_announce}
+          dismissLabel={t.games_congrats_dismiss}
+          onDismiss={() => setCelebrationDismissedKey(celebrationKey)}
+        />
         <p className="font-semibold text-[#1e293b]" style={{ fontSize: '4.5cqmin' }}>
           {t.ladder_result_title}
         </p>

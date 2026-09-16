@@ -16,7 +16,7 @@ export function GamePlayModal({ open, title, closeLabel, onClose, children }: Ga
   return (
     <TopLayerDialog open={open} onClose={onClose}>
       <div
-        className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        className="flex max-h-[92dvh] w-[min(96vw,52rem)] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
