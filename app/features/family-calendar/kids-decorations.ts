@@ -94,24 +94,28 @@ const IDLE_DECOS: IdleDeco[] = [
 ];
 
 /**
- * 상·하·좌·우에 두되 간격·높이는 조금씩 다르게.
- * 피함: 타이틀 글자, ‹ ›, 연월, 요일, 날짜 숫자, Add Event 가운데, 테두리.
- * 허용: Add Event 좌·우. 타이틀~오른쪽 끝 사이.
+ * 위젯 가장자리(패딩·모서리)만 사용.
+ * 날짜 그리드·요일·숫자와 겹치면 일정 스티커처럼 보이므로 금지.
+ * 섹션 패딩 ≈ 좌우 6cqmin / 상하 5cqmin → 슬롯 width+inset 이 그 안쪽에 머물게.
  */
 const SAFE_SLOTS: IdleSlot[] = [
-  { size: 'sm', className: 'top-[3.8cqmin] left-[73cqmin] w-[3.6cqmin] rotate-[14deg]' },
-  { size: 'md', className: 'top-[6.2cqmin] left-[calc(74cqmin+0.2*(100%-90cqmin))] w-[5.8cqmin] -rotate-12' },
-  { size: 'sm', className: 'top-[3.2cqmin] left-[calc(75cqmin+0.55*(100%-90cqmin))] w-[4.4cqmin] rotate-[8deg]' },
-  { size: 'md', className: 'top-[5.5cqmin] right-[5.5cqmin] w-[6.2cqmin] rotate-[-18deg]' },
-  { size: 'lg', className: 'top-[32cqmin] left-[4.2cqmin] w-[7cqmin] rotate-[-14deg]' },
-  { size: 'md', className: 'top-[46cqmin] left-[5.2cqmin] w-[5.2cqmin] rotate-[10deg]' },
-  { size: 'sm', className: 'top-[71cqmin] left-[4cqmin] w-[4.2cqmin] -rotate-8' },
-  { size: 'md', className: 'top-[41cqmin] right-[4cqmin] w-[5.8cqmin] rotate-[16deg]' },
-  { size: 'lg', className: 'top-[57cqmin] right-[5.5cqmin] w-[6.2cqmin] -rotate-6' },
-  { size: 'sm', className: 'top-[74cqmin] right-[4.2cqmin] w-[3.7cqmin] rotate-12' },
-  { size: 'lg', className: 'bottom-[4.2cqmin] left-[4.8cqmin] w-[9.5cqmin] rotate-[-10deg]' },
-  { size: 'md', className: 'bottom-[5.5cqmin] right-[22cqmin] w-[5.8cqmin] rotate-[14deg]' },
-  { size: 'md', className: 'bottom-[3.8cqmin] right-[4.5cqmin] w-[6.8cqmin] -rotate-8' },
+  // 타이틀 오른쪽(글자·연월과 분리)
+  { size: 'sm', className: 'top-[2.4cqmin] right-[18cqmin] w-[3.2cqmin] rotate-[12deg]' },
+  { size: 'md', className: 'top-[2.8cqmin] right-[9cqmin] w-[4.6cqmin] -rotate-10' },
+  { size: 'sm', className: 'top-[6.5cqmin] right-[3.2cqmin] w-[3.4cqmin] rotate-[8deg]' },
+  { size: 'md', className: 'top-[1.8cqmin] right-[1.6cqmin] w-[4.8cqmin] rotate-[-16deg]' },
+  // 좌측 여백 스트립 (그리드 안으로 침범 금지)
+  { size: 'lg', className: 'top-[30cqmin] left-[0.4cqmin] w-[4.6cqmin] rotate-[-12deg]' },
+  { size: 'md', className: 'top-[48cqmin] left-[0.6cqmin] w-[4.2cqmin] rotate-[8deg]' },
+  { size: 'sm', className: 'top-[66cqmin] left-[0.5cqmin] w-[3.4cqmin] -rotate-8' },
+  // 우측 여백 스트립
+  { size: 'md', className: 'top-[34cqmin] right-[0.4cqmin] w-[4.4cqmin] rotate-[14deg]' },
+  { size: 'lg', className: 'top-[52cqmin] right-[0.5cqmin] w-[4.8cqmin] -rotate-6' },
+  { size: 'sm', className: 'top-[70cqmin] right-[0.5cqmin] w-[3.2cqmin] rotate-10' },
+  // Add Event 좌·우 모서리 (버튼 중앙·날짜 칸 회피)
+  { size: 'lg', className: 'bottom-[2.2cqmin] left-[0.6cqmin] w-[5cqmin] rotate-[-8deg]' },
+  { size: 'md', className: 'bottom-[2.6cqmin] left-[8cqmin] w-[4.2cqmin] rotate-[12deg]' },
+  { size: 'md', className: 'bottom-[2.2cqmin] right-[0.6cqmin] w-[4.8cqmin] -rotate-8' },
 ];
 
 function seededShuffle<T>(items: readonly T[], seed: number): T[] {

@@ -86,7 +86,7 @@ const KidsIdleDecorations = memo(function KidsIdleDecorations({
 }) {
   const items = useMemo(() => layoutKidsIdleDecos(year, month), [year, month]);
   return (
-    <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden bg-transparent" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden bg-transparent" aria-hidden>
       {items.map((item, index) => (
         <img
           key={`${item.src}-${index}`}
@@ -149,7 +149,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         }
       >
         {isKidsTheme ? <KidsIdleDecorations year={calendarGrid.year} month={calendarGrid.month} /> : null}
-        <div className="section-header calendar-section-header" style={{ marginBottom: '2.5cqmin' }}>
+        <div className="section-header calendar-section-header relative z-[2]" style={{ marginBottom: '2.5cqmin' }}>
           <h3
             className="section-title m-0 flex items-center calendar-section-title"
             style={{ color: skin.titleColor, fontWeight: 800 }}
@@ -219,7 +219,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                 ›
               </button>
             </div>
-            <div className="calendar-grid-wrap">
+            <div className="calendar-grid-wrap relative z-[2]">
               <div className="calendar-grid" style={{ gap: '1cqmin' }}>
                 {weekDays.map((day, i) => (
                   <div
@@ -329,7 +329,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               </div>
             </div>
           </div>
-          <div className="relative w-full">
+          <div className="relative z-[2] w-full">
             {isKidsTheme && rocketTick > 0 ? (
               <img
                 key={rocketTick}
