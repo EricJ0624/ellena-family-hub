@@ -94,27 +94,28 @@ const IDLE_DECOS: IdleDeco[] = [
 ];
 
 /**
- * 위젯 가장자리(패딩·모서리)만 사용.
- * 날짜 그리드·요일·숫자와 겹치면 일정 스티커처럼 보이므로 금지.
- * 섹션 패딩 ≈ 좌우 6cqmin / 상하 5cqmin → 슬롯 width+inset 이 그 안쪽에 머물게.
+ * 위젯 가장자리에 분산 배치 (한 모서리에 몰지 않음).
+ * 날짜 숫자와 겹치면 일정처럼 보이므로 그리드 안쪽은 피하고,
+ * Add Event 버튼 위(앞) 겹침은 허용.
  */
 const SAFE_SLOTS: IdleSlot[] = [
-  // 타이틀 오른쪽(글자·연월과 분리)
-  { size: 'sm', className: 'top-[2.4cqmin] right-[18cqmin] w-[3.2cqmin] rotate-[12deg]' },
-  { size: 'md', className: 'top-[2.8cqmin] right-[9cqmin] w-[4.6cqmin] -rotate-10' },
-  { size: 'sm', className: 'top-[6.5cqmin] right-[3.2cqmin] w-[3.4cqmin] rotate-[8deg]' },
-  { size: 'md', className: 'top-[1.8cqmin] right-[1.6cqmin] w-[4.8cqmin] rotate-[-16deg]' },
-  // 좌·우 여백 — 좁게 유지해 날짜 칸과 겹치지 않게 (회전 여유 포함)
-  { size: 'lg', className: 'top-[28cqmin] left-[0.15cqmin] w-[3.5cqmin] rotate-[-12deg]' },
-  { size: 'md', className: 'top-[46cqmin] left-[0.2cqmin] w-[3.3cqmin] rotate-[8deg]' },
-  { size: 'sm', className: 'bottom-[3cqmin] left-[0.3cqmin] w-[3cqmin] -rotate-8' },
-  { size: 'md', className: 'top-[32cqmin] right-[0.15cqmin] w-[3.4cqmin] rotate-[14deg]' },
-  { size: 'lg', className: 'top-[50cqmin] right-[0.2cqmin] w-[3.6cqmin] -rotate-6' },
-  { size: 'sm', className: 'bottom-[3.2cqmin] right-[0.3cqmin] w-[3cqmin] rotate-10' },
-  // Add Event 위(앞)로 겹침 허용 — 장식 z가 버튼보다 높고 pointer-events-none
-  { size: 'lg', className: 'bottom-[0.2cqmin] left-[4cqmin] w-[6.5cqmin] rotate-[-10deg]' },
-  { size: 'md', className: 'bottom-[0.6cqmin] left-[22cqmin] w-[5cqmin] rotate-[14deg]' },
-  { size: 'md', className: 'bottom-[0.2cqmin] right-[4cqmin] w-[6cqmin] -rotate-8' },
+  // 상단 — 가로로 흩어짐 (우측 한곳에 몰지 않음)
+  { size: 'sm', className: 'top-[2cqmin] left-[56cqmin] w-[5.4cqmin] rotate-[12deg]' },
+  { size: 'md', className: 'top-[1.4cqmin] right-[1.2cqmin] w-[7.2cqmin] -rotate-12' },
+  { size: 'sm', className: 'top-[11cqmin] right-[0.6cqmin] w-[5.2cqmin] rotate-[8deg]' },
+  // 좌측 — 높이 다르게 분산, 크기 키움
+  { size: 'lg', className: 'top-[22cqmin] left-[0] w-[8.4cqmin] rotate-[-14deg]' },
+  { size: 'md', className: 'top-[40cqmin] left-[0] w-[7cqmin] rotate-[10deg]' },
+  { size: 'sm', className: 'top-[58cqmin] left-[0.1cqmin] w-[5.4cqmin] -rotate-8' },
+  { size: 'md', className: 'top-[68cqmin] left-[0] w-[6.8cqmin] rotate-[6deg]' },
+  // 우측 — 좌측과 다른 높이
+  { size: 'md', className: 'top-[26cqmin] right-[0] w-[7cqmin] rotate-[14deg]' },
+  { size: 'lg', className: 'top-[46cqmin] right-[0] w-[8.4cqmin] -rotate-8' },
+  { size: 'sm', className: 'top-[64cqmin] right-[0.1cqmin] w-[5.4cqmin] rotate-10' },
+  // 하단 Add Event 위 — 좌·중·우로 분산
+  { size: 'lg', className: 'bottom-[0] left-[8cqmin] w-[9.2cqmin] rotate-[-8deg]' },
+  { size: 'md', className: 'bottom-[0.3cqmin] left-[42cqmin] w-[7.2cqmin] rotate-[12deg]' },
+  { size: 'md', className: 'bottom-[0] right-[2cqmin] w-[7.6cqmin] -rotate-10' },
 ];
 
 function seededShuffle<T>(items: readonly T[], seed: number): T[] {
