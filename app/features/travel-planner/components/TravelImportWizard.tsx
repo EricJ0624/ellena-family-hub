@@ -102,7 +102,8 @@ export function TravelImportWizard() {
     }
     setItems(parsed);
     setDayTitles(day_titles);
-    setFormTitle(meta.title?.trim() || '');
+    // 파서 추정 제목은 부정확해 사용자 혼동을 주므로 비워 둠
+    setFormTitle('');
     setFormDestination(meta.destination?.trim() || '');
     setFormStartDate(meta.start_date || '');
     setFormEndDate(meta.end_date || '');
@@ -369,6 +370,11 @@ export function TravelImportWizard() {
                           ? `${item.check_in_date || item.day_date || '?'} ~ ${item.check_out_date || '?'}`
                           : `${item.day_date || `Day ${item.day_index ?? '?'}`}${item.start_time ? ` · ${item.start_time}` : ''}`}
                       </div>
+                      {item.description?.trim() ? (
+                        <p className="m-0 mt-1 whitespace-pre-wrap text-[11px] leading-snug text-slate-600">
+                          {item.description.trim()}
+                        </p>
+                      ) : null}
                       {item.low_confidence && (
                         <span className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
                           {tt('import_other_hint')}

@@ -19,7 +19,7 @@ const ACCOMMODATION_RE =
 const TRANSPORT_RE =
   /비행기|항공|공항|기차|KTX|SRT|택시|grab|uber|버스|지하철|렌터카|페리|항구|차량|이동|출발|도착|🚗|✈️|rental|flight|airport|train|taxi|transfer|ferry|→|->|➡️/i;
 const ATTRACTION_RE =
-  /(?:^|\s)왓\s|사원|박물관|궁|공원|랜드마크|관광|전망|야경|다이빙|스노클|와칭|투어|섬\b|포인트|temple|museum|palace|park|attraction|sightseeing|tower|market|diving|snorkel|⭐/i;
+  /(?:^|\s)왓\s|사원|박물관|궁|공원|랜드마크|관광|전망|야경|다이빙|다이브|펀다이빙|난파선|매크로|스노클|와칭|투어|섬\b|포인트|temple|museum|palace|park|attraction|sightseeing|tower|market|diving|dive|snorkel|wreck|⭐/i;
 
 const DAY_HEADER_RE =
   /^(?:#{1,3}\s*)?(?:day\s*(\d+)|(\d+)\s*일차|第\s*(\d+)\s*天)(?:\s*[\(（]([^）)]+)[\)）])?\s*[:：]?\s*(.*)$/i;
@@ -32,15 +32,25 @@ const DATE_RANGE_RE =
 const BUDGET_RE = /(?:예산|budget|총\s*예산)[:\s]*([0-9,]+)\s*(?:원|krw|만원)?/i;
 const NIGHT_DAY_RE = /(\d+)\s*박\s*(\d+)\s*일/;
 const KR_MD_RE = /(\d{1,2})\s*월\s*(\d{1,2})\s*일/;
-const LABELED_LINE_RE =
-  /^(?:이동|오전(?:\s*~\s*오후)?|오후|종일|이른\s*아침|아침|점심|저녁|브런치|체크인|체크아웃|추천\s*호텔|호텔|숙소|미식\s*노트|미슐랭[^:：]*노트|선정\s*이유|노트)(?:\s*\([^)]*\))?\s*[:：]/i;
+const SLOT_TOKEN = '이동|오전(?:\\s*~\\s*오후)?|오후|종일|이른\\s*아침|아침|점심|저녁|브런치';
+const LABELED_LINE_RE = new RegExp(
+  `^(?:${SLOT_TOKEN}|체크인|체크아웃|추천\\s*호텔|호텔|숙소|미식\\s*노트|미슐랭[^:：]*노트|선정\\s*이유|노트)(?:\\s*\\/\\s*(?:${SLOT_TOKEN}))*(?:\\s*\\([^)]*\\))?\\s*[:：]`,
+  'i',
+);
 const EMOJI_LABELED_RE = /^[🏨🍽️🚗✈️⭐]\s*/;
 const STAYOVER_RE = /숙소\s*연박|연박|same\s*hotel|stay\s*over/i;
 const REASON_RE = /^선정\s*이유\s*[:：]?\s*/i;
 const DINING_NOTE_RE = /^(?:🍽️\s*)?(?:미슐랭[^:：]*|미식)\s*노트\s*[:：]\s*/i;
 const HOTEL_LABEL_RE = /^(?:🏨\s*)?(?:추천\s*)?호텔(?:\s*\([^)]*\))?\s*[:：]\s*/i;
-const TIME_OF_DAY_LABEL_RE =
-  /^(?:이동|오전(?:\s*~\s*오후)?|오후|종일|이른\s*아침|아침|점심|저녁)\s*[:：]\s*/i;
+/** "이동:" 및 Gemini 스타일 "이동/오전/오후/종일:" 모두 매칭 */
+const TIME_OF_DAY_LABEL_RE = new RegExp(
+  `^(?:${SLOT_TOKEN})(?:\\s*\\/\\s*(?:${SLOT_TOKEN}))*\\s*[:：]\\s*`,
+  'i',
+);
+const HARD_TRANSPORT_RE =
+  /비행기|항공|공항|기차|KTX|SRT|택시|grab|uber|버스|지하철|렌터카|페리|항구|차량|🚗|✈️|rental|flight|airport|train|taxi|transfer|ferry/i;
+const ACTIVITY_HINT_RE =
+  /다이빙|다이브|펀다이빙|난파선|매크로|스노클|와칭|투어|탐닉|탐사|관찰|생태계|체크\s*다이빙|diving|dive|snorkel|wreck/i;
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -102,18 +112,56 @@ function splitTitleDescription(raw: string): { title: string; description: strin
   return { title: shortTitle(t), description: t };
 }
 
-function classifyLine(text: string): { kind: ImportItemKind; low_confidence: boolean } {
-  const t = text.trim();
-  if (!t) return { kind: 'other', low_confidence: true };
+function stripScheduleLabel(text: string): string {
+  return text.replace(TIME_OF_DAY_LABEL_RE, '').trim();
+}
 
-  if (HOTEL_LABEL_RE.test(t) || /^🏨/.test(t)) {
+function splitAirportAndRemainder(body: string): { airport: string | null; remainder: string } {
+  const m = body.match(/^(.*?(?:국제)?공항\s*도착)(?:\s*후)?(?:\s*[\/／]\s*|\s+)?(.*)$/i);
+  if (!m) return { airport: null, remainder: body.trim() };
+  const airport = m[1].trim();
+  const remainder = (m[2] || '').trim().replace(/^[\/／]\s*/, '');
+  return { airport, remainder };
+}
+
+/** 식당/숙소 다음 줄의 미식·선정 부가 설명인지 */
+function looksLikeFollowUpProse(trimmed: string): boolean {
+  if (!trimmed) return false;
+  if (HOTEL_LABEL_RE.test(trimmed) || DINING_NOTE_RE.test(trimmed) || REASON_RE.test(trimmed)) {
+    return false;
+  }
+  if (TIME_OF_DAY_LABEL_RE.test(trimmed) || EMOJI_LABELED_RE.test(trimmed)) return false;
+  if (BULLET_RE.test(trimmed) && (TIME_RE.test(trimmed) || HARD_TRANSPORT_RE.test(trimmed))) {
+    return false;
+  }
+  if (
+    /습니다\.?$|입니다\.?$|해요\.?$|이에요\.?$|예요\.?$|추천합니다\.?$|인상적|훌륭|뛰어|손색|풍미|완성도|밸런스|중독성|정화해|시푸드|다이닝입니다/i.test(
+      trimmed,
+    )
+  ) {
+    return true;
+  }
+  if (trimmed.length >= 35 && /[.。]/.test(trimmed) && !LABELED_LINE_RE.test(trimmed)) {
+    return true;
+  }
+  return false;
+}
+
+function classifyLine(text: string): { kind: ImportItemKind; low_confidence: boolean } {
+  const raw = text.trim();
+  if (!raw) return { kind: 'other', low_confidence: true };
+
+  if (HOTEL_LABEL_RE.test(raw) || /^🏨/.test(raw)) {
     return { kind: 'accommodation', low_confidence: false };
   }
-  if (DINING_NOTE_RE.test(t) || /^🍽️/.test(t)) {
+  if (DINING_NOTE_RE.test(raw) || /^🍽️/.test(raw)) {
     return { kind: 'dining', low_confidence: false };
   }
-  if (/^🚗|^✈️/.test(t) || TIME_OF_DAY_LABEL_RE.test(t) && TRANSPORT_RE.test(t) && !DINING_RE.test(t)) {
-    if (/다이빙|스노클|와칭|투어|릴랙싱|휴식/i.test(t) && !/이동|페리|공항|항구|차량/i.test(t)) {
+
+  const t = stripScheduleLabel(raw);
+
+  if (/^🚗|^✈️/.test(raw)) {
+    if (ACTIVITY_HINT_RE.test(t) && !HARD_TRANSPORT_RE.test(t)) {
       return { kind: 'attraction', low_confidence: false };
     }
   }
@@ -125,17 +173,35 @@ function classifyLine(text: string): { kind: ImportItemKind; low_confidence: boo
 
   if (/디너|dinner|크루즈|미식|미슐랭|🍽️/i.test(t)) dining += 3;
   if (/🏨|추천\s*호텔|리조트/i.test(t)) acc += 3;
-  if (/^왓\s|wat\s|다이빙|스노클|⭐/i.test(t)) attraction += 3;
+  if (/^왓\s|wat\s|다이빙|다이브|스노클|난파선|매크로|⭐/i.test(t)) attraction += 3;
+  if (ACTIVITY_HINT_RE.test(t)) attraction += 4;
   if (/→|->|➡️/.test(t) && transport > 0) transport += 1;
   if (/페리|항구|공항|차량으로/i.test(t)) transport += 2;
+
+  // "이동하여 다이빙"처럼 활동 이동만 있는 경우 교통 점수 억제
+  if (ACTIVITY_HINT_RE.test(t) && !HARD_TRANSPORT_RE.test(t)) {
+    transport = Math.min(transport, 1);
+  }
+  // 라벨의 "이동"만 남은 경우(본문에 교통 키워드 없음)
+  if (!HARD_TRANSPORT_RE.test(t) && !/→|->|➡️/.test(t)) {
+    if (TIME_OF_DAY_LABEL_RE.test(raw) && ACTIVITY_HINT_RE.test(t)) {
+      transport = 0;
+      attraction += 2;
+    }
+  }
+
   // 호텔+레스토랑 동시 → 호텔 라벨이면 숙소 우선
-  if (/호텔|🏨|리조트/i.test(t) && /레스토랑|미식/i.test(t) && HOTEL_LABEL_RE.test(t)) {
+  if (/호텔|🏨|리조트/i.test(t) && /레스토랑|미식/i.test(t) && HOTEL_LABEL_RE.test(raw)) {
     dining = 0;
   }
   // 조식+체크아웃 혼합 → 액티비티/기타로 (숙소 중복 방지)
   if (/체크아웃/.test(t) && /조식|스노클|다이빙|아침/.test(t)) {
     acc = 0;
     attraction += 2;
+  }
+  // 체크인+공항+다이빙 혼합 줄은 숙소 단독 항목으로 두지 않음 (상위에서 분리)
+  if (/체크인/.test(t) && (/공항/.test(t) || ACTIVITY_HINT_RE.test(t))) {
+    acc = Math.min(acc, 2);
   }
 
   const scores: [ImportItemKind, number][] = [
@@ -150,9 +216,9 @@ function classifyLine(text: string): { kind: ImportItemKind; low_confidence: boo
 
   if (bestScore === 0) return { kind: 'other', low_confidence: true };
   if (bestScore === secondScore) {
-    // 동점이면 이모지/라벨 힌트 우선
-    if (/🏨|호텔/.test(t)) return { kind: 'accommodation', low_confidence: false };
-    if (/🍽️|미식|미슐랭/.test(t)) return { kind: 'dining', low_confidence: false };
+    if (/🏨|호텔/.test(raw)) return { kind: 'accommodation', low_confidence: false };
+    if (/🍽️|미식|미슐랭/.test(raw)) return { kind: 'dining', low_confidence: false };
+    if (ACTIVITY_HINT_RE.test(t)) return { kind: 'attraction', low_confidence: false };
     return { kind: bestKind, low_confidence: true };
   }
   return { kind: bestKind, low_confidence: false };
@@ -347,6 +413,61 @@ export function parseItineraryImportText(rawText: string): ParseItineraryImportR
   let currentDayDate: string | null = meta.start_date ?? null;
   let lastItem: ParsedImportItem | null = null;
   let lastHotel: ParsedImportItem | null = null;
+  /** 호텔 카드 전에 나온 체크인·액티비티 설명을 숙소 description으로 합침 */
+  let pendingHotelNotes: string | null = null;
+
+  const flushPendingHotelNotesAsAttraction = () => {
+    if (!pendingHotelNotes) return;
+    const note = pendingHotelNotes;
+    pendingHotelNotes = null;
+    const { title, description } = splitTitleDescription(note);
+    if (!title || title.length < 2) return;
+    const item: ParsedImportItem = {
+      id: nextId(),
+      kind: 'attraction',
+      title,
+      description: description ?? (note !== title ? note : null),
+      day_index: currentDayIndex,
+      day_date: currentDayDate,
+      low_confidence: false,
+    };
+    items.push(item);
+    lastItem = item;
+  };
+
+  const pushTransport = (titleText: string, fullText: string) => {
+    const item: ParsedImportItem = {
+      id: nextId(),
+      kind: 'transport',
+      title: shortTitle(titleText),
+      description: fullText !== titleText ? fullText : null,
+      day_index: currentDayIndex,
+      day_date: currentDayDate,
+      transport_type: inferTransportType(fullText),
+      low_confidence: false,
+    };
+    const { departure, arrival } = parseTransportEndpoints(fullText);
+    item.departure = departure;
+    item.arrival = arrival;
+    items.push(item);
+    lastItem = item;
+  };
+
+  const pushAttraction = (body: string) => {
+    const { title, description } = splitTitleDescription(body);
+    if (!title || title.length < 2) return;
+    const item: ParsedImportItem = {
+      id: nextId(),
+      kind: 'attraction',
+      title,
+      description: description ?? (body !== title ? body : null),
+      day_index: currentDayIndex,
+      day_date: currentDayDate,
+      low_confidence: false,
+    };
+    items.push(item);
+    lastItem = item;
+  };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -357,6 +478,7 @@ export function parseItineraryImportText(rawText: string): ParseItineraryImportR
 
     const dayHdr = parseDayHeader(trimmed, year);
     if (dayHdr.matched) {
+      flushPendingHotelNotesAsAttraction();
       if (dayHdr.dayDate) {
         currentDayDate = dayHdr.dayDate;
         currentDayIndex = dayHdr.dayIndex;
@@ -399,6 +521,12 @@ export function parseItineraryImportText(rawText: string): ParseItineraryImportR
       continue;
     }
 
+    // 미식 노트 다음 문단 → 직전 식당 설명으로 합침
+    if (lastItem?.kind === 'dining' && looksLikeFollowUpProse(trimmed)) {
+      appendDescription(lastItem, trimmed);
+      continue;
+    }
+
     if (!shouldKeepLine(trimmed) && trimmed.length > 90) {
       if (lastItem) {
         appendDescription(lastItem, trimmed);
@@ -432,9 +560,11 @@ export function parseItineraryImportText(rawText: string): ParseItineraryImportR
       const outsideParen = afterLabel.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
       const alsoOr = outsideParen.match(/(?:혹은|또는)\s+(.+)$/);
       const descParts = [
+        pendingHotelNotes,
         engParen?.[1]?.trim() || null,
         alsoOr?.[1]?.trim() ? `대안: ${alsoOr[1].trim()}` : null,
       ].filter(Boolean) as string[];
+      pendingHotelNotes = null;
       const item: ParsedImportItem = {
         id: nextId(),
         kind: 'accommodation',
@@ -469,17 +599,65 @@ export function parseItineraryImportText(rawText: string): ParseItineraryImportR
       continue;
     }
 
+    // Gemini "이동/오전/오후/종일:" 일정 줄
+    if (TIME_OF_DAY_LABEL_RE.test(trimmed)) {
+      const body = stripScheduleLabel(trimmed);
+      if (!body) continue;
+
+      const { airport, remainder } = splitAirportAndRemainder(body);
+      if (airport) {
+        pushTransport(airport, airport);
+        if (remainder) {
+          // 체크인·장비 세팅 등은 이어지는 호텔 설명으로 (할일 분류 없음)
+          pendingHotelNotes = pendingHotelNotes
+            ? `${pendingHotelNotes}\n${remainder}`
+            : remainder;
+        }
+        continue;
+      }
+
+      // 공항 없이 체크인만 → 호텔 설명 대기
+      if (/체크인/.test(body) && !ACTIVITY_HINT_RE.test(body) && ACCOMMODATION_RE.test(body)) {
+        pendingHotelNotes = pendingHotelNotes ? `${pendingHotelNotes}\n${body}` : body;
+        continue;
+      }
+      // 체크인+액티비티 혼합(공항 없음)도 호텔 설명 우선
+      if (/체크인/.test(body) && ACTIVITY_HINT_RE.test(body)) {
+        pendingHotelNotes = pendingHotelNotes ? `${pendingHotelNotes}\n${body}` : body;
+        continue;
+      }
+
+      const { kind } = classifyLine(trimmed);
+      if (kind === 'attraction' || ACTIVITY_HINT_RE.test(body)) {
+        pushAttraction(body);
+        continue;
+      }
+      if (kind === 'transport') {
+        pushTransport(shortTitle(body), body);
+        continue;
+      }
+      // 기타는 아래 일반 분기로
+    }
+
     const stripped = stripBullet(trimmed);
     const { time, rest } = extractTime(stripped);
+    const bodyForTitle = stripScheduleLabel(rest.replace(TIME_OF_DAY_LABEL_RE, '').trim() || rest);
     const { kind, low_confidence } = classifyLine(stripped);
-    const { title, description } = splitTitleDescription(
-      rest.replace(TIME_OF_DAY_LABEL_RE, '').trim() || rest,
-    );
+    const { title, description } = splitTitleDescription(bodyForTitle || rest);
     if (!title || title.length < 2) continue;
 
     // 순수 "선정 이유"만 남은 경우
     if (REASON_RE.test(title) && lastItem) {
       appendDescription(lastItem, title.replace(REASON_RE, '').trim() || title);
+      continue;
+    }
+
+    // 식당 직후 자유 문장이 other/attraction으로 잡히면 설명으로 흡수
+    if (
+      lastItem?.kind === 'dining' &&
+      (kind === 'other' || (kind === 'attraction' && looksLikeFollowUpProse(trimmed)))
+    ) {
+      appendDescription(lastItem, trimmed);
       continue;
     }
 
@@ -509,12 +687,18 @@ export function parseItineraryImportText(rawText: string): ParseItineraryImportR
       item.check_in_date = currentDayDate;
       item.check_out_date = currentDayDate ? addDays(currentDayDate, 1) : null;
       item.title = cleanHotelName(item.title);
+      if (pendingHotelNotes) {
+        appendDescription(item, pendingHotelNotes);
+        pendingHotelNotes = null;
+      }
       lastHotel = item;
     }
 
     items.push(item);
     lastItem = item;
   }
+
+  flushPendingHotelNotesAsAttraction();
 
   // meta 날짜가 비었으면 day_titles/items에서 보정
   const dated = [

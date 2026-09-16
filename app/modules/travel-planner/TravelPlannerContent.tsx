@@ -2874,7 +2874,7 @@ export function TravelPlannerContent() {
                       <button
                         type="button"
                         onClick={() => void handleEnableDiary()}
-                        className="cursor-pointer rounded-lg border-0 bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 hover:bg-violet-200"
+                        className="cursor-pointer whitespace-nowrap shrink-0 rounded-lg border-0 bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 hover:bg-violet-200"
                       >
                         {tt('diary_start_button')}
                       </button>
