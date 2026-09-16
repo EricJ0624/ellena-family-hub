@@ -1,11 +1,13 @@
 import type { TravelDiaryEntry } from '@/lib/modules/travel-planner/diary-types';
 import type { UnifiedItineraryItem } from '@/lib/modules/travel-planner/unified-itinerary';
+import { compareUnifiedItineraryOrder } from '@/lib/modules/travel-planner/unified-itinerary';
 import { isDiaryPurgedEntry } from '@/lib/modules/travel-planner/diary-purge';
 
 export type DiaryTimelineSlot = {
   key: string;
   day_date: string;
   title: string;
+  start_time?: string | null;
   source_kind: UnifiedItineraryItem['kind'] | null;
   source_id: string | null;
   address?: string | null;
@@ -25,6 +27,25 @@ function entryKey(e: TravelDiaryEntry): string {
 function sourceKey(kind: string | null | undefined, id: string | null | undefined): string | null {
   if (!kind || !id) return null;
   return `${kind}:${id}`;
+}
+
+function compareDiarySlots(a: DiaryTimelineSlot, b: DiaryTimelineSlot): number {
+  return compareUnifiedItineraryOrder(
+    {
+      day_date: a.day_date,
+      start_time: a.start_time,
+      title: a.title,
+      kind: (a.source_kind ?? 'itinerary') as UnifiedItineraryItem['kind'],
+      id: a.source_id ?? a.key,
+    },
+    {
+      day_date: b.day_date,
+      start_time: b.start_time,
+      title: b.title,
+      kind: (b.source_kind ?? 'itinerary') as UnifiedItineraryItem['kind'],
+      id: b.source_id ?? b.key,
+    },
+  );
 }
 
 export function buildDiaryTimelineSlots(
@@ -52,28 +73,30 @@ export function buildDiaryTimelineSlots(
   const slots: DiaryTimelineSlot[] = unified
     .filter((u) => !hiddenKeys.has(`${u.kind}:${u.id}`))
     .map((u) => {
-    const k = `${u.kind}:${u.id}`;
-    return {
-      key: k,
-      day_date: u.day_date,
-      title: u.title,
-      source_kind: u.kind,
-      source_id: u.id,
-      address: u.address ?? null,
-      place_id: u.place_id ?? null,
-      latitude: u.latitude ?? null,
-      longitude: u.longitude ?? null,
-      field_record_kind: u.field_record_kind ?? null,
-      field_track_id: u.field_track_id ?? null,
-      entry: entryBySource.get(k) ?? null,
-    };
-  });
+      const k = `${u.kind}:${u.id}`;
+      return {
+        key: k,
+        day_date: u.day_date,
+        title: u.title,
+        start_time: u.start_time ?? null,
+        source_kind: u.kind,
+        source_id: u.id,
+        address: u.address ?? null,
+        place_id: u.place_id ?? null,
+        latitude: u.latitude ?? null,
+        longitude: u.longitude ?? null,
+        field_record_kind: u.field_record_kind ?? null,
+        field_track_id: u.field_track_id ?? null,
+        entry: entryBySource.get(k) ?? null,
+      };
+    });
 
   for (const e of orphanEntries) {
     slots.push({
       key: entryKey(e),
       day_date: e.day_date,
       title: e.note?.trim() || '—',
+      start_time: null,
       source_kind: null,
       source_id: null,
       address: null,
@@ -84,10 +107,7 @@ export function buildDiaryTimelineSlots(
     });
   }
 
-  slots.sort((a, b) => {
-    if (a.day_date !== b.day_date) return a.day_date.localeCompare(b.day_date);
-    return a.key.localeCompare(b.key);
-  });
+  slots.sort(compareDiarySlots);
 
   return slots;
 }
@@ -118,6 +138,7 @@ export function buildHiddenDiarySlots(
       key: `hidden:${e.id}`,
       day_date: u?.day_date ?? e.day_date,
       title: (u?.title ?? e.note?.trim()) || '—',
+      start_time: u?.start_time ?? null,
       source_kind: (u?.kind ?? e.source_kind) as DiaryTimelineSlot['source_kind'],
       source_id: u?.id ?? e.source_id,
       address: u?.address ?? null,
@@ -130,10 +151,7 @@ export function buildHiddenDiarySlots(
     });
   }
 
-  slots.sort((a, b) => {
-    if (a.day_date !== b.day_date) return a.day_date.localeCompare(b.day_date);
-    return a.key.localeCompare(b.key);
-  });
+  slots.sort(compareDiarySlots);
 
   return slots;
 }

@@ -36,13 +36,44 @@ export type UnifiedItineraryItem = {
   show_in_itinerary: boolean;
 };
 
-function sortUnifiedItems(a: UnifiedItineraryItem, b: UnifiedItineraryItem): number {
+/** Same-day order when start_time is missing — arrival/이동이 숙소·식사보다 앞에 오도록 */
+const KIND_ORDER: Record<UnifiedItineraryKind, number> = {
+  transport: 0,
+  attraction: 1,
+  itinerary: 2,
+  dining: 3,
+  accommodation: 4,
+};
+
+function effectiveSortTime(item: Pick<UnifiedItineraryItem, 'start_time' | 'title' | 'kind'>): string {
+  const raw = item.start_time && String(item.start_time).trim();
+  if (raw) return raw.substring(0, 5);
+  const title = item.title || '';
+  if (item.kind === 'transport' && /공항|airport/i.test(title) && /도착|arrival/i.test(title)) {
+    return '06:00';
+  }
+  if (item.kind === 'transport' && /공항|airport/i.test(title) && /출발|departure|체크아웃/i.test(title)) {
+    return '21:00';
+  }
+  return '12:00';
+}
+
+export function compareUnifiedItineraryOrder(
+  a: Pick<UnifiedItineraryItem, 'day_date' | 'start_time' | 'title' | 'kind' | 'id'>,
+  b: Pick<UnifiedItineraryItem, 'day_date' | 'start_time' | 'title' | 'kind' | 'id'>,
+): number {
   if (a.day_date !== b.day_date) return a.day_date.localeCompare(b.day_date);
-  const st = (t: string | null | undefined) => (t && String(t).trim() ? String(t).trim().substring(0, 5) : '12:00');
-  const ta = st(a.start_time);
-  const tb = st(b.start_time);
+  const ta = effectiveSortTime(a);
+  const tb = effectiveSortTime(b);
   if (ta !== tb) return ta.localeCompare(tb);
-  return `${a.kind}:${a.id}`.localeCompare(`${b.kind}:${b.id}`);
+  const ka = KIND_ORDER[a.kind] ?? 9;
+  const kb = KIND_ORDER[b.kind] ?? 9;
+  if (ka !== kb) return ka - kb;
+  return String(a.id).localeCompare(String(b.id));
+}
+
+function sortUnifiedItems(a: UnifiedItineraryItem, b: UnifiedItineraryItem): number {
+  return compareUnifiedItineraryOrder(a, b);
 }
 
 /**
@@ -126,7 +157,11 @@ export function buildUnifiedItineraries(params: {
     ? params.transports.filter((x) => x.show_in_itinerary)
     : params.transports;
   for (const t of transportFilter) {
-    const title = buildTransportItineraryTitle(t.departure, t.arrival) || (t.memo?.trim() ? t.memo.trim() : '—');
+    const title =
+      buildTransportItineraryTitle(t.departure, t.arrival) ||
+      (t.memo?.trim() ? t.memo.trim() : '—');
+    const arrivalLabel = typeof t.arrival === 'string' ? t.arrival.trim() : '';
+    const departureLabel = typeof t.departure === 'string' ? t.departure.trim() : '';
     rows.push({
       id: t.id,
       kind: 'transport',
@@ -136,8 +171,8 @@ export function buildUnifiedItineraries(params: {
       end_time: t.end_time,
       title,
       description: t.memo,
-      address: null,
-      place_id: null,
+      address: arrivalLabel || departureLabel || null,
+      place_id: t.arrival_place_id || t.departure_place_id || null,
       latitude: null,
       longitude: null,
       transport_type: t.transport_type,

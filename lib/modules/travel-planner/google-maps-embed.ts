@@ -63,9 +63,8 @@ function mapsApiKey(): string {
 
 export function canShowDiaryPlaceMap(
   item: GoogleMapsPlaceRef,
-  sourceKind?: string | null,
+  _sourceKind?: string | null,
 ): boolean {
-  if (sourceKind === 'transport') return false;
   const addr = typeof item.address === 'string' ? item.address.trim() : '';
   return Boolean(buildGoogleMapsViewUrl(item) || addr);
 }
