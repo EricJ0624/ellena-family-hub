@@ -95,13 +95,19 @@ const CSS = `
   .section-head h2 { margin: 0; font-size: 20px; }
   .section-head span { font-size: 11px; color: #94a3b8; }
   .accent-line { height: 1px; background: #D88C75; margin-bottom: 18px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
   .ov-card {
     background: #fff;
     border: 1px solid #f1f5f9;
     border-radius: 16px;
     padding: 14px;
     page-break-inside: avoid;
+    min-width: 0;
   }
   .ov-title {
     display: flex;
@@ -126,7 +132,7 @@ const CSS = `
   }
   .row {
     display: grid;
-    grid-template-columns: 7.5rem 1fr;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
     gap: 8px;
     padding: 10px 0;
     border-bottom: 1px solid #f1f5f9;
@@ -134,7 +140,23 @@ const CSS = `
   }
   .row:last-child { border-bottom: none; }
   .row dt { color: #94a3b8; font-weight: 500; margin: 0; }
-  .row dd { margin: 0; font-weight: 700; }
+  .row dd {
+    margin: 0;
+    font-weight: 700;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  /* 미리보기(스마트폰 iframe): 2열을 세로 스택. 인쇄/PDF(@media print)는 기존 2열 유지 */
+  @media screen and (max-width: 640px) {
+    .page { padding: 12px 10px 16px; }
+    h1 { font-size: 22px; }
+    .grid2 { grid-template-columns: 1fr; }
+    .row {
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: 6px;
+    }
+  }
   .day-card {
     background: #fff;
     border: 1px solid #f1f5f9;
@@ -424,6 +446,7 @@ export function buildItineraryDocumentHtml(params: {
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
   /*__ITIN_EMBEDDED_FONTS__*/
   ${CSS}
