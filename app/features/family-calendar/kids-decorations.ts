@@ -104,18 +104,17 @@ const SAFE_SLOTS: IdleSlot[] = [
   { size: 'md', className: 'top-[2.8cqmin] right-[9cqmin] w-[4.6cqmin] -rotate-10' },
   { size: 'sm', className: 'top-[6.5cqmin] right-[3.2cqmin] w-[3.4cqmin] rotate-[8deg]' },
   { size: 'md', className: 'top-[1.8cqmin] right-[1.6cqmin] w-[4.8cqmin] rotate-[-16deg]' },
-  // 좌측 여백 스트립 (그리드 안으로 침범 금지)
-  { size: 'lg', className: 'top-[30cqmin] left-[0.4cqmin] w-[4.6cqmin] rotate-[-12deg]' },
-  { size: 'md', className: 'top-[48cqmin] left-[0.6cqmin] w-[4.2cqmin] rotate-[8deg]' },
-  { size: 'sm', className: 'top-[66cqmin] left-[0.5cqmin] w-[3.4cqmin] -rotate-8' },
-  // 우측 여백 스트립
-  { size: 'md', className: 'top-[34cqmin] right-[0.4cqmin] w-[4.4cqmin] rotate-[14deg]' },
-  { size: 'lg', className: 'top-[52cqmin] right-[0.5cqmin] w-[4.8cqmin] -rotate-6' },
-  { size: 'sm', className: 'top-[70cqmin] right-[0.5cqmin] w-[3.2cqmin] rotate-10' },
-  // Add Event 좌·우 모서리 (버튼 중앙·날짜 칸 회피)
-  { size: 'lg', className: 'bottom-[2.2cqmin] left-[0.6cqmin] w-[5cqmin] rotate-[-8deg]' },
-  { size: 'md', className: 'bottom-[2.6cqmin] left-[8cqmin] w-[4.2cqmin] rotate-[12deg]' },
-  { size: 'md', className: 'bottom-[2.2cqmin] right-[0.6cqmin] w-[4.8cqmin] -rotate-8' },
+  // 좌·우 여백 — 좁게 유지해 날짜 칸과 겹치지 않게 (회전 여유 포함)
+  { size: 'lg', className: 'top-[28cqmin] left-[0.15cqmin] w-[3.5cqmin] rotate-[-12deg]' },
+  { size: 'md', className: 'top-[46cqmin] left-[0.2cqmin] w-[3.3cqmin] rotate-[8deg]' },
+  { size: 'sm', className: 'bottom-[3cqmin] left-[0.3cqmin] w-[3cqmin] -rotate-8' },
+  { size: 'md', className: 'top-[32cqmin] right-[0.15cqmin] w-[3.4cqmin] rotate-[14deg]' },
+  { size: 'lg', className: 'top-[50cqmin] right-[0.2cqmin] w-[3.6cqmin] -rotate-6' },
+  { size: 'sm', className: 'bottom-[3.2cqmin] right-[0.3cqmin] w-[3cqmin] rotate-10' },
+  // Add Event 좌·우 — 버튼과 겹쳐도 버튼 z-index가 위
+  { size: 'lg', className: 'bottom-[1.5cqmin] left-[6cqmin] w-[5cqmin] rotate-[-8deg]' },
+  { size: 'md', className: 'bottom-[1.8cqmin] left-[16cqmin] w-[4cqmin] rotate-[12deg]' },
+  { size: 'md', className: 'bottom-[1.5cqmin] right-[6cqmin] w-[4.6cqmin] -rotate-8' },
 ];
 
 function seededShuffle<T>(items: readonly T[], seed: number): T[] {

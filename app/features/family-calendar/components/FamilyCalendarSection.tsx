@@ -116,7 +116,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   onSelectDate,
   onAdd,
 }: {
-  calendarGrid: { cells: CalendarGridCell[]; year: number; month: number };
+  calendarGrid: { cells: CalendarGridCell[]; year: number; month: number; weekRows: number };
   selectedDate: Date | null;
   isKidsTheme: boolean;
   uiTheme: UiTheme;
@@ -220,7 +220,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               </button>
             </div>
             <div className="calendar-grid-wrap relative z-[2]">
-              <div className="calendar-grid" style={{ gap: '1cqmin' }}>
+              <div
+                className="calendar-grid"
+                style={{
+                  gap: '1cqmin',
+                  gridTemplateRows: `auto repeat(${calendarGrid.weekRows}, minmax(0, 1fr))`,
+                }}
+              >
                 {weekDays.map((day, i) => (
                   <div
                     key={i}
@@ -329,20 +335,20 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               </div>
             </div>
           </div>
-          <div className="relative z-[2] w-full">
+          <div className="relative z-[3] w-full">
             {isKidsTheme && rocketTick > 0 ? (
               <img
                 key={rocketTick}
                 src="/family-calendar/emojis/rocket.png"
                 alt=""
                 aria-hidden
-                className="calendar-kids-rocket pointer-events-none absolute left-1/2 z-[3] w-[16cqmin] bg-transparent"
+                className="calendar-kids-rocket pointer-events-none absolute left-1/2 z-[4] w-[16cqmin] bg-transparent"
               />
             ) : null}
             <button
               type="button"
               onClick={handleAddClick}
-              className="calendar-kids-add-btn w-full rounded-full border-0 outline-none appearance-none transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:outline-none"
+              className="calendar-kids-add-btn relative z-[3] w-full rounded-full border-0 outline-none appearance-none transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:outline-none"
               style={{
                 padding: '2.8cqmin 3cqmin',
                 borderRadius: '999px',
@@ -591,7 +597,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       });
     }
 
-    return { cells, year: y, month: m };
+    return { cells, year: y, month: m, weekRows: Math.max(4, Math.ceil(cells.length / 7)) };
   }, [calendarMonth, events, eventMatchesDate, isKidsTheme]);
 
   const eventsOnSelectedDate = useMemo(() => {
