@@ -43,11 +43,11 @@ export function TravelFieldRecordBar({
 }: Props) {
   if (layout === 'circles') {
     const circleBtn =
-      'travel-quick-record-circle inline-flex aspect-square w-[min(46cqmin,11rem)] min-w-[7.25rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-[1.2cqmin] overflow-visible border-0 px-[2cqmin] text-center font-bold transition-[transform,box-shadow,background-color] disabled:cursor-not-allowed disabled:opacity-55';
+      'travel-quick-record-circle inline-flex aspect-square w-[min(43cqmin,10.25rem)] max-h-[min(43cqmin,10.25rem)] min-w-[6.75rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-[1.2cqmin] overflow-visible border-0 px-[2cqmin] text-center font-bold transition-[transform,box-shadow,background-color] disabled:cursor-not-allowed disabled:opacity-55';
     const iconCls =
-      'travel-quick-record-circle-icon h-[clamp(1.1rem,8cqmin,2.25rem)] w-[clamp(1.1rem,8cqmin,2.25rem)] shrink-0';
+      'travel-quick-record-circle-icon h-[clamp(1.08rem,7.6cqmin,2.2rem)] w-[clamp(1.08rem,7.6cqmin,2.2rem)] shrink-0';
     const labelCls =
-      'travel-quick-record-circle-label max-w-[95%] px-0.5 text-[clamp(0.68rem,5.2cqmin,0.9rem)] leading-snug [overflow-wrap:anywhere] [word-break:keep-all]';
+      'travel-quick-record-circle-label max-w-[95%] px-0.5 text-[clamp(0.74rem,5.8cqmin,1.02rem)] leading-snug [overflow-wrap:anywhere] [word-break:keep-all]';
 
     return (
       <div className="flex w-full min-w-0 flex-col gap-[1.5cqmin]" data-travel-field-bar="circles">

@@ -546,10 +546,9 @@ button.travel-kids-add-trip-submit {
 }
 :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .travel-quick-record-circle,
 .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .travel-quick-record-circle {
-  width: min(46cqmin, 11rem);
-  min-width: 7.25rem;
-  /* 위젯 셀이 낮아도 원형·라벨이 눌려 글자가 잘리지 않게 */
-  max-height: none;
+  width: min(43cqmin, 10.25rem);
+  min-width: 6.75rem;
+  max-height: min(43cqmin, 10.25rem);
 }
 
 /* Neo Brutal (default) */
