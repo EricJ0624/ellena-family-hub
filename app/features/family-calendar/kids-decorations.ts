@@ -111,10 +111,10 @@ const SAFE_SLOTS: IdleSlot[] = [
   { size: 'md', className: 'top-[32cqmin] right-[0.15cqmin] w-[3.4cqmin] rotate-[14deg]' },
   { size: 'lg', className: 'top-[50cqmin] right-[0.2cqmin] w-[3.6cqmin] -rotate-6' },
   { size: 'sm', className: 'bottom-[3.2cqmin] right-[0.3cqmin] w-[3cqmin] rotate-10' },
-  // Add Event 좌·우 — 버튼과 겹쳐도 버튼 z-index가 위
-  { size: 'lg', className: 'bottom-[1.5cqmin] left-[6cqmin] w-[5cqmin] rotate-[-8deg]' },
-  { size: 'md', className: 'bottom-[1.8cqmin] left-[16cqmin] w-[4cqmin] rotate-[12deg]' },
-  { size: 'md', className: 'bottom-[1.5cqmin] right-[6cqmin] w-[4.6cqmin] -rotate-8' },
+  // Add Event 위(앞)로 겹침 허용 — 장식 z가 버튼보다 높고 pointer-events-none
+  { size: 'lg', className: 'bottom-[0.2cqmin] left-[4cqmin] w-[6.5cqmin] rotate-[-10deg]' },
+  { size: 'md', className: 'bottom-[0.6cqmin] left-[22cqmin] w-[5cqmin] rotate-[14deg]' },
+  { size: 'md', className: 'bottom-[0.2cqmin] right-[4cqmin] w-[6cqmin] -rotate-8' },
 ];
 
 function seededShuffle<T>(items: readonly T[], seed: number): T[] {

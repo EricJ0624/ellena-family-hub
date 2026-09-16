@@ -86,7 +86,7 @@ const KidsIdleDecorations = memo(function KidsIdleDecorations({
 }) {
   const items = useMemo(() => layoutKidsIdleDecos(year, month), [year, month]);
   return (
-    <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden bg-transparent" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-[4] overflow-hidden bg-transparent" aria-hidden>
       {items.map((item, index) => (
         <img
           key={`${item.src}-${index}`}
@@ -149,7 +149,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         }
       >
         {isKidsTheme ? <KidsIdleDecorations year={calendarGrid.year} month={calendarGrid.month} /> : null}
-        <div className="section-header calendar-section-header relative z-[2]" style={{ marginBottom: '2.5cqmin' }}>
+        <div className="section-header calendar-section-header relative z-[5]" style={{ marginBottom: '2.5cqmin' }}>
           <h3
             className="section-title m-0 flex items-center calendar-section-title"
             style={{ color: skin.titleColor, fontWeight: 800 }}
@@ -168,7 +168,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
             style={{ gap: '2.2cqmin', flex: '1 1 0%', minHeight: 0 }}
           >
             <div
-              className="relative z-[3]"
+              className="relative z-[5]"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -219,7 +219,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                 ›
               </button>
             </div>
-            <div className="calendar-grid-wrap relative z-[2]">
+            <div className="calendar-grid-wrap relative z-[5]">
               <div
                 className="calendar-grid"
                 style={{
@@ -335,20 +335,20 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               </div>
             </div>
           </div>
-          <div className="relative z-[3] w-full">
+          <div className="relative z-[2] w-full">
             {isKidsTheme && rocketTick > 0 ? (
               <img
                 key={rocketTick}
                 src="/family-calendar/emojis/rocket.png"
                 alt=""
                 aria-hidden
-                className="calendar-kids-rocket pointer-events-none absolute left-1/2 z-[4] w-[16cqmin] bg-transparent"
+                className="calendar-kids-rocket pointer-events-none absolute left-1/2 z-[6] w-[16cqmin] bg-transparent"
               />
             ) : null}
             <button
               type="button"
               onClick={handleAddClick}
-              className="calendar-kids-add-btn relative z-[3] w-full rounded-full border-0 outline-none appearance-none transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:outline-none"
+              className="calendar-kids-add-btn relative z-[2] w-full rounded-full border-0 outline-none appearance-none transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:outline-none"
               style={{
                 padding: '2.8cqmin 3cqmin',
                 borderRadius: '999px',
