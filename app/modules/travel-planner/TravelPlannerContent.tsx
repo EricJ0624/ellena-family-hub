@@ -1427,14 +1427,21 @@ export function TravelPlannerContent() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || tt('create_failed'));
+      const created = json.data as TravelTrip | undefined;
       setFormTitle('');
       setFormDestination('');
       setFormStartDate('');
       setFormEndDate('');
       setFormTripCurrency('KRW');
       setShowTripForm(false);
-      await fetchTrips();
-      if (json.data?.id) router.replace(`/travel?tripId=${json.data.id}`);
+      if (created?.id) {
+        setSelectedTrip(created);
+        setTrips((prev) => (prev.some((t) => t.id === created.id) ? prev : [created, ...prev]));
+        router.replace(`/travel?tripId=${encodeURIComponent(created.id)}`);
+        void fetchTrips();
+      } else {
+        await fetchTrips();
+      }
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : tt('create_failed'));
     } finally {
@@ -3906,7 +3913,7 @@ export function TravelPlannerContent() {
           </div>
         ) : (
           <div className="glass-panel rounded-xl p-6 text-center">
-            {loading && urlTripId ? (
+            {loading ? (
               <div className="text-slate-500">
                 <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
                 {tt('dashboard_trips_loading')}
@@ -3915,13 +3922,22 @@ export function TravelPlannerContent() {
               <>
                 <MapPin className="mx-auto mb-4 h-12 w-12 text-slate-400 opacity-60" />
                 <p className="m-0 text-sm text-slate-500">{tt('select_or_add_trip')}</p>
-                <button
-                  type="button"
-                  onClick={() => router.push('/dashboard')}
-                  className="mt-4 cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
-                >
-                  {tt('go_to_dashboard')}
-                </button>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTripForm(true)}
+                    className="cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
+                  >
+                    {tt('add_trip')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/dashboard')}
+                    className="cursor-pointer rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700"
+                  >
+                    {tt('go_to_dashboard')}
+                  </button>
+                </div>
               </>
             )}
           </div>
