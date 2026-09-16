@@ -783,6 +783,30 @@ export function TravelPlannerContent() {
     if (trip) setSelectedTrip(trip);
   }, [urlTripId, trips]);
 
+  // 여행 미선택 빈 화면 대신 대시보드(또는 남은 여행)로 보냄
+  useEffect(() => {
+    if (!currentGroupId || loading || showTripForm || urlOpenAdd) return;
+    if (selectedTrip) return;
+    if (urlTripId && trips.some((t) => t.id === urlTripId)) return;
+
+    if (trips.length > 0) {
+      const next = trips[0];
+      setSelectedTrip(next);
+      router.replace(`/travel?tripId=${encodeURIComponent(next.id)}`);
+      return;
+    }
+    router.replace('/dashboard');
+  }, [
+    currentGroupId,
+    loading,
+    showTripForm,
+    urlOpenAdd,
+    selectedTrip,
+    urlTripId,
+    trips,
+    router,
+  ]);
+
   // 자동완성/지도 공용 스크립트: 필요한 시점에만 로드
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1324,7 +1348,9 @@ export function TravelPlannerContent() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'travel_trips', filter: `group_id=eq.${groupId}` }, (payload: { eventType?: string; type?: string; old?: { id?: string }; new?: unknown }) => {
         fetchTrips();
         const isDelete = payload?.eventType === 'DELETE' || payload?.type === 'DELETE' || (payload?.old?.id != null && payload?.new == null);
-        if (isDelete && payload?.old?.id === selectedTripIdRef.current) setSelectedTrip(null);
+        if (isDelete && payload?.old?.id === selectedTripIdRef.current) {
+          router.replace('/dashboard');
+        }
       })
       .subscribe();
     channels.push(chTrips);
@@ -1589,9 +1615,13 @@ export function TravelPlannerContent() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || tt('delete_failed'));
       const wasCurrent = selectedTrip?.id === trip.id;
-      if (wasCurrent) setSelectedTrip(null);
-      await fetchTrips();
-      if (wasCurrent) router.push('/dashboard');
+      setTrips((prev) => prev.filter((t) => t.id !== trip.id));
+      if (wasCurrent) {
+        // 빈 선택 화면을 거치지 않고 바로 대시보드로 이동
+        router.replace('/dashboard');
+      } else {
+        void fetchTrips();
+      }
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : tt('delete_failed'));
     }
@@ -3912,34 +3942,9 @@ export function TravelPlannerContent() {
 
           </div>
         ) : (
-          <div className="glass-panel rounded-xl p-6 text-center">
-            {loading ? (
-              <div className="text-slate-500">
-                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
-                {tt('dashboard_trips_loading')}
-              </div>
-            ) : (
-              <>
-                <MapPin className="mx-auto mb-4 h-12 w-12 text-slate-400 opacity-60" />
-                <p className="m-0 text-sm text-slate-500">{tt('select_or_add_trip')}</p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowTripForm(true)}
-                    className="cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
-                  >
-                    {tt('add_trip')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => router.push('/dashboard')}
-                    className="cursor-pointer rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700"
-                  >
-                    {tt('go_to_dashboard')}
-                  </button>
-                </div>
-              </>
-            )}
+          <div className="glass-panel rounded-xl p-6 text-center text-slate-500">
+            <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
+            {tt('dashboard_trips_loading')}
           </div>
         )}
 

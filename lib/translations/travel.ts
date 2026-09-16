@@ -25,7 +25,6 @@ export type TravelTranslations = {
   view_on_map: string;
   no_accommodation: string;
   no_dining: string;
-  select_or_add_trip: string;
   /** 대시보드 카드 빈 상태 안내 */
   dashboard_card_empty: string;
   dashboard_select_group: string;
@@ -311,7 +310,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: '지도에서 보기',
     no_accommodation: '등록된 숙소가 없습니다.',
     no_dining: '등록된 먹거리가 없습니다.',
-    select_or_add_trip: '대시보드에서 여행을 선택하거나 여행을 추가해 주세요.',
     dashboard_card_empty: '여행 일정과 경비를 함께 관리해 보세요. 여행을 추가해 보세요.',
     dashboard_select_group: '여행 플래너를 보려면 그룹을 선택해 주세요.',
     dashboard_trips_loading: '여행 목록 불러오는 중...',
@@ -593,7 +591,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: 'View on map',
     no_accommodation: 'No accommodations yet.',
     no_dining: 'No dining yet.',
-    select_or_add_trip: 'Select a trip from the dashboard or add a new one.',
     dashboard_card_empty: 'Plan trips and track expenses together. Add a trip to get started.',
     dashboard_select_group: 'Select a group to use the travel planner.',
     dashboard_trips_loading: 'Loading trips…',
@@ -875,7 +872,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: '地図で見る',
     no_accommodation: '宿泊がありません。',
     no_dining: '食事がありません。',
-    select_or_add_trip: 'ダッシュボードで旅行を選択するか、追加してください。',
     dashboard_card_empty: '旅行の日程と支出を一緒に管理しましょう。旅行を追加してみてください。',
     dashboard_select_group: '旅行プランナーを使うにはグループを選択してください。',
     dashboard_trips_loading: '旅行一覧を読み込み中…',
@@ -1157,7 +1153,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: '在地图中查看',
     no_accommodation: '暂无住宿。',
     no_dining: '暂无餐饮。',
-    select_or_add_trip: '请在仪表盘选择旅行或添加新旅行。',
     dashboard_card_empty: '一起管理行程与开销。试试添加一次旅行。',
     dashboard_select_group: '请选择群组以使用旅行计划。',
     dashboard_trips_loading: '正在加载旅行列表…',
@@ -1439,7 +1434,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: '在地圖中查看',
     no_accommodation: '尚無住宿。',
     no_dining: '尚無餐飲。',
-    select_or_add_trip: '請在儀表板選擇旅行或新增旅行。',
     dashboard_card_empty: '一起管理行程與花費。試著新增一筆旅行。',
     dashboard_select_group: '請選擇群組以使用旅行計畫。',
     dashboard_trips_loading: '正在載入旅行清單…',
@@ -1721,7 +1715,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: 'Ver en el mapa',
     no_accommodation: 'Aún no hay alojamiento.',
     no_dining: 'Aún no hay cenas.',
-    select_or_add_trip: 'Seleccione un viaje desde el panel o agregue uno nuevo.',
     dashboard_card_empty: 'Planifiquen viajes y realicen un seguimiento de los gastos juntos. Añade un viaje para empezar.',
     dashboard_select_group: 'Seleccione un grupo para utilizar el planificador de viajes.',
     dashboard_trips_loading: 'Cargando viajes…',
@@ -2002,7 +1995,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: 'Voir sur la carte',
     no_accommodation: 'Aucun hébergement pour l\'instant.',
     no_dining: 'Pas encore de repas.',
-    select_or_add_trip: 'Sélectionnez un voyage dans le tableau de bord ou ajoutez-en un nouveau.',
     dashboard_card_empty: 'Planifiez vos voyages et suivez vos dépenses ensemble. Ajoutez un voyage pour commencer.',
     dashboard_select_group: 'Sélectionnez un groupe pour utiliser le planificateur de voyage.',
     dashboard_trips_loading: 'Chargement des voyages…',
@@ -2283,7 +2275,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: 'Auf der Karte anzeigen',
     no_accommodation: 'Noch keine Unterkunft.',
     no_dining: 'Noch kein Essen.',
-    select_or_add_trip: 'Wählen Sie im Dashboard eine Reise aus oder fügen Sie eine neue hinzu.',
     dashboard_card_empty: 'Planen Sie gemeinsam Reisen und verfolgen Sie die Ausgaben. Fügen Sie eine Reise hinzu, um loszulegen.',
     dashboard_select_group: 'Wählen Sie eine Gruppe aus, um den Reiseplaner zu verwenden.',
     dashboard_trips_loading: 'Fahrten werden geladen…',
@@ -2564,7 +2555,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: 'Visualizza sulla mappa',
     no_accommodation: 'Nessuna sistemazione ancora.',
     no_dining: 'Non si cena ancora.',
-    select_or_add_trip: 'Seleziona un viaggio dalla dashboard o aggiungine uno nuovo.',
     dashboard_card_empty: 'Pianificate insieme i viaggi e monitorate le spese. Aggiungi un viaggio per iniziare.',
     dashboard_select_group: 'Seleziona un gruppo per utilizzare il pianificatore di viaggio.',
     dashboard_trips_loading: 'Caricamento viaggi...',
@@ -2845,7 +2835,6 @@ const travel: Record<LangCode, TravelTranslations> = {
     view_on_map: 'Ver no mapa',
     no_accommodation: 'Nenhuma hospedagem ainda.',
     no_dining: 'Nenhuma refeição ainda.',
-    select_or_add_trip: 'Selecione uma viagem no painel ou adicione uma nova.',
     dashboard_card_empty: 'Planeje viagens e acompanhe despesas juntos. Adicione uma viagem para começar.',
     dashboard_select_group: 'Selecione um grupo para usar o planejador de viagens.',
     dashboard_trips_loading: 'Carregando viagens…',
