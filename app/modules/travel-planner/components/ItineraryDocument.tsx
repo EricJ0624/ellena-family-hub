@@ -3,8 +3,11 @@
 /**
  * 일정표 미리보기 — PDF와 동일한 HTML 단일 소스(`buildItineraryDocumentHtml`)를 iframe으로 표시합니다.
  * 디자인 수정은 `lib/modules/travel-planner/itinerary-document-html.ts` 한곳만 하면 됩니다.
+ *
+ * Static Maps는 iframe srcdoc 안 img로 직접 넣으면 HTTP 리퍼러 제한에 걸려 깨질 수 있어,
+ * 부모 문서에서 fetch → blob URL로 치환한 뒤 srcdoc에 넣습니다.
  */
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TravelAccommodation, TravelTrip } from '@/lib/modules/travel-planner/types';
 import { buildItineraryDocumentHtml } from '@/lib/modules/travel-planner/itinerary-document-html';
 
@@ -55,6 +58,10 @@ export function printItineraryDocumentPreview(): void {
   frame?.contentWindow?.print();
 }
 
+function isGoogleStaticMapUrl(url: string): boolean {
+  return /maps\.googleapis\.com\/maps\/api\/staticmap/i.test(url);
+}
+
 export function ItineraryDocument({
   trip,
   items,
@@ -68,6 +75,55 @@ export function ItineraryDocument({
   mapImageUrl,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [mapBlobUrl, setMapBlobUrl] = useState<string | null>(null);
+  const [mapPlaceholder, setMapPlaceholder] = useState<'no_coords' | 'loading' | 'load_failed' | null>(
+    mapImageUrl ? 'loading' : 'no_coords',
+  );
+
+  useEffect(() => {
+    const raw = (mapImageUrl ?? '').trim();
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    setMapBlobUrl(null);
+
+    if (!raw) {
+      setMapPlaceholder('no_coords');
+      return () => {};
+    }
+
+    if (!isGoogleStaticMapUrl(raw)) {
+      setMapBlobUrl(raw);
+      setMapPlaceholder(null);
+      return () => {};
+    }
+
+    setMapPlaceholder('loading');
+
+    (async () => {
+      try {
+        const res = await fetch(raw);
+        if (!res.ok) throw new Error(`staticmap ${res.status}`);
+        const blob = await res.blob();
+        if (cancelled) return;
+        // Google error image is often still 200 with tiny payload / gif; accept if image/*
+        if (!blob.type.startsWith('image/')) throw new Error('not image');
+        objectUrl = URL.createObjectURL(blob);
+        setMapBlobUrl(objectUrl);
+        setMapPlaceholder(null);
+      } catch {
+        if (!cancelled) {
+          setMapBlobUrl(null);
+          setMapPlaceholder('load_failed');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [mapImageUrl]);
 
   const html = useMemo(
     () =>
@@ -89,7 +145,8 @@ export function ItineraryDocument({
         travelerNames,
         travelerNationalities,
         coverImageUrl,
-        mapImageUrl,
+        mapImageUrl: mapBlobUrl,
+        mapPlaceholder,
       }),
     [
       trip,
@@ -101,7 +158,8 @@ export function ItineraryDocument({
       travelerNames,
       travelerNationalities,
       coverImageUrl,
-      mapImageUrl,
+      mapBlobUrl,
+      mapPlaceholder,
     ],
   );
 

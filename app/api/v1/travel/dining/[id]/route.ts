@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
+import { enrichMissingPlaceCoordinates } from '@/lib/modules/travel-planner/resolve-place-coordinates';
 
 /** PATCH: 먹거리 수정 */
 export async function PATCH(
@@ -25,19 +26,18 @@ export async function PATCH(
 
     const supabase = getSupabaseServerClient();
 
+    const { data: existing } = await supabase
+      .from('travel_dining')
+      .select('day_date, end_day_date, name, address, place_id, latitude, longitude')
+      .eq('id', id)
+      .eq('group_id', groupId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
     let existingEnd: string | null = null;
     let existingDay: string | null = null;
-    if (body.end_day_date !== undefined || body.day_date !== undefined) {
-      const { data: ex } = await supabase
-        .from('travel_dining')
-        .select('day_date, end_day_date')
-        .eq('id', id)
-        .eq('group_id', groupId)
-        .is('deleted_at', null)
-        .maybeSingle();
-      if (ex?.day_date) existingDay = String(ex.day_date).slice(0, 10);
-      if (ex?.end_day_date) existingEnd = String(ex.end_day_date).slice(0, 10);
-    }
+    if (existing?.day_date) existingDay = String(existing.day_date).slice(0, 10);
+    if (existing?.end_day_date) existingEnd = String(existing.end_day_date).slice(0, 10);
 
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -69,6 +69,38 @@ export async function PATCH(
     if (body.latitude !== undefined) updatePayload.latitude = body.latitude == null ? null : Number(body.latitude);
     if (body.longitude !== undefined) updatePayload.longitude = body.longitude == null ? null : Number(body.longitude);
     if (body.show_in_itinerary !== undefined) updatePayload.show_in_itinerary = body.show_in_itinerary === true;
+
+    const enriched = await enrichMissingPlaceCoordinates(supabase, {
+      place_id:
+        (updatePayload.place_id as string | null | undefined) ??
+        (existing?.place_id as string | null | undefined) ??
+        null,
+      name:
+        (updatePayload.name as string | undefined) ??
+        (existing?.name as string | undefined) ??
+        null,
+      address:
+        (updatePayload.address as string | null | undefined) ??
+        (existing?.address as string | null | undefined) ??
+        null,
+      latitude:
+        updatePayload.latitude !== undefined
+          ? (updatePayload.latitude as number | null)
+          : ((existing?.latitude as number | null | undefined) ?? null),
+      longitude:
+        updatePayload.longitude !== undefined
+          ? (updatePayload.longitude as number | null)
+          : ((existing?.longitude as number | null | undefined) ?? null),
+    });
+    if (enriched.latitude != null && updatePayload.latitude === undefined) {
+      updatePayload.latitude = enriched.latitude;
+    }
+    if (enriched.longitude != null && updatePayload.longitude === undefined) {
+      updatePayload.longitude = enriched.longitude;
+    }
+    if (enriched.place_id && updatePayload.place_id === undefined && !existing?.place_id) {
+      updatePayload.place_id = enriched.place_id;
+    }
 
     const { data, error } = await supabase
       .from('travel_dining')

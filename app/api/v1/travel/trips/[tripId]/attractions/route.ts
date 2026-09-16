@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, assertTripInGroup } from '@/lib/api-guards';
 import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
+import { enrichMissingPlaceCoordinates } from '@/lib/modules/travel-planner/resolve-place-coordinates';
 
 /** GET: 해당 여행의 관광지 목록 */
 export async function GET(
@@ -114,6 +115,17 @@ export async function POST(
     if (description) insertPayload.description = String(description).trim();
     if (latitude != null && typeof latitude === 'number') insertPayload.latitude = latitude;
     if (longitude != null && typeof longitude === 'number') insertPayload.longitude = longitude;
+
+    const enriched = await enrichMissingPlaceCoordinates(supabase, {
+      place_id: (insertPayload.place_id as string | null | undefined) ?? null,
+      name: insertPayload.name as string,
+      address: (insertPayload.address as string | null | undefined) ?? null,
+      latitude: insertPayload.latitude as number | undefined,
+      longitude: insertPayload.longitude as number | undefined,
+    });
+    if (enriched.latitude != null) insertPayload.latitude = enriched.latitude;
+    if (enriched.longitude != null) insertPayload.longitude = enriched.longitude;
+    if (enriched.place_id) insertPayload.place_id = enriched.place_id;
 
     const { data, error } = await supabase
       .from('travel_attractions')

@@ -2879,82 +2879,18 @@ export function TravelPlannerContent() {
       {selectedTrip ? (
           <div className="glass-panel rounded-xl p-5">
             <div className="mb-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="m-0 text-[20px] font-bold text-slate-800">{selectedTrip.title}</h2>
-                  {selectedTrip.destination && (
-                    <p className="m-0 mt-1 flex items-center gap-1.5 text-sm text-slate-500">
-                      <MapPin className="h-4 w-4" />
-                      {selectedTrip.destination}
-                    </p>
-                  )}
-                  <p className="m-0 mt-1 text-[13px] text-slate-400">
-                    <Calendar className="mr-1 inline h-[14px] w-[14px]" />
-                    {selectedTrip.start_date} ~ {selectedTrip.end_date}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span
-                      className={[
-                        'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-                        normalizeTripStatus(selectedTrip.status) === 'active'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : normalizeTripStatus(selectedTrip.status) === 'completed'
-                            ? 'bg-slate-200 text-slate-700'
-                            : 'bg-sky-100 text-sky-800',
-                      ].join(' ')}
-                    >
-                      {tripStatusLabel(selectedTrip.status)}
-                    </span>
-                    {selectedTrip.diary_enabled ? (
-                      <span className="text-[11px] font-medium text-violet-700">{tt('diary_started_label')}</span>
-                    ) : canUserOptInDiaryForTrip(selectedTrip) ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleEnableDiary()}
-                        className="cursor-pointer whitespace-nowrap shrink-0 rounded-lg border-0 bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 hover:bg-violet-200"
-                      >
-                        {tt('diary_start_button')}
-                      </button>
-                    ) : null}
-                  </div>
-                  {showDiaryCompletedInviteHint(selectedTrip) && (
-                    <p className="m-0 mt-1.5 text-[12px] text-violet-700">{tt('diary_completed_invite_hint')}</p>
-                  )}
-                  <TravelFieldRecordHost
-                    groupId={currentGroupId}
-                    tripId={selectedTrip.id}
-                    mode="page"
-                    enabled={Boolean(selectedTrip.id)}
-                    labels={{
-                      checkin: tt('field_checkin'),
-                      route_start: tt('field_route_start'),
-                      route_stop: tt('field_route_stop'),
-                      need_active_trip: tt('field_need_active_trip'),
-                      recording: tt('field_recording'),
-                    }}
-                    pickLabels={{
-                      title: tt('field_pick_title'),
-                      create: tt('field_pick_create'),
-                      attach_hint: tt('field_pick_attach'),
-                      cancel: tt('field_pick_cancel'),
-                    }}
-                    onSaved={() => {
-                      if (selectedTrip?.id) fetchItineraries(selectedTrip.id);
-                    }}
-                  />
-                  <p className="m-0 mt-1 text-xs text-slate-500">
-                    {tt('label_trip_currency')}: <strong className="text-slate-700">{tripCurrencyCode}</strong>
-                  </p>
-                  <p className="m-0 mt-1 text-xs text-slate-400">
-                    {tt('ui_created_label')}: {getDisplayName(selectedTrip.created_by)}
-                    {selectedTrip.updated_by != null && ` · ${tt('ui_updated_label')}: ${getDisplayName(selectedTrip.updated_by)}`}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <h2
+                  className="m-0 min-w-0 flex-1 truncate text-base font-bold leading-tight text-slate-800 sm:text-[20px]"
+                  title={selectedTrip.title}
+                >
+                  {selectedTrip.title}
+                </h2>
+                <div className="flex shrink-0 items-center gap-1">
                   <button
                     type="button"
                     onClick={() => setTravelAttachmentTarget({ entityType: 'travel_trip', entityId: selectedTrip.id })}
-                    className="cursor-pointer rounded-lg border-0 bg-blue-50 px-3 py-2 text-[13px] font-semibold text-blue-700"
+                    className="cursor-pointer rounded-md border-0 bg-blue-50 px-2 py-1.5 text-[11px] font-semibold text-blue-700 sm:px-2.5 sm:text-[12px]"
                   >
                     {tt('ui_photo')}
                   </button>
@@ -2964,21 +2900,94 @@ export function TravelPlannerContent() {
                       fillTripFormFromSelected();
                       setShowTripEditForm(true);
                     }}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-slate-100 px-3 py-2 text-[13px] font-semibold text-slate-600"
+                    className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-md border-0 bg-slate-100 p-1.5 text-[11px] font-semibold text-slate-600 sm:px-2.5 sm:py-1.5 sm:text-[12px]"
+                    title={tt('edit')}
+                    aria-label={tt('edit')}
                   >
-                    <Pencil className="h-4 w-4" />
-                    {tt('edit')}
+                    <Pencil className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">{tt('edit')}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDeleteTrip(selectedTrip)}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-red-100 px-3 py-2 text-[13px] font-semibold text-red-800"
+                    className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-md border-0 bg-red-100 p-1.5 text-[11px] font-semibold text-red-800 sm:px-2.5 sm:py-1.5 sm:text-[12px]"
+                    title={tt('delete')}
+                    aria-label={tt('delete')}
                   >
-                    <Trash2 className="h-4 w-4" />
-                    {tt('delete')}
+                    <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">{tt('delete')}</span>
                   </button>
                 </div>
               </div>
+              {selectedTrip.destination && (
+                <p className="m-0 mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+                  <MapPin className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 truncate">{selectedTrip.destination}</span>
+                </p>
+              )}
+              <p className="m-0 mt-1 flex min-w-0 items-center gap-1 whitespace-nowrap text-[12px] text-slate-400 sm:text-[13px]">
+                <Calendar className="h-[14px] w-[14px] shrink-0" aria-hidden />
+                <span className="min-w-0 truncate">
+                  {selectedTrip.start_date} ~ {selectedTrip.end_date}
+                </span>
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span
+                  className={[
+                    'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                    normalizeTripStatus(selectedTrip.status) === 'active'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : normalizeTripStatus(selectedTrip.status) === 'completed'
+                        ? 'bg-slate-200 text-slate-700'
+                        : 'bg-sky-100 text-sky-800',
+                  ].join(' ')}
+                >
+                  {tripStatusLabel(selectedTrip.status)}
+                </span>
+                {selectedTrip.diary_enabled ? (
+                  <span className="text-[11px] font-medium text-violet-700">{tt('diary_started_label')}</span>
+                ) : canUserOptInDiaryForTrip(selectedTrip) ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleEnableDiary()}
+                    className="cursor-pointer whitespace-nowrap shrink-0 rounded-lg border-0 bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 hover:bg-violet-200"
+                  >
+                    {tt('diary_start_button')}
+                  </button>
+                ) : null}
+              </div>
+              {showDiaryCompletedInviteHint(selectedTrip) && (
+                <p className="m-0 mt-1.5 text-[12px] text-violet-700">{tt('diary_completed_invite_hint')}</p>
+              )}
+              <TravelFieldRecordHost
+                groupId={currentGroupId}
+                tripId={selectedTrip.id}
+                mode="page"
+                enabled={Boolean(selectedTrip.id)}
+                labels={{
+                  checkin: tt('field_checkin'),
+                  route_start: tt('field_route_start'),
+                  route_stop: tt('field_route_stop'),
+                  need_active_trip: tt('field_need_active_trip'),
+                  recording: tt('field_recording'),
+                }}
+                pickLabels={{
+                  title: tt('field_pick_title'),
+                  create: tt('field_pick_create'),
+                  attach_hint: tt('field_pick_attach'),
+                  cancel: tt('field_pick_cancel'),
+                }}
+                onSaved={() => {
+                  if (selectedTrip?.id) fetchItineraries(selectedTrip.id);
+                }}
+              />
+              <p className="m-0 mt-1 text-xs text-slate-500">
+                {tt('label_trip_currency')}: <strong className="text-slate-700">{tripCurrencyCode}</strong>
+              </p>
+              <p className="m-0 mt-1 text-xs text-slate-400">
+                {tt('ui_created_label')}: {getDisplayName(selectedTrip.created_by)}
+                {selectedTrip.updated_by != null && ` · ${tt('ui_updated_label')}: ${getDisplayName(selectedTrip.updated_by)}`}
+              </p>
 
               <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
                 <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">

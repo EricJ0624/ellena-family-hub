@@ -212,6 +212,8 @@ export function buildItineraryDocumentHtml(params: {
   travelerNationalities?: string[];
   coverImageUrl?: string | null;
   mapImageUrl?: string | null;
+  /** 지도 이미지 없을 때 개요 안내 (미리보기용) */
+  mapPlaceholder?: 'no_coords' | 'loading' | 'load_failed' | null;
 }): string {
   const { trip, items, accommodations, transports, dayTitles, labels } = params;
   const badge = resolveCoverBadge(trip);
@@ -235,6 +237,7 @@ export function buildItineraryDocumentHtml(params: {
   const hotels = accommodations.filter((a) => (a.name ?? '').trim());
   const cover = (params.coverImageUrl ?? '').trim();
   const mapUrl = (params.mapImageUrl ?? '').trim();
+  const mapPlaceholder = params.mapPlaceholder ?? (mapUrl ? null : 'no_coords');
 
   const days = enumerateTripDays(trip.start_date, trip.end_date);
   const byDay = new Map<string, HtmlDocItem[]>();
@@ -308,12 +311,23 @@ export function buildItineraryDocumentHtml(params: {
         .join('')}
     </div>`;
 
-  const mapBlock = !mapUrl
-    ? ''
-    : `
+  const mapPlaceholderText =
+    mapPlaceholder === 'loading'
+      ? '여행 지도를 불러오는 중…'
+      : mapPlaceholder === 'load_failed'
+        ? '여행 지도를 불러오지 못했습니다. Maps Static API 키·API 활성화·HTTP 리퍼러 제한을 확인해 주세요.'
+        : '좌표가 있는 숙소·먹거리·관광지가 없으면 지도가 표시되지 않습니다. 장소를 자동완성으로 고르거나 주소가 있으면 저장 시 좌표가 채워집니다.';
+
+  const mapBlock = mapUrl
+    ? `
     <div class="ov-card" style="margin-top:12px">
       ${ovTitle('map', '여행 지도')}
       <img class="map-img" src="${esc(mapUrl)}" alt="Trip map" />
+    </div>`
+    : `
+    <div class="ov-card" style="margin-top:12px">
+      ${ovTitle('map', '여행 지도')}
+      <p style="margin:0;font-size:13px;color:#94a3b8;line-height:1.5">${esc(mapPlaceholderText)}</p>
     </div>`;
 
   const packingBlock =

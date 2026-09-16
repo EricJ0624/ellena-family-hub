@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
+import { enrichMissingPlaceCoordinates } from '@/lib/modules/travel-planner/resolve-place-coordinates';
 
 /** PATCH: 숙소 수정 */
 export async function PATCH(
@@ -24,6 +25,14 @@ export async function PATCH(
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+    const { data: existing } = await supabase
+      .from('travel_accommodations')
+      .select('name, address, place_id, latitude, longitude')
+      .eq('id', id)
+      .eq('group_id', groupId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
       updated_by: user.id,
@@ -43,6 +52,39 @@ export async function PATCH(
     if (body.latitude !== undefined) updatePayload.latitude = body.latitude == null ? null : Number(body.latitude);
     if (body.longitude !== undefined) updatePayload.longitude = body.longitude == null ? null : Number(body.longitude);
     if (body.show_in_itinerary !== undefined) updatePayload.show_in_itinerary = body.show_in_itinerary === true;
+
+    const mergedForEnrich = {
+      place_id:
+        (updatePayload.place_id as string | null | undefined) ??
+        (existing?.place_id as string | null | undefined) ??
+        null,
+      name:
+        (updatePayload.name as string | undefined) ??
+        (existing?.name as string | undefined) ??
+        null,
+      address:
+        (updatePayload.address as string | null | undefined) ??
+        (existing?.address as string | null | undefined) ??
+        null,
+      latitude:
+        updatePayload.latitude !== undefined
+          ? (updatePayload.latitude as number | null)
+          : ((existing?.latitude as number | null | undefined) ?? null),
+      longitude:
+        updatePayload.longitude !== undefined
+          ? (updatePayload.longitude as number | null)
+          : ((existing?.longitude as number | null | undefined) ?? null),
+    };
+    const enriched = await enrichMissingPlaceCoordinates(supabase, mergedForEnrich);
+    if (enriched.latitude != null && updatePayload.latitude === undefined) {
+      updatePayload.latitude = enriched.latitude;
+    }
+    if (enriched.longitude != null && updatePayload.longitude === undefined) {
+      updatePayload.longitude = enriched.longitude;
+    }
+    if (enriched.place_id && updatePayload.place_id === undefined && !existing?.place_id) {
+      updatePayload.place_id = enriched.place_id;
+    }
 
     const { data, error } = await supabase
       .from('travel_accommodations')

@@ -43,15 +43,15 @@ export function TravelFieldRecordBar({
 }: Props) {
   if (layout === 'circles') {
     const circleBtn =
-      'travel-quick-record-circle inline-flex aspect-square w-[min(40cqmin,10.5rem)] shrink-0 cursor-pointer flex-col items-center justify-center gap-[1.8cqmin] border-0 px-[2.4cqmin] text-center font-bold transition-[transform,box-shadow,background-color] disabled:cursor-not-allowed disabled:opacity-55';
+      'travel-quick-record-circle inline-flex aspect-square w-[min(46cqmin,11rem)] min-w-[7.25rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-[1.2cqmin] overflow-visible border-0 px-[2cqmin] text-center font-bold transition-[transform,box-shadow,background-color] disabled:cursor-not-allowed disabled:opacity-55';
     const iconCls =
-      'travel-quick-record-circle-icon h-[11cqmin] w-[11cqmin] max-h-10 max-w-10 shrink-0';
+      'travel-quick-record-circle-icon h-[clamp(1.1rem,8cqmin,2.25rem)] w-[clamp(1.1rem,8cqmin,2.25rem)] shrink-0';
     const labelCls =
-      'travel-quick-record-circle-label max-w-full text-[6cqmin] leading-tight [word-break:keep-all]';
+      'travel-quick-record-circle-label max-w-[95%] px-0.5 text-[clamp(0.68rem,5.2cqmin,0.9rem)] leading-snug [overflow-wrap:anywhere] [word-break:keep-all]';
 
     return (
       <div className="flex w-full min-w-0 flex-col gap-[1.5cqmin]" data-travel-field-bar="circles">
-        <div className="travel-quick-record-circle-row flex w-full min-w-0 items-center justify-evenly gap-[3cqmin] py-[1.5cqmin]">
+        <div className="travel-quick-record-circle-row flex w-full min-w-0 items-center justify-evenly gap-[2cqmin] py-[1.5cqmin]">
           <button
             type="button"
             onClick={onCheckIn}
@@ -103,21 +103,23 @@ export function TravelFieldRecordBar({
 
   return (
     <div className="mt-3 flex w-full min-w-0 flex-col gap-2" data-travel-field-bar={mode}>
-      <div className="flex w-full min-w-0 flex-wrap gap-2">
+      <div className="grid w-full min-w-0 grid-cols-2 gap-2">
         <button
           type="button"
           onClick={onCheckIn}
           disabled={busy || disabled}
-          className="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-0 bg-emerald-600 px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-55 sm:flex-none"
+          className="inline-flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-0 bg-emerald-600 px-2.5 py-2.5 text-[12px] font-semibold leading-snug text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-55 sm:px-3 sm:text-[13px]"
         >
           <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span className="truncate">{labels.checkin}</span>
+          <span className="min-w-0 text-center [overflow-wrap:anywhere] [word-break:keep-all]">
+            {labels.checkin}
+          </span>
         </button>
         <button
           type="button"
           onClick={onToggleRoute}
           disabled={busy || disabled}
-          className={`inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-0 px-3 py-2 text-[13px] font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-55 sm:flex-none ${
+          className={`inline-flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-0 px-2.5 py-2.5 text-[12px] font-semibold leading-snug text-white transition-colors disabled:cursor-not-allowed disabled:opacity-55 sm:px-3 sm:text-[13px] ${
             recording ? 'bg-rose-600 hover:bg-rose-700' : 'bg-violet-600 hover:bg-violet-700'
           }`}
         >
@@ -126,7 +128,9 @@ export function TravelFieldRecordBar({
           ) : (
             <Navigation className="h-3.5 w-3.5 shrink-0" aria-hidden />
           )}
-          <span className="truncate">{recording ? labels.route_stop : labels.route_start}</span>
+          <span className="min-w-0 text-center [overflow-wrap:anywhere] [word-break:keep-all]">
+            {recording ? labels.route_stop : labels.route_start}
+          </span>
         </button>
       </div>
       {disabled ? (
