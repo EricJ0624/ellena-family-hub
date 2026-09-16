@@ -21,7 +21,9 @@ const KIDS_CONGRATS = [
   '/family-calendar/emojis/congrats-3.png',
 ] as const;
 
-const BIRTHDAY_PATTERN = /생일|birthday|cake|케이크/;
+/** 생일 마커: 일반/존댓말·각 언어 동의어 (제목에 포함되면 congrats 프레임) */
+const BIRTHDAY_PATTERN =
+  /생일|생신|birthday|bday|cake|케이크|誕生日|バースデー|生日|寿辰|壽辰|诞辰|誕辰|cumpleaños|cumpleanos|cumple|anniversaire|geburtstag|compleanno|anivers[aá]rio/;
 
 function pickCongratsSrc(seedKey: string): string {
   let seed = 0;
@@ -99,11 +101,13 @@ const IDLE_DECOS: IdleDeco[] = [
  * Add Event 버튼 위(앞) 겹침은 허용.
  */
 const SAFE_SLOTS: IdleSlot[] = [
-  // 상단 — 가로로 흩어짐 (우측 한곳에 몰지 않음)
-  { size: 'sm', className: 'top-[2cqmin] left-[56cqmin] w-[5.4cqmin] rotate-[12deg]' },
-  { size: 'md', className: 'top-[1.4cqmin] right-[1.2cqmin] w-[7.2cqmin] -rotate-12' },
-  { size: 'sm', className: 'top-[11cqmin] right-[0.6cqmin] w-[5.2cqmin] rotate-[8deg]' },
-  // 좌측 — 높이 다르게 분산, 크기 키움
+  // 타이틀(FAMILY CALENDAR)과 우측 끝 사이 빈 구간 — 항상 2개
+  { size: 'sm', className: 'top-[1.5cqmin] left-[61cqmin] w-[5.6cqmin] rotate-[12deg]' },
+  { size: 'md', className: 'top-[2.2cqmin] left-[71cqmin] w-[7cqmin] -rotate-10' },
+  // 우측 상단 끝
+  { size: 'md', className: 'top-[1.2cqmin] right-[0.8cqmin] w-[7.2cqmin] rotate-[-14deg]' },
+  { size: 'sm', className: 'top-[10.5cqmin] right-[0.5cqmin] w-[5.2cqmin] rotate-[8deg]' },
+  // 좌측 — 높이 다르게 분산
   { size: 'lg', className: 'top-[22cqmin] left-[0] w-[8.4cqmin] rotate-[-14deg]' },
   { size: 'md', className: 'top-[40cqmin] left-[0] w-[7cqmin] rotate-[10deg]' },
   { size: 'sm', className: 'top-[58cqmin] left-[0.1cqmin] w-[5.4cqmin] -rotate-8' },
