@@ -11,7 +11,7 @@ import { intlLocaleForLang } from '@/lib/language-fonts';
 import { loadUserGroupAccess } from '@/lib/account-suspend-access';
 import { MESSAGE_MAX_LENGTH } from '@/lib/admin-suspend';
 import { isValidUUID } from '@/lib/validation';
-import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
+import { dashboardHrefWithOpenGroup, writeStoredGroupId } from '@/lib/group-id-resolve';
 
 type NoticeMessage = {
   id: string;
@@ -260,6 +260,7 @@ function SuspendedNoticeContent() {
 
   const logout = async () => {
     await supabase.auth.signOut();
+    writeStoredGroupId(null);
     router.replace('/');
   };
 

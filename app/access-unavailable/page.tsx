@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAccountAccessErrorTranslation } from '@/lib/translations/accountAccessError';
 import { supabase } from '@/lib/supabase';
+import { writeStoredGroupId } from '@/lib/group-id-resolve';
 
 export default function AccessUnavailablePage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function AccessUnavailablePage() {
 
   const logout = async () => {
     await supabase.auth.signOut();
+    writeStoredGroupId(null);
     router.replace('/');
   };
 

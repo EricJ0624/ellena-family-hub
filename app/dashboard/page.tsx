@@ -6043,11 +6043,14 @@ export default function FamilyHub() {
         // 모든 Supabase 관련 세션 데이터 정리
         clearAuthStorage();
         sessionStorage.clear();
-        
+        // 명시 로그아웃 후에는 그룹 선택을 다시 하도록 이전 그룹 힌트 제거
+        writeStoredGroupId(null);
+
         // 로그인 페이지로 리다이렉트
         router.push('/');
       } catch (error) {
         console.error('Logout error:', error);
+        writeStoredGroupId(null);
         // 에러가 발생해도 로그인 페이지로 이동
         router.push('/');
       }

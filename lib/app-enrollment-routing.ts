@@ -3,8 +3,22 @@ import {
   buildOnboardingPath,
   isValidInviteCodeFormat,
 } from '@/lib/family-auth-routing';
+import {
+  dashboardHrefWithOpenGroup,
+  readStoredGroupId,
+  sameGroupId,
+} from '@/lib/group-id-resolve';
 
 export const APP_ENROLL_PATH = '/app-enroll';
+
+export type ResolvePostAuthPathOptions = {
+  /**
+   * 세션 복원(로그인 유지 재접속) 전용.
+   * 저장된 currentGroupId가 접근 가능하면 그룹 선택 없이 이전 대시보드로 직행.
+   * 명시 로그인/OAuth/콜백에서는 쓰지 않는다.
+   */
+  preferLastDashboard?: boolean;
+};
 
 /** 멤버 기능 진입 전 앱 가입 동의가 필요한지 */
 export function needsAppEnrollment(bootstrap: AuthBootstrapPayload): boolean {
@@ -25,11 +39,13 @@ export function buildAppEnrollPath(invite: string | null | undefined): string {
 /**
  * 로그인/콜백 직후 목적지.
  * enrollment 없으면 /app-enroll (단, 무그룹 시스템 관리자는 /admin).
- * 그룹이 1개여도 대시보드로 건너뛰지 않음 — 새 그룹 만들기·초대 가입은 온보딩 선택 화면에서만 가능.
+ * 기본: 그룹이 1개여도 대시보드로 건너뛰지 않음 — 새 그룹 만들기·초대 가입은 온보딩 선택 화면에서만 가능.
+ * preferLastDashboard: 세션 복원 시에만 이전 그룹 대시보드로 직행.
  */
 export function resolvePostAuthPath(
   bootstrap: AuthBootstrapPayload,
   invite: string | null | undefined,
+  options?: ResolvePostAuthPathOptions,
 ): string {
   if (!bootstrap.hasAppEnrollment) {
     if (bootstrap.isSystemAdmin && !bootstrap.hasGroups) {
@@ -50,5 +66,16 @@ export function resolvePostAuthPath(
   if (bootstrap.isSystemAdmin && !bootstrap.hasGroups) {
     return '/admin';
   }
+
+  if (options?.preferLastDashboard) {
+    const saved = readStoredGroupId();
+    if (
+      saved &&
+      bootstrap.accessibleGroupIds.some((id) => sameGroupId(id, saved))
+    ) {
+      return dashboardHrefWithOpenGroup(saved);
+    }
+  }
+
   return buildOnboardingPath(null);
 }

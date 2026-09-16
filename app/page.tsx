@@ -176,12 +176,13 @@ export default function LoginPage() {
     if (!isMounted) return;
     let cancelled = false;
 
+    // 로그인 유지로 이미 세션이 있는 재접속만 이전 대시보드 직행 (명시 로그인은 routeAfterLoginBootstrap)
     const routeFromBootstrap = (bootstrap: AuthBootstrapPayload | null | undefined, invite: string | null) => {
       if (!bootstrap) {
         router.push(buildOnboardingPath(invite));
         return;
       }
-      router.push(resolvePostAuthPath(bootstrap, invite));
+      router.push(resolvePostAuthPath(bootstrap, invite, { preferLastDashboard: true }));
     };
 
     const checkExistingSession = async () => {
