@@ -14,6 +14,8 @@ export type TravelFieldRecordBarLabels = {
   route_stop: string;
   need_active_trip: string;
   recording: string;
+  /** C1: keep screen/app foreground while recording */
+  recording_keep_open?: string;
 };
 
 type Props = {
@@ -87,9 +89,16 @@ export function TravelFieldRecordBar({
           </p>
         ) : null}
         {recording && !disabled ? (
-          <p className="travel-quick-record-status m-0 text-center text-[3.8cqmin] font-semibold">
-            {labels.recording}
-          </p>
+          <div className="flex flex-col gap-[0.6cqmin]">
+            <p className="travel-quick-record-status m-0 text-center text-[3.8cqmin] font-semibold">
+              {labels.recording}
+            </p>
+            {labels.recording_keep_open ? (
+              <p className="travel-quick-record-hint m-0 text-center text-[3.4cqmin] leading-snug [word-break:keep-all]">
+                {labels.recording_keep_open}
+              </p>
+            ) : null}
+          </div>
         ) : null}
         {message ? (
           <p className="travel-quick-record-ok m-0 text-center text-[3.8cqmin] font-medium">{message}</p>
@@ -137,7 +146,14 @@ export function TravelFieldRecordBar({
         <p className="m-0 text-xs leading-snug text-slate-500">{labels.need_active_trip}</p>
       ) : null}
       {recording && !disabled ? (
-        <p className="m-0 text-xs font-semibold text-rose-600">{labels.recording}</p>
+        <div className="flex flex-col gap-0.5">
+          <p className="m-0 text-xs font-semibold text-rose-600">{labels.recording}</p>
+          {labels.recording_keep_open ? (
+            <p className="m-0 text-[11px] leading-snug text-slate-500 [word-break:keep-all]">
+              {labels.recording_keep_open}
+            </p>
+          ) : null}
+        </div>
       ) : null}
       {message ? <p className="m-0 text-xs font-medium text-emerald-700">{message}</p> : null}
       {error ? <p className="m-0 text-xs font-medium text-red-700">{error}</p> : null}

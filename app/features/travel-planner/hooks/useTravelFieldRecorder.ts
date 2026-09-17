@@ -16,12 +16,17 @@ export type FieldGeoPoint = {
 
 type AuthHeaders = Record<string, string>;
 
+export type FieldSavedInfo = {
+  tripId?: string | null;
+  kind?: 'checkin' | 'route';
+};
+
 type Options = {
   groupId: string | null;
   tripId: string | null;
   getAuthHeaders: () => Promise<AuthHeaders>;
   /** Called after successful check-in / route complete so UI can reload itineraries */
-  onSaved?: () => void;
+  onSaved?: (info?: FieldSavedInfo) => void;
   /** If tripId is null (widget, no trips yet), create a trip first */
   ensureTripId?: () => Promise<string>;
 };
@@ -55,7 +60,13 @@ export function supportsBackgroundFieldRecording(): boolean {
   return false;
 }
 
-function readStoredTrack(): { trackId: string; tripId: string; groupId: string; startDay: string; startHm: string } | null {
+function readStoredTrack(): {
+  trackId: string;
+  tripId: string;
+  groupId: string;
+  startDay: string;
+  startHm: string;
+} | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -80,13 +91,15 @@ function readStoredTrack(): { trackId: string; tripId: string; groupId: string; 
   }
 }
 
-function writeStoredTrack(v: {
-  trackId: string;
-  tripId: string;
-  groupId: string;
-  startDay: string;
-  startHm: string;
-} | null) {
+function writeStoredTrack(
+  v: {
+    trackId: string;
+    tripId: string;
+    groupId: string;
+    startDay: string;
+    startHm: string;
+  } | null,
+) {
   if (typeof window === 'undefined') return;
   if (!v) {
     sessionStorage.removeItem(STORAGE_KEY);
@@ -118,6 +131,7 @@ export function useTravelFieldRecorder({
 }: Options) {
   const [recording, setRecording] = useState(false);
   const [trackId, setTrackId] = useState<string | null>(null);
+  const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +145,12 @@ export function useTravelFieldRecorder({
   onSavedRef.current = onSaved;
   const ensureTripIdRef = useRef(ensureTripId);
   ensureTripIdRef.current = ensureTripId;
+  const trackIdRef = useRef<string | null>(null);
+  trackIdRef.current = trackId;
+  const groupIdRef = useRef(groupId);
+  groupIdRef.current = groupId;
+  const recordingRef = useRef(recording);
+  recordingRef.current = recording;
 
   const resolveTripId = useCallback(
     async (override?: string | null): Promise<string> => {
@@ -172,6 +192,14 @@ export function useTravelFieldRecorder({
     [getAuthHeaders],
   );
 
+  const pushPoint = useCallback((next: FieldGeoPoint) => {
+    const prev = lastKeptRef.current;
+    if (prev && haversineM(prev, next) < MIN_MOVE_M) return false;
+    lastKeptRef.current = next;
+    bufferRef.current.push(next);
+    return true;
+  }, []);
+
   const startWatch = useCallback(
     (id: string, gid: string) => {
       clearWatch();
@@ -179,16 +207,12 @@ export function useTravelFieldRecorder({
 
       watchIdRef.current = navigator.geolocation.watchPosition(
         (pos) => {
-          const next: FieldGeoPoint = {
+          pushPoint({
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
             accuracy: pos.coords.accuracy,
             recorded_at: new Date().toISOString(),
-          };
-          const prev = lastKeptRef.current;
-          if (prev && haversineM(prev, next) < MIN_MOVE_M) return;
-          lastKeptRef.current = next;
-          bufferRef.current.push(next);
+          });
         },
         () => {
           /* keep recording; user can still stop */
@@ -200,27 +224,34 @@ export function useTravelFieldRecorder({
         void flushPoints(id, gid);
       }, FLUSH_EVERY_MS);
     },
-    [clearWatch, flushPoints],
+    [clearWatch, flushPoints, pushPoint],
   );
 
-  // Restore active track after refresh
+  /**
+   * Restore active track after refresh / phone unlock.
+   * Widget passes tripId=null — still restore from sessionStorage + DB.
+   * Page: only restore when stored trip matches page trip.
+   */
   useEffect(() => {
-    if (!groupId || !tripId) return;
+    if (!groupId) return;
     const stored = readStoredTrack();
-    if (!stored || stored.groupId !== groupId || stored.tripId !== tripId) return;
+    if (!stored || stored.groupId !== groupId) return;
+    if (tripId && stored.tripId !== tripId) return;
 
+    const restoreTripId = stored.tripId;
     let cancelled = false;
     (async () => {
       try {
         const headers = await getAuthHeaders();
         const res = await fetch(
-          `/api/v1/travel/trips/${tripId}/field-tracks?groupId=${encodeURIComponent(groupId)}`,
+          `/api/v1/travel/trips/${restoreTripId}/field-tracks?groupId=${encodeURIComponent(groupId)}`,
           { headers },
         );
         const json = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (json?.data?.id && json.data.status === 'recording') {
           setTrackId(json.data.id);
+          setActiveTripId(restoreTripId);
           setRecording(true);
           startMetaRef.current = {
             day: stored.startDay,
@@ -242,164 +273,232 @@ export function useTravelFieldRecorder({
 
   useEffect(() => () => clearWatch(), [clearWatch]);
 
-  const checkInHere = useCallback(async (choice: FieldAttachChoice = { attachMode: 'create' }) => {
-    if (!groupId || busy) return;
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const resolvedTripId = await resolveTripId(choice.tripId);
-      const pos = await getPosition();
-      const headers = await getAuthHeaders();
-      const day_date = formatLocalDayDate();
-      const time_hm = formatLocalHm();
-      const res = await fetch(`/api/v1/travel/trips/${resolvedTripId}/field-checkin`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          groupId,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          day_date,
-          time_hm,
-          attach_mode: choice.attachMode,
-          itinerary_id: choice.itineraryId ?? null,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || '위치 저장에 실패했습니다.');
-      setMessage(json.data?.created ? '새 일정으로 위치를 저장했습니다.' : '선택한 일정에 위치를 붙였습니다.');
-      onSavedRef.current?.();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '위치 저장에 실패했습니다.');
-    } finally {
-      setBusy(false);
-    }
-  }, [groupId, busy, getAuthHeaders, resolveTripId]);
+  /** C2: when tab/screen becomes visible again, grab a point + flush */
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
 
-  const startRoute = useCallback(async (tripIdOverride?: string | null) => {
-    if (!groupId || busy || recording) return;
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const resolvedTripId = await resolveTripId(tripIdOverride);
-      const pos = await getPosition();
-      const day = formatLocalDayDate();
-      const hm = formatLocalHm();
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/v1/travel/trips/${resolvedTripId}/field-tracks`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          groupId,
-          day_date: day,
-          start_time: hm,
-          start_lat: pos.coords.latitude,
-          start_lng: pos.coords.longitude,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (res.status === 409 && json?.data?.trackId) {
-          setTrackId(json.data.trackId);
-          setRecording(true);
-          startMetaRef.current = { day, hm };
-          writeStoredTrack({
-            trackId: json.data.trackId,
-            tripId: resolvedTripId,
-            groupId,
-            startDay: day,
-            startHm: hm,
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!recordingRef.current) return;
+      const id = trackIdRef.current;
+      const gid = groupIdRef.current;
+      if (!id || !gid) return;
+      void (async () => {
+        try {
+          const pos = await getPosition();
+          pushPoint({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            recorded_at: new Date().toISOString(),
           });
-          startWatch(json.data.trackId, groupId);
-          setMessage('이전 경로 기록을 이어서 진행합니다.');
-          return;
+          await flushPoints(id, gid);
+        } catch {
+          /* ignore — user can still stop */
         }
-        throw new Error(json.error || '경로 시작에 실패했습니다.');
-      }
-      const id = json.data?.id as string;
-      setTrackId(id);
-      setRecording(true);
-      startMetaRef.current = { day, hm };
-      writeStoredTrack({ trackId: id, tripId: resolvedTripId, groupId, startDay: day, startHm: hm });
-      bufferRef.current = [
-        {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-          recorded_at: new Date().toISOString(),
-        },
-      ];
-      lastKeptRef.current = bufferRef.current[0];
-      startWatch(id, groupId);
-      void flushPoints(id, groupId);
-      setMessage('경로 기록을 시작했습니다.');
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '경로 시작에 실패했습니다.');
-    } finally {
-      setBusy(false);
-    }
-  }, [groupId, busy, recording, getAuthHeaders, startWatch, resolveTripId, flushPoints]);
+      })();
+    };
 
-  const stopRoute = useCallback(async (choice: FieldAttachChoice = { attachMode: 'create' }) => {
-    if (!groupId || !trackId || busy) return;
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      await flushPoints(trackId, groupId);
-      let endLat: number | null = null;
-      let endLng: number | null = null;
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [flushPoints, pushPoint]);
+
+  const checkInHere = useCallback(
+    async (choice: FieldAttachChoice = { attachMode: 'create' }) => {
+      if (!groupId || busy) return;
+      setBusy(true);
+      setError(null);
+      setMessage(null);
       try {
+        const resolvedTripId = await resolveTripId(choice.tripId);
         const pos = await getPosition();
-        endLat = pos.coords.latitude;
-        endLng = pos.coords.longitude;
-      } catch {
-        /* use last buffered / server points */
+        const headers = await getAuthHeaders();
+        const day_date = formatLocalDayDate();
+        const time_hm = formatLocalHm();
+        const res = await fetch(`/api/v1/travel/trips/${resolvedTripId}/field-checkin`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groupId,
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            day_date,
+            time_hm,
+            attach_mode: choice.attachMode,
+            itinerary_id: choice.itineraryId ?? null,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error || '위치 저장에 실패했습니다.');
+        setMessage(
+          json.data?.created ? '새 일정으로 위치를 저장했습니다.' : '선택한 일정에 위치를 붙였습니다.',
+        );
+        onSavedRef.current?.({ tripId: resolvedTripId, kind: 'checkin' });
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : '위치 저장에 실패했습니다.');
+      } finally {
+        setBusy(false);
       }
-      const meta = startMetaRef.current || {
-        day: formatLocalDayDate(),
-        hm: formatLocalHm(),
-      };
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/v1/travel/field-tracks/${trackId}/complete`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    },
+    [groupId, busy, getAuthHeaders, resolveTripId],
+  );
+
+  const startRoute = useCallback(
+    async (tripIdOverride?: string | null) => {
+      if (!groupId || busy || recording) return;
+      setBusy(true);
+      setError(null);
+      setMessage(null);
+      try {
+        const resolvedTripId = await resolveTripId(tripIdOverride);
+        const pos = await getPosition();
+        const day = formatLocalDayDate();
+        const hm = formatLocalHm();
+        const headers = await getAuthHeaders();
+        const res = await fetch(`/api/v1/travel/trips/${resolvedTripId}/field-tracks`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groupId,
+            day_date: day,
+            start_time: hm,
+            start_lat: pos.coords.latitude,
+            start_lng: pos.coords.longitude,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (res.status === 409 && json?.data?.trackId) {
+            // B3: bind session to the *existing* track's trip, not the picker override
+            const existingTripId =
+              (typeof json.data.tripId === 'string' && json.data.tripId.trim()) ||
+              resolvedTripId;
+            const startDay =
+              (typeof json.data.day_date === 'string' && json.data.day_date.slice(0, 10)) || day;
+            const startHm =
+              (typeof json.data.start_time === 'string' &&
+                json.data.start_time.trim().substring(0, 5)) ||
+              hm;
+            setTrackId(json.data.trackId);
+            setActiveTripId(existingTripId);
+            setRecording(true);
+            startMetaRef.current = { day: startDay, hm: startHm };
+            writeStoredTrack({
+              trackId: json.data.trackId,
+              tripId: existingTripId,
+              groupId,
+              startDay,
+              startHm,
+            });
+            startWatch(json.data.trackId, groupId);
+            setMessage('이전 경로 기록을 이어서 진행합니다.');
+            return;
+          }
+          throw new Error(json.error || '경로 시작에 실패했습니다.');
+        }
+        const id = json.data?.id as string;
+        setTrackId(id);
+        setActiveTripId(resolvedTripId);
+        setRecording(true);
+        startMetaRef.current = { day, hm };
+        writeStoredTrack({
+          trackId: id,
+          tripId: resolvedTripId,
           groupId,
-          day_date: meta.day,
-          start_time: meta.hm,
-          end_time: formatLocalHm(),
-          end_lat: endLat,
-          end_lng: endLng,
-          attach_mode: choice.attachMode,
-          itinerary_id: choice.itineraryId ?? null,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || '경로 저장에 실패했습니다.');
-      clearWatch();
-      setRecording(false);
-      setTrackId(null);
-      writeStoredTrack(null);
-      startMetaRef.current = null;
-      bufferRef.current = [];
-      lastKeptRef.current = null;
-      setMessage(json.data?.created ? '새 일정으로 경로를 저장했습니다.' : '선택한 일정에 경로를 붙였습니다.');
-      onSavedRef.current?.();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '경로 저장에 실패했습니다.');
-    } finally {
-      setBusy(false);
-    }
-  }, [groupId, trackId, busy, flushPoints, getAuthHeaders, clearWatch]);
+          startDay: day,
+          startHm: hm,
+        });
+        bufferRef.current = [
+          {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            recorded_at: new Date().toISOString(),
+          },
+        ];
+        lastKeptRef.current = bufferRef.current[0];
+        startWatch(id, groupId);
+        void flushPoints(id, groupId);
+        setMessage('경로 기록을 시작했습니다.');
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : '경로 시작에 실패했습니다.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [groupId, busy, recording, getAuthHeaders, startWatch, resolveTripId, flushPoints],
+  );
+
+  const stopRoute = useCallback(
+    async (choice: FieldAttachChoice = { attachMode: 'create' }) => {
+      if (!groupId || !trackId || busy) return;
+      setBusy(true);
+      setError(null);
+      setMessage(null);
+      try {
+        await flushPoints(trackId, groupId);
+        let endLat: number | null = null;
+        let endLng: number | null = null;
+        try {
+          const pos = await getPosition();
+          endLat = pos.coords.latitude;
+          endLng = pos.coords.longitude;
+        } catch {
+          /* use last buffered / server points */
+        }
+        const meta = startMetaRef.current || {
+          day: formatLocalDayDate(),
+          hm: formatLocalHm(),
+        };
+        const headers = await getAuthHeaders();
+        const res = await fetch(`/api/v1/travel/field-tracks/${trackId}/complete`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groupId,
+            day_date: meta.day,
+            start_time: meta.hm,
+            end_time: formatLocalHm(),
+            end_lat: endLat,
+            end_lng: endLng,
+            attach_mode: choice.attachMode,
+            itinerary_id: choice.itineraryId ?? null,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error || '경로 저장에 실패했습니다.');
+        const savedTripId =
+          (typeof json.data?.tripId === 'string' && json.data.tripId.trim()) ||
+          activeTripId ||
+          readStoredTrack()?.tripId ||
+          null;
+        clearWatch();
+        setRecording(false);
+        setTrackId(null);
+        setActiveTripId(null);
+        writeStoredTrack(null);
+        startMetaRef.current = null;
+        bufferRef.current = [];
+        lastKeptRef.current = null;
+        setMessage(
+          json.data?.created ? '새 일정으로 경로를 저장했습니다.' : '선택한 일정에 경로를 붙였습니다.',
+        );
+        onSavedRef.current?.({ tripId: savedTripId, kind: 'route' });
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : '경로 저장에 실패했습니다.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [groupId, trackId, activeTripId, busy, flushPoints, getAuthHeaders, clearWatch],
+  );
 
   return {
     recording,
     busy,
     message,
     error,
+    activeTripId,
     checkInHere,
     startRoute,
     stopRoute,

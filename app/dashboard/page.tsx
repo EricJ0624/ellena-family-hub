@@ -6720,6 +6720,7 @@ export default function FamilyHub() {
               route_stop: tt('field_route_stop'),
               need_active_trip: tt('field_need_active_trip'),
               recording: tt('field_recording'),
+              recording_keep_open: tt('field_recording_keep_open'),
             }}
             pickLabels={{
               title: tt('field_pick_title'),
@@ -6728,6 +6729,9 @@ export default function FamilyHub() {
               cancel: tt('field_pick_cancel'),
             }}
             onFieldSaved={reloadTravelTrips}
+            onOpenTripDiary={(tid) =>
+              router.push(`/travel/diary?tripId=${encodeURIComponent(tid)}`)
+            }
           />
         );
       case 'travel_diary':

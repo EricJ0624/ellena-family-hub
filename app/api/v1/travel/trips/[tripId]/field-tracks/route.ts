@@ -83,7 +83,7 @@ export async function POST(
     // One active recording per user
     const { data: existing } = await supabase
       .from('travel_field_tracks')
-      .select('id')
+      .select('id, trip_id, day_date, start_time')
       .eq('user_id', user.id)
       .eq('status', 'recording')
       .limit(1)
@@ -91,7 +91,15 @@ export async function POST(
 
     if (existing?.id) {
       return NextResponse.json(
-        { error: '이미 기록 중인 경로가 있습니다.', data: { trackId: existing.id } },
+        {
+          error: '이미 기록 중인 경로가 있습니다.',
+          data: {
+            trackId: existing.id,
+            tripId: existing.trip_id ? String(existing.trip_id) : null,
+            day_date: existing.day_date ?? null,
+            start_time: existing.start_time ?? null,
+          },
+        },
         { status: 409 },
       );
     }

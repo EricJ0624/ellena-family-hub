@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { formatLocalDayDate } from '@/lib/modules/travel-planner/field-match';
+import { formatLocalDayDate, formatLocalHm } from '@/lib/modules/travel-planner/field-match';
 import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import { TravelFieldRecordBar, type TravelFieldRecordBarLabels } from './TravelFieldRecordBar';
 import {
@@ -24,6 +24,7 @@ import {
 import {
   useTravelFieldRecorder,
   type FieldAttachChoice,
+  type FieldSavedInfo,
 } from '../hooks/useTravelFieldRecorder';
 
 export type FieldWidgetTripOption = {
@@ -48,7 +49,9 @@ type Props = {
   labels: TravelFieldRecordBarLabels;
   pickLabels?: FieldTargetPickLabels;
   enabled?: boolean;
-  onSaved?: () => void;
+  onSaved?: (info?: FieldSavedInfo) => void;
+  /** After route stop: open the trip diary that received the track */
+  onOpenTripDiary?: (tripId: string) => void;
 };
 
 const DEFAULT_PICK_PAGE: FieldTargetPickLabels = {
@@ -65,6 +68,14 @@ const DEFAULT_PICK_WIDGET: FieldTargetPickLabels = {
   cancel: '취소',
 };
 
+/** B4: distinguish same-day quick trips in diary widget list */
+function buildDistinctTripTitle(base: string): string {
+  const day = formatLocalDayDate();
+  const hm = formatLocalHm();
+  const md = day.slice(5).replace('-', '/'); // MM/DD
+  return `${base} · ${md} ${hm}`;
+}
+
 export function TravelFieldRecordHost({
   groupId,
   tripId,
@@ -77,6 +88,7 @@ export function TravelFieldRecordHost({
   pickLabels,
   enabled = true,
   onSaved,
+  onOpenTripDiary,
 }: Props) {
   const resolvedPickLabels =
     pickLabels ?? (mode === 'widget' ? DEFAULT_PICK_WIDGET : DEFAULT_PICK_PAGE);
@@ -101,6 +113,8 @@ export function TravelFieldRecordHost({
   );
   const [localTripId, setLocalTripId] = useState<string | null>(null);
   const ensureTripPromiseRef = useRef<Promise<string> | null>(null);
+  const onOpenTripDiaryRef = useRef(onOpenTripDiary);
+  onOpenTripDiaryRef.current = onOpenTripDiary;
 
   useEffect(() => {
     if (tripId) setLocalTripId(tripId);
@@ -108,17 +122,28 @@ export function TravelFieldRecordHost({
 
   const effectiveTripId = tripId || localTripId;
 
+  const handleSaved = useCallback(
+    (info?: FieldSavedInfo) => {
+      onSaved?.(info);
+      if (info?.kind === 'route' && info.tripId && onOpenTripDiaryRef.current) {
+        onOpenTripDiaryRef.current(info.tripId);
+      }
+    },
+    [onSaved],
+  );
+
   /** Always POST a new trip (widget "새 여행으로 저장") */
   const createFreshTrip = useCallback(async () => {
     if (!groupId) throw new Error('그룹을 선택해 주세요.');
     const headers = await getAuthHeaders();
     const today = formatLocalDayDate();
+    const title = buildDistinctTripTitle(newTripTitle);
     const res = await fetch('/api/v1/travel/trips', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         groupId,
-        title: newTripTitle,
+        title,
         start_date: today,
         end_date: today,
         ...(enableDiaryOnCreate ? { diary_enabled: true } : {}),
@@ -162,9 +187,14 @@ export function TravelFieldRecordHost({
     groupId: canUse ? groupId : null,
     tripId: mode === 'widget' ? null : effectiveTripId,
     getAuthHeaders,
-    onSaved,
+    onSaved: handleSaved,
     ensureTripId: mode === 'widget' ? ensureTripId : undefined,
   });
+
+  // Keep localTripId in sync when restore/409 binds an existing track trip
+  useEffect(() => {
+    if (recorder.activeTripId) setLocalTripId(recorder.activeTripId);
+  }, [recorder.activeTripId]);
 
   const tripsToOptions = useCallback((): FieldTargetOption[] => {
     return trips.map((t) => {
@@ -231,8 +261,7 @@ export function TravelFieldRecordHost({
     const kind = pickerKind;
     setPickerKind(null);
     try {
-      const tid =
-        tripIdChoice === 'new' ? await createFreshTrip() : tripIdChoice;
+      const tid = tripIdChoice === 'new' ? await createFreshTrip() : tripIdChoice;
       setLocalTripId(tid);
       if (kind === 'checkin') {
         void recorder.checkInHere({ attachMode: 'create', tripId: tid });

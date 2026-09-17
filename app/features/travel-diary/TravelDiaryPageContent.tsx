@@ -402,6 +402,7 @@ export function TravelDiaryPageContent() {
             route_stop: getTravelTranslation(lang, 'field_route_stop'),
             need_active_trip: getTravelTranslation(lang, 'field_need_active_trip'),
             recording: getTravelTranslation(lang, 'field_recording'),
+            recording_keep_open: getTravelTranslation(lang, 'field_recording_keep_open'),
           }}
           pickLabels={{
             title: getTravelTranslation(lang, 'field_pick_title'),
@@ -410,6 +411,13 @@ export function TravelDiaryPageContent() {
             cancel: getTravelTranslation(lang, 'field_pick_cancel'),
           }}
           onSaved={() => void loadAll()}
+          onOpenTripDiary={(tid) => {
+            if (tid === tripIdParam) {
+              void loadAll();
+              return;
+            }
+            router.push(`/travel/diary?tripId=${encodeURIComponent(tid)}`);
+          }}
         />
 
         {loading ? (

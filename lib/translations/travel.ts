@@ -269,6 +269,8 @@ export type TravelTranslations = {
   field_route_stop: string;
   field_need_active_trip: string;
   field_recording: string;
+  /** Keep app/screen open while recording (web GPS limitation) */
+  field_recording_keep_open: string;
   field_badge_checkin: string;
   field_badge_route: string;
   field_pick_title: string;
@@ -549,6 +551,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: '기록 종료',
     field_need_active_trip: '여행을 추가하면 위치·경로를 기록할 수 있어요.',
     field_recording: '경로 기록 중…',
+    field_recording_keep_open: '화면을 켠 채·앱을 앞에 두고 이동해야 경로가 이어집니다.',
     field_badge_checkin: '위치',
     field_badge_route: '경로',
 
@@ -828,6 +831,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: 'Stop recording',
     field_need_active_trip: 'Add a trip to record location and routes.',
     field_recording: 'Recording route…',
+    field_recording_keep_open: 'Keep the screen on and this app in front while moving so the route continues.',
     field_badge_checkin: 'Check-in',
     field_badge_route: 'Route',
 
@@ -1107,6 +1111,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: '記録終了',
     field_need_active_trip: '進行中の旅行があるときに使えます。',
     field_recording: 'ルート記録中…',
+    field_recording_keep_open: '移動中は画面をつけたまま、このアプリを前面に保ってください。',
     field_badge_checkin: '位置',
     field_badge_route: 'ルート',
 
@@ -1386,6 +1391,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: '结束记录',
     field_need_active_trip: '有进行中的旅行时可用。',
     field_recording: '正在记录路线…',
+    field_recording_keep_open: '移动时请保持屏幕亮起，并将本应用留在前台，路线才会继续记录。',
     field_badge_checkin: '位置',
     field_badge_route: '路线',
 
@@ -1665,6 +1671,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: '結束記錄',
     field_need_active_trip: '有進行中的旅行時可用。',
     field_recording: '正在記錄路線…',
+    field_recording_keep_open: '移動時請保持螢幕亮起，並將本應用留在前景，路線才會繼續記錄。',
     field_badge_checkin: '位置',
     field_badge_route: '路線',
 
@@ -1943,6 +1950,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: 'Detener',
     field_need_active_trip: 'Disponible con un viaje en curso.',
     field_recording: 'Grabando ruta…',
+    field_recording_keep_open: 'Mantén la pantalla encendida y esta app en primer plano al moverte para seguir la ruta.',
     field_badge_checkin: 'Ubicación',
     field_badge_route: 'Ruta',
 
@@ -2221,6 +2229,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: 'Arrêter',
     field_need_active_trip: 'Disponible pendant un voyage en cours.',
     field_recording: 'Enregistrement…',
+    field_recording_keep_open: 'Gardez l’écran allumé et cette app au premier plan pour continuer l’enregistrement.',
     field_badge_checkin: 'Lieu',
     field_badge_route: 'Trajet',
 
@@ -2499,6 +2508,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: 'Stoppen',
     field_need_active_trip: 'Verfügbar bei aktiver Reise.',
     field_recording: 'Route wird aufgezeichnet…',
+    field_recording_keep_open: 'Lassen Sie den Bildschirm an und diese App im Vordergrund, damit die Route weiterläuft.',
     field_badge_checkin: 'Ort',
     field_badge_route: 'Route',
 
@@ -2777,6 +2787,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: 'Interrompi',
     field_need_active_trip: 'Disponibile con un viaggio in corso.',
     field_recording: 'Registrazione in corso…',
+    field_recording_keep_open: 'Tieni lo schermo acceso e questa app in primo piano mentre ti muovi.',
     field_badge_checkin: 'Posizione',
     field_badge_route: 'Percorso',
 
@@ -3055,6 +3066,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     field_route_stop: 'Parar',
     field_need_active_trip: 'Disponível com uma viagem em andamento.',
     field_recording: 'Gravando rota…',
+    field_recording_keep_open: 'Mantenha a tela ligada e este app em primeiro plano ao se mover para continuar a rota.',
     field_badge_checkin: 'Local',
     field_badge_route: 'Rota',
 

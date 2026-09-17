@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { attachFieldToItinerary } from '@/lib/modules/travel-planner/field-attach';
+import type { FieldTrackLatLng } from '@/lib/modules/travel-planner/field-track-path';
 import {
   buildFieldRecordTitle,
   reverseGeocodeLatLng,
 } from '@/lib/modules/travel-planner/reverse-geocode';
+import { buildRoadSnappedPath } from '@/lib/modules/travel-planner/snap-field-track-path';
 import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 
 /** POST: complete route → attach to itinerary (create or attach) */
@@ -93,6 +95,36 @@ export async function POST(
     const endHm = endTime || startTime;
     const now = new Date().toISOString();
 
+    const rawPath: FieldTrackLatLng[] = [];
+    for (const p of points ?? []) {
+      const pla = Number(p.latitude);
+      const pln = Number(p.longitude);
+      if (Number.isFinite(pla) && Number.isFinite(pln)) rawPath.push({ lat: pla, lng: pln });
+    }
+    if (rawPath.length === 0) {
+      rawPath.push({ lat, lng });
+    } else if (
+      rawPath[rawPath.length - 1]!.lat !== lat ||
+      rawPath[rawPath.length - 1]!.lng !== lng
+    ) {
+      rawPath.push({ lat, lng });
+    }
+
+    let snappedPath: FieldTrackLatLng[] = [];
+    let fromRoads = false;
+    try {
+      const referer =
+        request.headers.get('referer') ||
+        request.headers.get('origin') ||
+        process.env.NEXT_PUBLIC_APP_URL ||
+        'http://localhost:3000/';
+      const built = await buildRoadSnappedPath(rawPath, { referer });
+      snappedPath = built.path;
+      fromRoads = built.fromRoads;
+    } catch (e) {
+      console.warn('complete snapToRoads:', e);
+    }
+
     const { error: upTrackErr } = await supabase
       .from('travel_field_tracks')
       .update({
@@ -106,6 +138,8 @@ export async function POST(
         end_lng: lng,
         start_lat: track.start_lat ?? (first ? Number(first.latitude) : lat),
         start_lng: track.start_lng ?? (first ? Number(first.longitude) : lng),
+        // Only persist when Roads/Directions succeeded — never store raw GPS as snapped
+        snapped_path: fromRoads && snappedPath.length >= 2 ? snappedPath : null,
       })
       .eq('id', trackId);
 
@@ -154,7 +188,13 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      data: { trackId, ...attach, pointCount },
+      data: {
+        trackId,
+        tripId: String(track.trip_id),
+        ...attach,
+        pointCount,
+        snappedPointCount: fromRoads ? snappedPath.length : 0,
+      },
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '서버 오류';

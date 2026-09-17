@@ -24,6 +24,7 @@ interface TravelQuickRecordSectionProps {
   fieldLabels: TravelFieldRecordBarLabels;
   pickLabels?: FieldTargetPickLabels;
   onFieldSaved?: () => void;
+  onOpenTripDiary?: (tripId: string) => void;
 }
 
 export function TravelQuickRecordSection({
@@ -34,6 +35,7 @@ export function TravelQuickRecordSection({
   fieldLabels,
   pickLabels,
   onFieldSaved,
+  onOpenTripDiary,
 }: TravelQuickRecordSectionProps) {
   const isKidsTheme = uiTheme === 'kids_friendly';
   const isGlassTheme = uiTheme === 'highend_glass';
@@ -72,6 +74,7 @@ export function TravelQuickRecordSection({
       labels={fieldLabels}
       pickLabels={pickLabels}
       onSaved={onFieldSaved}
+      onOpenTripDiary={onOpenTripDiary}
     />
   );
 

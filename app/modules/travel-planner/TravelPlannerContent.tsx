@@ -24,6 +24,7 @@ import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-plan
 import { buildStaticMapUrl, collectTripMapPoints } from '@/lib/modules/travel-planner/static-map-url';
 import { buildGoogleMapsViewUrl, formatPlaceCoords } from '@/lib/modules/travel-planner/google-maps-embed';
 import { fetchFieldTrackPath } from '@/lib/modules/travel-planner/field-track-path';
+import { resolveRoadPath } from '@/lib/modules/travel-planner/resolve-road-path-client';
 import { ItineraryDocument, printItineraryDocumentPreview } from '@/app/modules/travel-planner/components/ItineraryDocument';
 import {
   canUserOptInDiaryForTrip,
@@ -1072,8 +1073,19 @@ export function TravelPlannerContent() {
           };
           for (const trackId of trackIds) {
             if (!isCurrent()) return;
-            const path = await fetchFieldTrackPath(trackId, currentGroupId, getHeaders, ac.signal);
-            if (!isCurrent() || path.length === 0) continue;
+            const pathResult = await fetchFieldTrackPath(
+              trackId,
+              currentGroupId,
+              getHeaders,
+              ac.signal,
+            );
+            if (!isCurrent() || pathResult.path.length === 0) continue;
+            let path = pathResult.path;
+            if (!pathResult.roadSnapped && path.length >= 2) {
+              const road = await resolveRoadPath(path, currentGroupId);
+              if (!isCurrent()) return;
+              if (road.length >= 2) path = road;
+            }
 
             if (path.length >= 2) {
               path.forEach((p) => bounds.extend(p));
@@ -3052,6 +3064,7 @@ export function TravelPlannerContent() {
                   route_stop: tt('field_route_stop'),
                   need_active_trip: tt('field_need_active_trip'),
                   recording: tt('field_recording'),
+                  recording_keep_open: tt('field_recording_keep_open'),
                 }}
                 pickLabels={{
                   title: tt('field_pick_title'),

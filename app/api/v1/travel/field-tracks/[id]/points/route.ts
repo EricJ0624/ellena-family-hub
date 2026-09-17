@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import type { FieldTrackLatLng } from '@/lib/modules/travel-planner/field-track-path';
+import {
+  buildRoadSnappedPath,
+  looksLikeRawGpsPath,
+  parseStoredSnappedPath,
+} from '@/lib/modules/travel-planner/snap-field-track-path';
 
 type PointIn = {
   latitude?: number;
@@ -10,7 +16,7 @@ type PointIn = {
   seq?: number;
 };
 
-/** GET: list points for a track (group members) */
+/** GET: list points for a track (group members) + road-snapped path when available */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -18,7 +24,6 @@ export async function GET(
   try {
     const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
 
     const { id: trackId } = await params;
     const groupId = request.nextUrl.searchParams.get('groupId');
@@ -26,13 +31,13 @@ export async function GET(
       return NextResponse.json({ error: 'groupId와 track id가 필요합니다.' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMember(user.id, groupId);
+    const memberCheck = await requireGroupMember(authResult.user.id, groupId);
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
     const { data: track, error: trackErr } = await supabase
       .from('travel_field_tracks')
-      .select('id, group_id, start_lat, start_lng, end_lat, end_lng')
+      .select('id, group_id, status, start_lat, start_lng, end_lat, end_lng, snapped_path')
       .eq('id', trackId)
       .eq('group_id', groupId)
       .maybeSingle();
@@ -52,6 +57,56 @@ export async function GET(
       return NextResponse.json({ error: '포인트 조회에 실패했습니다.' }, { status: 500 });
     }
 
+    let snappedPath = parseStoredSnappedPath(track.snapped_path);
+    let roadSnapped = Boolean(snappedPath && snappedPath.length > 6);
+
+    // Treat sparse stored path as raw GPS (failed server snap) → recompute
+    if (snappedPath && looksLikeRawGpsPath(snappedPath)) {
+      snappedPath = null;
+      roadSnapped = false;
+    }
+
+    // Lazy backfill for completed tracks without a real road path
+    if ((!snappedPath || !roadSnapped) && track.status === 'completed') {
+      const raw: FieldTrackLatLng[] = [];
+      for (const p of points ?? []) {
+        const lat = Number(p.latitude);
+        const lng = Number(p.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) raw.push({ lat, lng });
+      }
+      if (raw.length === 0) {
+        const sl = track.start_lat != null ? Number(track.start_lat) : NaN;
+        const sg = track.start_lng != null ? Number(track.start_lng) : NaN;
+        const el = track.end_lat != null ? Number(track.end_lat) : NaN;
+        const eg = track.end_lng != null ? Number(track.end_lng) : NaN;
+        if (Number.isFinite(sl) && Number.isFinite(sg)) raw.push({ lat: sl, lng: sg });
+        if (Number.isFinite(el) && Number.isFinite(eg)) raw.push({ lat: el, lng: eg });
+      }
+      if (raw.length >= 2) {
+        try {
+          const referer =
+            request.headers.get('referer') ||
+            request.headers.get('origin') ||
+            process.env.NEXT_PUBLIC_APP_URL ||
+            'http://localhost:3000/';
+          const built = await buildRoadSnappedPath(raw, { referer });
+          if (built.fromRoads && built.path.length >= 2) {
+            snappedPath = built.path;
+            roadSnapped = true;
+            await supabase
+              .from('travel_field_tracks')
+              .update({
+                snapped_path: built.path,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', trackId);
+          }
+        } catch (e) {
+          console.warn('lazy snapToRoads:', e);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: points ?? [],
@@ -60,6 +115,8 @@ export async function GET(
         start_lng: track.start_lng ?? null,
         end_lat: track.end_lat ?? null,
         end_lng: track.end_lng ?? null,
+        snapped_path: roadSnapped && snappedPath && snappedPath.length >= 2 ? snappedPath : null,
+        road_snapped: roadSnapped,
       },
     });
   } catch (e: unknown) {
