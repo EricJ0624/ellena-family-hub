@@ -10,6 +10,7 @@ export interface MemberSupportTicketRow {
   status: string;
   answer: string | null;
   answered_at: string | null;
+  answer_message_id?: string | null;
   message_thread?: unknown;
   created_at: string;
 }

@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { isValidUUID } from '@/lib/validation';
+import { deleteAttachmentsForSupportTicket } from '@/lib/support-ticket-attachments-cleanup';
 
 const REASON_CODES = [
   'report',
@@ -174,8 +175,33 @@ export async function DELETE(request: NextRequest) {
     if ('error' in loaded && loaded.error) return loaded.error;
     const { supabase, ticket } = loaded as {
       supabase: ReturnType<typeof getSupabaseServerClient>;
-      ticket: Record<string, unknown> & { group_id: string; created_by?: string; title?: string };
+      ticket: Record<string, unknown> & {
+        group_id: string;
+        created_by?: string;
+        title?: string;
+        id?: string;
+        answer_message_id?: string | null;
+        message_thread?: unknown;
+      };
     };
+
+    try {
+      await deleteAttachmentsForSupportTicket(supabase, {
+        groupId: ticket.group_id,
+        entityType: 'member_support_ticket',
+        ticket: {
+          id: String(ticket.id || ticketId),
+          answer_message_id: ticket.answer_message_id,
+          message_thread: ticket.message_thread,
+        },
+      });
+    } catch (cleanupErr) {
+      console.error('멤버 문의 첨부 정리 오류(예외 삭제):', cleanupErr);
+      return NextResponse.json(
+        { error: cleanupErr instanceof Error ? cleanupErr.message : '문의 첨부 정리에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
 
     const { error: delErr } = await supabase
       .from('member_support_tickets')

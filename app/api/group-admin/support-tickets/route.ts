@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
+import { deleteAttachmentsForSupportTicket } from '@/lib/support-ticket-attachments-cleanup';
 
 /**
  * 문의 목록 조회 (그룹 관리자용)
@@ -193,7 +194,7 @@ export async function PATCH(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { id, group_id, follow_up } = body;
+    const { id, group_id, follow_up, message_id } = body;
 
     if (!id || !group_id || !follow_up || !String(follow_up).trim()) {
       return NextResponse.json(
@@ -201,6 +202,12 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const UUID_ANY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const entryId =
+      typeof message_id === 'string' && UUID_ANY.test(message_id)
+        ? message_id
+        : crypto.randomUUID();
 
     const adminCheck = await requireGroupAdmin(user.id, group_id);
     if (adminCheck instanceof NextResponse) return adminCheck;
@@ -243,6 +250,7 @@ export async function PATCH(request: NextRequest) {
     const thread = parseMessageThread(existing.message_thread);
     const createdAt = new Date().toISOString();
     thread.push({
+      id: entryId,
       role: 'group_admin',
       user_id: user.id,
       body: String(follow_up).trim(),
@@ -312,7 +320,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data: row, error: fetchErr } = await supabase
       .from('support_tickets')
-      .select('id, group_id, title')
+      .select('id, group_id, title, answer_message_id, message_thread')
       .eq('id', id)
       .eq('group_id', groupId)
       .maybeSingle();
@@ -323,6 +331,20 @@ export async function DELETE(request: NextRequest) {
     }
     if (!row) {
       return NextResponse.json({ error: '문의를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    try {
+      await deleteAttachmentsForSupportTicket(supabase, {
+        groupId,
+        entityType: 'support_ticket',
+        ticket: row,
+      });
+    } catch (cleanupErr) {
+      console.error('시스템 문의 첨부 정리 오류:', cleanupErr);
+      return NextResponse.json(
+        { error: cleanupErr instanceof Error ? cleanupErr.message : '문의 첨부 정리에 실패했습니다.' },
+        { status: 500 }
+      );
     }
 
     const { error: delErr } = await supabase

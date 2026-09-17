@@ -6,13 +6,17 @@ export type FeatureEntityType =
   | 'piggy_bank_tx'
   | 'travel_trip'
   | 'travel_expense'
-  | 'travel_diary_entry';
+  | 'travel_diary_entry'
+  | 'member_support_ticket'
+  | 'support_ticket';
+
+export type FeatureType = 'chat' | 'piggy' | 'travel' | 'support';
 
 export type UploadedAttachment = {
   id: string;
   group_id: string;
   uploader_id: string;
-  feature_type: 'chat' | 'piggy' | 'travel';
+  feature_type: FeatureType;
   entity_type: FeatureEntityType;
   entity_id: string;
   original_filename: string;
@@ -22,6 +26,9 @@ export type UploadedAttachment = {
   thumbnail_url: string | null;
   created_at: string;
 };
+
+/** 첨부 최대 크기 (바이트). UI·API와 동일하게 유지. */
+export const ATTACHMENT_MAX_SIZE_BYTES = 20 * 1024 * 1024;
 
 export type UploadJobStatus = 'queued' | 'uploading' | 'success' | 'failed' | 'cancelled';
 export type UploadJob = {
@@ -34,7 +41,7 @@ export type UploadJob = {
 };
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
-const MAX_SIZE = 20 * 1024 * 1024;
+const MAX_SIZE = ATTACHMENT_MAX_SIZE_BYTES;
 
 /** 모바일에서 file.type 이 비어 있거나 image/jpg 인 경우가 많음 */
 export function normalizeImageMimeType(rawType: string, fileName: string): string {
@@ -58,8 +65,13 @@ export function ensureImageFileWithKnownMime(file: File): File {
 
 export function validateAttachmentFile(file: File): string | null {
   const mime = normalizeImageMimeType(file.type, file.name);
-  if (!ALLOWED_TYPES.has(mime)) return '지원하지 않는 파일 형식입니다.';
-  if (file.size <= 0 || file.size > MAX_SIZE) return '파일 크기는 1B~20MB여야 합니다.';
+  if (!ALLOWED_TYPES.has(mime)) {
+    return '지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, HEIC)';
+  }
+  if (file.size <= 0) return '빈 파일은 첨부할 수 없습니다.';
+  if (file.size > MAX_SIZE) {
+    return `파일 크기가 20MB를 초과합니다. (${file.name})`;
+  }
   return null;
 }
 
@@ -144,7 +156,7 @@ async function getUploadUrl(groupId: string, fileName: string, mimeType: string,
 
 export async function uploadFeatureAttachment(params: {
   groupId: string;
-  featureType: 'chat' | 'piggy' | 'travel';
+  featureType: FeatureType;
   entityType: FeatureEntityType;
   entityId: string;
   file: File;
@@ -219,7 +231,7 @@ export async function uploadFeatureAttachment(params: {
 
 export async function uploadFeatureAttachments(params: {
   groupId: string;
-  featureType: 'chat' | 'piggy' | 'travel';
+  featureType: FeatureType;
   entityType: FeatureEntityType;
   entityId: string;
   files: File[];

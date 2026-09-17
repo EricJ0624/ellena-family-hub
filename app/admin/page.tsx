@@ -49,6 +49,11 @@ import { LANG_CODES, LANG_OPTIONS, LANG_LABELS, ANNOUNCEMENT_PRIMARY_LANG_CODES,
 import { getCountryDisplayName } from '@/lib/countries';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
+import {
+  SupportPendingAttachmentPicker,
+  SupportSavedAttachmentGallery,
+  uploadSupportTicketFiles,
+} from '@/app/components/support/SupportTicketAttachments';
 import { getGroupSelectorLabel, getGroupDisplayNameRaw } from '@/lib/group-display-name';
 import { FeatureUsageSection } from '@/app/components/admin/FeatureUsageSection';
 import { SignupSettingsSection } from '@/app/components/admin/SignupSettingsSection';
@@ -191,6 +196,7 @@ interface SupportTicketInfo {
   answer: string | null;
   answered_by: string | null;
   answered_at: string | null;
+  answer_message_id?: string | null;
   message_thread?: unknown;
   created_at: string;
   updated_at: string;
@@ -308,6 +314,12 @@ export default function AdminPage() {
   const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
   const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementInfo | null | undefined>(undefined);
   const [editingTicket, setEditingTicket] = useState<SupportTicketInfo | null>(null);
+  const [ticketAnswer, setTicketAnswer] = useState('');
+  const [ticketReplyFiles, setTicketReplyFiles] = useState<File[]>([]);
+  const supportAttachLabels = {
+    attach: gat('attach_photo'),
+    delete: gat('attach_remove'),
+  };
   const [announcementTitleI18n, setAnnouncementTitleI18n] = useState<Record<string, string>>(() => Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
   const [announcementContentI18n, setAnnouncementContentI18n] = useState<Record<string, string>>(() => Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
   const [announcementTarget, setAnnouncementTarget] = useState<'ADMIN_ONLY' | 'ALL_MEMBERS'>('ADMIN_ONLY');
@@ -316,7 +328,6 @@ export default function AdminPage() {
   const [announcementLangTab, setAnnouncementLangTab] = useState<LangCode>('ko');
   const [announcementExtraEnabled, setAnnouncementExtraEnabled] = useState<Set<LangCode>>(() => new Set());
   const [announcementExtraExpanded, setAnnouncementExtraExpanded] = useState(false);
-  const [ticketAnswer, setTicketAnswer] = useState('');
   const [deletingSystemSupportTicketId, setDeletingSystemSupportTicketId] = useState<string | null>(null);
   const [accessRequestExpiresHours, setAccessRequestExpiresHours] = useState(24);
   const [showNewAccessRequestModal, setShowNewAccessRequestModal] = useState(false);
@@ -2913,6 +2924,12 @@ export default function AdminPage() {
                           <p className="mb-3 mt-0 whitespace-pre-wrap text-sm text-slate-500">
                             {ticket.content}
                           </p>
+                          <SupportSavedAttachmentGallery
+                            groupId={ticket.group_id}
+                            entityType="support_ticket"
+                            entityId={ticket.id}
+                            labels={supportAttachLabels}
+                          />
                           {ticket.answer && (
                             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
                               <div className="mb-2 text-xs font-semibold text-sky-700">
@@ -2921,6 +2938,14 @@ export default function AdminPage() {
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
                               </p>
+                              {ticket.answer_message_id ? (
+                                <SupportSavedAttachmentGallery
+                                  groupId={ticket.group_id}
+                                  entityType="support_ticket"
+                                  entityId={ticket.answer_message_id}
+                                  labels={supportAttachLabels}
+                                />
+                              ) : null}
                             </div>
                           )}
                           {parseMessageThread(ticket.message_thread).map((entry, idx) => (
@@ -2939,6 +2964,14 @@ export default function AdminPage() {
                               <div className="mt-2 text-[11px] text-slate-400">
                                 {new Date(entry.created_at).toLocaleString(adminLocale)}
                               </div>
+                              {entry.id ? (
+                                <SupportSavedAttachmentGallery
+                                  groupId={ticket.group_id}
+                                  entityType="support_ticket"
+                                  entityId={entry.id}
+                                  labels={supportAttachLabels}
+                                />
+                              ) : null}
                             </div>
                           ))}
                         </div>
@@ -2990,6 +3023,7 @@ export default function AdminPage() {
                             onClick={() => {
                               setEditingTicket(ticket);
                               setTicketAnswer('');
+                              setTicketReplyFiles([]);
                             }}
                             className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                           >
@@ -3246,6 +3280,12 @@ export default function AdminPage() {
                           <p className="mb-3 mt-0 whitespace-pre-wrap text-sm text-slate-500">
                             {ticket.content}
                           </p>
+                          <SupportSavedAttachmentGallery
+                            groupId={ticket.group_id}
+                            entityType="support_ticket"
+                            entityId={ticket.id}
+                            labels={supportAttachLabels}
+                          />
                           {ticket.answer && (
                             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
                               <div className="mb-2 text-xs font-semibold text-sky-700">
@@ -3254,6 +3294,14 @@ export default function AdminPage() {
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
                               </p>
+                              {ticket.answer_message_id ? (
+                                <SupportSavedAttachmentGallery
+                                  groupId={ticket.group_id}
+                                  entityType="support_ticket"
+                                  entityId={ticket.answer_message_id}
+                                  labels={supportAttachLabels}
+                                />
+                              ) : null}
                             </div>
                           )}
                           {parseMessageThread(ticket.message_thread).map((entry, idx) => (
@@ -3272,6 +3320,14 @@ export default function AdminPage() {
                               <div className="mt-2 text-[11px] text-slate-400">
                                 {new Date(entry.created_at).toLocaleString(adminLocale)}
                               </div>
+                              {entry.id ? (
+                                <SupportSavedAttachmentGallery
+                                  groupId={ticket.group_id}
+                                  entityType="support_ticket"
+                                  entityId={entry.id}
+                                  labels={supportAttachLabels}
+                                />
+                              ) : null}
                             </div>
                           ))}
                         </div>
@@ -3323,6 +3379,7 @@ export default function AdminPage() {
                             onClick={() => {
                               setEditingTicket(ticket);
                               setTicketAnswer('');
+                              setTicketReplyFiles([]);
                             }}
                             className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                           >
@@ -4054,6 +4111,7 @@ console.error(at('error_revoke_failed'), error);
         onClose={() => {
           setEditingTicket(null);
           setTicketAnswer('');
+          setTicketReplyFiles([]);
         }}
       >
         {editingTicket && (
@@ -4068,6 +4126,12 @@ console.error(at('error_revoke_failed'), error);
               <div className="text-[13px] text-slate-500">
                 {editingTicket.content}
               </div>
+              <SupportSavedAttachmentGallery
+                groupId={editingTicket.group_id}
+                entityType="support_ticket"
+                entityId={editingTicket.id}
+                labels={supportAttachLabels}
+              />
               {editingTicket.answer && (
                 <div className="mt-3 text-xs text-sky-700">
                   <div className="mb-1 font-semibold">{at('first_answer_label')}</div>
@@ -4075,7 +4139,7 @@ console.error(at('error_revoke_failed'), error);
                 </div>
               )}
               {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
-                <div key={`ticket-modal-${idx}`} className="mt-2.5 text-xs">
+                <div key={entry.id || `ticket-modal-${idx}`} className="mt-2.5 text-xs">
                   <div className={`font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
                     {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
                   </div>
@@ -4089,11 +4153,17 @@ console.error(at('error_revoke_failed'), error);
               placeholder={at('placeholder_answer')}
               className="mb-4 min-h-[200px] w-full resize-y rounded-lg border border-slate-200 p-3 text-sm font-inherit"
             />
-            <div className="flex justify-end gap-2">
+            <SupportPendingAttachmentPicker
+              files={ticketReplyFiles}
+              onChange={setTicketReplyFiles}
+              labels={supportAttachLabels}
+            />
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => {
                   setEditingTicket(null);
                   setTicketAnswer('');
+                  setTicketReplyFiles([]);
                 }}
                 className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
               >
@@ -4117,6 +4187,17 @@ console.error(at('error_revoke_failed'), error);
                       return;
                     }
 
+                    const messageId = crypto.randomUUID();
+                    if (ticketReplyFiles.length > 0) {
+                      await uploadSupportTicketFiles({
+                        groupId: editingTicket.group_id,
+                        entityType: 'support_ticket',
+                        entityId: messageId,
+                        files: ticketReplyFiles,
+                      });
+                    }
+
+                    const isFirstAnswer = !editingTicket.answer;
                     const response = await fetch('/api/admin/support-tickets', {
                       method: 'POST',
                       headers: {
@@ -4127,6 +4208,9 @@ console.error(at('error_revoke_failed'), error);
                         id: editingTicket.id,
                         answer: ticketAnswer.trim(),
                         status: 'answered',
+                        ...(isFirstAnswer
+                          ? { answer_message_id: messageId }
+                          : { message_id: messageId }),
                       }),
                     });
 
@@ -4142,6 +4226,7 @@ console.error(at('error_revoke_failed'), error);
                     alert(isAllSupportTab ? at('answer_saved') : at('success_answer_submitted'));
                     setEditingTicket(null);
                     setTicketAnswer('');
+                    setTicketReplyFiles([]);
                     if (isAllSupportTab) {
                       loadAllSupportTickets();
                     } else {

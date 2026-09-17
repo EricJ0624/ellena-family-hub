@@ -6,7 +6,7 @@ import {
   generateS3KeyWithGroup,
   getS3ClientInstance,
 } from '@/lib/api-helpers';
-import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { requireAuthUser, requireGroupMemberOrSystemAdmin } from '@/lib/api-guards';
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -41,10 +41,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '지원하지 않는 파일 형식입니다.' }, { status: 400 });
     }
     if (typeof fileSize !== 'number' || fileSize <= 0 || fileSize > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: '파일 크기는 1B~20MB여야 합니다.' }, { status: 400 });
+      return NextResponse.json({ error: '파일 크기가 20MB를 초과합니다. (최대 20MB)' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMember(user.id, String(groupId));
+    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, String(groupId));
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;

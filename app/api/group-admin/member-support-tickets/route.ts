@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { id, group_id, answer, status } = body || {};
+    const { id, group_id, answer, status, answer_message_id, message_id } = body || {};
 
     if (!id || !group_id) {
       return NextResponse.json({ error: '문의 ID와 그룹 ID가 필요합니다.' }, { status: 400 });
@@ -65,6 +65,10 @@ export async function PUT(request: NextRequest) {
     if (!answer) {
       return NextResponse.json({ error: '답변 내용은 필수입니다.' }, { status: 400 });
     }
+
+    const UUID_ANY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const resolveMsgId = (raw: unknown) =>
+      typeof raw === 'string' && UUID_ANY.test(raw) ? raw : crypto.randomUUID();
 
     const adminCheck = await requireGroupAdmin(user.id, group_id);
     if (adminCheck instanceof NextResponse) return adminCheck;
@@ -98,6 +102,7 @@ export async function PUT(request: NextRequest) {
     let updErr: { message: string } | null = null;
 
     if (!existing.answer) {
+      const answerMessageId = resolveMsgId(answer_message_id ?? message_id);
       const { data, error } = await supabase
         .from('member_support_tickets')
         .update({
@@ -105,6 +110,7 @@ export async function PUT(request: NextRequest) {
           answered_by: user.id,
           answered_at: answeredAt,
           status: nextStatus,
+          answer_message_id: answerMessageId,
         })
         .eq('id', id)
         .eq('group_id', group_id)
@@ -115,6 +121,7 @@ export async function PUT(request: NextRequest) {
     } else {
       const thread = parseMemberSupportMessageThread(existing.message_thread);
       thread.push({
+        id: resolveMsgId(message_id),
         role: 'group_admin',
         user_id: user.id,
         body: trimmed,

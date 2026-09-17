@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -16,6 +16,13 @@ import {
 } from '@/lib/member-support';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
+import {
+  SupportPendingAttachmentPicker,
+  SupportSavedAttachmentGallery,
+  collectSupportAttachmentEntityIds,
+  uploadSupportTicketFiles,
+  useSupportAttachmentsMap,
+} from '@/app/components/support/SupportTicketAttachments';
 
 function MemberSupportPageContent() {
   const router = useRouter();
@@ -46,9 +53,33 @@ function MemberSupportPageContent() {
   const [followUpTicketId, setFollowUpTicketId] = useState<string | null>(null);
   const [followUpText, setFollowUpText] = useState('');
   const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [composeFiles, setComposeFiles] = useState<File[]>([]);
+  const [followUpFiles, setFollowUpFiles] = useState<File[]>([]);
 
   const isGroupAdmin =
     (userRole === 'ADMIN' || isOwner) && currentGroupId !== null;
+
+  const attachmentEntityIds = useMemo(
+    () =>
+      tickets.flatMap((t) =>
+        collectSupportAttachmentEntityIds({
+          id: t.id,
+          answer_message_id: t.answer_message_id,
+          message_thread: t.message_thread,
+        })
+      ),
+    [tickets]
+  );
+  const { map: attachmentMap, reload: reloadAttachments } = useSupportAttachmentsMap(
+    currentGroupId,
+    'member_support_ticket',
+    attachmentEntityIds
+  );
+
+  const attachLabels = {
+    attach: dt('member_support_attach_photo'),
+    delete: dt('member_support_attach_remove'),
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -171,10 +202,21 @@ function MemberSupportPageContent() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || dt('member_support_alert_submit_failed'));
+      const ticketId = json?.data?.id as string | undefined;
+      if (ticketId && composeFiles.length > 0) {
+        await uploadSupportTicketFiles({
+          groupId: currentGroupId,
+          entityType: 'member_support_ticket',
+          entityId: ticketId,
+          files: composeFiles,
+        });
+      }
       alert(dt('member_support_alert_registered'));
       setTitle('');
       setContent('');
+      setComposeFiles([]);
       await loadTickets();
+      await reloadAttachments();
     } catch (e: unknown) {
       console.error('멤버 문의 작성 오류:', e);
       alert(e instanceof Error ? e.message : dt('member_support_alert_submit_failed'));
@@ -197,6 +239,15 @@ function MemberSupportPageContent() {
         alert(dt('member_support_alert_auth'));
         return;
       }
+      const messageId = crypto.randomUUID();
+      if (followUpFiles.length > 0) {
+        await uploadSupportTicketFiles({
+          groupId: currentGroupId,
+          entityType: 'member_support_ticket',
+          entityId: messageId,
+          files: followUpFiles,
+        });
+      }
       const res = await fetch('/api/support-tickets', {
         method: 'PATCH',
         headers: {
@@ -207,6 +258,7 @@ function MemberSupportPageContent() {
           id: followUpTicketId,
           group_id: currentGroupId,
           follow_up: text,
+          message_id: messageId,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -218,7 +270,9 @@ function MemberSupportPageContent() {
       alert(dt('member_support_follow_up_success'));
       setFollowUpTicketId(null);
       setFollowUpText('');
+      setFollowUpFiles([]);
       await loadTickets();
+      await reloadAttachments();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : dt('member_support_follow_up_error'));
     } finally {
@@ -349,9 +403,20 @@ function MemberSupportPageContent() {
                       >
                         {t.content}
                       </div>
+                      {currentGroupId && (
+                        <SupportSavedAttachmentGallery
+                          groupId={currentGroupId}
+                          entityType="member_support_ticket"
+                          entityId={t.id}
+                          attachments={attachmentMap[t.id]}
+                          canDelete
+                          onChanged={() => void reloadAttachments()}
+                          labels={attachLabels}
+                        />
+                      )}
                       {hasFirstAnswer && (
                         <div
-                          className="whitespace-pre-wrap rounded-[10px] border border-emerald-200 bg-emerald-50 p-3 text-[13px] text-emerald-800"
+                          className="mt-2.5 whitespace-pre-wrap rounded-[10px] border border-emerald-200 bg-emerald-50 p-3 text-[13px] text-emerald-800"
                         >
                           <strong className="mb-1.5 block">
                             {dt('member_support_admin_reply')}
@@ -363,11 +428,20 @@ function MemberSupportPageContent() {
                               {new Date(t.answered_at).toLocaleString(intlLocaleForLang(lang))}
                             </div>
                           )}
+                          {currentGroupId && t.answer_message_id && (
+                            <SupportSavedAttachmentGallery
+                              groupId={currentGroupId}
+                              entityType="member_support_ticket"
+                              entityId={t.answer_message_id}
+                              attachments={attachmentMap[t.answer_message_id]}
+                              labels={attachLabels}
+                            />
+                          )}
                         </div>
                       )}
                       {thread.map((entry, idx) => (
                         <div
-                          key={`${entry.created_at}-${idx}`}
+                          key={entry.id || `${entry.created_at}-${idx}`}
                           className={`mt-2.5 whitespace-pre-wrap rounded-[10px] border p-3 text-[13px] ${
                             entry.role === 'member'
                               ? 'border-amber-200 bg-amber-50 text-amber-800'
@@ -383,6 +457,17 @@ function MemberSupportPageContent() {
                           <div className="mt-2 text-[11px] opacity-85">
                             {new Date(entry.created_at).toLocaleString(intlLocaleForLang(lang))}
                           </div>
+                          {currentGroupId && entry.id && (
+                            <SupportSavedAttachmentGallery
+                              groupId={currentGroupId}
+                              entityType="member_support_ticket"
+                              entityId={entry.id}
+                              attachments={attachmentMap[entry.id]}
+                              canDelete={entry.role === 'member'}
+                              onChanged={() => void reloadAttachments()}
+                              labels={attachLabels}
+                            />
+                          )}
                         </div>
                       ))}
                       <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3">
@@ -446,6 +531,12 @@ function MemberSupportPageContent() {
                   className="min-h-[140px] w-full resize-y box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 />
               </div>
+              <SupportPendingAttachmentPicker
+                files={composeFiles}
+                onChange={setComposeFiles}
+                disabled={submitLoading}
+                labels={attachLabels}
+              />
               <button
                 type="button"
                 onClick={() => void handleSubmit()}
@@ -466,6 +557,7 @@ function MemberSupportPageContent() {
                 if (followUpLoading) return;
                 setFollowUpTicketId(null);
                 setFollowUpText('');
+                setFollowUpFiles([]);
               }}
             >
               <div
@@ -483,13 +575,20 @@ function MemberSupportPageContent() {
                   maxLength={2000}
                   className="mb-3.5 w-full box-border resize-y rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 />
-                <div className="flex justify-end gap-2">
+                <SupportPendingAttachmentPicker
+                  files={followUpFiles}
+                  onChange={setFollowUpFiles}
+                  disabled={followUpLoading}
+                  labels={attachLabels}
+                />
+                <div className="mt-3.5 flex justify-end gap-2">
                   <button
                     type="button"
                     disabled={followUpLoading}
                     onClick={() => {
                       setFollowUpTicketId(null);
                       setFollowUpText('');
+                      setFollowUpFiles([]);
                     }}
                     className="rounded-lg border-none bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed"
                   >

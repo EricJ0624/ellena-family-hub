@@ -4,6 +4,7 @@ import { requireAuthUser, requireGroupAdmin, requireGroupMember } from '@/lib/ap
 import { isSystemAdmin } from '@/lib/permissions';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
+import { deleteAttachmentsForSupportTicket } from '@/lib/support-ticket-attachments-cleanup';
 
 /**
  * 멤버 문의 목록 조회 (본인 작성 + 해당 그룹)
@@ -127,7 +128,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data: row, error: fetchErr } = await supabase
       .from('member_support_tickets')
-      .select('id, created_by, group_id, title')
+      .select('id, created_by, group_id, title, answer_message_id, message_thread')
       .eq('id', ticketId)
       .maybeSingle();
 
@@ -153,6 +154,20 @@ export async function DELETE(request: NextRequest) {
     } else {
       const adminCheck = await requireGroupAdmin(user.id, groupId);
       if (adminCheck instanceof NextResponse) return adminCheck;
+    }
+
+    try {
+      await deleteAttachmentsForSupportTicket(supabase, {
+        groupId,
+        entityType: 'member_support_ticket',
+        ticket: row,
+      });
+    } catch (cleanupErr) {
+      console.error('멤버 문의 첨부 정리 오류:', cleanupErr);
+      return NextResponse.json(
+        { error: cleanupErr instanceof Error ? cleanupErr.message : '문의 첨부 정리에 실패했습니다.' },
+        { status: 500 }
+      );
     }
 
     const { error: delErr } = await supabase
@@ -202,7 +217,7 @@ export async function PATCH(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { id, group_id, follow_up } = body || {};
+    const { id, group_id, follow_up, message_id } = body || {};
 
     if (!id || !group_id || !follow_up || !String(follow_up).trim()) {
       return NextResponse.json(
@@ -210,6 +225,12 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const UUID_ANY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const entryId =
+      typeof message_id === 'string' && UUID_ANY.test(message_id)
+        ? message_id
+        : crypto.randomUUID();
 
     const memberCheck = await requireGroupMember(user.id, group_id);
     if (memberCheck instanceof NextResponse) return memberCheck;
@@ -256,6 +277,7 @@ export async function PATCH(request: NextRequest) {
     const thread = parseMemberSupportMessageThread(existing.message_thread);
     const createdAt = new Date().toISOString();
     thread.push({
+      id: entryId,
       role: 'member',
       user_id: user.id,
       body: String(follow_up).trim(),

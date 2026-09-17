@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
-import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { requireAuthUser, requireGroupMemberOrSystemAdmin } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { ensureFamilyAlbumItemForDiaryPhoto } from '@/lib/storage-object-refs';
 
@@ -11,9 +11,11 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'travel_trip',
   'travel_expense',
   'travel_diary_entry',
+  'member_support_ticket',
+  'support_ticket',
 ]);
 
-const ALLOWED_FEATURE_TYPES = new Set(['chat', 'piggy', 'travel']);
+const ALLOWED_FEATURE_TYPES = new Set(['chat', 'piggy', 'travel', 'support']);
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -66,10 +68,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '지원하지 않는 파일 형식입니다.' }, { status: 400 });
     }
     if (typeof sizeBytes !== 'number' || sizeBytes <= 0 || sizeBytes > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: '파일 크기는 1B~20MB여야 합니다.' }, { status: 400 });
+      return NextResponse.json({ error: '파일 크기가 20MB를 초과합니다. (최대 20MB)' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMember(user.id, String(groupId));
+    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, String(groupId));
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();

@@ -4,11 +4,15 @@
  */
 
 export type MemberSupportTicketThreadEntry = {
+  /** 첨부 entity_id로 사용. 구 데이터는 없을 수 있음. */
+  id?: string;
   role: 'member' | 'group_admin';
   user_id: string;
   body: string;
   created_at: string;
 };
+
+const UUID_ANY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function parseMemberSupportMessageThread(raw: unknown): MemberSupportTicketThreadEntry[] {
   if (!raw || !Array.isArray(raw)) return [];
@@ -26,7 +30,8 @@ export function parseMemberSupportMessageThread(raw: unknown): MemberSupportTick
       typeof body === 'string' &&
       typeof created_at === 'string'
     ) {
-      out.push({ role, user_id, body, created_at });
+      const id = typeof o.id === 'string' && UUID_ANY.test(o.id) ? o.id : undefined;
+      out.push(id ? { id, role, user_id, body, created_at } : { role, user_id, body, created_at });
     }
   }
   return out;

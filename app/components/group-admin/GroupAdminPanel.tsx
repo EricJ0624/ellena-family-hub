@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -39,6 +39,13 @@ import { intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 import { getAnnouncementTexts, isAnnouncementVisibleForLang } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
+import {
+  SupportPendingAttachmentPicker,
+  SupportSavedAttachmentGallery,
+  collectSupportAttachmentEntityIds,
+  uploadSupportTicketFiles,
+  useSupportAttachmentsMap,
+} from '@/app/components/support/SupportTicketAttachments';
 import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/memberManagement';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { DB_TABLES } from '@/lib/db-table-names';
@@ -116,6 +123,7 @@ interface SupportTicketInfo {
   answer: string | null;
   answered_by: string | null;
   answered_at: string | null;
+  answer_message_id?: string | null;
   message_thread?: unknown;
   created_at: string;
   updated_at: string;
@@ -131,6 +139,7 @@ interface MemberSupportTicketInfo {
   answer: string | null;
   answered_by: string | null;
   answered_at: string | null;
+  answer_message_id?: string | null;
   message_thread?: unknown;
   created_at: string;
   updated_at: string;
@@ -243,6 +252,47 @@ export function GroupAdminPanel({
   const [followUpForTicket, setFollowUpForTicket] = useState<SupportTicketInfo | null>(null);
   const [followUpBody, setFollowUpBody] = useState('');
   const [deletingSupportTicketId, setDeletingSupportTicketId] = useState<string | null>(null);
+  const [composeFiles, setComposeFiles] = useState<File[]>([]);
+  const [followUpFiles, setFollowUpFiles] = useState<File[]>([]);
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
+
+  const attachLabels = {
+    attach: gat('attach_photo'),
+    delete: gat('attach_remove'),
+  };
+
+  const supportEntityIds = useMemo(
+    () =>
+      supportTickets.flatMap((t) =>
+        collectSupportAttachmentEntityIds({
+          id: t.id,
+          answer_message_id: t.answer_message_id,
+          message_thread: t.message_thread,
+        })
+      ),
+    [supportTickets]
+  );
+  const memberEntityIds = useMemo(
+    () =>
+      memberSupportTickets.flatMap((t) =>
+        collectSupportAttachmentEntityIds({
+          id: t.id,
+          answer_message_id: t.answer_message_id,
+          message_thread: t.message_thread,
+        })
+      ),
+    [memberSupportTickets]
+  );
+  const { map: supportAttachmentMap, reload: reloadSupportAttachments } = useSupportAttachmentsMap(
+    effectiveGroupId,
+    'support_ticket',
+    supportEntityIds
+  );
+  const { map: memberAttachmentMap, reload: reloadMemberAttachments } = useSupportAttachmentsMap(
+    effectiveGroupId,
+    'member_support_ticket',
+    memberEntityIds
+  );
 
   const [piggyArchivesSnapshots, setPiggyArchivesSnapshots] = useState<Array<{
     id: string;
@@ -1409,6 +1459,7 @@ export function GroupAdminPanel({
                       setShowTicketForm(true);
                       setTicketTitle('');
                       setTicketContent('');
+                      setComposeFiles([]);
                     }}
                     className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                   >
@@ -1451,6 +1502,17 @@ export function GroupAdminPanel({
                           <p className="m-0 mb-3 whitespace-pre-wrap text-sm text-slate-500">
                             {ticket.content}
                           </p>
+                          {effectiveGroupId && (
+                            <SupportSavedAttachmentGallery
+                              groupId={effectiveGroupId}
+                              entityType="support_ticket"
+                              entityId={ticket.id}
+                              attachments={supportAttachmentMap[ticket.id]}
+                              canDelete
+                              onChanged={() => void reloadSupportAttachments()}
+                              labels={attachLabels}
+                            />
+                          )}
                           {ticket.answer && (
                             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
                               <div className="mb-2 text-xs font-semibold text-sky-700">
@@ -1459,11 +1521,20 @@ export function GroupAdminPanel({
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
                               </p>
+                              {effectiveGroupId && ticket.answer_message_id && (
+                                <SupportSavedAttachmentGallery
+                                  groupId={effectiveGroupId}
+                                  entityType="support_ticket"
+                                  entityId={ticket.answer_message_id}
+                                  attachments={supportAttachmentMap[ticket.answer_message_id]}
+                                  labels={attachLabels}
+                                />
+                              )}
                             </div>
                           )}
                           {parseMessageThread(ticket.message_thread).map((entry, idx) => (
                             <div
-                              key={`${entry.created_at}-${idx}`}
+                              key={entry.id || `${entry.created_at}-${idx}`}
                               className={`mt-3 rounded-lg border p-3.5 ${
                                 entry.role === 'group_admin'
                                   ? 'border-amber-200 bg-amber-50'
@@ -1483,6 +1554,17 @@ export function GroupAdminPanel({
                               <div className="mt-2 text-[11px] text-slate-400">
                                 {formatDateTime(entry.created_at)}
                               </div>
+                              {effectiveGroupId && entry.id && (
+                                <SupportSavedAttachmentGallery
+                                  groupId={effectiveGroupId}
+                                  entityType="support_ticket"
+                                  entityId={entry.id}
+                                  attachments={supportAttachmentMap[entry.id]}
+                                  canDelete={entry.role === 'group_admin'}
+                                  onChanged={() => void reloadSupportAttachments()}
+                                  labels={attachLabels}
+                                />
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1493,6 +1575,7 @@ export function GroupAdminPanel({
                               onClick={() => {
                                 setFollowUpForTicket(ticket);
                                 setFollowUpBody('');
+                                setFollowUpFiles([]);
                               }}
                               className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
                             >
@@ -1604,6 +1687,15 @@ export function GroupAdminPanel({
                           <p className="m-0 mb-3 whitespace-pre-wrap text-sm text-slate-500">
                             {ticket.content}
                           </p>
+                          {effectiveGroupId && (
+                            <SupportSavedAttachmentGallery
+                              groupId={effectiveGroupId}
+                              entityType="member_support_ticket"
+                              entityId={ticket.id}
+                              attachments={memberAttachmentMap[ticket.id]}
+                              labels={attachLabels}
+                            />
+                          )}
                           {ticket.answer && (
                             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
                               <div className="mb-2 text-xs font-semibold text-sky-700">
@@ -1612,11 +1704,22 @@ export function GroupAdminPanel({
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
                               </p>
+                              {effectiveGroupId && ticket.answer_message_id && (
+                                <SupportSavedAttachmentGallery
+                                  groupId={effectiveGroupId}
+                                  entityType="member_support_ticket"
+                                  entityId={ticket.answer_message_id}
+                                  attachments={memberAttachmentMap[ticket.answer_message_id]}
+                                  canDelete
+                                  onChanged={() => void reloadMemberAttachments()}
+                                  labels={attachLabels}
+                                />
+                              )}
                             </div>
                           )}
                           {parseMemberSupportMessageThread(ticket.message_thread).map((entry, idx) => (
                             <div
-                              key={`mst-${entry.created_at}-${idx}`}
+                              key={entry.id || `mst-${entry.created_at}-${idx}`}
                               className={`mt-3 rounded-lg border p-3.5 ${
                                 entry.role === 'member'
                                   ? 'border-amber-200 bg-amber-50'
@@ -1636,6 +1739,17 @@ export function GroupAdminPanel({
                               <div className="mt-2 text-[11px] text-slate-400">
                                 {formatDateTime(entry.created_at)}
                               </div>
+                              {effectiveGroupId && entry.id && (
+                                <SupportSavedAttachmentGallery
+                                  groupId={effectiveGroupId}
+                                  entityType="member_support_ticket"
+                                  entityId={entry.id}
+                                  attachments={memberAttachmentMap[entry.id]}
+                                  canDelete={entry.role === 'group_admin'}
+                                  onChanged={() => void reloadMemberAttachments()}
+                                  labels={attachLabels}
+                                />
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1647,6 +1761,7 @@ export function GroupAdminPanel({
                             onClick={() => {
                               setEditingMemberTicket(ticket);
                               setMemberTicketAnswer('');
+                              setReplyFiles([]);
                             }}
                             className="cursor-pointer rounded-md border-none bg-blue-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                           >
@@ -1982,6 +2097,7 @@ export function GroupAdminPanel({
           setShowTicketForm(false);
           setTicketTitle('');
           setTicketContent('');
+          setComposeFiles([]);
         }}
       >
         <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
@@ -2000,12 +2116,19 @@ export function GroupAdminPanel({
           placeholder={gat('content_placeholder')}
           className="mb-4 min-h-[300px] w-full rounded-lg border border-slate-200 p-3 text-sm"
         />
-        <div className="flex justify-end gap-2">
+        <SupportPendingAttachmentPicker
+          files={composeFiles}
+          onChange={setComposeFiles}
+          disabled={loadingData}
+          labels={attachLabels}
+        />
+        <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={() => {
               setShowTicketForm(false);
               setTicketTitle('');
               setTicketContent('');
+              setComposeFiles([]);
             }}
             className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           >
@@ -2050,11 +2173,23 @@ export function GroupAdminPanel({
                   throw new Error(result.error || gat('error_ticket_create'));
                 }
 
+                const ticketId = result?.data?.id as string | undefined;
+                if (ticketId && composeFiles.length > 0) {
+                  await uploadSupportTicketFiles({
+                    groupId: effectiveGroupId,
+                    entityType: 'support_ticket',
+                    entityId: ticketId,
+                    files: composeFiles,
+                  });
+                }
+
                 alert(gat('ticket_created'));
                 setShowTicketForm(false);
                 setTicketTitle('');
                 setTicketContent('');
+                setComposeFiles([]);
                 loadSupportTickets();
+                void reloadSupportAttachments();
               } catch (error: unknown) {
                 console.error('ticket create', error);
                 alert(error instanceof Error ? error.message : gat('error_ticket_create'));
@@ -2075,6 +2210,7 @@ export function GroupAdminPanel({
         onClose={() => {
           setFollowUpForTicket(null);
           setFollowUpBody('');
+          setFollowUpFiles([]);
         }}
       >
         {followUpForTicket && (
@@ -2091,12 +2227,19 @@ export function GroupAdminPanel({
               placeholder={gat('follow_up_placeholder')}
               className="mb-4 min-h-[160px] w-full rounded-lg border border-slate-200 p-3 text-sm"
             />
-            <div className="flex justify-end gap-2">
+            <SupportPendingAttachmentPicker
+              files={followUpFiles}
+              onChange={setFollowUpFiles}
+              disabled={loadingData}
+              labels={attachLabels}
+            />
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setFollowUpForTicket(null);
                   setFollowUpBody('');
+                  setFollowUpFiles([]);
                 }}
                 className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
               >
@@ -2120,6 +2263,15 @@ export function GroupAdminPanel({
                       alert(gat('alert_auth'));
                       return;
                     }
+                    const messageId = crypto.randomUUID();
+                    if (followUpFiles.length > 0) {
+                      await uploadSupportTicketFiles({
+                        groupId: effectiveGroupId,
+                        entityType: 'support_ticket',
+                        entityId: messageId,
+                        files: followUpFiles,
+                      });
+                    }
                     const response = await fetch('/api/group-admin/support-tickets', {
                       method: 'PATCH',
                       headers: {
@@ -2130,6 +2282,7 @@ export function GroupAdminPanel({
                         id: followUpForTicket.id,
                         group_id: effectiveGroupId,
                         follow_up: followUpBody.trim(),
+                        message_id: messageId,
                       }),
                     });
                     const result = await response.json();
@@ -2138,7 +2291,9 @@ export function GroupAdminPanel({
                     }
                     setFollowUpForTicket(null);
                     setFollowUpBody('');
+                    setFollowUpFiles([]);
                     loadSupportTickets();
+                    void reloadSupportAttachments();
                   } catch (e: unknown) {
                     alert(e instanceof Error ? e.message : gat('error_follow_up_send'));
                   } finally {
@@ -2159,6 +2314,7 @@ export function GroupAdminPanel({
         onClose={() => {
           setEditingMemberTicket(null);
           setMemberTicketAnswer('');
+          setReplyFiles([]);
         }}
       >
         {editingMemberTicket && (
@@ -2169,6 +2325,15 @@ export function GroupAdminPanel({
             <div className="mb-4 rounded-lg bg-slate-50 p-3 text-[13px] text-slate-600">
               <div className="mb-1.5 font-semibold text-slate-800">{editingMemberTicket.title}</div>
               <div className="mb-2 whitespace-pre-wrap">{editingMemberTicket.content}</div>
+              {effectiveGroupId && (
+                <SupportSavedAttachmentGallery
+                  groupId={effectiveGroupId}
+                  entityType="member_support_ticket"
+                  entityId={editingMemberTicket.id}
+                  attachments={memberAttachmentMap[editingMemberTicket.id]}
+                  labels={attachLabels}
+                />
+              )}
               {editingMemberTicket.answer && (
                 <div className="mt-2 border-t border-slate-200 pt-2">
                   <span className="text-[11px] font-semibold text-sky-700">{gat('first_reply_label')}</span>
@@ -2176,7 +2341,7 @@ export function GroupAdminPanel({
                 </div>
               )}
               {parseMemberSupportMessageThread(editingMemberTicket.message_thread).map((entry, i) => (
-                <div key={`emt-modal-${i}`} className="mt-2 border-t border-slate-200 pt-2">
+                <div key={entry.id || `emt-modal-${i}`} className="mt-2 border-t border-slate-200 pt-2">
                   <span
                     className={`text-[11px] font-semibold ${
                       entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'
@@ -2194,11 +2359,18 @@ export function GroupAdminPanel({
               placeholder={gat('reply_placeholder')}
               className="mb-4 min-h-[220px] w-full rounded-lg border border-slate-200 p-3 text-sm"
             />
-            <div className="flex justify-end gap-2">
+            <SupportPendingAttachmentPicker
+              files={replyFiles}
+              onChange={setReplyFiles}
+              disabled={loadingData}
+              labels={attachLabels}
+            />
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => {
                   setEditingMemberTicket(null);
                   setMemberTicketAnswer('');
+                  setReplyFiles([]);
                 }}
                 className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
               >
@@ -2218,6 +2390,16 @@ export function GroupAdminPanel({
                       alert(gat('auth_required'));
                       return;
                     }
+                    const messageId = crypto.randomUUID();
+                    if (replyFiles.length > 0) {
+                      await uploadSupportTicketFiles({
+                        groupId: effectiveGroupId,
+                        entityType: 'member_support_ticket',
+                        entityId: messageId,
+                        files: replyFiles,
+                      });
+                    }
+                    const isFirstAnswer = !editingMemberTicket.answer;
                     const response = await fetch('/api/group-admin/member-support-tickets', {
                       method: 'PUT',
                       headers: {
@@ -2229,6 +2411,9 @@ export function GroupAdminPanel({
                         group_id: effectiveGroupId,
                         answer: memberTicketAnswer.trim(),
                         status: 'answered',
+                        ...(isFirstAnswer
+                          ? { answer_message_id: messageId }
+                          : { message_id: messageId }),
                       }),
                     });
                     const result = await response.json();
@@ -2238,7 +2423,9 @@ export function GroupAdminPanel({
                     alert(gat('reply_saved'));
                     setEditingMemberTicket(null);
                     setMemberTicketAnswer('');
+                    setReplyFiles([]);
                     loadMemberSupportTickets();
+                    void reloadMemberAttachments();
                   } catch (e: unknown) {
                     console.error('member support reply save', e);
                     alert(e instanceof Error ? e.message : gat('error_reply_save'));

@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
+import { deleteAttachmentsForSupportTicket } from '@/lib/support-ticket-attachments-cleanup';
 
 /**
  * 문의 목록 조회 (시스템 관리자용)
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
-    const { id, answer, status } = body;
+    const { id, answer, status, answer_message_id, message_id } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -100,6 +101,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const UUID_ANY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const resolveMsgId = (raw: unknown) =>
+      typeof raw === 'string' && UUID_ANY.test(raw) ? raw : crypto.randomUUID();
 
     const supabase = getSupabaseServerClient();
 
@@ -128,6 +133,7 @@ export async function POST(request: NextRequest) {
     let updateError: { message: string } | null = null;
 
     if (!existing.answer) {
+      const answerMessageId = resolveMsgId(answer_message_id ?? message_id);
       const { data, error } = await supabase
         .from('support_tickets')
         .update({
@@ -135,6 +141,7 @@ export async function POST(request: NextRequest) {
           answered_by: user.id,
           answered_at: answeredAt,
           status: nextStatus,
+          answer_message_id: answerMessageId,
         })
         .eq('id', id)
         .select()
@@ -144,6 +151,7 @@ export async function POST(request: NextRequest) {
     } else {
       const thread = parseMessageThread(existing.message_thread);
       thread.push({
+        id: resolveMsgId(message_id),
         role: 'system_admin',
         user_id: user.id,
         body: trimmed,
@@ -293,7 +301,7 @@ export async function DELETE(request: NextRequest) {
 
     const { data: row, error: fetchErr } = await supabase
       .from('support_tickets')
-      .select('id, group_id, title')
+      .select('id, group_id, title, answer_message_id, message_thread')
       .eq('id', id)
       .maybeSingle();
 
@@ -303,6 +311,20 @@ export async function DELETE(request: NextRequest) {
     }
     if (!row) {
       return NextResponse.json({ error: '문의를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    try {
+      await deleteAttachmentsForSupportTicket(supabase, {
+        groupId: row.group_id,
+        entityType: 'support_ticket',
+        ticket: row,
+      });
+    } catch (cleanupErr) {
+      console.error('시스템 문의 첨부 정리 오류(관리자):', cleanupErr);
+      return NextResponse.json(
+        { error: cleanupErr instanceof Error ? cleanupErr.message : '문의 첨부 정리에 실패했습니다.' },
+        { status: 500 }
+      );
     }
 
     const { error: delErr } = await supabase.from('support_tickets').delete().eq('id', id);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
-import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { requireAuthUser, requireGroupMemberOrSystemAdmin } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { deleteS3IfUnreferenced } from '@/lib/storage-object-refs';
 
@@ -11,6 +11,8 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'travel_trip',
   'travel_expense',
   'travel_diary_entry',
+  'member_support_ticket',
+  'support_ticket',
 ]);
 
 /* v4 전용이 아닌 일반 UUID(버전·variant 혼용 DB 대비) */
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '지원하지 않는 entityType 입니다.' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMember(user.id, groupId);
+    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, groupId);
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
       .filter((id) => UUID_ANY.test(id));
     if (ids.length === 0) return NextResponse.json({ success: true, data: [] });
 
-    const memberCheck = await requireGroupMember(user.id, String(groupId));
+    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, String(groupId));
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
@@ -105,9 +107,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'groupId, attachmentId는 필수입니다.' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMember(user.id, String(groupId));
+    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, String(groupId));
     if (memberCheck instanceof NextResponse) return memberCheck;
-    const { role, isOwner } = memberCheck;
+    const { role, isOwner, isSystemAdmin: actingSystemAdmin } = memberCheck;
 
     const supabase = getSupabaseServerClient();
     const { data: row, error: fetchError } = await supabase
@@ -122,7 +124,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '첨부를 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    const canDelete = row.uploader_id === user.id || role === 'ADMIN' || isOwner;
+    const canDelete =
+      row.uploader_id === user.id || role === 'ADMIN' || isOwner || actingSystemAdmin;
     if (!canDelete) {
       return NextResponse.json({ error: '첨부를 삭제할 권한이 없습니다.' }, { status: 403 });
     }

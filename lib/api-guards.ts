@@ -192,6 +192,27 @@ export async function requireGroupMember(
 }
 
 /**
+ * 그룹 멤버 또는 시스템 관리자.
+ * 문의(support) 첨부처럼 시스템 관리자가 그룹 미소속·타 앱 그룹일 때 조회·업로드에 사용.
+ */
+export async function requireGroupMemberOrSystemAdmin(
+  userId: string,
+  groupId: string
+): Promise<
+  | { role: MembershipRole; isOwner: boolean; isSystemAdmin: boolean }
+  | NextResponse
+> {
+  const sysAdmin = await isSystemAdmin(userId);
+  if (sysAdmin) {
+    return { role: 'ADMIN', isOwner: false, isSystemAdmin: true };
+  }
+
+  const memberCheck = await requireGroupMember(userId, groupId);
+  if (memberCheck instanceof NextResponse) return memberCheck;
+  return { ...memberCheck, isSystemAdmin: false };
+}
+
+/**
  * 여행(trip)이 그룹에 속하는지 검증
  * 
  * @param tripId - 여행 ID

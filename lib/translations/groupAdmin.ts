@@ -116,6 +116,8 @@ export type GroupAdminTranslations = {
   alert_enter_content: string;
   error_follow_up_send: string;
   send_btn: string;
+  attach_photo: string;
+  attach_remove: string;
   member_support_section_title: string;
   no_member_support_tickets: string;
   error_member_support_load: string;
@@ -272,6 +274,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: '내용을 입력해 주세요.',
     error_follow_up_send: '추가 문의 전송에 실패했습니다.',
     send_btn: '보내기',
+    attach_photo: '사진 첨부',
+    attach_remove: '첨부 삭제',
     member_support_section_title: '멤버 문의',
     no_member_support_tickets: '멤버 문의가 없습니다.',
     error_member_support_load: '멤버 문의를 불러오지 못했습니다.',
@@ -427,6 +431,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: 'Please enter a message.',
     error_follow_up_send: 'Failed to send follow-up.',
     send_btn: 'Send',
+    attach_photo: 'Attach photo',
+    attach_remove: 'Remove attachment',
     member_support_section_title: 'Member inquiries',
     no_member_support_tickets: 'No member inquiries.',
     error_member_support_load: 'Failed to load member inquiries.',
@@ -582,6 +588,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: '内容を入力してください。',
     error_follow_up_send: '追加問い合わせの送信に失敗しました。',
     send_btn: '送信',
+    attach_photo: '写真を添付',
+    attach_remove: '添付を削除',
     member_support_section_title: 'メンバー問い合わせ',
     no_member_support_tickets: 'メンバー問い合わせはありません。',
     error_member_support_load: 'メンバー問い合わせを読み込めませんでした。',
@@ -735,6 +743,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: '请输入内容。',
     error_follow_up_send: '发送追加咨询失败。',
     send_btn: '发送',
+    attach_photo: '添加照片',
+    attach_remove: '删除附件',
     member_support_section_title: '成员咨询',
     no_member_support_tickets: '暂无成员咨询。',
     error_member_support_load: '无法加载成员咨询。',
@@ -887,6 +897,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: '請輸入內容。',
     error_follow_up_send: '傳送追加諮詢失敗。',
     send_btn: '傳送',
+    attach_photo: '附加照片',
+    attach_remove: '刪除附件',
     member_support_section_title: '成員諮詢',
     no_member_support_tickets: '尚無成員諮詢。',
     error_member_support_load: '無法載入成員諮詢。',
@@ -1039,6 +1051,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: 'Por favor ingrese un mensaje.',
     error_follow_up_send: 'No se pudo enviar el seguimiento.',
     send_btn: 'Enviar',
+    attach_photo: 'Adjuntar foto',
+    attach_remove: 'Quitar adjunto',
     member_support_section_title: 'Consultas de miembros',
     no_member_support_tickets: 'No hay consultas de miembros.',
     error_member_support_load: 'No se pudieron cargar las consultas de los miembros.',
@@ -1191,6 +1205,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: 'Veuillez saisir un message.',
     error_follow_up_send: 'Échec de l\'envoi du suivi.',
     send_btn: 'Envoyer',
+    attach_photo: 'Joindre une photo',
+    attach_remove: 'Supprimer la pièce jointe',
     member_support_section_title: 'Demandes des membres',
     no_member_support_tickets: 'Aucune demande de renseignements des membres.',
     error_member_support_load: 'Échec du chargement des demandes de renseignements des membres.',
@@ -1343,6 +1359,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: 'Bitte geben Sie eine Nachricht ein.',
     error_follow_up_send: 'Die Nachverfolgung konnte nicht gesendet werden.',
     send_btn: 'Schicken',
+    attach_photo: 'Foto anhängen',
+    attach_remove: 'Anhang entfernen',
     member_support_section_title: 'Mitgliederanfragen',
     no_member_support_tickets: 'Keine Mitgliederanfragen.',
     error_member_support_load: 'Mitgliederanfragen konnten nicht geladen werden.',
@@ -1495,6 +1513,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: 'Inserisci un messaggio.',
     error_follow_up_send: 'Impossibile inviare il follow-up.',
     send_btn: 'Inviare',
+    attach_photo: 'Allega foto',
+    attach_remove: 'Rimuovi allegato',
     member_support_section_title: 'Richieste dei membri',
     no_member_support_tickets: 'Nessuna richiesta da parte dei membri.',
     error_member_support_load: 'Impossibile caricare le richieste dei membri.',
@@ -1649,6 +1669,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_enter_content: 'Digite uma mensagem.',
     error_follow_up_send: 'Falha ao enviar acompanhamento.',
     send_btn: 'Enviar',
+    attach_photo: 'Anexar foto',
+    attach_remove: 'Remover anexo',
     member_support_section_title: 'Solicitações de membros',
     no_member_support_tickets: 'Nenhuma solicitação de membro.',
     error_member_support_load: 'Falha ao carregar solicitações de membros.',

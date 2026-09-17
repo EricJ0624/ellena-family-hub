@@ -315,6 +315,8 @@ export type DashboardTranslations = {
   member_support_follow_up_success: string;
   member_support_follow_up_error: string;
   member_support_thread_extra: string;
+  member_support_attach_photo: string;
+  member_support_attach_remove: string;
   /** 돋보기(팝업) 모드 열기 버튼 aria-label */
   widgets_magnify_open: string;
   /** 돋보기(팝업) 모드 닫기 버튼 aria-label */
@@ -612,6 +614,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: '추가 문의가 등록되었습니다.',
     member_support_follow_up_error: '추가 문의 등록에 실패했습니다.',
     member_support_thread_extra: '추가 문의',
+    member_support_attach_photo: '사진 첨부',
+    member_support_attach_remove: '첨부 삭제',
     widgets_magnify_open: '위젯 확대 보기',
     widgets_magnify_close: '닫기',
   },
@@ -905,6 +909,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: 'Your follow-up was sent.',
     member_support_follow_up_error: 'Could not send follow-up.',
     member_support_thread_extra: 'Follow-up',
+    member_support_attach_photo: 'Attach photo',
+    member_support_attach_remove: 'Remove attachment',
     widgets_magnify_open: 'Expand widget',
     widgets_magnify_close: 'Close',
   },
@@ -1198,6 +1204,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: '追加のお問い合わせを受け付けました。',
     member_support_follow_up_error: '送信に失敗しました。',
     member_support_thread_extra: '追加のお問い合わせ',
+    member_support_attach_photo: '写真を添付',
+    member_support_attach_remove: '添付を削除',
     widgets_magnify_open: 'ウィジェットを拡大',
     widgets_magnify_close: '閉じる',
   },
@@ -1488,6 +1496,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: '追加咨询已提交。',
     member_support_follow_up_error: '发送失败。',
     member_support_thread_extra: '追加咨询',
+    member_support_attach_photo: '添加照片',
+    member_support_attach_remove: '删除附件',
     widgets_magnify_open: '放大小工具',
     widgets_magnify_close: '关闭',
   },
@@ -1778,6 +1788,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: '追加諮詢已送出。',
     member_support_follow_up_error: '送出失敗。',
     member_support_thread_extra: '追加諮詢',
+    member_support_attach_photo: '附加照片',
+    member_support_attach_remove: '刪除附件',
     widgets_magnify_open: '放大小工具',
     widgets_magnify_close: '關閉',
   },
@@ -2067,6 +2079,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: 'Su seguimiento fue enviado.',
     member_support_follow_up_error: 'No se pudo enviar el seguimiento.',
     member_support_thread_extra: 'Hacer un seguimiento',
+    member_support_attach_photo: 'Adjuntar foto',
+    member_support_attach_remove: 'Quitar adjunto',
     widgets_magnify_open: 'Expandir widget',
     widgets_magnify_close: 'Cerrar',
   },
@@ -2356,6 +2370,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: 'Votre suivi a été envoyé.',
     member_support_follow_up_error: 'Impossible d\'envoyer un suivi.',
     member_support_thread_extra: 'Suivi',
+    member_support_attach_photo: 'Joindre une photo',
+    member_support_attach_remove: 'Supprimer la pièce jointe',
     widgets_magnify_open: 'Développer le widget',
     widgets_magnify_close: 'Fermer',
   },
@@ -2645,6 +2661,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: 'Ihr Follow-up wurde gesendet.',
     member_support_follow_up_error: 'Konnte keine Folgenachricht senden.',
     member_support_thread_extra: 'Nachverfolgen',
+    member_support_attach_photo: 'Foto anhängen',
+    member_support_attach_remove: 'Anhang entfernen',
     widgets_magnify_open: 'Widget erweitern',
     widgets_magnify_close: 'Schließen',
   },
@@ -2934,6 +2952,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: 'Il tuo follow-up è stato inviato.',
     member_support_follow_up_error: 'Impossibile inviare il follow-up.',
     member_support_thread_extra: 'Seguito',
+    member_support_attach_photo: 'Allega foto',
+    member_support_attach_remove: 'Rimuovi allegato',
     widgets_magnify_open: 'Espandi widget',
     widgets_magnify_close: 'Chiudi',
   },
@@ -3223,6 +3243,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: 'Seu acompanhamento foi enviado.',
     member_support_follow_up_error: 'Não foi possível enviar o acompanhamento.',
     member_support_thread_extra: 'Acompanhamento',
+    member_support_attach_photo: 'Anexar foto',
+    member_support_attach_remove: 'Remover anexo',
     widgets_magnify_open: 'Expandir widget',
     widgets_magnify_close: 'Fechar',
   },
