@@ -198,7 +198,7 @@ export function TravelDiaryPageContent() {
       collage_style?: 'film' | 'postal';
       show_map?: boolean;
     },
-  ): Promise<string | null> => {
+  ): Promise<{ entryId: string | null; expenseId: string | null } | null> => {
     if (!currentGroupId || !tripIdParam) return null;
     const { data: session } = await supabase.auth.getSession();
     const token = session.session?.access_token;
@@ -228,7 +228,10 @@ export function TravelDiaryPageContent() {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error);
     await loadAll();
-    return json.data?.id ?? null;
+    return {
+      entryId: json.data?.id ?? null,
+      expenseId: json.data?.travel_expense_id ?? null,
+    };
   };
 
   const saveCollage = async (payload: {
@@ -446,6 +449,9 @@ export function TravelDiaryPageContent() {
                     rating_label: t('rating_label'),
                     revisit_label: t('revisit_label'),
                     expense_label: t('expense_label'),
+                    receipt_upload: t('receipt_upload'),
+                    receipt_need_expense: t('receipt_need_expense'),
+                    receipt_upload_failed: t('receipt_upload_failed'),
                     save: t('save'),
                     saved: t('saved'),
                     edit: t('edit'),

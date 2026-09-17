@@ -208,39 +208,6 @@
     "de": "Aktualisiert",
     "it": "Aggiornato"
   },
-  "ui_photo": {
-    "ko": "사진",
-    "en": "Photo",
-    "ja": "写真",
-    "zh-CN": "照片",
-    "zh-TW": "照片",
-    "es": "Foto",
-    "fr": "Photo",
-    "de": "Foto",
-    "it": "Foto"
-  },
-  "ui_attachment_photos": {
-    "ko": "첨부 사진",
-    "en": "Attachments",
-    "ja": "添付写真",
-    "zh-CN": "附件照片",
-    "zh-TW": "附件照片",
-    "es": "Adjuntos",
-    "fr": "Pièces jointes",
-    "de": "Anhänge",
-    "it": "Allegati"
-  },
-  "ui_close": {
-    "ko": "닫기",
-    "en": "Close",
-    "ja": "閉じる",
-    "zh-CN": "关闭",
-    "zh-TW": "關閉",
-    "es": "Cerrar",
-    "fr": "Fermer",
-    "de": "Schließen",
-    "it": "Chiudi"
-  },
   "ui_uploading": {
     "ko": "업로드 중…",
     "en": "Uploading…",
@@ -251,39 +218,6 @@
     "fr": "Téléversement…",
     "de": "Wird hochgeladen…",
     "it": "Caricamento…"
-  },
-  "ui_add_photo": {
-    "ko": "사진 추가",
-    "en": "Add photo",
-    "ja": "写真を追加",
-    "zh-CN": "添加照片",
-    "zh-TW": "新增照片",
-    "es": "Añadir foto",
-    "fr": "Ajouter une photo",
-    "de": "Foto hinzufügen",
-    "it": "Aggiungi foto"
-  },
-  "ui_auto_optimized_upload": {
-    "ko": "자동 최적화 업로드",
-    "en": "Auto-optimized upload",
-    "ja": "自動最適化アップロード",
-    "zh-CN": "自动优化上传",
-    "zh-TW": "自動最佳化上傳",
-    "es": "Carga optimizada automática",
-    "fr": "Téléversement auto-optimisé",
-    "de": "Automatisch optimierter Upload",
-    "it": "Caricamento auto-ottimizzato"
-  },
-  "ui_filename_filter": {
-    "ko": "파일명 필터",
-    "en": "Filename filter",
-    "ja": "ファイル名フィルター",
-    "zh-CN": "文件名筛选",
-    "zh-TW": "檔名篩選",
-    "es": "Filtro de nombre de archivo",
-    "fr": "Filtre de nom de fichier",
-    "de": "Dateinamenfilter",
-    "it": "Filtro nome file"
   },
   "ui_expense_section": {
     "ko": "경비",
@@ -438,5 +372,53 @@
     "fr": "Carte des lieux (hébergement, restauration, attractions)",
     "de": "Standortkarte (Unterkunft, Essen, Sehenswürdigkeiten)",
     "it": "Mappa posizioni (alloggio, ristorazione, attrazioni)"
+  },
+  "ui_upload_cover_photo": {
+    "ko": "커버사진 올리기",
+    "en": "Upload cover photo",
+    "ja": "カバー写真を追加",
+    "zh-CN": "上传封面照片",
+    "zh-TW": "上傳封面照片",
+    "es": "Subir foto de portada",
+    "fr": "Ajouter une photo de couverture",
+    "de": "Titelbild hochladen",
+    "it": "Carica foto di copertina",
+    "pt": "Enviar foto de capa"
+  },
+  "ui_receipt_upload": {
+    "ko": "영수증 업로드",
+    "en": "Upload receipt",
+    "ja": "領収書アップロード",
+    "zh-CN": "上传收据",
+    "zh-TW": "上傳收據",
+    "es": "Subir recibo",
+    "fr": "Téléverser un reçu",
+    "de": "Beleg hochladen",
+    "it": "Carica ricevuta",
+    "pt": "Enviar recibo"
+  },
+  "ui_related_schedule": {
+    "ko": "관련 일정",
+    "en": "Related schedule",
+    "ja": "関連スケジュール",
+    "zh-CN": "相关行程",
+    "zh-TW": "相關行程",
+    "es": "Itinerario relacionado",
+    "fr": "Programme lié",
+    "de": "Zugehöriger Termin",
+    "it": "Programma collegato",
+    "pt": "Itinerário relacionado"
+  },
+  "ui_related_schedule_none": {
+    "ko": "연결 안 함",
+    "en": "Not linked",
+    "ja": "連携なし",
+    "zh-CN": "不关联",
+    "zh-TW": "不關聯",
+    "es": "Sin vincular",
+    "fr": "Non lié",
+    "de": "Nicht verknüpft",
+    "it": "Non collegato",
+    "pt": "Não vinculado"
   }
 }

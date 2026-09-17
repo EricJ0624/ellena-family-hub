@@ -6,6 +6,7 @@ import type { DiaryTimelineSlot } from '@/lib/modules/travel-planner/diary-timel
 import type { TravelExpense, TravelPlaceFeedback } from '@/lib/modules/travel-planner/types';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import {
+  deleteAttachment,
   getAttachmentsForEntity,
   uploadFeatureAttachments,
   validateAttachmentFile,
@@ -42,6 +43,9 @@ type Labels = {
   rating_label: string;
   revisit_label: string;
   expense_label: string;
+  receipt_upload: string;
+  receipt_need_expense: string;
+  receipt_upload_failed: string;
   save: string;
   saved: string;
   edit: string;
@@ -86,7 +90,7 @@ type Props = {
     actual_expense: number | null;
     collage_style?: DiaryCollageStyle;
     show_map?: boolean;
-  }) => Promise<string | null>;
+  }) => Promise<{ entryId: string | null; expenseId: string | null } | null>;
   onCollageSave: (payload: {
     entryId: string;
     collage_attachment_ids?: CollageSlotIds;
@@ -101,6 +105,22 @@ function expenseInputValue(linkedExpense?: TravelExpense | null): string {
   const n = Number(linkedExpense.amount);
   if (!Number.isFinite(n) || n <= 0) return '';
   return String(n);
+}
+
+type PendingReceipt = {
+  localId: string;
+  file: File;
+  previewUrl: string;
+};
+
+function revokePendingReceipts(items: PendingReceipt[]) {
+  for (const item of items) {
+    try {
+      URL.revokeObjectURL(item.previewUrl);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export function DiaryEntryCard({
@@ -125,6 +145,9 @@ export function DiaryEntryCard({
   const [acting, setActing] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
+  const [receipts, setReceipts] = useState<UploadedAttachment[]>([]);
+  const [pendingReceipts, setPendingReceipts] = useState<PendingReceipt[]>([]);
+  const [pendingReceiptDeleteIds, setPendingReceiptDeleteIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [mode, setMode] = useState<'view' | 'edit'>(entry?.id ? 'view' : 'edit');
   const [collageStyle, setCollageStyle] = useState<DiaryCollageStyle>(
@@ -143,9 +166,21 @@ export function DiaryEntryCard({
   const slotIdsRef = useRef<CollageSlotIds>(emptyCollageSlots());
   const photoFocusRef = useRef<PhotoFocusMap>(parsePhotoFocus(entry?.photo_focus));
   const fileRef = useRef<HTMLInputElement>(null);
+  const receiptFileRef = useRef<HTMLInputElement>(null);
+  const pendingReceiptsRef = useRef<PendingReceipt[]>([]);
   const entryId = entry?.id ?? null;
 
   const focusCurrent = focusQueue[0] ?? null;
+
+  useEffect(() => {
+    pendingReceiptsRef.current = pendingReceipts;
+  }, [pendingReceipts]);
+
+  useEffect(() => {
+    return () => {
+      revokePendingReceipts(pendingReceiptsRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     setNote(entry?.note ?? '');
@@ -162,8 +197,9 @@ export function DiaryEntryCard({
   }, [feedback?.id, feedback?.rating, feedback?.is_revisit]);
 
   useEffect(() => {
+    if (mode === 'edit') return;
     setExpense(expenseInputValue(linkedExpense));
-  }, [linkedExpense?.id, linkedExpense?.amount]);
+  }, [linkedExpense?.id, linkedExpense?.amount, mode]);
 
   useEffect(() => {
     setCollageStyle(parseCollageStyle(entry?.collage_style));
@@ -187,6 +223,103 @@ export function DiaryEntryCard({
       .then(setAttachments)
       .catch(() => setAttachments([]));
   }, [groupId, entryId]);
+
+  useEffect(() => {
+    if (!linkedExpense?.id) {
+      setReceipts([]);
+      return;
+    }
+    void getAttachmentsForEntity({
+      groupId,
+      entityType: 'travel_expense',
+      entityId: linkedExpense.id,
+    })
+      .then(setReceipts)
+      .catch(() => setReceipts([]));
+  }, [groupId, linkedExpense?.id]);
+
+  const reloadReceipts = async (expenseId?: string | null) => {
+    const id = expenseId || linkedExpense?.id;
+    if (!id) {
+      setReceipts([]);
+      return;
+    }
+    try {
+      const rows = await getAttachmentsForEntity({
+        groupId,
+        entityType: 'travel_expense',
+        entityId: id,
+      });
+      setReceipts(rows);
+    } catch {
+      setReceipts([]);
+    }
+  };
+
+  const clearPendingReceipts = () => {
+    revokePendingReceipts(pendingReceiptsRef.current);
+    pendingReceiptsRef.current = [];
+    setPendingReceipts([]);
+    setPendingReceiptDeleteIds([]);
+  };
+
+  const parseExpenseAmount = (): number | null => {
+    const exp = expense.trim() === '' ? null : Number(expense.replace(/,/g, ''));
+    if (exp == null || !Number.isFinite(exp) || exp <= 0) return null;
+    return exp;
+  };
+
+  const hasExpenseAmount = parseExpenseAmount() != null;
+
+  const visibleSavedReceipts = useMemo(
+    () => receipts.filter((att) => !pendingReceiptDeleteIds.includes(att.id)),
+    [receipts, pendingReceiptDeleteIds],
+  );
+
+  const onPickReceipt = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (files.length === 0) return;
+    if (!hasExpenseAmount) {
+      alert(labels.receipt_need_expense);
+      return;
+    }
+    for (const file of files) {
+      const err = validateAttachmentFile(file);
+      if (err) {
+        alert(err);
+        return;
+      }
+    }
+    const next: PendingReceipt[] = files.map((file) => ({
+      localId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    setPendingReceipts((prev) => [...prev, ...next]);
+  };
+
+  const removePendingReceipt = (localId: string) => {
+    setPendingReceipts((prev) => {
+      const target = prev.find((item) => item.localId === localId);
+      if (target) revokePendingReceipts([target]);
+      return prev.filter((item) => item.localId !== localId);
+    });
+  };
+
+  const onDeleteSavedReceipt = (attachmentId: string) => {
+    setPendingReceiptDeleteIds((prev) =>
+      prev.includes(attachmentId) ? prev : [...prev, attachmentId],
+    );
+  };
+
+  const startReceiptAttach = () => {
+    if (!hasExpenseAmount) {
+      alert(labels.receipt_need_expense);
+      return;
+    }
+    receiptFileRef.current?.click();
+  };
 
   useEffect(() => {
     slotIdsRef.current = slotIds;
@@ -229,6 +362,7 @@ export function DiaryEntryCard({
     setExpense(expenseInputValue(linkedExpense));
     setCollageStyle(parseCollageStyle(entry?.collage_style));
     setShowMapPref(parseShowMap(entry?.show_map));
+    clearPendingReceipts();
   };
 
   const currencyCode = (linkedExpense?.currency || tripCurrency || 'KRW').trim().toUpperCase() || 'KRW';
@@ -263,23 +397,69 @@ export function DiaryEntryCard({
     void persistCollage(slotsCustomized.current ? slotIds : undefined, next);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (opts?: { stayInEdit?: boolean }) => {
     setSaving(true);
     try {
-      const exp = expense.trim() === '' ? null : Number(expense.replace(/,/g, ''));
-      const id = await onSave({
+      const exp = parseExpenseAmount();
+      const result = await onSave({
         note,
         mood_tags: moods,
         rating,
         is_revisit: isRevisit,
-        actual_expense: exp != null && Number.isFinite(exp) ? exp : null,
+        actual_expense: exp,
         collage_style: collageStyle,
         show_map: showMapPref,
       });
+
+      if (!opts?.stayInEdit) {
+        const expenseId = result?.expenseId ?? linkedExpense?.id ?? null;
+        const pendingFiles = pendingReceiptsRef.current;
+        const deleteIds = pendingReceiptDeleteIds;
+
+        if (pendingFiles.length > 0 && !expenseId) {
+          alert(labels.receipt_need_expense);
+          setSavedFlash(true);
+          setTimeout(() => setSavedFlash(false), 1500);
+          return result;
+        }
+
+        if (expenseId && (pendingFiles.length > 0 || deleteIds.length > 0)) {
+          try {
+            for (const attachmentId of deleteIds) {
+              await deleteAttachment(groupId, attachmentId);
+            }
+            if (pendingFiles.length > 0) {
+              await uploadFeatureAttachments({
+                groupId,
+                featureType: 'travel',
+                entityType: 'travel_expense',
+                entityId: expenseId,
+                files: pendingFiles.map((item) => item.file),
+                maxConcurrent: 2,
+                retryCount: 1,
+              });
+            }
+          } catch {
+            alert(labels.receipt_upload_failed);
+          }
+        }
+
+        clearPendingReceipts();
+        if (expenseId) {
+          await reloadReceipts(expenseId);
+        } else {
+          setReceipts([]);
+        }
+
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 1500);
+        if (result?.entryId) setMode('view');
+        return result;
+      }
+
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
-      if (id) setMode('view');
-      return id;
+      return result;
     } catch {
       alert(labels.save_failed);
       return null;
@@ -370,7 +550,8 @@ export function DiaryEntryCard({
 
   const ensureEntryId = async () => {
     if (entryId) return entryId;
-    return handleSave();
+    const result = await handleSave({ stayInEdit: true });
+    return result?.entryId ?? null;
   };
 
   const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -583,6 +764,25 @@ export function DiaryEntryCard({
               <span className="text-sm font-medium text-slate-700">{expenseText}</span>
             ) : null}
           </div>
+          {receipts.length > 0 ? (
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {receipts.map((att) => (
+                <a
+                  key={att.id}
+                  href={att.image_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block overflow-hidden rounded-md border border-slate-200"
+                >
+                  <img
+                    src={att.thumbnail_url || att.image_url}
+                    alt={att.original_filename}
+                    className="h-[72px] w-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          ) : null}
         </>
       ) : (
         <>
@@ -726,6 +926,72 @@ export function DiaryEntryCard({
                   <span className="shrink-0 text-xs font-medium text-slate-500">{currencyCode}</span>
                 </span>
               </label>
+              <div className={displayMap ? '' : 'sm:col-span-2'}>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={startReceiptAttach}
+                    className={[
+                      'rounded-lg border px-3 py-1.5 text-xs font-semibold',
+                      hasExpenseAmount
+                        ? 'cursor-pointer border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                        : 'cursor-pointer border-slate-200 bg-slate-100 text-slate-400',
+                      saving ? 'opacity-60' : '',
+                    ].join(' ')}
+                    aria-disabled={!hasExpenseAmount}
+                  >
+                    {labels.receipt_upload}
+                  </button>
+                  <input
+                    ref={receiptFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/heic"
+                    capture="environment"
+                    multiple
+                    className="hidden"
+                    onChange={onPickReceipt}
+                  />
+                </div>
+                {(visibleSavedReceipts.length > 0 || pendingReceipts.length > 0) ? (
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {visibleSavedReceipts.map((att) => (
+                      <div key={att.id} className="relative">
+                        <a href={att.image_url} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={att.thumbnail_url || att.image_url}
+                            alt={att.original_filename}
+                            className="h-[72px] w-full rounded-md object-cover"
+                          />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteSavedReceipt(att.id)}
+                          className="absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-0 bg-[rgba(239,68,68,0.95)] text-[10px] text-white"
+                        >
+                          x
+                        </button>
+                      </div>
+                    ))}
+                    {pendingReceipts.map((item) => (
+                      <div key={item.localId} className="relative">
+                        <img
+                          src={item.previewUrl}
+                          alt={item.file.name}
+                          className="h-[72px] w-full rounded-md object-cover ring-2 ring-blue-300"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePendingReceipt(item.localId)}
+                          className="absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-0 bg-[rgba(239,68,68,0.95)] text-[10px] text-white"
+                        >
+                          x
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
           )}
 

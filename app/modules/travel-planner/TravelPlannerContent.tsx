@@ -17,6 +17,7 @@ import type {
   TravelPackingItem,
   TravelDayTitle,
   TravelTripParticipant,
+  TravelPlaceSourceKind,
 } from '@/lib/modules/travel-planner/types';
 import { normalizePackingChecklist } from '@/lib/modules/travel-planner/document-meta';
 import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
@@ -65,7 +66,6 @@ import {
   listAttachments,
   uploadFeatureAttachments,
   validateAttachmentFile,
-  type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
 import { intlLocaleForLang } from '@/lib/language-fonts';
@@ -83,6 +83,24 @@ function getGoogleMapsNs(): typeof google.maps | undefined {
 const API_BASE = '/api/v1/travel';
 
 const TRIP_CURRENCY_OPTIONS = [...getTopCurrencyCodes()];
+
+function plannerTypeToSourceKind(
+  type: ExpandedPlannerItineraryItem['type'],
+): TravelPlaceSourceKind {
+  return type === 'other' ? 'itinerary' : type;
+}
+
+function parseExpenseSourceKey(key: string): { source_kind: TravelPlaceSourceKind; source_id: string } | null {
+  const trimmed = key.trim();
+  if (!trimmed) return null;
+  const idx = trimmed.indexOf(':');
+  if (idx <= 0) return null;
+  const kind = trimmed.slice(0, idx) as TravelPlaceSourceKind;
+  const id = trimmed.slice(idx + 1).trim();
+  if (!id) return null;
+  if (!['attraction', 'dining', 'accommodation', 'transport', 'itinerary'].includes(kind)) return null;
+  return { source_kind: kind, source_id: id };
+}
 
 export function TravelPlannerContent() {
   const router = useRouter();
@@ -226,13 +244,13 @@ export function TravelPlannerContent() {
   const [showDocMetaForm, setShowDocMetaForm] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [tripCoverImageUrl, setTripCoverImageUrl] = useState<string | null>(null);
-  const [travelAttachmentTarget, setTravelAttachmentTarget] = useState<{ entityType: 'travel_trip' | 'travel_expense'; entityId: string } | null>(null);
-  const [travelAttachments, setTravelAttachments] = useState<UploadedAttachment[]>([]);
-  const [travelAttachmentUploading, setTravelAttachmentUploading] = useState(false);
-  const [travelAttachmentJobs, setTravelAttachmentJobs] = useState<UploadJob[]>([]);
-  const [travelAttachmentFilter, setTravelAttachmentFilter] = useState('');
-  const travelAttachmentInputRef = useRef<HTMLInputElement | null>(null);
-  const travelAttachmentAbortRef = useRef<AbortController | null>(null);
+  const [coverPhotoUploading, setCoverPhotoUploading] = useState(false);
+  const coverPhotoInputRef = useRef<HTMLInputElement | null>(null);
+  const [expenseAttachmentsById, setExpenseAttachmentsById] = useState<Record<string, UploadedAttachment[]>>({});
+  const [expenseReceiptUploadingId, setExpenseReceiptUploadingId] = useState<string | null>(null);
+  const expenseReceiptInputRef = useRef<HTMLInputElement | null>(null);
+  const expenseReceiptTargetIdRef = useRef<string | null>(null);
+  const [expenseSourceKey, setExpenseSourceKey] = useState('');
 
   /** userId → 표시명 (nickname || email || '멤버'). 그룹 멤버 + 프로필에서 로드 */
   const [memberDisplayNames, setMemberDisplayNames] = useState<Map<string, string>>(new Map());
@@ -751,15 +769,102 @@ export function TravelPlannerContent() {
     [currentGroupId, selectedTrip, getAuthHeaders, tt],
   );
 
-  const loadTravelAttachments = useCallback(async (entityType: 'travel_trip' | 'travel_expense', entityId: string) => {
-    if (!currentGroupId) return;
-    const rows = await listAttachments({
-      groupId: currentGroupId,
-      entityType,
-      entityIds: [entityId],
-    });
-    setTravelAttachments(rows);
+  const loadExpenseAttachments = useCallback(async (expenseIds: string[]) => {
+    if (!currentGroupId || expenseIds.length === 0) {
+      setExpenseAttachmentsById({});
+      return;
+    }
+    try {
+      const rows = await listAttachments({
+        groupId: currentGroupId,
+        entityType: 'travel_expense',
+        entityIds: expenseIds,
+      });
+      const next: Record<string, UploadedAttachment[]> = {};
+      for (const row of rows) {
+        (next[row.entity_id] ??= []).push(row);
+      }
+      setExpenseAttachmentsById(next);
+    } catch {
+      setExpenseAttachmentsById({});
+    }
   }, [currentGroupId]);
+
+  const handlePickCoverPhoto = async (e: { target: HTMLInputElement }) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0 || !currentGroupId || !selectedTrip) return;
+    for (const file of files) {
+      const err = validateAttachmentFile(file);
+      if (err) {
+        alert(err);
+        e.target.value = '';
+        return;
+      }
+    }
+    setCoverPhotoUploading(true);
+    try {
+      const existing = await listAttachments({
+        groupId: currentGroupId,
+        entityType: 'travel_trip',
+        entityIds: [selectedTrip.id],
+      });
+      await uploadFeatureAttachments({
+        groupId: currentGroupId,
+        featureType: 'travel',
+        entityType: 'travel_trip',
+        entityId: selectedTrip.id,
+        files: files.slice(0, 1),
+        maxConcurrent: 1,
+        retryCount: 1,
+      });
+      for (const old of existing) {
+        try {
+          await deleteAttachment(currentGroupId, old.id);
+        } catch {
+          /* ignore cleanup errors */
+        }
+      }
+      await fetchTripCoverImage(selectedTrip.id);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : tt('load_failed'));
+    } finally {
+      setCoverPhotoUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handlePickExpenseReceipt = async (e: { target: HTMLInputElement }) => {
+    const files = Array.from(e.target.files ?? []);
+    const expenseId = expenseReceiptTargetIdRef.current;
+    if (files.length === 0 || !currentGroupId || !expenseId) return;
+    for (const file of files) {
+      const err = validateAttachmentFile(file);
+      if (err) {
+        alert(err);
+        e.target.value = '';
+        return;
+      }
+    }
+    setExpenseReceiptUploadingId(expenseId);
+    try {
+      await uploadFeatureAttachments({
+        groupId: currentGroupId,
+        featureType: 'travel',
+        entityType: 'travel_expense',
+        entityId: expenseId,
+        files,
+        maxConcurrent: 2,
+        retryCount: 1,
+      });
+      await loadExpenseAttachments(expenses.map((row) => row.id));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : tt('load_failed'));
+    } finally {
+      setExpenseReceiptUploadingId(null);
+      expenseReceiptTargetIdRef.current = null;
+      e.target.value = '';
+    }
+  };
 
   useEffect(() => {
     if (currentGroupId) {
@@ -1290,51 +1395,8 @@ export function TravelPlannerContent() {
   }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports, fetchDayTitles, fetchParticipants, fetchTripCoverImage]);
 
   useEffect(() => {
-    if (!travelAttachmentTarget) {
-      setTravelAttachments([]);
-      return;
-    }
-    void loadTravelAttachments(travelAttachmentTarget.entityType, travelAttachmentTarget.entityId);
-  }, [travelAttachmentTarget, loadTravelAttachments]);
-
-  const handlePickTravelAttachment = async (e: { target: HTMLInputElement }) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length === 0 || !currentGroupId || !travelAttachmentTarget) return;
-    for (const file of files) {
-      const err = validateAttachmentFile(file);
-      if (err) {
-        alert(err);
-        e.target.value = '';
-        return;
-      }
-    }
-    setTravelAttachmentUploading(true);
-    const abort = new AbortController();
-    travelAttachmentAbortRef.current = abort;
-    try {
-      await uploadFeatureAttachments({
-        groupId: currentGroupId,
-        featureType: 'travel',
-        entityType: travelAttachmentTarget.entityType,
-        entityId: travelAttachmentTarget.entityId,
-        files,
-        maxConcurrent: 2,
-        retryCount: 1,
-        signal: abort.signal,
-        onJobsChange: setTravelAttachmentJobs,
-      });
-      await loadTravelAttachments(travelAttachmentTarget.entityType, travelAttachmentTarget.entityId);
-      if (travelAttachmentTarget.entityType === 'travel_trip') {
-        await fetchTripCoverImage(travelAttachmentTarget.entityId);
-      }
-    } catch (error) {
-      alert(error instanceof Error ? error.message : tt('load_failed'));
-    } finally {
-      setTravelAttachmentUploading(false);
-      travelAttachmentAbortRef.current = null;
-      e.target.value = '';
-    }
-  };
+    void loadExpenseAttachments(expenses.map((row) => row.id));
+  }, [expenses, loadExpenseAttachments]);
 
   /** 실시간 반영: 테이블당 채널 1개만 사용 (한 채널에 여러 postgres_changes 시 server/client bindings mismatch) */
   useEffect(() => {
@@ -1887,6 +1949,9 @@ export function TravelPlannerContent() {
       setExpenseAmount(String(item.amount));
       setExpenseDate(item.expense_date);
       setExpenseMemo(item.memo ?? '');
+      setExpenseSourceKey(
+        item.source_kind && item.source_id ? `${item.source_kind}:${item.source_id}` : '',
+      );
     } else {
       setEditingExpense(null);
       setExpenseEntryType(defaultEntryType ?? 'expense');
@@ -1894,6 +1959,7 @@ export function TravelPlannerContent() {
       setExpenseAmount('');
       setExpenseDate('');
       setExpenseMemo('');
+      setExpenseSourceKey('');
     }
     setShowExpenseForm(true);
   };
@@ -1905,6 +1971,7 @@ export function TravelPlannerContent() {
       alert(expenseRequiredAlertMessage);
       return;
     }
+    const linked = expenseEntryType === 'expense' ? parseExpenseSourceKey(expenseSourceKey) : null;
     try {
       setSubmitting(true);
       const headers = await getAuthHeaders();
@@ -1918,6 +1985,8 @@ export function TravelPlannerContent() {
           expense_date: expenseDate,
           category: expenseCategory.trim() || undefined,
           memo: expenseMemo.trim() || undefined,
+          source_kind: linked?.source_kind ?? null,
+          source_id: linked?.source_id ?? null,
         }),
       });
       const json = await res.json();
@@ -1939,6 +2008,7 @@ export function TravelPlannerContent() {
       alert(expenseRequiredAlertMessage);
       return;
     }
+    const linked = expenseEntryType === 'expense' ? parseExpenseSourceKey(expenseSourceKey) : null;
     try {
       setSubmitting(true);
       const headers = await getAuthHeaders();
@@ -1951,6 +2021,8 @@ export function TravelPlannerContent() {
           amount,
           expense_date: expenseDate,
           memo: expenseMemo.trim() || null,
+          source_kind: linked?.source_kind ?? null,
+          source_id: linked?.source_id ?? null,
         }),
       });
       const json = await res.json();
@@ -2675,6 +2747,23 @@ export function TravelPlannerContent() {
       .outsideTrip;
   }, [expandedItineraryRows, selectedTrip]);
 
+  const expenseScheduleOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: { key: string; label: string }[] = [];
+    for (const row of expandedItineraryRows) {
+      const kind = plannerTypeToSourceKind(row.type);
+      const key = `${kind}:${row.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const day = row.display_day ? `${row.display_day} · ` : '';
+      options.push({
+        key,
+        label: `${day}${shortItineraryTitle(row.type, row.title, row.address)}`,
+      });
+    }
+    return options;
+  }, [expandedItineraryRows]);
+
   const itineraryOutsideGrouped = useMemo(() => {
     const days = [...new Set(itineraryRowsOutsideTrip.map((r) => r.display_day))].sort();
     const map = new Map<string, ExpandedPlannerItineraryItem[]>();
@@ -2889,13 +2978,6 @@ export function TravelPlannerContent() {
                 <div className="flex shrink-0 items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => setTravelAttachmentTarget({ entityType: 'travel_trip', entityId: selectedTrip.id })}
-                    className="cursor-pointer rounded-md border-0 bg-blue-50 px-2 py-1.5 text-[11px] font-semibold text-blue-700 sm:px-2.5 sm:text-[12px]"
-                  >
-                    {tt('ui_photo')}
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => {
                       fillTripFormFromSelected();
                       setShowTripEditForm(true);
@@ -3051,86 +3133,6 @@ export function TravelPlannerContent() {
                 )}
               </div>
 
-            {travelAttachmentTarget && (
-              <div className="my-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <strong className="text-[13px] text-slate-700">{tt('ui_attachment_photos')}</strong>
-                  <button type="button" onClick={() => setTravelAttachmentTarget(null)} className="cursor-pointer rounded-md border-0 bg-slate-200 px-2 py-1">{tt('ui_close')}</button>
-                </div>
-                <input
-                  ref={travelAttachmentInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/heic"
-                  capture="environment"
-                  onChange={handlePickTravelAttachment}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => travelAttachmentInputRef.current?.click()}
-                  disabled={travelAttachmentUploading}
-                  className="cursor-pointer rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold"
-                >
-                  {travelAttachmentUploading ? tt('ui_uploading') : tt('ui_add_photo')}
-                </button>
-                <span className="ml-2 text-xs text-slate-500">{tt('ui_auto_optimized_upload')}</span>
-                {travelAttachmentUploading && (
-                  <button
-                    type="button"
-                    onClick={() => travelAttachmentAbortRef.current?.abort()}
-                    className="ml-2 cursor-pointer rounded-md border-0 bg-red-100 px-2.5 py-1.5 text-xs font-semibold text-red-700"
-                  >
-                    {tt('cancel')}
-                  </button>
-                )}
-                <input
-                  value={travelAttachmentFilter}
-                  onChange={(e) => setTravelAttachmentFilter(e.target.value)}
-                  placeholder={tt('ui_filename_filter')}
-                  className="ml-2 min-w-[120px] rounded-md border border-slate-300 px-2 py-1.5"
-                />
-                {travelAttachmentJobs.length > 0 && (
-                  <div className="mt-2 grid w-full gap-1">
-                    {travelAttachmentJobs.map((job) => (
-                      <div key={job.id} className="text-xs text-slate-600">
-                        {job.fileName} · {job.status}{job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="mt-2 grid grid-cols-[repeat(4,minmax(0,1fr))] gap-2">
-                  {travelAttachments
-                    .filter((att) => !travelAttachmentFilter || att.original_filename.toLowerCase().includes(travelAttachmentFilter.toLowerCase()))
-                    .map((att) => (
-                    <div key={att.id} className="relative">
-                      <a href={att.image_url} target="_blank" rel="noopener noreferrer">
-                        <img src={att.thumbnail_url || att.image_url} alt={att.original_filename} className="h-[78px] w-full rounded-md object-cover" />
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!currentGroupId) return;
-                          void (async () => {
-                            try {
-                              await deleteAttachment(currentGroupId, att.id);
-                              if (travelAttachmentTarget) {
-                                await loadTravelAttachments(travelAttachmentTarget.entityType, travelAttachmentTarget.entityId);
-                              }
-                            } catch (e) {
-                              alert(e instanceof Error ? e.message : tt('load_failed'));
-                            }
-                          })();
-                        }}
-                        className="absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-0 bg-[rgba(239,68,68,0.95)] text-white"
-                      >
-                        x
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="mt-5">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="m-0 flex items-center gap-1.5 text-[15px] font-semibold text-slate-600">
@@ -3154,6 +3156,15 @@ export function TravelPlannerContent() {
                   </button>
                 </div>
                 </div>
+                <input
+                  ref={expenseReceiptInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic"
+                  capture="environment"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => void handlePickExpenseReceipt(e)}
+                />
                 <div className="mb-2 flex flex-wrap items-center gap-4">
                   <span className="text-[15px] text-slate-500">
                     {tt('total_budget')}{' '}
@@ -3177,7 +3188,6 @@ export function TravelPlannerContent() {
                           <div className="mt-0.5 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div className="flex shrink-0 gap-1">
-                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} className="cursor-pointer rounded-md border-0 bg-blue-50 p-1.5 text-blue-700" title={tt('ui_photo')}>📷</button>
                           <button type="button" onClick={() => openExpenseForm(e)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
                           <button type="button" onClick={() => handleDeleteExpense(e)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
                         </div>
@@ -3190,21 +3200,69 @@ export function TravelPlannerContent() {
                   {expenseList.length === 0 ? (
                     <li className="rounded-md bg-slate-50 p-2.5 text-[13px] text-slate-400">{tt('no_expenses')}</li>
                   ) : (
-                    expenseList.map((e) => (
-                      <li key={e.id} className="mb-1 flex items-start justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px]">
-                        <div className="min-w-0 flex-1">
-                          <span>{e.category || tt('other')}</span>
-                          <span className="ml-2 font-semibold text-red-700">-{fmtTripMoney(Number(e.amount))}</span>
-                          {e.expense_date && <span className="ml-2 text-xs text-slate-500">{e.expense_date}</span>}
-                          <div className="mt-0.5 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
+                    expenseList.map((e) => {
+                      const receipts = expenseAttachmentsById[e.id] ?? [];
+                      return (
+                      <li key={e.id} className="mb-1 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px]">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <span>{e.category || tt('other')}</span>
+                            <span className="ml-2 font-semibold text-red-700">-{fmtTripMoney(Number(e.amount))}</span>
+                            {e.expense_date && <span className="ml-2 text-xs text-slate-500">{e.expense_date}</span>}
+                            <div className="mt-0.5 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
+                          </div>
+                          <div className="flex shrink-0 gap-1">
+                            <button
+                              type="button"
+                              disabled={expenseReceiptUploadingId === e.id}
+                              onClick={() => {
+                                expenseReceiptTargetIdRef.current = e.id;
+                                expenseReceiptInputRef.current?.click();
+                              }}
+                              className="cursor-pointer rounded-md border-0 bg-blue-50 px-2 py-1.5 text-[11px] font-semibold text-blue-700 disabled:opacity-60"
+                              title={tt('ui_receipt_upload')}
+                            >
+                              {expenseReceiptUploadingId === e.id ? tt('ui_uploading') : tt('ui_receipt_upload')}
+                            </button>
+                            <button type="button" onClick={() => openExpenseForm(e)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
+                            <button type="button" onClick={() => handleDeleteExpense(e)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
+                          </div>
                         </div>
-                        <div className="flex shrink-0 gap-1">
-                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} className="cursor-pointer rounded-md border-0 bg-blue-50 p-1.5 text-blue-700" title={tt('ui_photo')}>📷</button>
-                          <button type="button" onClick={() => openExpenseForm(e)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
-                          <button type="button" onClick={() => handleDeleteExpense(e)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
-                        </div>
+                        {receipts.length > 0 && (
+                          <div className="mt-2 grid grid-cols-4 gap-2">
+                            {receipts.map((att) => (
+                              <div key={att.id} className="relative">
+                                <a href={att.image_url} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={att.thumbnail_url || att.image_url}
+                                    alt={att.original_filename}
+                                    className="h-[72px] w-full rounded-md object-cover"
+                                  />
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!currentGroupId) return;
+                                    void (async () => {
+                                      try {
+                                        await deleteAttachment(currentGroupId, att.id);
+                                        await loadExpenseAttachments(expenses.map((row) => row.id));
+                                      } catch (err) {
+                                        alert(err instanceof Error ? err.message : tt('load_failed'));
+                                      }
+                                    })();
+                                  }}
+                                  className="absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-0 bg-[rgba(239,68,68,0.95)] text-[10px] text-white"
+                                >
+                                  x
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </li>
-                    ))
+                      );
+                    })
                   )}
                 </ul>
             </div>
@@ -4416,7 +4474,22 @@ export function TravelPlannerContent() {
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <h3 className="m-0 text-base font-semibold text-slate-800">{tt('preview_itinerary_doc')}</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={coverPhotoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic"
+                  className="hidden"
+                  onChange={(e) => void handlePickCoverPhoto(e)}
+                />
+                <button
+                  type="button"
+                  disabled={coverPhotoUploading}
+                  onClick={() => coverPhotoInputRef.current?.click()}
+                  className="cursor-pointer rounded-lg border-0 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 disabled:opacity-60"
+                >
+                  {coverPhotoUploading ? tt('ui_uploading') : tt('ui_upload_cover_photo')}
+                </button>
                 <button
                   type="button"
                   onClick={() => printItineraryDocumentPreview()}
@@ -4726,8 +4799,28 @@ export function TravelPlannerContent() {
                 value={expenseMemo}
                 onChange={(e) => setExpenseMemo(e.target.value)}
                 placeholder={tt('placeholder_optional')}
-                className="mb-5 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                className={[
+                  'min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm',
+                  expenseEntryType === 'expense' ? 'mb-3' : 'mb-5',
+                ].join(' ')}
               />
+              {expenseEntryType === 'expense' && (
+                <>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('ui_related_schedule')}</label>
+                  <select
+                    value={expenseSourceKey}
+                    onChange={(e) => setExpenseSourceKey(e.target.value)}
+                    className="mb-5 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                  >
+                    <option value="">{tt('ui_related_schedule_none')}</option>
+                    {expenseScheduleOptions.map((opt) => (
+                      <option key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
               <div className="flex justify-end gap-2">
                 <button
                   type="button"

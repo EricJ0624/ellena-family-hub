@@ -69,6 +69,29 @@ const CSS = `
     padding: 14px 16px;
     margin-top: 28px;
     box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .card.has-cover {
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 40%);
+  }
+  .card-meta { min-width: 0; }
+  .card-cover {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+  }
+  .card-cover img {
+    display: block;
+    max-width: 100%;
+    max-height: 200px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
   }
   .meta-row {
     display: flex;
@@ -152,6 +175,8 @@ const CSS = `
     .page { padding: 12px 10px 16px; }
     h1 { font-size: 22px; }
     .grid2 { grid-template-columns: 1fr; }
+    .card.has-cover { grid-template-columns: 1fr; }
+    .card-cover img { max-height: 180px; }
     .row {
       grid-template-columns: 5.5rem minmax(0, 1fr);
       gap: 6px;
@@ -178,8 +203,6 @@ const CSS = `
   .time { color: #D88C75; font-size: 12px; font-weight: 700; }
   .slot-title { font-size: 14px; font-weight: 700; margin-top: 2px; }
   .slot-desc { font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.5; }
-  .cover-img-wrap { margin-top: 20px; border-radius: 16px; overflow: hidden; }
-  .cover-img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
   .hotel-block { padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
   .hotel-block:last-child { border-bottom: none; }
   .hotel-name { font-size: 14px; font-weight: 700; }
@@ -388,9 +411,9 @@ export function buildItineraryDocumentHtml(params: {
     ${packingBlock}
   </section>`;
 
-  const coverImg = !cover
+  const coverBlock = !cover
     ? ''
-    : `<div class="cover-img-wrap"><img class="cover-img" src="${esc(cover)}" alt="" /></div>`;
+    : `<div class="card-cover"><img src="${esc(cover)}" alt="" /></div>`;
 
   const activeDays = days.filter((d) => (byDay.get(d) ?? []).length > 0 || (dayTitles[d] ?? '').trim());
   const chunks: string[][] = [];
@@ -471,8 +494,10 @@ export function buildItineraryDocumentHtml(params: {
     <div class="badge">${esc(badge)}</div>
     <h1>${esc(trip.title)}</h1>
     ${subtitle ? `<p class="sub">${esc(subtitle)}</p>` : ''}
-    ${coverImg}
-    <div class="card">${metaRows}</div>
+    <div class="card${cover ? ' has-cover' : ''}">
+      <div class="card-meta">${metaRows}</div>
+      ${coverBlock}
+    </div>
   </section>
   ${overviewPage}
   ${detailPages}

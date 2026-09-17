@@ -483,8 +483,9 @@ export async function POST(
       saved = data as Record<string, unknown>;
     }
 
+    let travelExpenseId: string | null = null;
     if (sourceKind && sourceId && (body.rating != null || body.actual_expense != null || body.is_revisit != null)) {
-      await syncPlaceFeedbackWithExpense(supabase, {
+      const feedback = await syncPlaceFeedbackWithExpense(supabase, {
         groupId,
         tripId,
         sourceKind,
@@ -498,9 +499,16 @@ export async function POST(
         placeTitle: body.place_title,
         tripCurrency: (tripRow as { currency?: string }).currency,
       });
+      travelExpenseId = feedback.travel_expense_id ?? null;
     }
 
-    return NextResponse.json({ success: true, data: normalizeEntryRow(saved!) });
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...normalizeEntryRow(saved!),
+        travel_expense_id: travelExpenseId,
+      },
+    });
   } catch (e: unknown) {
     console.error('POST diary-entries:', e);
     return NextResponse.json(

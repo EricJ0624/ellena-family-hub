@@ -61,13 +61,15 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { category, amount, paid_by, memo, expense_date, entry_type } = body as {
+    const { category, amount, paid_by, memo, expense_date, entry_type, source_kind, source_id } = body as {
       category?: string;
       amount?: number;
       paid_by?: string;
       memo?: string;
       expense_date?: string;
       entry_type?: 'addition' | 'expense';
+      source_kind?: string | null;
+      source_id?: string | null;
     };
 
     if (!groupId || !tripId || amount == null || amount < 0 || !expense_date) {
@@ -103,6 +105,22 @@ export async function POST(
         .trim()
         .toUpperCase() || 'KRW';
 
+    const sourceKinds = new Set(['attraction', 'dining', 'accommodation', 'transport', 'itinerary']);
+    let resolvedSourceKind: string | null = null;
+    let resolvedSourceId: string | null = null;
+    if (source_kind != null && String(source_kind).trim()) {
+      const sk = String(source_kind).trim();
+      if (!sourceKinds.has(sk)) {
+        return NextResponse.json({ error: '유효하지 않은 source_kind입니다.' }, { status: 400 });
+      }
+      const sid = source_id != null ? String(source_id).trim() : '';
+      if (!sid) {
+        return NextResponse.json({ error: 'source_id가 필요합니다.' }, { status: 400 });
+      }
+      resolvedSourceKind = sk;
+      resolvedSourceId = sid;
+    }
+
     const { data, error } = await supabase
       .from('travel_expenses')
       .insert({
@@ -115,6 +133,8 @@ export async function POST(
         paid_by: paid_by || null,
         memo: memo ? String(memo).trim() : null,
         expense_date,
+        source_kind: resolvedSourceKind,
+        source_id: resolvedSourceId,
         created_by: user.id,
       })
       .select()
