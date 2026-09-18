@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { CURRENT_APP_ID } from '@/lib/apps';
+import {
+  normalizeAlertPreferences,
+  isFirstAlertMode,
+  isSubsequentAlertMode,
+} from '@/lib/notifications/alert-modes';
 import { NOTIFIABLE_WIDGET_KEYS, isNotifiableWidgetKey } from '@/lib/notifications/types';
 
-/** GET/PUT: 위젯별 알림 수신 설정 */
+/** GET/PUT: 위젯별 수신(그룹) + 연속 알림 모드(유저 전역) */
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuthUser(request);
@@ -19,14 +25,27 @@ export async function GET(request: NextRequest) {
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
-    const { data, error } = await supabase
-      .from('notification_preferences')
-      .select('widget_key, push_enabled, inapp_enabled, updated_at')
-      .eq('user_id', user.id)
-      .eq('group_id', groupId);
+    const appId = CURRENT_APP_ID;
+
+    const [{ data, error }, { data: alertRow, error: alertError }] = await Promise.all([
+      supabase
+        .from('notification_preferences')
+        .select('widget_key, push_enabled, inapp_enabled, updated_at')
+        .eq('user_id', user.id)
+        .eq('group_id', groupId),
+      supabase
+        .from('notification_alert_preferences')
+        .select('first_mode, subsequent_mode, updated_at')
+        .eq('user_id', user.id)
+        .eq('app_id', appId)
+        .maybeSingle(),
+    ]);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (alertError) {
+      return NextResponse.json({ error: alertError.message }, { status: 500 });
     }
 
     const byKey = new Map((data || []).map((row) => [row.widget_key, row]));
@@ -40,7 +59,11 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ success: true, data: preferences });
+    return NextResponse.json({
+      success: true,
+      data: preferences,
+      alertPreferences: normalizeAlertPreferences(alertRow),
+    });
   } catch (error) {
     console.error('GET /api/notifications/preferences:', error);
     return NextResponse.json(
@@ -59,6 +82,10 @@ export async function PUT(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const groupId = typeof body.groupId === 'string' ? body.groupId.trim() : '';
     const preferences = Array.isArray(body.preferences) ? body.preferences : null;
+    const alertPreferencesRaw =
+      body.alertPreferences && typeof body.alertPreferences === 'object'
+        ? body.alertPreferences
+        : null;
 
     if (!groupId || !preferences) {
       return NextResponse.json({ error: 'groupId와 preferences가 필요합니다.' }, { status: 400 });
@@ -95,7 +122,33 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    let alertPreferences = normalizeAlertPreferences(null);
+    if (alertPreferencesRaw) {
+      const first = alertPreferencesRaw.first_mode;
+      const subsequent = alertPreferencesRaw.subsequent_mode;
+      if (!isFirstAlertMode(first) || !isSubsequentAlertMode(subsequent)) {
+        return NextResponse.json(
+          { error: 'alertPreferences 모드가 올바르지 않습니다.' },
+          { status: 400 },
+        );
+      }
+      alertPreferences = { first_mode: first, subsequent_mode: subsequent };
+      const { error: alertError } = await supabase.from('notification_alert_preferences').upsert(
+        {
+          user_id: user.id,
+          app_id: CURRENT_APP_ID,
+          first_mode: first,
+          subsequent_mode: subsequent,
+          updated_at: now,
+        },
+        { onConflict: 'user_id,app_id' },
+      );
+      if (alertError) {
+        return NextResponse.json({ error: alertError.message }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ success: true, alertPreferences });
   } catch (error) {
     console.error('PUT /api/notifications/preferences:', error);
     return NextResponse.json(

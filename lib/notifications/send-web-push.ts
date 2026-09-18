@@ -26,6 +26,11 @@ export interface WebPushPayload {
   icon?: string;
   badge?: string;
   tag?: string;
+  /** OS 알림 무음 (지원 브라우저) */
+  silent?: boolean;
+  /** Android Chrome 등 vibrate 패턴(ms) */
+  vibrate?: number[];
+  renotify?: boolean;
   data?: Record<string, unknown>;
 }
 
@@ -109,6 +114,9 @@ export async function sendWebPushToUser(
     icon: payload.icon || '/icon-192x192.png',
     badge: payload.badge || '/badge-72x72.png',
     tag: payload.tag,
+    silent: payload.silent === true,
+    vibrate: Array.isArray(payload.vibrate) ? payload.vibrate : undefined,
+    renotify: payload.renotify === true,
     data: payload.data || {},
   });
 

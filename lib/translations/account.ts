@@ -20,6 +20,10 @@ export type AccountTranslations = {
   delete_warning_owner_groups: string;
   delete_warning_owner_deleted: string;
   delete_warning_owner_final: string;
+  leave_section_title: string;
+  leave_section_hint: string;
+  leave_current_group: string;
+  leave_no_group: string;
   leave_group_btn: string;
   leave_group_aria: string;
   leave_confirm: string;
@@ -32,12 +36,13 @@ export type AccountTranslations = {
 
 const en: AccountTranslations = {
   page_title: 'Account',
-  page_subtitle: 'Manage your account. Leaving a group is done from that group’s dashboard.',
+  page_subtitle:
+    'Leave the current group or delete your account. These are separate actions — leaving a group keeps your account.',
   back_dashboard: 'Back to dashboard',
   back_onboarding: 'Back to group selection',
   delete_section_title: 'Delete account',
   delete_section_hint:
-    'Deleting your account permanently removes your data. To leave only one group, use Leave group on that group’s dashboard.',
+    'Deleting your account permanently removes your data. To leave only one group, use Leave group above — your account will remain.',
   delete_account_btn: 'Delete account',
   delete_account_aria: 'Delete account',
   delete_confirm_1:
@@ -53,25 +58,31 @@ const en: AccountTranslations = {
   delete_warning_owner_deleted:
     'Those groups and their data may be deleted, and all members removed. This cannot be undone.',
   delete_warning_owner_final: 'Delete account anyway?',
+  leave_section_title: 'Leave group',
+  leave_section_hint:
+    'Leave only the group currently selected on the dashboard. Other groups and your account stay.',
+  leave_current_group: 'Current group',
+  leave_no_group: 'No group is selected. Open a group dashboard first, then leave from here.',
   leave_group_btn: 'Leave group',
   leave_group_aria: 'Leave this group',
   leave_confirm: 'Leave this group?\n\nYour account will remain. You can join again with an invite.',
   leave_success: 'You left the group.',
   leave_failed: 'Could not leave the group.',
   leave_owner_blocked:
-    'Group owners cannot leave. Transfer ownership or delete the account from Account settings.',
+    'Group owners cannot leave. Transfer ownership first, or use Delete account below if you mean to remove everything.',
   account_link: 'Account',
   account_link_aria: 'Account settings',
 };
 
 const ko: AccountTranslations = {
   page_title: '계정',
-  page_subtitle: '계정 설정을 관리합니다. 특정 그룹만 나가려면 해당 그룹 대시보드에서 그룹 탈퇴를 사용하세요.',
+  page_subtitle:
+    '현재 그룹에서 나가거나 회원 탈퇴를 할 수 있습니다. 그룹 탈퇴와 회원 탈퇴는 다른 동작입니다.',
   back_dashboard: '대시보드로',
   back_onboarding: '그룹 선택으로',
   delete_section_title: '회원 탈퇴',
   delete_section_hint:
-    '회원 탈퇴 시 계정과 데이터가 영구 삭제됩니다. 한 그룹만 나가려면 그 그룹 대시보드의 「그룹 탈퇴」를 이용하세요.',
+    '회원 탈퇴 시 계정과 데이터가 영구 삭제됩니다. 한 그룹만 나가려면 위의 「그룹 탈퇴」를 이용하세요. 계정은 유지됩니다.',
   delete_account_btn: '회원 탈퇴',
   delete_account_aria: '회원 탈퇴',
   delete_confirm_1:
@@ -87,6 +98,11 @@ const ko: AccountTranslations = {
   delete_warning_owner_deleted:
     '⚠️ 삭제되는 내용:\n• 소유한 그룹이 영구적으로 삭제됩니다\n• 그룹의 모든 데이터가 삭제됩니다\n• 그룹의 모든 멤버가 자동으로 탈퇴됩니다\n• 이 작업은 되돌릴 수 없습니다',
   delete_warning_owner_final: '정말로 탈퇴하시겠습니까?',
+  leave_section_title: '그룹 탈퇴',
+  leave_section_hint:
+    '대시보드에서 선택된 현재 그룹에서만 나갑니다. 다른 그룹과 계정은 그대로 유지됩니다.',
+  leave_current_group: '현재 그룹',
+  leave_no_group: '선택된 그룹이 없습니다. 그룹 대시보드에 들어간 뒤 여기서 탈퇴하세요.',
   leave_group_btn: '그룹 탈퇴',
   leave_group_aria: '이 그룹에서 나가기',
   leave_confirm:
@@ -94,7 +110,7 @@ const ko: AccountTranslations = {
   leave_success: '그룹에서 탈퇴했습니다.',
   leave_failed: '그룹 탈퇴에 실패했습니다.',
   leave_owner_blocked:
-    '그룹 소유자는 탈퇴할 수 없습니다. 소유권을 이전하거나 계정 페이지에서 회원 탈퇴를 진행해 주세요.',
+    '그룹 소유자는 그룹 탈퇴를 할 수 없습니다. 먼저 소유권을 이전하거나, 계정 전체를 없애려면 아래 회원 탈퇴를 이용하세요.',
   account_link: '계정',
   account_link_aria: '계정 설정',
 };

@@ -3,6 +3,11 @@ import { sendWebPushToUser } from './send-web-push';
 import type { NotifiableWidgetKey, NotifyFamilyInput, NotifyFamilyResult } from './types';
 import { isNotifiableWidgetKey } from './types';
 import { CURRENT_APP_ID } from '@/lib/apps';
+import {
+  normalizeAlertPreferences,
+  resolveAlertMode,
+  type NotificationAlertPreferences,
+} from './alert-modes';
 
 function getServiceSupabase(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -78,11 +83,59 @@ async function loadPreferenceMap(
   return map;
 }
 
+async function loadAlertPreferenceMap(
+  supabase: SupabaseClient,
+  userIds: string[],
+  appId: string,
+): Promise<Map<string, NotificationAlertPreferences>> {
+  const map = new Map<string, NotificationAlertPreferences>();
+  if (userIds.length === 0) return map;
+
+  const { data } = await supabase
+    .from('notification_alert_preferences')
+    .select('user_id, first_mode, subsequent_mode')
+    .eq('app_id', appId)
+    .in('user_id', userIds);
+
+  for (const row of data || []) {
+    map.set(String(row.user_id), normalizeAlertPreferences(row));
+  }
+  return map;
+}
+
+function buildPushOptions(mode: string, groupId: string, isFirst: boolean) {
+  const bundleTag = `hearth-unread:${groupId}`;
+  if (mode === 'voice') {
+    return {
+      silent: false,
+      vibrate: undefined as number[] | undefined,
+      tag: isFirst ? undefined : bundleTag,
+      renotify: !isFirst,
+    };
+  }
+  if (mode === 'vibrate') {
+    return {
+      silent: true,
+      vibrate: [180, 80, 180],
+      tag: bundleTag,
+      renotify: true,
+    };
+  }
+  // silent
+  return {
+    silent: true,
+    vibrate: undefined as number[] | undefined,
+    tag: bundleTag,
+    renotify: false,
+  };
+}
+
 /**
  * 가족 알림 공통 진입점.
  * - preferences 반영 (없으면 기본 on)
  * - notifications 인앱 기록
- * - Web Push 발송 (해당 그룹에 미확인 알림이 있으면 푸시 생략 — 목록만 추가)
+ * - Web Push: 첫 미확인은 first_mode, 이후는 subsequent_mode
+ *   (subsequent silent = 푸시 생략·목록만, vibrate = 무음+진동 푸시)
  * 실패해도 throw하지 않고 결과/로그만 반환 (본 기능 성공 유지).
  */
 export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFamilyResult> {
@@ -141,14 +194,21 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
       const { error: insertError } = await supabase.from('notifications').insert(rows);
       if (insertError) {
         console.error('[notifyFamily] notifications insert 실패:', insertError.message);
-        // 인앱 기록 실패 시 푸시도 보내지 않음 (잘못된/불완전 알림 확산 방지)
         return result;
       }
       result.notified = inappRecipients.length;
     }
 
-    // 미확인 알림이 이미 있는 수신자에게는 OS 푸시를 보내지 않음 (인앱 목록만 누적)
-    const pushRecipients: string[] = [];
+    const pushAppId = input.appId || CURRENT_APP_ID;
+    const alertPrefs = await loadAlertPreferenceMap(supabase, pushCandidates, pushAppId);
+
+    type PushJob = {
+      userId: string;
+      isFirst: boolean;
+      mode: string;
+    };
+    const pushJobs: PushJob[] = [];
+
     if (pushCandidates.length > 0) {
       const { data: unreadRows } = await supabase
         .from('notifications')
@@ -164,33 +224,51 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
       }
 
       for (const userId of pushCandidates) {
-        // insert 직후이므로 inapp 켠 유저는 unread >= 1. 푸시는 "이번이 첫 미확인"일 때만.
-        // = 이번 insert 전 unread가 0이었으면, insert 후 unread === 1 → 푸시
         const unreadAfter = unreadCounts.get(userId) || 0;
-        const hadPriorUnread = inappRecipients.includes(userId) ? unreadAfter > 1 : unreadAfter > 0;
-        if (hadPriorUnread) {
+        // insert 직후: inapp 켠 유저는 unread>=1. 이번이 첫 미확인이면 unread===1
+        const isFirst = inappRecipients.includes(userId)
+          ? unreadAfter === 1
+          : unreadAfter === 0;
+        const mode = resolveAlertMode(
+          isFirst,
+          alertPrefs.get(userId) || normalizeAlertPreferences(null),
+        );
+
+        // subsequent silent: OS 푸시 생략 (인앱 목록·배지만)
+        if (!isFirst && mode === 'silent') {
           result.skipped += 1;
           continue;
         }
-        pushRecipients.push(userId);
+        // first silent: 무음 배너는 보내되 소리 없음
+        pushJobs.push({ userId, isFirst, mode });
       }
     }
 
-    const pushAppId = input.appId || CURRENT_APP_ID;
     await Promise.all(
-      pushRecipients.map(async (userId) => {
+      pushJobs.map(async ({ userId, isFirst, mode }) => {
+        const opts = buildPushOptions(mode, input.groupId, isFirst);
+        const tag =
+          opts.tag ||
+          input.tag ||
+          input.entityId ||
+          input.eventType;
         const pushResult = await sendWebPushToUser(
           userId,
           {
             title: input.title,
             body: input.body,
-            tag: input.tag || input.entityId || input.eventType,
+            tag,
+            silent: opts.silent,
+            vibrate: opts.vibrate,
+            renotify: opts.renotify,
             data: {
               type: input.eventType,
               widgetKey: input.widgetKey,
               entityId: input.entityId,
               url: input.url,
               appId: pushAppId,
+              alertMode: mode,
+              isFirstUnread: isFirst,
               ...(input.payload || {}),
             },
           },

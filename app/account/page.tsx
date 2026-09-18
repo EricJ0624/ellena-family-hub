@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useGroup } from '@/app/contexts/GroupContext';
+import LeaveGroupSection from '@/app/components/LeaveGroupSection';
 import AccountDeleteSection from '@/app/components/AccountDeleteSection';
 import { getAccountTranslation } from '@/lib/translations/account';
 
@@ -52,7 +53,8 @@ export default function AccountPage() {
         </Link>
         <h1 className="mt-4 text-2xl font-bold text-slate-900">{at('page_title')}</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">{at('page_subtitle')}</p>
-        <div className="mt-8">
+        <div className="mt-8 space-y-6">
+          <LeaveGroupSection />
           <AccountDeleteSection />
         </div>
       </div>

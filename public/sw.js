@@ -12,6 +12,9 @@ self.addEventListener('push', (event) => {
     badge: '/badge-72x72.png',
     tag: 'location-request',
     requireInteraction: true,
+    silent: false,
+    vibrate: undefined,
+    renotify: false,
     data: {}
   };
 
@@ -26,6 +29,9 @@ self.addEventListener('push', (event) => {
         badge: payload.badge || notificationData.badge,
         tag: payload.tag || payload.data?.requestId || notificationData.tag,
         requireInteraction: true,
+        silent: payload.silent === true,
+        vibrate: Array.isArray(payload.vibrate) ? payload.vibrate : undefined,
+        renotify: payload.renotify === true,
         data: payload.data || {}
       };
     } catch (e) {
@@ -33,8 +39,22 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const options = {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    tag: notificationData.tag,
+    requireInteraction: notificationData.requireInteraction,
+    silent: notificationData.silent,
+    renotify: notificationData.renotify,
+    data: notificationData.data,
+  };
+  if (Array.isArray(notificationData.vibrate)) {
+    options.vibrate = notificationData.vibrate;
+  }
+
   event.waitUntil(
-    self.registration.showNotification(notificationData.title, notificationData)
+    self.registration.showNotification(notificationData.title, options)
   );
 });
 

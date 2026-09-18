@@ -83,6 +83,7 @@ import {
 } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import NotificationCenter from '@/app/components/notifications/NotificationCenter';
+import AccountNotificationSettings from '@/app/components/AccountNotificationSettings';
 import GroupJoinRequestModalHost from '@/app/components/GroupJoinRequestModalHost';
 import { getAnnouncementTexts, isAnnouncementVisibleForLang } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
@@ -5802,65 +5803,6 @@ export default function FamilyHub() {
     setPendingComeHereAccept(null);
   };
 
-  // 그룹 탈퇴 (계정은 /account 에서 회원 탈퇴)
-  const handleLeaveGroup = async () => {
-    if (!currentGroupId) return;
-    if (groupIsOwner) {
-      alert(getAccountTranslation(lang, 'leave_owner_blocked'));
-      return;
-    }
-    if (!confirm(getAccountTranslation(lang, 'leave_confirm'))) return;
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        alert(dt('auth_fetch_failed'));
-        return;
-      }
-
-      const res = await fetch('/api/groups/leave', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ group_id: currentGroupId }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(typeof json.error === 'string' ? json.error : getAccountTranslation(lang, 'leave_failed'));
-        return;
-      }
-
-      alert(
-        typeof json.message === 'string'
-          ? json.message
-          : getAccountTranslation(lang, 'leave_success'),
-      );
-
-      const leftId = currentGroupId;
-      const remaining = (groupList || []).filter(
-        (g) => String(g.id).toLowerCase() !== String(leftId).toLowerCase(),
-      );
-      await refreshGroups?.();
-      if (remaining.length > 0) {
-        const nextId = String(remaining[0].id);
-        setCurrentGroupId?.(nextId);
-        writeStoredGroupId(nextId);
-        router.push('/dashboard');
-      } else {
-        setCurrentGroupId?.(null);
-        writeStoredGroupId(null);
-        router.push('/onboarding');
-      }
-    } catch (error: unknown) {
-      console.error('그룹 탈퇴 오류:', error);
-      alert(error instanceof Error ? error.message : getAccountTranslation(lang, 'leave_failed'));
-    }
-  };
-
   // 공지사항 로드 (그룹 페이지 진입 후에만 - group_id 필수)
   const loadAnnouncements = useCallback(async (retryCount = 0) => {
     if (!currentGroupId || !userId) return;
@@ -7064,6 +7006,10 @@ export default function FamilyHub() {
                   ))}
                 </select>
               </div>
+              <AccountNotificationSettings
+                groupId={currentGroupId}
+                active={isNicknameModalOpen}
+              />
             </div>
             <div className="modal-actions">
               <button 
@@ -7528,7 +7474,7 @@ export default function FamilyHub() {
         }
       `}</style>
 
-      {/* 하단 고정: 문의 + 그룹 탈퇴 + 계정(회원 탈퇴) */}
+      {/* 하단 고정: 문의 + 계정(그룹 탈퇴·회원 탈퇴는 /account) */}
       <div
         className="pointer-events-none fixed bottom-[calc(4px+env(safe-area-inset-bottom,0px))] right-[calc(6px+env(safe-area-inset-right,0px))] z-[1000] flex flex-col items-end gap-1.5"
       >
@@ -7552,19 +7498,6 @@ export default function FamilyHub() {
             )}
           </button>
         )}
-        {!groupIsOwner && currentGroupId ? (
-          <button
-            type="button"
-            onClick={() => void handleLeaveGroup()}
-            className="pointer-events-auto flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-[rgba(139,69,19,0.9)] px-[9px] py-[5px] text-[11px] font-semibold leading-[1.25] text-white shadow-[0_2px_8px_rgba(139,69,19,0.32)] transition-all duration-200 ease-in-out hover:bg-[rgba(139,69,19,1)] hover:shadow-[0_3px_10px_rgba(139,69,19,0.45)]"
-            aria-label={getAccountTranslation(lang, 'leave_group_aria')}
-          >
-            <span className="text-xs leading-none" aria-hidden>
-              🚪
-            </span>
-            {getAccountTranslation(lang, 'leave_group_btn')}
-          </button>
-        ) : null}
         <Link
           href="/account"
           className="pointer-events-auto flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border border-slate-300 bg-white/95 px-[9px] py-[5px] text-[11px] font-semibold leading-[1.25] text-slate-700 no-underline shadow-sm hover:bg-white"
