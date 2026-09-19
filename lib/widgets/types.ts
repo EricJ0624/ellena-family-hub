@@ -214,20 +214,18 @@ const _layoutLocation = {
   layoutLandscapeH: LOCATION_M_LAYOUT_H,
 } as const;
 
+/** 기본 표시 순서: … → 여행 플래너 → 여행 다이어리 → 빠른 여행 기록 → … */
 export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'tasks',    is_enabled: true, display_order: 10, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'calendar', is_enabled: true, display_order: 20, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'chat',     is_enabled: true, display_order: 30, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'piggy',    is_enabled: true, display_order: 40, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'travel',   is_enabled: true, display_order: 50, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutTravel },
-  { widget_key: 'album',    is_enabled: true, display_order: 60, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'location', is_enabled: true, display_order: 70, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutLocation },
-  { widget_key: 'games',        is_enabled: true,  display_order: 80, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'travel_diary', is_enabled: false, display_order: 85, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'travel_diary', is_enabled: false, display_order: 55, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   {
     widget_key: 'travel_quick_record',
     is_enabled: true,
-    display_order: 86,
+    display_order: 56,
     size: 'M',
     colSpan: _spanM.colSpan,
     rowSpan: Math.min(6, Math.max(1, Math.round(TRAVEL_QUICK_RECORD_M_LAYOUT_H))),
@@ -236,6 +234,9 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
     priority: 0,
     ..._layoutTravelQuickRecord,
   },
+  { widget_key: 'album',    is_enabled: true, display_order: 60, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'location', is_enabled: true, display_order: 70, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutLocation },
+  { widget_key: 'games',        is_enabled: true,  display_order: 80, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
 ];
 
 /** 위젯별 기본 display_order — resetAllLayouts에서 순서 초기화 시 사용 */

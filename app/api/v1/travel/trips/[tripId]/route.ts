@@ -294,7 +294,11 @@ export async function PATCH(
   }
 }
 
-/** DELETE: 여행 소프트 삭제 (deleted_at, deleted_by 기록) + 하위 일정/경비 동일 처리 */
+/** DELETE: 플래너에서 제거.
+ * - diary_enabled: 플래너만 숨김(planner_hidden_at), 다이어리·여행 행 유지
+ * - 그 외: 기존처럼 여행 soft-delete(deleted_at)
+ * 하위 일정/경비/장소 등은 항상 soft-delete
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
@@ -316,35 +320,74 @@ export async function DELETE(
     const supabase = getSupabaseServerClient();
     const now = new Date().toISOString();
 
+    const { data: existingTrip, error: fetchErr } = await supabase
+      .from('travel_trips')
+      .select('id, diary_enabled, deleted_at, planner_hidden_at')
+      .eq('id', tripId)
+      .eq('group_id', groupId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (fetchErr || !existingTrip) {
+      return NextResponse.json({ error: '여행을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const keepForDiary = Boolean(existingTrip.diary_enabled);
+    const tripUpdate = keepForDiary
+      ? {
+          planner_hidden_at: now,
+          planner_hidden_by: user.id,
+          updated_at: now,
+          updated_by: user.id,
+        }
+      : {
+          deleted_at: now,
+          deleted_by: user.id,
+          updated_at: now,
+          updated_by: user.id,
+        };
+
     const { error: tripError } = await supabase
       .from('travel_trips')
-      .update({ deleted_at: now, deleted_by: user.id })
+      .update(tripUpdate)
       .eq('id', tripId)
-      .eq('group_id', groupId);
+      .eq('group_id', groupId)
+      .is('deleted_at', null);
 
     if (tripError) {
       console.error('travel_trips DELETE:', tripError);
       return NextResponse.json({ error: '여행 삭제에 실패했습니다.' }, { status: 500 });
     }
 
-    await supabase
-      .from('travel_itineraries')
-      .update({ deleted_at: now, deleted_by: user.id })
-      .eq('trip_id', tripId)
-      .eq('group_id', groupId);
-    await supabase
-      .from('travel_expenses')
-      .update({ deleted_at: now, deleted_by: user.id })
-      .eq('trip_id', tripId)
-      .eq('group_id', groupId);
+    /* 다이어리 타임라인은 장소/일정 행에 의존 — 다이어리 유지 시 soft-delete 하지 않음 */
+    if (!keepForDiary) {
+      const childUpdate = { deleted_at: now, deleted_by: user.id };
+      const childTables = [
+        'travel_itineraries',
+        'travel_expenses',
+        'travel_day_titles',
+        'travel_accommodations',
+        'travel_dining',
+        'travel_attractions',
+        'travel_transports',
+      ] as const;
 
-    await supabase
-      .from('travel_day_titles')
-      .update({ deleted_at: now, deleted_by: user.id })
-      .eq('trip_id', tripId)
-      .eq('group_id', groupId);
+      await Promise.all(
+        childTables.map((table) =>
+          supabase
+            .from(table)
+            .update(childUpdate)
+            .eq('trip_id', tripId)
+            .eq('group_id', groupId)
+            .is('deleted_at', null),
+        ),
+      );
+    }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      kept_for_diary: keepForDiary,
+    });
   } catch (e: any) {
     console.error('DELETE /api/v1/travel/trips/[tripId]:', e);
     return NextResponse.json({ error: e.message ?? '서버 오류' }, { status: 500 });

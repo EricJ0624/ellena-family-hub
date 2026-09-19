@@ -11,6 +11,7 @@ import type { TravelTrip } from '../types';
 import { TravelFieldRecordHost } from './TravelFieldRecordHost';
 import type { TravelFieldRecordBarLabels } from './TravelFieldRecordBar';
 import type { FieldTargetPickLabels } from './TravelFieldTargetPicker';
+import { isTripVisibleInPlanner } from '@/lib/modules/travel-planner/planner-visibility';
 
 interface TravelQuickRecordSectionProps {
   trips: TravelTrip[];
@@ -40,6 +41,7 @@ export function TravelQuickRecordSection({
   const isKidsTheme = uiTheme === 'kids_friendly';
   const isGlassTheme = uiTheme === 'highend_glass';
   const isNeoTheme = uiTheme === 'default';
+  const plannerTrips = trips.filter(isTripVisibleInPlanner);
 
   const body = !currentGroupId ? (
     <p
@@ -60,7 +62,7 @@ export function TravelQuickRecordSection({
     <TravelFieldRecordHost
       groupId={currentGroupId}
       tripId={null}
-      trips={trips.map((trip) => ({
+      trips={plannerTrips.map((trip) => ({
         id: trip.id,
         title: trip.title,
         start_date: trip.start_date,

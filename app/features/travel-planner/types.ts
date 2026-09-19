@@ -22,4 +22,6 @@ export interface TravelTrip {
   diary_invite_status?: DiaryInviteStatus;
   currency?: string;
   budget?: number | null;
+  /** 플래너에서만 숨김(다이어리 유지) */
+  planner_hidden_at?: string | null;
 }

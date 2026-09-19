@@ -13,6 +13,7 @@ export type TravelDiaryTranslations = {
   back: string;
   trip_required: string;
   cannot_write: string;
+  trip_title_empty: string;
   save: string;
   saved: string;
   edit: string;
@@ -70,6 +71,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: '돌아가기',
     trip_required: '여행을 선택해 주세요.',
     cannot_write: '이 여행은 다이어리 작성이 시작되지 않았습니다.',
+    trip_title_empty: '제목을 입력해 주세요.',
     save: '저장',
     saved: '저장됨',
     edit: '편집',
@@ -126,6 +128,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: 'Back',
     trip_required: 'Select a trip.',
     cannot_write: 'Diary writing has not been started for this trip.',
+    trip_title_empty: 'Please enter a title.',
     save: 'Save',
     saved: 'Saved',
     edit: 'Edit',
@@ -182,6 +185,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: '戻る',
     trip_required: '旅行を選択してください。',
     cannot_write: 'この旅行はダイアリーが開始されていません。',
+    trip_title_empty: 'タイトルを入力してください。',
     save: '保存',
     saved: '保存しました',
     edit: '編集',
@@ -237,6 +241,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: '返回',
     trip_required: '请选择旅行。',
     cannot_write: '此旅行尚未开始写日记。',
+    trip_title_empty: '请输入标题。',
     save: '保存',
     saved: '已保存',
     edit: '编辑',
@@ -292,6 +297,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: '返回',
     trip_required: '請選擇旅行。',
     cannot_write: '此旅行尚未開始撰寫日記。',
+    trip_title_empty: '請輸入標題。',
     save: '儲存',
     saved: '已儲存',
     edit: '編輯',
@@ -347,6 +353,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: 'Atrás',
     trip_required: 'Selecciona un viaje.',
     cannot_write: 'No se ha comenzado a escribir el diario para este viaje.',
+    trip_title_empty: 'Introduce un título.',
     save: 'Ahorrar',
     saved: 'Guardado',
     edit: 'Editar',
@@ -403,6 +410,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: 'Dos',
     trip_required: 'Sélectionnez un voyage.',
     cannot_write: 'La rédaction du journal n\'a pas encore commencé pour ce voyage.',
+    trip_title_empty: 'Veuillez saisir un titre.',
     save: 'Sauvegarder',
     saved: 'Enregistré',
     edit: 'Modifier',
@@ -459,6 +467,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: 'Zurück',
     trip_required: 'Wählen Sie eine Reise aus.',
     cannot_write: 'Für diese Reise wurde noch nicht mit dem Tagebuchschreiben begonnen.',
+    trip_title_empty: 'Bitte einen Titel eingeben.',
     save: 'Speichern',
     saved: 'Gespeichert',
     edit: 'Bearbeiten',
@@ -515,6 +524,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: 'Indietro',
     trip_required: 'Seleziona un viaggio.',
     cannot_write: 'Per questo viaggio non è stata avviata la scrittura del diario.',
+    trip_title_empty: 'Inserisci un titolo.',
     save: 'Salva',
     saved: 'Salvato',
     edit: 'Modifica',
@@ -571,6 +581,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     back: 'Voltar',
     trip_required: 'Selecione uma viagem.',
     cannot_write: 'A escrita do diário ainda não foi iniciada para esta viagem.',
+    trip_title_empty: 'Digite um título.',
     save: 'Salvar',
     saved: 'Salvo',
     edit: 'Editar',

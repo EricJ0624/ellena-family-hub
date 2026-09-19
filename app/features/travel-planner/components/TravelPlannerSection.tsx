@@ -8,6 +8,7 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { TravelTrip } from '../types';
+import { isTripVisibleInPlanner } from '@/lib/modules/travel-planner/planner-visibility';
 
 interface TravelPlannerSectionProps {
   trips: TravelTrip[];
@@ -37,6 +38,7 @@ export function TravelPlannerSection({
   uiTheme,
   translations: t,
 }: TravelPlannerSectionProps) {
+  const plannerTrips = trips.filter(isTripVisibleInPlanner);
   const isKidsTheme = uiTheme === 'kids_friendly';
 
   if (isKidsTheme) {
@@ -71,11 +73,11 @@ export function TravelPlannerSection({
                 <p className="travel-kids-widget-empty">{t.select_group}</p>
               ) : loading ? (
                 <p className="travel-kids-widget-empty">{t.trips_loading}</p>
-              ) : trips.length === 0 ? (
+              ) : plannerTrips.length === 0 ? (
                 <p className="travel-kids-widget-empty">{t.empty_state}</p>
               ) : (
                 <ul className="travel-kids-widget-trips">
-                  {trips.map((trip) => (
+                  {plannerTrips.map((trip) => (
                     <li key={trip.id} className="travel-kids-widget-trip-item">
                       <button
                         type="button"
@@ -135,13 +137,13 @@ export function TravelPlannerSection({
           <div style={{ fontSize: '5cqmin' }} className="text-[#64748b]">
             {t.trips_loading}
           </div>
-        ) : trips.length === 0 ? (
+        ) : plannerTrips.length === 0 ? (
           <div style={{ fontSize: '5cqmin', lineHeight: 1.6 }} className="text-[#475569] [word-break:keep-all]">
             {t.empty_state}
           </div>
         ) : (
           <ul className="m-0 list-none p-0">
-            {trips.map((trip) => (
+            {plannerTrips.map((trip) => (
               <li
                 key={trip.id}
                 onClick={() => onTripClick(trip.id)}

@@ -31,6 +31,7 @@ import {
   showDiaryCompletedInviteHint,
 } from '@/lib/modules/travel-planner/diary-eligibility';
 import { normalizeTripStatus, type TravelTripStatus } from '@/lib/modules/travel-planner/trip-status';
+import { isTripVisibleInPlanner } from '@/lib/modules/travel-planner/planner-visibility';
 import { TravelFieldRecordHost } from '@/app/features/travel-planner/components/TravelFieldRecordHost';
 import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import {
@@ -564,7 +565,8 @@ export function TravelPlannerContent() {
       const res = await fetch(`${API_BASE}/trips?groupId=${currentGroupId}`, { headers });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || tt('load_trips_failed'));
-      setTrips(json.data ?? []);
+      const rows = (json.data ?? []) as TravelTrip[];
+      setTrips(rows.filter(isTripVisibleInPlanner));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : tt('load_failed'));
       setTrips([]);
@@ -1679,7 +1681,10 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteTrip = async (trip: TravelTrip) => {
-    if (!currentGroupId || !confirm(ft('confirm_delete_trip', { title: trip.title }))) return;
+    const confirmMsg = trip.diary_enabled
+      ? ft('confirm_delete_trip_keep_diary', { title: trip.title })
+      : ft('confirm_delete_trip', { title: trip.title });
+    if (!currentGroupId || !confirm(confirmMsg)) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/trips/${trip.id}?groupId=${currentGroupId}`, {

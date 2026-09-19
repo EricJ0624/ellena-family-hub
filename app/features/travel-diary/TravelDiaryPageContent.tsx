@@ -60,6 +60,9 @@ export function TravelDiaryPageContent() {
   const [planner, setPlanner] = useState<PlannerBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [hidingAll, setHidingAll] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
 
   const loadAll = useCallback(async () => {
@@ -190,6 +193,60 @@ export function TravelDiaryPageContent() {
   const moneyLocale = intlLocaleForLang(lang);
 
   const canWrite = trip ? canWriteDiary(trip) : false;
+
+  const beginEditTitle = () => {
+    if (!trip || !canWrite) return;
+    setTitleDraft(trip.title);
+    setEditingTitle(true);
+  };
+
+  const cancelEditTitle = () => {
+    setEditingTitle(false);
+    setTitleDraft('');
+  };
+
+  const saveTitle = async () => {
+    if (!trip || !currentGroupId || !tripIdParam || savingTitle) return;
+    const next = titleDraft.trim();
+    if (!next) {
+      window.alert(t('trip_title_empty'));
+      return;
+    }
+    if (next === trip.title) {
+      cancelEditTitle();
+      return;
+    }
+    setSavingTitle(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API}/trips/${tripIdParam}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ groupId: currentGroupId, title: next }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        window.alert(typeof body?.error === 'string' ? body.error : t('save_failed'));
+        return;
+      }
+      const body = (await res.json()) as { trip?: TravelTrip };
+      const updated = body.trip;
+      if (updated) {
+        setTrip(updated);
+      } else {
+        setTrip((prev) => (prev ? { ...prev, title: next } : prev));
+      }
+      setEditingTitle(false);
+      setTitleDraft('');
+    } finally {
+      setSavingTitle(false);
+    }
+  };
 
   const saveSlot = async (
     slot: (typeof timelineSlots)[0],
@@ -424,18 +481,91 @@ export function TravelDiaryPageContent() {
           ) : null}
         </div>
         {trip && (
-          <p
-            className={[
-              'mt-1 text-sm',
-              isFamilyTheme
-                ? 'text-cyan-200/85'
-                : isNightShell
-                  ? 'text-sky-200/75'
-                  : 'text-slate-500',
-            ].join(' ')}
-          >
-            {trip.title} · {currentGroup?.name}
-          </p>
+          <div className="mt-1">
+            {editingTitle ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void saveTitle();
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEditTitle();
+                    }
+                  }}
+                  disabled={savingTitle}
+                  maxLength={200}
+                  autoFocus
+                  aria-label={t('edit')}
+                  className={[
+                    'min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium outline-none focus:ring-2',
+                    isDarkPage
+                      ? 'border-white/20 bg-white/10 text-white focus:ring-cyan-400/40'
+                      : 'border-slate-200 bg-white text-slate-800 focus:ring-sky-400/40',
+                  ].join(' ')}
+                />
+                <button
+                  type="button"
+                  onClick={() => void saveTitle()}
+                  disabled={savingTitle}
+                  className={[
+                    'rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60',
+                    isDarkPage ? 'bg-cyan-500 hover:bg-cyan-400' : 'bg-sky-600 hover:bg-sky-500',
+                  ].join(' ')}
+                >
+                  {savingTitle ? t('loading') : t('save')}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEditTitle}
+                  disabled={savingTitle}
+                  className={[
+                    'rounded-lg border px-2.5 py-1.5 text-xs font-medium disabled:opacity-60',
+                    isDarkPage
+                      ? 'border-white/20 text-slate-300 hover:bg-white/10'
+                      : 'border-slate-200 text-slate-500 hover:bg-slate-50',
+                  ].join(' ')}
+                >
+                  {t('cancel')}
+                </button>
+              </div>
+            ) : (
+              <p
+                className={[
+                  'flex flex-wrap items-center gap-2 text-sm',
+                  isFamilyTheme
+                    ? 'text-cyan-200/85'
+                    : isNightShell
+                      ? 'text-sky-200/75'
+                      : 'text-slate-500',
+                ].join(' ')}
+              >
+                <span className="min-w-0 break-words">
+                  {trip.title}
+                  {currentGroup?.name ? ` · ${currentGroup.name}` : ''}
+                </span>
+                {canWrite ? (
+                  <button
+                    type="button"
+                    onClick={beginEditTitle}
+                    className={[
+                      'shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors',
+                      isDarkPage
+                        ? 'border-white/20 text-slate-300 hover:bg-white/10 hover:text-white'
+                        : 'border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+                    ].join(' ')}
+                  >
+                    {t('edit')}
+                  </button>
+                ) : null}
+              </p>
+            )}
+          </div>
         )}
 
         <TravelFieldRecordHost

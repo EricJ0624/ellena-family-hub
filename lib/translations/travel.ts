@@ -174,6 +174,7 @@ export type TravelTranslations = {
   diary_modal_yes: string;
   diary_modal_later: string;
   confirm_delete_trip: string;
+  confirm_delete_trip_keep_diary: string;
   confirm_delete_itinerary: string;
   confirm_remove_from_itinerary: string;
   remove_from_itinerary_failed: string;
@@ -458,6 +459,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: '작성하기',
     diary_modal_later: '나중에',
     confirm_delete_trip: '"{title}" 여행을 삭제할까요?',
+    confirm_delete_trip_keep_diary: '"{title}" 여행을 플래너에서만 삭제할까요? 다이어리는 그대로 남습니다.',
     confirm_delete_itinerary: '"{title}" 일정을 삭제할까요?',
     confirm_remove_from_itinerary: '"{title}" 항목을 일정에서 제거할까요?',
     remove_from_itinerary_failed: '일정에서 제거하는데 실패했습니다.',
@@ -738,6 +740,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: 'Yes, start',
     diary_modal_later: 'Later',
     confirm_delete_trip: 'Delete trip "{title}"?',
+    confirm_delete_trip_keep_diary: 'Remove "{title}" from the planner only? The diary will be kept.',
     confirm_delete_itinerary: 'Delete itinerary "{title}"?',
     confirm_remove_from_itinerary: 'Remove "{title}" from itinerary?',
     remove_from_itinerary_failed: 'Failed to remove from itinerary.',
@@ -1018,6 +1021,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: '書く',
     diary_modal_later: 'あとで',
     confirm_delete_trip: '旅行「{title}」を削除しますか？',
+    confirm_delete_trip_keep_diary: '「{title}」をプランナーからのみ削除しますか？ダイアリーは残ります。',
     confirm_delete_itinerary: '日程「{title}」を削除しますか？',
     confirm_remove_from_itinerary: '「{title}」を日程から外しますか？',
     remove_from_itinerary_failed: '日程からの削除に失敗しました。',
@@ -1298,6 +1302,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: '撰写',
     diary_modal_later: '稍后',
     confirm_delete_trip: '删除旅行「{title}」？',
+    confirm_delete_trip_keep_diary: '仅从行程规划删除「{title}」？日记会保留。',
     confirm_delete_itinerary: '删除行程「{title}」？',
     confirm_remove_from_itinerary: '从行程中移除「{title}」？',
     remove_from_itinerary_failed: '从行程中移除失败。',
@@ -1578,6 +1583,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: '撰寫',
     diary_modal_later: '稍後',
     confirm_delete_trip: '刪除旅行「{title}」？',
+    confirm_delete_trip_keep_diary: '僅從行程規劃刪除「{title}」？日記會保留。',
     confirm_delete_itinerary: '刪除行程「{title}」？',
     confirm_remove_from_itinerary: '從行程中移除「{title}」？',
     remove_from_itinerary_failed: '從行程中移除失敗。',
@@ -1857,6 +1863,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: 'si, empieza',
     diary_modal_later: 'Más tarde',
     confirm_delete_trip: '¿Eliminar el viaje "{title}"?',
+    confirm_delete_trip_keep_diary: '¿Quitar "{title}" solo del planificador? El diario se conservará.',
     confirm_delete_itinerary: '¿Eliminar el itinerario "{title}"?',
     confirm_remove_from_itinerary: '¿Quitar "{title}" del itinerario?',
     remove_from_itinerary_failed: 'No se pudo quitar del itinerario.',
@@ -2136,6 +2143,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: 'Oui, commence',
     diary_modal_later: 'Plus tard',
     confirm_delete_trip: 'Supprimer le voyage « {title} » ?',
+    confirm_delete_trip_keep_diary: 'Retirer « {title} » du planificateur uniquement ? Le journal sera conservé.',
     confirm_delete_itinerary: 'Supprimer l\'itinéraire « {title} » ?',
     confirm_remove_from_itinerary: 'Retirer « {title} » de l\'itinéraire ?',
     remove_from_itinerary_failed: 'Échec du retrait de l\'itinéraire.',
@@ -2415,6 +2423,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: 'Ja, fang an',
     diary_modal_later: 'Später',
     confirm_delete_trip: 'Reise „{title}" löschen?',
+    confirm_delete_trip_keep_diary: '„{title}" nur aus dem Planer entfernen? Das Tagebuch bleibt erhalten.',
     confirm_delete_itinerary: 'Reiseplan „{title}" löschen?',
     confirm_remove_from_itinerary: '„{title}" aus dem Reiseplan entfernen?',
     remove_from_itinerary_failed: 'Entfernen aus dem Reiseplan fehlgeschlagen.',
@@ -2694,6 +2703,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: 'Sì, inizia',
     diary_modal_later: 'Dopo',
     confirm_delete_trip: 'Eliminare il viaggio "{title}"?',
+    confirm_delete_trip_keep_diary: 'Rimuovere "{title}" solo dal planner? Il diario verrà conservato.',
     confirm_delete_itinerary: 'Eliminare l\'itinerario "{title}"?',
     confirm_remove_from_itinerary: 'Rimuovere "{title}" dall\'itinerario?',
     remove_from_itinerary_failed: 'Impossibile rimuovere dall\'itinerario.',
@@ -2973,6 +2983,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     diary_modal_yes: 'Sim, começar',
     diary_modal_later: 'Depois',
     confirm_delete_trip: 'Excluir viagem "{title}"?',
+    confirm_delete_trip_keep_diary: 'Remover "{title}" apenas do planejador? O diário será mantido.',
     confirm_delete_itinerary: 'Excluir itinerário "{title}"?',
     confirm_remove_from_itinerary: 'Remover "{title}" do itinerário?',
     remove_from_itinerary_failed: 'Falha ao remover do itinerário.',

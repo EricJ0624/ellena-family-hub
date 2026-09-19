@@ -46,6 +46,9 @@ export interface TravelTrip {
   updated_by?: string | null;
   deleted_at?: string | null;
   deleted_by?: string | null;
+  /** 플래너에서만 숨김(다이어리 유지). deleted_at 과 별개 */
+  planner_hidden_at?: string | null;
+  planner_hidden_by?: string | null;
 }
 
 /** 여행별 참가자 */
