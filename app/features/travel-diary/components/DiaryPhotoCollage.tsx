@@ -101,7 +101,8 @@ export function DiaryPhotoCollage({
       <button
         type="button"
         onClick={onOpen}
-        className="relative mt-3 block aspect-[16/9] w-full cursor-pointer overflow-hidden rounded-xl border border-dashed border-violet-300 bg-gradient-to-br from-amber-50 to-stone-100 p-0 text-xs font-medium text-violet-700"
+        className="relative mt-3 block aspect-[16/9] w-full cursor-pointer appearance-none border border-dashed border-[#cfc8bf]/80 bg-transparent p-0 text-xs font-medium text-[#57534e] shadow-none"
+        style={{ backgroundColor: 'transparent' }}
         aria-label={photosLabel}
       >
         {photosLabel}
@@ -117,24 +118,20 @@ export function DiaryPhotoCollage({
       type="button"
       onClick={onOpen}
       className={[
-        'relative mt-3 block w-full cursor-pointer overflow-hidden rounded-xl border-0 p-0 text-left',
-        isPostal
-          ? 'bg-gradient-to-br from-amber-50 via-orange-50 to-stone-100'
-          : 'bg-gradient-to-br from-amber-50 to-stone-100',
+        // No fill / clip panel — photos float on the parent card color
+        'relative mt-3 block w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-left shadow-none',
         panoramaClass(count),
       ].join(' ')}
+      style={{ backgroundColor: 'transparent', backgroundImage: 'none' }}
       aria-label={photosLabel}
     >
-      {isPostal ? (
-        <div className="pointer-events-none absolute inset-2 rounded-lg border border-dashed border-amber-200/80" />
-      ) : null}
       {photos.slice(0, count).map((attachment, index) => (
         <div
           key={attachment.id}
           className={['absolute origin-center', slots[index] ?? ''].join(' ')}
         >
           {isPostal ? (
-            <div className="h-full w-full bg-white p-[4px] pb-5 shadow-[0_8px_18px_rgba(120,53,15,0.18)]">
+            <div className="h-full w-full bg-white p-[4px] pb-5 shadow-[0_4px_10px_rgba(30,27,75,0.1)]">
               <img
                 src={photoSrc(attachment)}
                 alt=""
@@ -143,7 +140,7 @@ export function DiaryPhotoCollage({
               />
             </div>
           ) : (
-            <div className="h-full w-full overflow-hidden rounded-[2px] bg-zinc-950 p-[3px] shadow-[0_10px_22px_rgba(15,23,42,0.28)]">
+            <div className="h-full w-full overflow-hidden rounded-[2px] bg-zinc-950 p-[3px] shadow-[0_4px_10px_rgba(15,23,42,0.16)]">
               <img
                 src={photoSrc(attachment)}
                 alt=""

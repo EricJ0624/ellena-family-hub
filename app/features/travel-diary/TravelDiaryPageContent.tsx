@@ -41,8 +41,12 @@ export function TravelDiaryPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tripIdParam = searchParams.get('tripId');
-  const { currentGroupId, currentGroup } = useGroup();
+  const { currentGroupId, currentGroup, uiTheme } = useGroup();
   const { lang } = useLanguage();
+  const isFamilyTheme = uiTheme === 'kids_friendly';
+  const isNightShell = uiTheme === 'highend_glass';
+  /** Family·High-end: 어두운 앱 셸 위 밝은 카드 */
+  const isDarkPage = isFamilyTheme || isNightShell;
   const t = useCallback(
     (key: Parameters<typeof getTravelDiaryTranslation>[1]) => getTravelDiaryTranslation(lang, key),
     [lang],
@@ -346,7 +350,12 @@ export function TravelDiaryPageContent() {
 
   if (!currentGroupId) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6 text-slate-600">
+      <div
+        className={[
+          'flex min-h-screen items-center justify-center p-6',
+          isDarkPage ? 'bg-app-shell-inner text-slate-300' : 'bg-gradient-to-b from-slate-50 to-sky-50/50 text-slate-500',
+        ].join(' ')}
+      >
         {t('select_group')}
       </div>
     );
@@ -354,39 +363,77 @@ export function TravelDiaryPageContent() {
 
   if (!tripIdParam) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6 text-slate-600">
+      <div
+        className={[
+          'flex min-h-screen items-center justify-center p-6',
+          isDarkPage ? 'bg-app-shell-inner text-slate-300' : 'bg-gradient-to-b from-slate-50 to-sky-50/50 text-slate-500',
+        ].join(' ')}
+      >
         {t('trip_required')}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-base)] p-4 sm:p-6">
+    <div
+      className={[
+        'min-h-screen p-4 sm:p-6',
+        isDarkPage
+          ? 'bg-app-shell-inner text-slate-50'
+          : 'bg-gradient-to-b from-slate-50 via-white to-sky-50/40 text-slate-800',
+      ].join(' ')}
+    >
       <div className="mx-auto max-w-2xl">
         <button
           type="button"
           onClick={() => router.push('/dashboard')}
-          className="mb-4 inline-flex cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent text-sm font-medium text-slate-600 hover:text-slate-900"
+          className={[
+            'mb-4 inline-flex cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent text-sm font-medium',
+            isDarkPage
+              ? 'text-slate-300 hover:text-white'
+              : 'text-slate-500 hover:text-slate-800',
+          ].join(' ')}
         >
           <ChevronLeft className="h-4 w-4" />
           {t('back')}
         </button>
 
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="m-0 text-xl font-bold text-slate-800">{t('diary_page_title')}</h1>
+          <h1
+            className={[
+              'm-0 text-xl font-bold tracking-tight',
+              isDarkPage ? 'text-white' : 'text-slate-800',
+            ].join(' ')}
+          >
+            {t('diary_page_title')}
+          </h1>
           {canWrite ? (
             <button
               type="button"
               onClick={() => void hideAllSlots()}
               disabled={hidingAll}
-              className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-rose-600 transition-colors hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className={[
+                'inline-flex cursor-pointer items-center rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                isDarkPage
+                  ? 'border-rose-300/40 bg-white/95 text-rose-600 hover:bg-white'
+                  : 'border-slate-200 bg-white text-rose-600 hover:border-rose-200 hover:bg-rose-50',
+              ].join(' ')}
             >
               {hidingAll ? t('loading') : t('hide_all')}
             </button>
           ) : null}
         </div>
         {trip && (
-          <p className="mt-1 text-sm text-slate-500">
+          <p
+            className={[
+              'mt-1 text-sm',
+              isFamilyTheme
+                ? 'text-cyan-200/85'
+                : isNightShell
+                  ? 'text-sky-200/75'
+                  : 'text-slate-500',
+            ].join(' ')}
+          >
             {trip.title} · {currentGroup?.name}
           </p>
         )}
@@ -421,11 +468,17 @@ export function TravelDiaryPageContent() {
         />
 
         {loading ? (
-          <p className="mt-8 text-sm text-slate-500">{t('loading')}</p>
+          <p className={['mt-8 text-sm', isDarkPage ? 'text-slate-300' : 'text-slate-500'].join(' ')}>
+            {t('loading')}
+          </p>
         ) : !canWrite ? (
-          <p className="mt-8 text-sm text-violet-700">{t('cannot_write')}</p>
+          <p className={['mt-8 text-sm', isDarkPage ? 'text-violet-200' : 'text-violet-600'].join(' ')}>
+            {t('cannot_write')}
+          </p>
         ) : timelineSlots.length === 0 && hiddenSlots.length === 0 ? (
-          <p className="mt-8 text-sm text-slate-600">{t('no_slots')}</p>
+          <p className={['mt-8 text-sm', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+            {t('no_slots')}
+          </p>
         ) : (
           <>
           <div className="mt-6 space-y-4">

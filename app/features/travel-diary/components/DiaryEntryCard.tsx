@@ -33,6 +33,13 @@ import { DiaryPhotoGalleryModal } from './DiaryPhotoGalleryModal';
 import { DiaryPlaceMapPreview } from './DiaryPlaceMapPreview';
 import { FieldTrackRouteMap } from '@/app/features/travel-planner/components/FieldTrackRouteMap';
 import { FamilyAlbumPickerModal } from './FamilyAlbumPickerModal';
+import { useGroup } from '@/app/contexts/GroupContext';
+import {
+  diaryBodyClass,
+  diaryCardShellClass,
+  diaryDateClass,
+  diaryTitleClass,
+} from '@/lib/modules/travel-planner/diary-entry-theme';
 
 const MOOD_OPTIONS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'];
 
@@ -135,6 +142,14 @@ export function DiaryEntryCard({
   onCollageSave,
   onHide,
 }: Props) {
+  const { uiTheme } = useGroup();
+  const isFamilyTheme = uiTheme === 'kids_friendly';
+  const isNightShell = uiTheme === 'highend_glass';
+  const themeOpts = { isFamilyTheme, isNightShell };
+  const labelMutedClass = isNightShell ? 'text-slate-300' : 'text-slate-600';
+  const emptyStarClass = isNightShell
+    ? 'fill-transparent text-white/25'
+    : 'fill-transparent text-slate-300';
   const entry = slot.entry;
   const [note, setNote] = useState(entry?.note ?? '');
   const [moods, setMoods] = useState<string[]>(entry?.mood_tags ?? []);
@@ -636,9 +651,18 @@ export function DiaryEntryCard({
     : null;
 
   return (
-    <div className="glass-panel-soft rounded-xl p-4">
-      <div className="text-sm font-semibold text-slate-800">{slot.title}</div>
-      <div className="mt-0.5 text-xs text-slate-500">{slot.day_date}</div>
+    <div className={['rounded-2xl p-4', diaryCardShellClass(themeOpts)].join(' ')}>
+      <div className={['text-sm font-semibold tracking-tight', diaryTitleClass(themeOpts)].join(' ')}>
+        {slot.title}
+      </div>
+      <div
+        className={[
+          'mt-0.5 text-xs font-semibold tabular-nums tracking-wide',
+          diaryDateClass(themeOpts),
+        ].join(' ')}
+      >
+        {slot.day_date}
+      </div>
 
       {attachments.length > 0 ? (
         <DiaryPhotoCollage
@@ -653,7 +677,12 @@ export function DiaryEntryCard({
       {isView ? (
         <>
           {note.trim() ? (
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+            <p
+              className={[
+                'mt-3 whitespace-pre-wrap text-sm leading-relaxed',
+                diaryBodyClass(themeOpts),
+              ].join(' ')}
+            >
               {note}
             </p>
           ) : null}
@@ -688,7 +717,7 @@ export function DiaryEntryCard({
                               'h-4 w-4',
                               n <= rating
                                 ? 'fill-amber-400 text-amber-400'
-                                : 'fill-transparent text-slate-300',
+                                : emptyStarClass,
                             ].join(' ')}
                           />
                         ))}
@@ -726,7 +755,7 @@ export function DiaryEntryCard({
                         'h-4 w-4',
                         n <= rating
                           ? 'fill-amber-400 text-amber-400'
-                          : 'fill-transparent text-slate-300',
+                          : emptyStarClass,
                       ].join(' ')}
                     />
                   ))}
@@ -761,7 +790,9 @@ export function DiaryEntryCard({
               </button>
             </div>
             {expenseText ? (
-              <span className="text-sm font-medium text-slate-700">{expenseText}</span>
+              <span className={['text-sm font-medium', diaryBodyClass(themeOpts)].join(' ')}>
+                {expenseText}
+              </span>
             ) : null}
           </div>
           {receipts.length > 0 ? (
@@ -796,7 +827,9 @@ export function DiaryEntryCard({
 
           <div className="mt-3 flex items-stretch gap-2">
             <div className="flex w-max max-w-[58%] min-w-0 shrink-0 flex-col">
-              <span className="text-xs font-medium text-slate-600">{labels.mood_label}</span>
+              <span className={['text-xs font-medium', labelMutedClass].join(' ')}>
+                {labels.mood_label}
+              </span>
               <div className="mt-1 flex flex-wrap gap-1">
                 {MOOD_OPTIONS.map((m) => (
                   <button
@@ -826,7 +859,9 @@ export function DiaryEntryCard({
 
           {canShowMap ? (
             <div className="mt-3">
-              <span className="text-xs font-medium text-slate-600">{labels.map_label}</span>
+              <span className={['text-xs font-medium', labelMutedClass].join(' ')}>
+                {labels.map_label}
+              </span>
               <div className="mt-1 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -857,7 +892,9 @@ export function DiaryEntryCard({
           ) : null}
 
           <div className="mt-3">
-            <span className="text-xs font-medium text-slate-600">{labels.photos_style_label}</span>
+            <span className={['text-xs font-medium', labelMutedClass].join(' ')}>
+              {labels.photos_style_label}
+            </span>
             <div className="mt-1 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -888,7 +925,7 @@ export function DiaryEntryCard({
 
           {slot.source_kind && (
             <div className={displayMap ? 'mt-3 flex flex-col gap-2' : 'mt-3 grid gap-2 sm:grid-cols-2'}>
-              <label className="text-xs text-slate-600">
+              <label className={['text-xs', labelMutedClass].join(' ')}>
                 {labels.rating_label}
                 <select
                   value={rating ?? ''}
@@ -905,7 +942,13 @@ export function DiaryEntryCard({
                   ))}
                 </select>
               </label>
-              <label className={`flex items-center gap-2 text-xs text-slate-600${displayMap ? '' : ' sm:mt-5'}`}>
+              <label
+                className={[
+                  'flex items-center gap-2 text-xs',
+                  labelMutedClass,
+                  displayMap ? '' : ' sm:mt-5',
+                ].join(' ')}
+              >
                 <input
                   type="checkbox"
                   checked={isRevisit}
@@ -913,7 +956,13 @@ export function DiaryEntryCard({
                 />
                 {labels.revisit_label}
               </label>
-              <label className={`text-xs text-slate-600${displayMap ? '' : ' sm:col-span-2'}`}>
+              <label
+                className={[
+                  'text-xs',
+                  labelMutedClass,
+                  displayMap ? '' : ' sm:col-span-2',
+                ].join(' ')}
+              >
                 {labels.expense_label}
                 <span className="mt-1 flex items-center gap-2">
                   <input
@@ -923,7 +972,14 @@ export function DiaryEntryCard({
                     onChange={(e) => setExpense(e.target.value)}
                     className="block min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                   />
-                  <span className="shrink-0 text-xs font-medium text-slate-500">{currencyCode}</span>
+                  <span
+                    className={[
+                      'shrink-0 text-xs font-medium',
+                      isNightShell ? 'text-slate-400' : 'text-slate-500',
+                    ].join(' ')}
+                  >
+                    {currencyCode}
+                  </span>
                 </span>
               </label>
               <div className={displayMap ? '' : 'sm:col-span-2'}>
@@ -1028,7 +1084,12 @@ export function DiaryEntryCard({
                   restoreFromSaved();
                   setMode('view');
                 }}
-                className="cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800"
+                className={[
+                  'cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1.5 text-xs font-medium',
+                  isNightShell
+                    ? 'text-slate-400 hover:text-white'
+                    : 'text-slate-500 hover:text-slate-800',
+                ].join(' ')}
               >
                 {labels.cancel}
               </button>

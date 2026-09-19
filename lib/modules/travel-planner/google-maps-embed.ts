@@ -36,21 +36,17 @@ export function buildGoogleMapsViewUrl(item: GoogleMapsPlaceRef): string | null 
   const textQuery = [label, addr].filter(Boolean).join(' ').trim();
   const lat = toNum(item.latitude);
   const lng = toNum(item.longitude);
-  const coordQuery = lat != null && lng != null ? `${lat},${lng}` : '';
 
-  if (pid) {
-    const query = textQuery || coordQuery || pid;
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${encodeURIComponent(pid)}`;
-  }
-  // Bare GPS / field check-in: prefer coords over generic titles like "위치 기록"
-  if (lat != null && lng != null && !addr) {
+  // Field check-in / GPS: always pin exact saved coordinates (never "current location" or address search drift)
+  if (lat != null && lng != null) {
     return `https://www.google.com/maps?q=${lat},${lng}`;
+  }
+  if (pid) {
+    const query = textQuery || pid;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${encodeURIComponent(pid)}`;
   }
   if (textQuery) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(textQuery)}`;
-  }
-  if (lat != null && lng != null) {
-    return `https://www.google.com/maps?q=${lat},${lng}`;
   }
   return null;
 }
@@ -71,7 +67,8 @@ export function canShowDiaryPlaceMap(
 
 /**
  * Maps Embed API iframe src. 키 없거나 위치 정보 없으면 null.
- * 좌표가 있으면 그 지점, 없으면 이름·주소 검색. 무제한 무료 SKU.
+ * 좌표가 있으면 view+center로 저장 좌표에 고정(검색/현재위치 재해석 방지).
+ * 없으면 이름·주소·place_id 검색. 무제한 무료 SKU.
  */
 export function buildMapsEmbedUrl(
   item: GoogleMapsPlaceRef,
@@ -85,12 +82,23 @@ export function buildMapsEmbedUrl(
   const addr = typeof item.address === 'string' ? item.address.trim() : '';
   const pid = typeof item.place_id === 'string' ? item.place_id.trim() : '';
   const label = typeof item.title === 'string' ? item.title.trim() : '';
-  const zoom = Math.min(Math.max(opts?.zoom ?? 13, 3), 21);
+  const zoom = Math.min(Math.max(opts?.zoom ?? 15, 3), 21);
+
+  const params = new URLSearchParams();
+  params.set('key', apiKey);
+  params.set('zoom', String(zoom));
+  params.set('maptype', 'roadmap');
+  const language = opts?.language?.trim();
+  if (language) params.set('language', language);
+
+  // Exact GPS pin: view mode centers on saved coords (no place-search / device location)
+  if (lat != null && lng != null) {
+    params.set('center', `${lat},${lng}`);
+    return `https://www.google.com/maps/embed/v1/view?${params.toString()}`;
+  }
 
   let q = '';
-  if (lat != null && lng != null) {
-    q = `${lat},${lng}`;
-  } else if (pid) {
+  if (pid) {
     q = `place_id:${pid}`;
   } else if (addr) {
     q = addr;
@@ -99,13 +107,6 @@ export function buildMapsEmbedUrl(
   }
   if (!q) return null;
 
-  const params = new URLSearchParams();
-  params.set('key', apiKey);
   params.set('q', q);
-  params.set('zoom', String(zoom));
-  params.set('maptype', 'roadmap');
-  const language = opts?.language?.trim();
-  if (language) params.set('language', language);
-
   return `https://www.google.com/maps/embed/v1/place?${params.toString()}`;
 }

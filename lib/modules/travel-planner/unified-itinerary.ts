@@ -192,8 +192,10 @@ export function buildUnifiedItineraries(params: {
       description: i.description,
       address: i.address,
       place_id: null,
-      latitude: i.latitude,
-      longitude: i.longitude,
+      latitude:
+        i.latitude != null && Number.isFinite(Number(i.latitude)) ? Number(i.latitude) : null,
+      longitude:
+        i.longitude != null && Number.isFinite(Number(i.longitude)) ? Number(i.longitude) : null,
       field_record_kind: i.field_record_kind ?? null,
       field_track_id: i.field_track_id ?? null,
       show_in_itinerary: true,

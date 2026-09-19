@@ -215,11 +215,11 @@ export function TravelDiaryDashboardSection({
         <li
           key={trip.id}
           onClick={() => onOpenTrip(trip.id)}
-          className="glass-panel-soft glass-panel-interactive cursor-pointer rounded-lg text-[#1e293b] transition-colors hover:bg-white/50"
+          className="glass-panel-soft glass-panel-interactive cursor-pointer rounded-lg text-foreground transition-colors hover:bg-white/50"
           style={{ marginBottom: '1.5cqmin', padding: '2.5cqmin 3cqmin', fontSize: '5cqmin' }}
         >
           <div className="font-semibold">{trip.title}</div>
-          <div className="text-[#64748b]" style={{ marginTop: '0.5cqmin', fontSize: '4cqmin' }}>
+          <div className="text-muted-foreground" style={{ marginTop: '0.5cqmin', fontSize: '4cqmin' }}>
             {trip.start_date} ~ {trip.end_date}
           </div>
         </li>
