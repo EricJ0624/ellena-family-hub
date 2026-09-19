@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TravelTrip } from '@/app/features/travel-planner/types';
 import type { UiTheme } from '@/lib/ui-theme';
 import { canUserOptInDiaryForTrip } from '@/lib/modules/travel-planner/diary-eligibility';
+import { useHorizontalPageSwipe } from '@/lib/hooks/useHorizontalPageSwipe';
 import {
   TRAVEL_DIARY_BG_SIZE,
   TRAVEL_DIARY_POLAROID_INNER,
@@ -322,6 +323,28 @@ function DiaryKidsScrapbookSection({
   const canPrev = page > 0;
   const canNext = page < spreadCount - 1 && trips.length > 0;
 
+  const goPage = useCallback(
+    (dir: 'next' | 'prev') => {
+      if (dir === 'next') {
+        if (!canNext) return;
+        setFlipDir('next');
+        setPage((prev) => Math.min(spreadCount - 1, prev + 1));
+        return;
+      }
+      if (!canPrev) return;
+      setFlipDir('prev');
+      setPage((prev) => Math.max(0, prev - 1));
+    },
+    [canNext, canPrev, spreadCount],
+  );
+
+  const swipe = useHorizontalPageSwipe({
+    enabled: trips.length > 0 && spreadCount > 1,
+    canPrev,
+    canNext,
+    onPage: goPage,
+  });
+
   const hint = !currentGroupId
     ? t.select_group
     : loading
@@ -330,35 +353,23 @@ function DiaryKidsScrapbookSection({
   const showHint = !currentGroupId || loading || trips.length === 0;
 
   return (
-    <section className="content-section travel-diary-widget travel-diary-widget--book relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
+    <section
+      className="content-section travel-diary-widget travel-diary-widget--book relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]"
+      {...swipe}
+      tabIndex={spreadCount > 1 ? 0 : undefined}
+      role="region"
+      aria-label={t.section_title}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          goPage('prev');
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          goPage('next');
+        }
+      }}
+    >
       <DiaryPolaroidFromViewedAlbum />
-
-      <button
-        type="button"
-        className="diary-book-nav diary-book-nav--prev"
-        disabled={!canPrev}
-        aria-label="이전 페이지"
-        onClick={() => {
-          if (!canPrev) return;
-          setFlipDir('prev');
-          setPage((prev) => Math.max(0, prev - 1));
-        }}
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        className="diary-book-nav diary-book-nav--next"
-        disabled={!canNext}
-        aria-label="다음 페이지"
-        onClick={() => {
-          if (!canNext) return;
-          setFlipDir('next');
-          setPage((prev) => Math.min(spreadCount - 1, prev + 1));
-        }}
-      >
-        ›
-      </button>
 
       <div className="diary-book-stage">
         <div className="diary-book-cover">

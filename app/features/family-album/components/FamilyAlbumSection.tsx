@@ -6,8 +6,9 @@
 
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { markAlbumPhotoUrlViewed } from '@/lib/album-viewed-photo-urls';
+import { useHorizontalPageSwipe } from '@/lib/hooks/useHorizontalPageSwipe';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { Photo } from '../types';
 
@@ -242,27 +243,51 @@ function FamilyAlbumScrapbookSection({
   const canPrev = page > 0;
   const canNext = page < spreadCount - 1 && photos.length > 0;
 
+  const goPage = useCallback(
+    (dir: 'next' | 'prev') => {
+      if (dir === 'next') {
+        if (!canNext) return;
+        setFlipDir('next');
+        setPage((prev) => Math.min(spreadCount - 1, prev + 1));
+        return;
+      }
+      if (!canPrev) return;
+      setFlipDir('prev');
+      setPage((prev) => Math.max(0, prev - 1));
+    },
+    [canNext, canPrev, spreadCount],
+  );
+
+  const swipe = useHorizontalPageSwipe({
+    enabled: photos.length > 0 && spreadCount > 1,
+    canPrev,
+    canNext,
+    onPage: goPage,
+  });
+
   const openPhoto = (photo: Photo) => {
     if (onPhotoClick) onPhotoClick(photo);
     else onViewAllClick();
   };
 
   return (
-    <section className="content-section album-widget-section">
+    <section
+      className="content-section album-widget-section"
+      {...swipe}
+      tabIndex={spreadCount > 1 ? 0 : undefined}
+      role="region"
+      aria-label={t.section_title}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          goPage('prev');
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          goPage('next');
+        }
+      }}
+    >
       <div className="album-book-stage">
-        <button
-          type="button"
-          className="album-book-nav album-book-nav--prev"
-          disabled={!canPrev}
-          aria-label="이전 페이지"
-          onClick={() => {
-            if (!canPrev) return;
-            setFlipDir('prev');
-            setPage((prev) => Math.max(0, prev - 1));
-          }}
-        >
-          ‹
-        </button>
         <div className="album-book-cover">
           <div className="album-book-fit">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -288,19 +313,6 @@ function FamilyAlbumScrapbookSection({
             <AlbumPageDoodles />
           </div>
         </div>
-        <button
-          type="button"
-          className="album-book-nav album-book-nav--next"
-          disabled={!canNext}
-          aria-label="다음 페이지"
-          onClick={() => {
-            if (!canNext) return;
-            setFlipDir('next');
-            setPage((prev) => Math.min(spreadCount - 1, prev + 1));
-          }}
-        >
-          ›
-        </button>
       </div>
       <div className="album-book-footer">
         {photos.length > 0 ? (

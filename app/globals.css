@@ -879,9 +879,10 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 .diary-book-title {
   position: absolute;
   top: 3%;
-  left: 10%;
+  /* 왼쪽 종이 가장자리에 가깝게 */
+  left: 7.5%;
   z-index: 3;
-  max-width: 38%;
+  max-width: 40%;
   pointer-events: none;
   text-align: left;
 }
@@ -891,37 +892,57 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   inset: 0;
   z-index: 2;
   display: block;
-  transform-origin: center;
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
   pointer-events: none;
 }
 
 .diary-book-spread--next {
-  animation: diary-spread-next 0.42s ease-out;
+  animation: diary-spread-next 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .diary-book-spread--prev {
-  animation: diary-spread-prev 0.42s ease-out;
+  animation: diary-spread-prev 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 @keyframes diary-spread-next {
   from {
-    opacity: 0.45;
-    transform: rotateY(-16deg);
+    opacity: 0.4;
+    transform: rotateY(-48deg) scale(0.94);
+    filter: brightness(0.88);
+    box-shadow: -18px 0 28px rgb(40 20 10 / 0.22);
+  }
+  60% {
+    opacity: 0.92;
+    transform: rotateY(-10deg) scale(0.99);
+    filter: brightness(0.97);
   }
   to {
     opacity: 1;
     transform: none;
+    filter: none;
+    box-shadow: none;
   }
 }
 
 @keyframes diary-spread-prev {
   from {
-    opacity: 0.45;
-    transform: rotateY(16deg);
+    opacity: 0.4;
+    transform: rotateY(48deg) scale(0.94);
+    filter: brightness(0.88);
+    box-shadow: 18px 0 28px rgb(40 20 10 / 0.22);
+  }
+  60% {
+    opacity: 0.92;
+    transform: rotateY(10deg) scale(0.99);
+    filter: brightness(0.97);
   }
   to {
     opacity: 1;
     transform: none;
+    filter: none;
+    box-shadow: none;
   }
 }
 
@@ -967,11 +988,13 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget.travel-diary-widget--book .diary-book-trips .travel-kids-widget-trip-item,
 .content-section.travel-diary-widget.travel-diary-widget--book .diary-book-trips .travel-kids-widget-trip-item {
   display: flex;
-  flex: 1 1 0;
+  /* 5칸 고정 — 오른쪽 1건이어도 페이지 전체로 늘어나 가운데 붙지 않음 */
+  flex: 0 0 calc((100% - 0.48rem) / 5);
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
   max-width: 100%;
+  max-height: calc((100% - 0.48rem) / 5);
   min-height: 0;
   margin: 0;
   padding: 0;
@@ -996,10 +1019,11 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget.travel-diary-widget--book .diary-book-page--left,
 .content-section.travel-diary-widget.travel-diary-widget--book .diary-book-page--left {
   top: 11%;
-  left: 10%;
-  width: 38%;
+  /* ‹ 버튼·프레임만 피하고 종이 왼쪽 가장자리로 */
+  left: 7.5%;
+  width: 40.5%;
   height: 80%;
-  padding: 0.08rem 0.2rem 0.12rem 0.1rem;
+  padding: 0.08rem 0.15rem 0.12rem 0.35rem;
   box-sizing: border-box;
   align-items: stretch;
   text-align: left !important;
@@ -1062,49 +1086,6 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   justify-content: flex-start;
   padding-top: 0.2rem;
   text-shadow: 0 0 6px rgb(255 255 255 / 0.9);
-}
-
-/* 액자 좌·우 세로 중앙 — 가장자리에 붙임 */
-.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget.travel-diary-widget--book > .diary-book-nav,
-.content-section.travel-diary-widget.travel-diary-widget--book > .diary-book-nav {
-  position: absolute;
-  top: 50%;
-  z-index: 10;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.15rem;
-  height: 1.65rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(91, 58, 32, 0.88);
-  color: #f8efd8;
-  font-size: 0.95rem;
-  line-height: 1;
-  transform: translateY(-50%);
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.content-section.travel-diary-widget.travel-diary-widget--book > .diary-book-nav--prev {
-  left: 0;
-  right: auto;
-}
-
-.content-section.travel-diary-widget.travel-diary-widget--book > .diary-book-nav--next {
-  right: 0;
-  left: auto;
-}
-
-.content-section.travel-diary-widget.travel-diary-widget--book > .diary-book-nav:disabled {
-  opacity: 0.28;
-  cursor: default;
-}
-
-.content-section.travel-diary-widget.travel-diary-widget--book > .diary-book-nav:not(:disabled):hover {
-  background: #5c3d24;
 }
 
 .diary-book-footer {
@@ -3776,36 +3757,56 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   display: block;
   background: none;
   box-shadow: none;
-  transform-origin: center;
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
 }
 
 .album-book-spread--next {
-  animation: album-spread-next 0.42s ease-out;
+  animation: album-spread-next 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .album-book-spread--prev {
-  animation: album-spread-prev 0.42s ease-out;
+  animation: album-spread-prev 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 @keyframes album-spread-next {
   from {
-    opacity: 0.45;
-    transform: rotateY(-16deg);
+    opacity: 0.4;
+    transform: rotateY(-48deg) scale(0.94);
+    filter: brightness(0.88);
+    box-shadow: -18px 0 28px rgb(40 20 10 / 0.22);
+  }
+  60% {
+    opacity: 0.92;
+    transform: rotateY(-10deg) scale(0.99);
+    filter: brightness(0.97);
   }
   to {
     opacity: 1;
     transform: none;
+    filter: none;
+    box-shadow: none;
   }
 }
 
 @keyframes album-spread-prev {
   from {
-    opacity: 0.45;
-    transform: rotateY(16deg);
+    opacity: 0.4;
+    transform: rotateY(48deg) scale(0.94);
+    filter: brightness(0.88);
+    box-shadow: 18px 0 28px rgb(40 20 10 / 0.22);
+  }
+  60% {
+    opacity: 0.92;
+    transform: rotateY(10deg) scale(0.99);
+    filter: brightness(0.97);
   }
   to {
     opacity: 1;
     transform: none;
+    filter: none;
+    box-shadow: none;
   }
 }
 
@@ -3891,41 +3892,6 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   font-size: 3.2cqmin;
   font-weight: 700;
   color: #fff;
-}
-
-.album-book-nav {
-  position: absolute;
-  top: 50%;
-  z-index: 8;
-  width: 1.35rem;
-  height: 1.85rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(91, 58, 32, 0.88);
-  color: #f8efd8;
-  font-size: 1.05rem;
-  line-height: 1;
-  transform: translateY(-50%);
-  cursor: pointer;
-}
-
-.album-book-nav--prev {
-  left: 0.4%;
-}
-
-.album-book-nav--next {
-  right: 0.4%;
-}
-
-.album-book-nav:disabled {
-  opacity: 0.28;
-  cursor: default;
-}
-
-.album-book-nav:not(:disabled):hover {
-  background: #5c3d24;
 }
 
 .album-book-footer {
