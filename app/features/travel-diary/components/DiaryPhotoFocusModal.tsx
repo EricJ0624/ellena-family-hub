@@ -2,6 +2,13 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { clampPhotoFocusY } from '@/lib/modules/travel-planner/diary-collage';
+import {
+  clampLocationOvalFocusY,
+  LOCATION_OVAL_FOCUS_Y_MAX,
+  LOCATION_OVAL_FOCUS_Y_MIN,
+} from '@/lib/album-photo-focus';
+
+type PreviewVariant = 'rect' | 'oval';
 
 type Props = {
   open: boolean;
@@ -13,10 +20,12 @@ type Props = {
   skipLabel: string;
   onConfirm: (y: number) => void;
   onSkip: () => void;
+  /** rect = 일기 콜라주용 4:3, oval = 가족 위치 타원 미리보기 */
+  previewVariant?: PreviewVariant;
 };
 
 /**
- * 세로 사진용: 가로 프레임 안에서 드래그로 object-position y 를 맞춤.
+ * 세로 사진용: 프레임 안에서 드래그로 object-position y 를 맞춤.
  */
 export function DiaryPhotoFocusModal({
   open,
@@ -28,15 +37,22 @@ export function DiaryPhotoFocusModal({
   skipLabel,
   onConfirm,
   onSkip,
+  previewVariant = 'rect',
 }: Props) {
-  const [y, setY] = useState(clampPhotoFocusY(initialY));
+  const isOval = previewVariant === 'oval';
+  const clampY = useCallback(
+    (v: number) => (isOval ? clampLocationOvalFocusY(v) : clampPhotoFocusY(v)),
+    [isOval],
+  );
+
+  const [y, setY] = useState(() => clampY(initialY));
   const dragging = useRef(false);
   const lastY = useRef(0);
   const frameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) setY(clampPhotoFocusY(initialY));
-  }, [open, initialY, imageUrl]);
+    if (open) setY(clampY(initialY));
+  }, [open, initialY, imageUrl, clampY]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     dragging.current = true;
@@ -44,14 +60,17 @@ export function DiaryPhotoFocusModal({
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, []);
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const frameH = frameRef.current?.clientHeight ?? 1;
-    const dy = e.clientY - lastY.current;
-    lastY.current = e.clientY;
-    // 사진을 아래로 드래그 → 위쪽이 더 보임 → y 감소
-    setY((prev) => clampPhotoFocusY(prev - (dy / frameH) * 100));
-  }, []);
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragging.current) return;
+      const frameH = frameRef.current?.clientHeight ?? 1;
+      const dy = e.clientY - lastY.current;
+      lastY.current = e.clientY;
+      // 사진을 아래로 드래그 → 위쪽이 더 보임 → y 감소
+      setY((prev) => clampY(prev - (dy / frameH) * 100));
+    },
+    [clampY],
+  );
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     dragging.current = false;
@@ -64,6 +83,11 @@ export function DiaryPhotoFocusModal({
 
   if (!open) return null;
 
+  // 위젯 타원: width 39.5% × height 23% of 992×1070 → ≈391.8×246.1 → aspect ≈ 1.592
+  const frameClass = isOval
+    ? 'relative mx-auto mt-4 aspect-[392/246] w-[min(100%,300px)] cursor-grab touch-none overflow-hidden rounded-[50%] border-2 border-amber-800/80 bg-zinc-950 shadow-inner active:cursor-grabbing'
+    : 'relative mt-4 aspect-[4/3] w-full cursor-grab touch-none overflow-hidden rounded-xl border-2 border-zinc-800 bg-zinc-950 active:cursor-grabbing';
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/55 p-4"
@@ -74,10 +98,16 @@ export function DiaryPhotoFocusModal({
       <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
         <h2 className="text-base font-semibold text-slate-800">{title}</h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-500">{hint}</p>
+        {isOval ? (
+          <p className="mt-1 text-[11px] text-slate-400">
+            위·아래 범위는 {LOCATION_OVAL_FOCUS_Y_MIN}–{LOCATION_OVAL_FOCUS_Y_MAX}%로 제한됩니다. 타원에
+            보이는 그대로 저장됩니다.
+          </p>
+        ) : null}
 
         <div
           ref={frameRef}
-          className="relative mt-4 aspect-[4/3] w-full cursor-grab touch-none overflow-hidden rounded-xl border-2 border-zinc-800 bg-zinc-950 active:cursor-grabbing"
+          className={frameClass}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -106,7 +136,7 @@ export function DiaryPhotoFocusModal({
           </button>
           <button
             type="button"
-            onClick={() => onConfirm(y)}
+            onClick={() => onConfirm(clampY(y))}
             className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-2 text-sm font-semibold text-white"
           >
             {confirmLabel}

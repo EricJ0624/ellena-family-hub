@@ -1028,6 +1028,7 @@ export interface Database {
           taken_at: string | null
           created_at: string
           upload_mode: 'normal' | 'original' | null
+          focus_y: number | null
         }
         Insert: {
           id?: string
@@ -1045,6 +1046,7 @@ export interface Database {
           taken_at?: string | null
           created_at?: string
           upload_mode?: 'normal' | 'original' | null
+          focus_y?: number | null
         }
         Update: {
           id?: string
@@ -1062,6 +1064,7 @@ export interface Database {
           taken_at?: string | null
           created_at?: string
           upload_mode?: 'normal' | 'original' | null
+          focus_y?: number | null
         }
         Relationships: [
           {

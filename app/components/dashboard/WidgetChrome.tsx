@@ -67,7 +67,9 @@ export function WidgetChrome({
           role="button"
           tabIndex={0}
           aria-label={expandLabel}
-          className="absolute inset-0 z-10 cursor-zoom-in touch-pan-y"
+          className={`absolute inset-0 z-10 cursor-zoom-in touch-pan-y${
+            widgetKey === 'location' ? ' widget-expand-overlay--location' : ''
+          }`}
           onClick={() => onExpand(widgetKey)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {

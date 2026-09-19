@@ -123,7 +123,7 @@ export function FamilyLocationSection({
         hasRequestUi ? ' location-widget-section--compact' : ''
       }${showMap ? ' location-widget-section--sharing' : ''}`}
     >
-      <LocationOvalFromViewedAlbum />
+      <LocationOvalFromViewedAlbum lang={lang} />
       <div className="section-header shrink-0">
         <h3 className="section-title">{t.section_title_location}</h3>
         <div className="location-header-actions">

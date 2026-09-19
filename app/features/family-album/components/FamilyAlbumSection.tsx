@@ -89,7 +89,12 @@ function AlbumTile({ photo, onOpen }: { photo: Photo; onOpen: () => void }) {
         alt={alt}
         loading="lazy"
         draggable={false}
-        onLoad={() => markAlbumPhotoUrlViewed(photo.data)}
+        onLoad={() =>
+          markAlbumPhotoUrlViewed(photo.data, {
+            id: photo.supabaseId ?? photo.id,
+            focus_y: photo.focus_y ?? null,
+          })
+        }
       />
       {photo.isUploading ? (
         <span className="album-tile-uploading">업로드 중...</span>
@@ -188,6 +193,12 @@ function FamilyAlbumClassicSection({
                     alt={photo.description || ''}
                     loading="lazy"
                     draggable={false}
+                    onLoad={() =>
+                      markAlbumPhotoUrlViewed(photo.data, {
+                        id: photo.supabaseId ?? photo.id,
+                        focus_y: photo.focus_y ?? null,
+                      })
+                    }
                   />
                 </div>
                 {photo.isUploading ? (

@@ -8,6 +8,7 @@ import { DB_TABLES } from '@/lib/db-table-names';
 import { getStorageKey, getAuthKey, CryptoService } from '@/lib/dashboard-storage';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { clearViewedAlbumPhotoUrls } from '@/lib/album-viewed-photo-urls';
+import { clampLocationOvalFocusY, parseAlbumFocusY } from '@/lib/album-photo-focus';
 
 export type Photo = {
   id: number | string;
@@ -23,6 +24,8 @@ export type Photo = {
   description?: string;
   taken_at?: string | null; // 촬영일시 ISO. null이면 날짜 없음
   upload_mode?: 'normal' | 'original' | null; // 다운로드 라벨용
+  /** 세로 크롭 object-position y %. null/undefined = 미저장 */
+  focus_y?: number | null;
 };
 
 type AlbumContextType = {
@@ -31,6 +34,7 @@ type AlbumContextType = {
   addPhoto: (payload: Photo) => void;
   deletePhoto: (id: number | string) => void;
   updatePhotoDescription: (payload: { photoId: number | string; description: string }) => void;
+  updatePhotoFocusY: (payload: { photoId: number | string; focusY: number }) => Promise<boolean>;
   updatePhotoId: (payload: {
     oldId: number | string;
     newId: number | string;
@@ -145,7 +149,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       const res = await supabase
         .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .select(
-          'id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at, upload_mode'
+          'id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at, upload_mode, focus_y'
         )
         .eq('group_id', groupIdForThisLoad)
         .order('created_at', { ascending: false })
@@ -189,6 +193,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
         created_by: (p.uploader_id || p.created_by) as string | undefined,
         taken_at: (p.taken_at as string | null) ?? null,
         upload_mode: (p.upload_mode as 'normal' | 'original' | null) ?? null,
+        focus_y: parseAlbumFocusY(p.focus_y),
       }));
 
     const supabaseIds = new Set(supabasePhotos.map((p) => String(p.id)));
@@ -270,6 +275,10 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
                     created_by: (updated.uploader_id || updated.created_by || p.created_by) as string | undefined,
                     taken_at: (updated.taken_at as string | null) ?? p.taken_at ?? null,
                     upload_mode: (updated.upload_mode as 'normal' | 'original' | null) ?? p.upload_mode ?? null,
+                    focus_y:
+                      updated.focus_y === null
+                        ? null
+                        : parseAlbumFocusY(updated.focus_y) ?? p.focus_y ?? null,
                   }
                 : p
             )
@@ -290,6 +299,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
           created_by: (newPhoto.uploader_id || newPhoto.created_by) as string | undefined,
           taken_at: (newPhoto.taken_at as string | null) ?? null,
           upload_mode: (newPhoto.upload_mode as 'normal' | 'original' | null) ?? null,
+          focus_y: parseAlbumFocusY(newPhoto.focus_y),
         };
         setAlbum((prev) => {
           const exists = prev.some(
@@ -440,12 +450,67 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     [getKey, userId, currentGroupId]
   );
 
+  const updatePhotoFocusY = useCallback(
+    async (payload: { photoId: number | string; focusY: number }): Promise<boolean> => {
+      if (!currentGroupId) return false;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return false;
+
+      const focusY = clampLocationOvalFocusY(payload.focusY);
+      try {
+        const res = await fetch('/api/photos/focus-y', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            photoId: String(payload.photoId),
+            groupId: currentGroupId,
+            focusY,
+          }),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          focusY?: number;
+          error?: string;
+        };
+        if (!res.ok && res.status !== 409) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('focus_y update error', json.error || res.status);
+          }
+          return false;
+        }
+        const savedY =
+          typeof json.focusY === 'number' && Number.isFinite(json.focusY) ? json.focusY : focusY;
+        setAlbum((prev) => {
+          const next = prev.map((p) => {
+            const match =
+              String(p.id) === String(payload.photoId) ||
+              (p.supabaseId != null && String(p.supabaseId) === String(payload.photoId));
+            return match ? { ...p, focus_y: savedY } : p;
+          });
+          albumRef.current = next;
+          const key = getKey();
+          if (key && userId) persistAlbumOnly(userId, currentGroupId, key, next);
+          return next;
+        });
+        return true;
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') console.error('updatePhotoFocusY error', err);
+        return false;
+      }
+    },
+    [getKey, userId, currentGroupId]
+  );
+
   const value: AlbumContextType = {
     album,
     albumRef,
     addPhoto,
     deletePhoto,
     updatePhotoDescription,
+    updatePhotoFocusY,
     updatePhotoId,
   };
 

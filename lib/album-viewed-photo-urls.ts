@@ -6,22 +6,47 @@
 
 type Listener = () => void;
 
+export type ViewedAlbumPhotoMeta = {
+  id?: string | number;
+  focus_y?: number | null;
+};
+
 const viewedUrls = new Set<string>();
+const viewedMetaByUrl = new Map<string, ViewedAlbumPhotoMeta>();
 const listeners = new Set<Listener>();
 
 function notify(): void {
   listeners.forEach((listener) => listener());
 }
 
-export function markAlbumPhotoUrlViewed(url: string): void {
+export function markAlbumPhotoUrlViewed(url: string, meta?: ViewedAlbumPhotoMeta): void {
   const trimmed = (url || '').trim();
-  if (!trimmed || viewedUrls.has(trimmed)) return;
-  viewedUrls.add(trimmed);
-  notify();
+  if (!trimmed) return;
+  const isNew = !viewedUrls.has(trimmed);
+  if (isNew) viewedUrls.add(trimmed);
+  if (meta) {
+    const prev = viewedMetaByUrl.get(trimmed) ?? {};
+    viewedMetaByUrl.set(trimmed, {
+      id: meta.id ?? prev.id,
+      focus_y:
+        meta.focus_y !== undefined
+          ? meta.focus_y
+          : prev.focus_y !== undefined
+            ? prev.focus_y
+            : null,
+    });
+  }
+  if (isNew || meta) notify();
 }
 
 export function getViewedAlbumPhotoUrls(): string[] {
   return Array.from(viewedUrls);
+}
+
+export function getViewedAlbumPhotoMeta(url: string): ViewedAlbumPhotoMeta | undefined {
+  const trimmed = (url || '').trim();
+  if (!trimmed) return undefined;
+  return viewedMetaByUrl.get(trimmed);
 }
 
 export function subscribeViewedAlbumPhotoUrls(listener: Listener): () => void {
@@ -32,8 +57,9 @@ export function subscribeViewedAlbumPhotoUrls(listener: Listener): () => void {
 }
 
 export function clearViewedAlbumPhotoUrls(): void {
-  if (viewedUrls.size === 0) return;
+  if (viewedUrls.size === 0 && viewedMetaByUrl.size === 0) return;
   viewedUrls.clear();
+  viewedMetaByUrl.clear();
   notify();
 }
 

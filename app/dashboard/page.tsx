@@ -899,10 +899,14 @@ export default function FamilyHub() {
           location: d.location && typeof d.location === 'object' && d.location !== null && !Array.isArray(d.location)
             ? d.location as AppState['location']
             : INITIAL_STATE.location,
-          familyLocations: Array.isArray(d.familyLocations) ? d.familyLocations as AppState['familyLocations'] : INITIAL_STATE.familyLocations,
-          todos: Array.isArray(d.todos) ? d.todos as AppState['todos'] : INITIAL_STATE.todos,
+          // familyLocations: loadFamilyLocations / Realtime이 소스.
+          // localStorage 빈 배열 hydrate가 마커를 통째로 지우는 레이스 방지 (todos/events/messages와 동일).
+          familyLocations: prev.familyLocations,
+          // todos/events: useFamilyTasks / useFamilyCalendar(Supabase)가 소스.
+          // localStorage의 빈 배열로 hydrate하면 로드된 임무·일정이 통째로 사라진다 (messages와 동일 이슈).
+          todos: prev.todos,
           album: stableAlbum,
-          events: Array.isArray(d.events) ? d.events as AppState['events'] : INITIAL_STATE.events,
+          events: prev.events,
           messages: prev.messages,
           titleStyle: d.titleStyle && typeof d.titleStyle === 'object' && d.titleStyle !== null
             ? d.titleStyle as AppState['titleStyle']
