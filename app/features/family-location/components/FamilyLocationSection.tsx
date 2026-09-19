@@ -17,6 +17,7 @@ export type FamilyLocationSectionTranslations = Pick<
   | 'section_title_location'
   | 'location_where_btn'
   | 'location_come_btn'
+  | 'location_im_here_btn'
   | 'location_got_it_btn'
   | 'location_request_come_label'
   | 'piggy_request_sent'
@@ -58,6 +59,7 @@ export type FamilyLocationSectionTranslations = Pick<
 type Props = {
   onOpenRequestModal: () => void;
   onOpenComeHereModal: () => void;
+  onShareImHere: () => void;
   myLocation: {
     address: string;
     latitude?: number;
@@ -93,6 +95,7 @@ function fillName(template: string, name: string) {
 export function FamilyLocationSection({
   onOpenRequestModal,
   onOpenComeHereModal,
+  onShareImHere,
   myLocation,
   extractLocationAddress,
   showMap,
@@ -127,21 +130,31 @@ export function FamilyLocationSection({
       <div className="section-header shrink-0">
         <h3 className="section-title">{t.section_title_location}</h3>
         <div className="location-header-actions">
+          <div className="location-header-actions-twin">
+            <button
+              type="button"
+              onClick={onOpenRequestModal}
+              className="location-action-btn bg-emerald-500 text-white hover:bg-emerald-600"
+            >
+              <span>📍</span>
+              <span>{t.location_where_btn}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenComeHereModal}
+              className="location-action-btn bg-blue-500 text-white hover:bg-blue-600"
+            >
+              <span>🚶</span>
+              <span>{t.location_come_btn}</span>
+            </button>
+          </div>
           <button
             type="button"
-            onClick={onOpenRequestModal}
-            className="location-action-btn bg-emerald-500 text-white hover:bg-emerald-600"
+            onClick={onShareImHere}
+            className="location-action-btn location-action-btn--im-here bg-amber-500 text-white hover:bg-amber-600"
           >
-            <span>📍</span>
-            <span>{t.location_where_btn}</span>
-          </button>
-          <button
-            type="button"
-            onClick={onOpenComeHereModal}
-            className="location-action-btn bg-blue-500 text-white hover:bg-blue-600"
-          >
-            <span>🚶</span>
-            <span>{t.location_come_btn}</span>
+            <span>📌</span>
+            <span>{t.location_im_here_btn}</span>
           </button>
         </div>
       </div>

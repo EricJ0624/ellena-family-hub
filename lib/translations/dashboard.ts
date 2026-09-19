@@ -155,6 +155,8 @@ export type DashboardTranslations = {
   event_today: string;
   location_where_btn: string;
   location_come_btn: string;
+  /** 선제 위치 공유 「나여기」 */
+  location_im_here_btn: string;
   location_got_it_btn: string;
   location_request_come_label: string;
   location_modal_come_title: string;
@@ -458,6 +460,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: '오늘',
     location_where_btn: '어디야',
     location_come_btn: '일루와',
+    location_im_here_btn: '나여기',
     location_got_it_btn: '알았어',
     location_request_come_label: '일루와 요청',
     location_modal_come_title: '누구에게 일루와 요청할까요?',
@@ -753,6 +756,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: 'Today',
     location_where_btn: 'Where are you?',
     location_come_btn: 'Come here',
+    location_im_here_btn: "I'm here",
     location_got_it_btn: 'Got it',
     location_request_come_label: 'Come here request',
     location_modal_come_title: 'Who should come to you?',
@@ -1048,6 +1052,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: '今日',
     location_where_btn: 'どこ？',
     location_come_btn: '来て',
+    location_im_here_btn: 'ここだよ',
     location_got_it_btn: '了解',
     location_request_come_label: '来てリクエスト',
     location_modal_come_title: '誰に来てもらいますか？',
@@ -1342,6 +1347,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: '今天',
     location_where_btn: '你在哪？',
     location_come_btn: '过来',
+    location_im_here_btn: '我在这',
     location_got_it_btn: '知道了',
     location_request_come_label: '过来请求',
     location_modal_come_title: '要邀请谁过来？',
@@ -1634,6 +1640,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: '今天',
     location_where_btn: '你在哪？',
     location_come_btn: '過來',
+    location_im_here_btn: '我在這',
     location_got_it_btn: '知道了',
     location_request_come_label: '過來請求',
     location_modal_come_title: '要邀請誰過來？',
@@ -1926,6 +1933,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: 'Hoy',
     location_where_btn: '¿Dónde estás?',
     location_come_btn: 'Ven aquí',
+    location_im_here_btn: 'Estoy aquí',
     location_got_it_btn: 'Entendido',
     location_request_come_label: 'Solicitud ven aquí',
     location_modal_come_title: '¿A quién invitas?',
@@ -2217,6 +2225,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: 'Aujourd\'hui',
     location_where_btn: 'Où es-tu?',
     location_come_btn: 'Viens ici',
+    location_im_here_btn: 'Je suis là',
     location_got_it_btn: 'Compris',
     location_request_come_label: 'Demande viens ici',
     location_modal_come_title: 'Qui inviter ?',
@@ -2508,6 +2517,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: 'Heute',
     location_where_btn: 'Wo bist du?',
     location_come_btn: 'Komm her',
+    location_im_here_btn: 'Ich bin hier',
     location_got_it_btn: 'Verstanden',
     location_request_come_label: 'Komm-her-Anfrage',
     location_modal_come_title: 'Wen einladen?',
@@ -2799,6 +2809,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: 'Oggi',
     location_where_btn: 'Dove sei?',
     location_come_btn: 'Vieni qui',
+    location_im_here_btn: 'Sono qui',
     location_got_it_btn: 'Capito',
     location_request_come_label: 'Richiesta vieni qui',
     location_modal_come_title: 'Chi invitare?',
@@ -3090,6 +3101,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_today: 'Hoje',
     location_where_btn: 'Onde você está?',
     location_come_btn: 'Venha aqui',
+    location_im_here_btn: 'Estou aqui',
     location_got_it_btn: 'Entendi',
     location_request_come_label: 'Pedido venha aqui',
     location_modal_come_title: 'Quem convidar?',

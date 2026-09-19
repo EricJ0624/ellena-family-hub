@@ -5319,101 +5319,98 @@ export default function FamilyHub() {
     }
   }, [userId, isAuthenticated]); // useCallback 의존성 (supabase는 안정적인 싱글톤이므로 제외)
 
-  // "여기야" 버튼 클릭 시 현재 위치 공유
-  const handleShareMyLocation = async () => {
+  // 「나여기」— 선제 공유 (기존 어디야/일루와/승인 핸들러는 변경하지 않음)
+  const handleImHereShare = async () => {
     if (!userId || !isAuthenticated) {
       alert(dt('login_required'));
       return;
     }
-
+    if (!currentGroupId) {
+      alert(dt('group_info_missing'));
+      return;
+    }
     if (!navigator.geolocation) {
       alert(dt('location_geolocation_unsupported'));
       return;
     }
 
+    const lockKey = 'im-here-share';
+    if (processingRequestsRef.current.has(lockKey)) {
+      return;
+    }
+    processingRequestsRef.current.add(lockKey);
+
     try {
-      // 현재 위치 가져오기
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 0
+          maximumAge: 0,
         });
       });
 
       const latitude = position.coords.latitude;
       const longitude = position.coords.longitude;
-      const address = ''; // Geocoding 미사용
-
-      await saveLocationToSupabase(latitude, longitude, address);
-
-      setState(prev => ({
-        ...prev,
-        location: {
-          address: address,
-          latitude: latitude,
-          longitude: longitude,
-          userId: userId,
-          updatedAt: new Date().toISOString()
-        }
-      }));
-
-      // 받은 위치 요청들을 모두 accepted로 변경
-      const pendingRequests = locationRequests.filter(
-        req => req.target_id === userId && req.status === 'pending'
-      );
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        console.warn('위치 요청 자동 승인: 인증 세션이 없습니다.');
+        alert(dt('auth_session_expired'));
         return;
       }
 
-      for (const req of pendingRequests) {
-        if (!currentGroupId) {
-          console.warn('위치 요청 자동 승인: currentGroupId가 없습니다. groupId가 필요합니다.');
-          break;
-        }
-        try {
-          const response = await fetch('/api/location-approve', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              requestId: req.id,
-              userId: userId,
-              groupId: currentGroupId,
-              action: 'accept',
-            }),
-          });
+      const response = await fetch('/api/location-share-now', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          latitude,
+          longitude,
+          address: '',
+        }),
+      });
 
-          if (!response.ok) {
-            console.error('위치 요청 승인 실패:', req.id);
-          }
-        } catch (error) {
-          console.error('위치 요청 승인 오류:', error);
-        }
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        alert(result.error || dt('location_fetch_failed'));
+        return;
       }
 
-      // 위치 요청 목록 다시 로드 (완료 대기)
+      lastLocationUpdateRef.current = Date.now();
+      lastSentLatRef.current = latitude;
+      lastSentLngRef.current = longitude;
+
+      setState((prev) => ({
+        ...prev,
+        location: {
+          address: '',
+          latitude,
+          longitude,
+          userId,
+          updatedAt: new Date().toISOString(),
+        },
+      }));
+
       await loadLocationRequests();
-      
-      // locationRequests 상태가 업데이트될 때까지 약간의 지연
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // 위치 목록 다시 로드 (승인된 요청이 반영된 후)
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await loadFamilyLocations();
 
-      alert(dt('location_shared_success'));
+      if (!Array.isArray(result.sharedWith) || result.sharedWith.length === 0) {
+        alert(result.message || dt('location_modal_empty'));
+      } else {
+        alert(dt('location_shared_success'));
+      }
     } catch (error: any) {
-      console.error('위치 공유 오류:', error);
-      if (error.code === 1) {
+      console.error('나여기 공유 오류:', error);
+      if (error?.code === 1) {
         alert(dt('location_permission_denied'));
       } else {
         alert(dt('location_fetch_failed'));
       }
+    } finally {
+      processingRequestsRef.current.delete(lockKey);
     }
   };
 
@@ -6765,6 +6762,7 @@ export default function FamilyHub() {
           <FamilyLocationSection
             onOpenRequestModal={handleOpenLocationWhere}
             onOpenComeHereModal={handleOpenLocationComeHere}
+            onShareImHere={handleImHereShare}
             myLocation={state.location}
             extractLocationAddress={extractLocationAddress}
             showMap={hasAcceptedShare}
@@ -6779,6 +6777,7 @@ export default function FamilyHub() {
               section_title_location: dt('section_title_location'),
               location_where_btn: dt('location_where_btn'),
               location_come_btn: dt('location_come_btn'),
+              location_im_here_btn: dt('location_im_here_btn'),
               location_got_it_btn: dt('location_got_it_btn'),
               location_request_come_label: dt('location_request_come_label'),
               piggy_request_sent: dt('piggy_request_sent'),

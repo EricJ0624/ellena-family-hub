@@ -314,13 +314,19 @@ function LocationPreview() {
       <div className="section-header shrink-0">
         <h3 className="section-title">{dt('section_title_location')}</h3>
         <div className="location-header-actions">
-          <button type="button" tabIndex={-1} className="location-action-btn bg-emerald-500 text-white">
-            <span>📍</span>
-            <span>{dt('location_where_btn')}</span>
-          </button>
-          <button type="button" tabIndex={-1} className="location-action-btn bg-blue-500 text-white">
-            <span>🚶</span>
-            <span>{dt('location_come_btn')}</span>
+          <div className="location-header-actions-twin">
+            <button type="button" tabIndex={-1} className="location-action-btn bg-emerald-500 text-white">
+              <span>📍</span>
+              <span>{dt('location_where_btn')}</span>
+            </button>
+            <button type="button" tabIndex={-1} className="location-action-btn bg-blue-500 text-white">
+              <span>🚶</span>
+              <span>{dt('location_come_btn')}</span>
+            </button>
+          </div>
+          <button type="button" tabIndex={-1} className="location-action-btn bg-amber-500 text-white">
+            <span>📌</span>
+            <span>{dt('location_im_here_btn')}</span>
           </button>
         </div>
       </div>

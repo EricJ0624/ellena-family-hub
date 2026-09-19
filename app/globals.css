@@ -4168,6 +4168,11 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     gap: 1.5cqmin;
   }
 
+  .widget-chrome[data-widget-key='location'] .section-header > .section-title,
+  .widget-chrome[data-widget-key='location'] .section-header > h3.section-title {
+    flex: 0 1 auto;
+  }
+
   .widget-chrome[data-widget-key='location'] .location-widget-section--compact .section-header {
     margin-bottom: 1cqmin;
     gap: 1cqmin;
@@ -4175,11 +4180,27 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
 
   .widget-chrome[data-widget-key='location'] .location-header-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
     gap: 1.5cqmin;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-header-actions-twin {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5cqmin;
+    min-width: 0;
   }
 
   .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-header-actions {
+    gap: 1cqmin;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-header-actions-twin {
     gap: 1cqmin;
   }
 
@@ -4536,12 +4557,12 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-title {
     position: absolute;
     z-index: 4;
-    /* final.png 제목판 구멍 ≈ 5.8–51.3% × 10–28.5% */
-    top: 10%;
-    left: 5.8%;
+    /* FG 제목판 */
+    top: 8.9%;
+    left: 4.8%;
     display: flex;
-    width: 45.5%;
-    height: 18.5%;
+    width: 48.5%;
+    height: 20.5%;
     max-height: none;
     margin: 0;
     overflow: hidden;
@@ -4555,7 +4576,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     background-position: center;
     background-size: 100% 100%;
     font-family: 'Black Ops One', Montserrat, Pretendard, 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC', sans-serif;
-    font-size: 5.6cqmin;
+    font-size: 6cqmin;
     font-weight: 900;
     font-style: normal;
     letter-spacing: -0.02em;
@@ -4577,15 +4598,25 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions {
     position: absolute;
     z-index: 6;
-    right: 12%;
-    bottom: 18.5%;
-    left: 12%;
-    justify-content: center;
+    right: 8%;
+    bottom: 20.5%;
+    left: 8%;
+    justify-content: space-between;
     align-items: center;
     flex-wrap: nowrap;
-    gap: 1.4cqmin;
+    gap: 1cqmin;
     width: auto;
     pointer-events: auto;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions-twin,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions-twin,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions-twin {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 1cqmin;
+    min-width: 0;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn,
@@ -4593,11 +4624,11 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn {
     flex: 0 1 auto;
     min-width: 0;
-    max-width: calc(50% - 0.5cqmin);
+    max-width: none;
     box-shadow: 0 2px 6px rgb(15 23 42 / 0.24);
-    gap: 1cqmin;
-    padding: 1.7cqmin 3.2cqmin;
-    font-size: 4.5cqmin;
+    gap: 0.9cqmin;
+    padding: 1.65cqmin 2.9cqmin;
+    font-size: 4.3cqmin;
     font-weight: 700;
     line-height: 1.15;
     white-space: nowrap;
@@ -4607,9 +4638,29 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-action-btn,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-action-btn,
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-action-btn {
-    gap: 0.85cqmin;
-    padding: 1.4cqmin 2.8cqmin;
-    font-size: 4cqmin;
+    gap: 0.75cqmin;
+    padding: 1.4cqmin 2.45cqmin;
+    font-size: 3.9cqmin;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn--im-here,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn--im-here,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn--im-here {
+    flex-shrink: 0;
+    padding-right: 4cqmin;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-action-btn--im-here,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-action-btn--im-here,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-action-btn--im-here {
+    padding-right: 3.4cqmin;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn--im-here > span:last-child,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn--im-here > span:last-child,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn--im-here > span:last-child {
+    overflow: visible;
+    text-overflow: clip;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn > span:last-child,
@@ -4694,6 +4745,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   /*
    * 원본 ori: 양피지 띠 ≈ 위젯 높이 62–72% (지도창 기준 top≈53%, height≈17%).
    * 글자는 띠 위, 공유 ON 시 이 노드 자체가 사라짐.
+   * 하단 버튼 슬롯(bottom≈20.5%)과 겹치지 않게 위로.
    */
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-placeholder-hint,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-placeholder-hint,
@@ -4702,7 +4754,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     z-index: 2;
     left: -4% !important;
     right: -1% !important;
-    top: 42% !important;
+    top: 33% !important;
     width: auto !important;
     max-width: none !important;
     height: 16% !important;
