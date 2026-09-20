@@ -5,10 +5,12 @@ import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import type { FamilyGameSessionBundle } from '@/lib/family-games/session-types';
 import {
   canAddLobbySlot,
+  canCreateMultiplayerLobby,
   canRemoveLobbySlot,
   getLobbyMaxSlotsCap,
   getSessionMaxSlots,
   lobbyCanStart,
+  LOBBY_MIN_SLOTS,
 } from '@/lib/family-games/lobby-helpers';
 import type { GameTab } from '../types';
 import { getMemberNickname } from './MemberSelect';
@@ -27,6 +29,7 @@ export type GameLobbyTranslations = {
   games_lobby_status_not_joined: string;
   games_lobby_slots: string;
   games_lobby_you_host: string;
+  games_lobby_min_members: string;
   games_cancel: string;
   no_members: string;
 };
@@ -68,14 +71,29 @@ export function GameLobbyPanel({
 }: GameLobbyPanelProps) {
   if (members.length === 0) {
     return (
-      <p className="text-[#64748b]" style={{ fontSize: '4cqw' }}>
+      <p
+        className="rounded-lg bg-white/95 px-2.5 py-2 font-semibold text-slate-800 shadow-sm"
+        style={{ fontSize: '4cqw' }}
+      >
         {t.no_members}
       </p>
     );
   }
 
+  const canInvite = canCreateMultiplayerLobby(members.length);
+  if (!canInvite && !bundle) {
+    return (
+      <p
+        className="rounded-lg bg-white/95 px-2.5 py-2 font-semibold text-slate-800 shadow-sm"
+        style={{ fontSize: '4cqw' }}
+      >
+        {t.games_lobby_min_members}
+      </p>
+    );
+  }
+
   const maxCap = getLobbyMaxSlotsCap(gameType, members.length);
-  const maxSlots = bundle ? getSessionMaxSlots(bundle.session) : 2;
+  const maxSlots = bundle ? getSessionMaxSlots(bundle.session) : LOBBY_MIN_SLOTS;
   const participants = bundle
     ? [...bundle.participants].sort((a, b) => a.slot_index - b.slot_index)
     : [];
@@ -118,7 +136,7 @@ export function GameLobbyPanel({
           <button
             type="button"
             onClick={() => onJoin().catch(console.error)}
-            disabled={actionLoading}
+            disabled={actionLoading || (!bundle && !canInvite)}
             className="relative z-[1] shrink-0 rounded-lg bg-indigo-600 px-2.5 py-1.5 font-semibold text-white disabled:opacity-50"
             style={{ fontSize: '3.6cqw' }}
           >

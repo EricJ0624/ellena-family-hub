@@ -47,11 +47,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: bundle });
   } catch (error) {
-    const message = error instanceof Error ? error.message : '참가에 실패했습니다.';
+    const message =
+      error instanceof Error
+        ? error.message === 'INSUFFICIENT_MEMBERS'
+          ? '그룹 멤버가 2명 이상일 때 게임을 초대할 수 있습니다.'
+          : error.message
+        : '참가에 실패했습니다.';
     const status =
-      message === 'WRONG_GAME_TYPE' || message === 'LOBBY_CLOSED'
-        ? 409
-        : message === 'LOBBY_FULL'
+      error instanceof Error && error.message === 'INSUFFICIENT_MEMBERS'
+        ? 400
+        : message === 'WRONG_GAME_TYPE' || message === 'LOBBY_CLOSED' || message === 'LOBBY_FULL'
           ? 409
           : 500;
     console.error('POST /api/games/sessions/lobby/join error:', error);

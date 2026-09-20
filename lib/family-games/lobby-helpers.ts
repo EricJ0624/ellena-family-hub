@@ -33,10 +33,16 @@ export function getSessionMaxSlots(session: FamilyGameSessionRow): number {
 }
 
 export function getLobbyMaxSlotsCap(gameType: FamilyGameType, memberCount: number): number {
-  const count = Math.max(memberCount, LOBBY_MIN_SLOTS);
+  const count = Math.max(0, memberCount);
+  if (count < LOBBY_MIN_SLOTS) return count;
   if (gameType === 'rps') return 2;
   if (gameType === 'ladder') return Math.min(count, LADDER_MAX_LANES);
   return count;
+}
+
+/** 사다리·가위바위보·룰렛 로비 생성에 그룹 멤버가 충분한지 */
+export function canCreateMultiplayerLobby(memberCount: number): boolean {
+  return memberCount >= LOBBY_MIN_SLOTS;
 }
 
 export function createInitialLobbyConfig(gameType: FamilyGameType): Record<string, unknown> {

@@ -253,7 +253,7 @@ async function getGroupMemberCount(
     .eq('group_id', groupId);
 
   if (error) throw error;
-  return Math.max(count ?? LOBBY_MIN_SLOTS, LOBBY_MIN_SLOTS);
+  return count ?? 0;
 }
 
 export async function lobbyJoinGameSession(
@@ -265,7 +265,6 @@ export async function lobbyJoinGameSession(
   await cancelStaleSessionsForGroup(supabase, groupId);
 
   const memberCount = await getGroupMemberCount(supabase, groupId);
-  const slotsCap = getLobbyMaxSlotsCap(gameType, memberCount);
 
   const { data: existingSession } = await supabase
     .from('family_game_sessions')
@@ -309,6 +308,10 @@ export async function lobbyJoinGameSession(
     if (insertError) throw insertError;
 
     return (await fetchSessionBundle(supabase, session.id))!;
+  }
+
+  if (memberCount < LOBBY_MIN_SLOTS) {
+    throw new Error('INSUFFICIENT_MEMBERS');
   }
 
   const config = createInitialLobbyConfig(gameType);

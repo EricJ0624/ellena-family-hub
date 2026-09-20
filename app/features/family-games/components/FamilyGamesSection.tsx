@@ -101,6 +101,7 @@ export interface FamilyGamesSectionProps {
     games_lobby_status_not_joined: string;
     games_lobby_slots: string;
     games_lobby_you_host: string;
+    games_lobby_min_members: string;
     games_lobby_wrong_tab: string;
     games_lobby_wrong_game: string;
     games_congrats_title: string;
@@ -238,6 +239,7 @@ export function FamilyGamesSection({
     games_lobby_status_not_joined: t.games_lobby_status_not_joined,
     games_lobby_slots: t.games_lobby_slots,
     games_lobby_you_host: t.games_lobby_you_host,
+    games_lobby_min_members: t.games_lobby_min_members,
     games_cancel: t.games_cancel,
     no_members: t.no_members,
   };

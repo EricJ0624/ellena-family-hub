@@ -74,6 +74,7 @@ export type GamesTranslations = {
   games_lobby_status_not_joined: string;
   games_lobby_slots: string;
   games_lobby_you_host: string;
+  games_lobby_min_members: string;
   games_lobby_wrong_tab: string;
   games_lobby_wrong_game: string;
 };
@@ -153,6 +154,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: '미참여',
     games_lobby_slots: '{joined}/{max}명',
     games_lobby_you_host: '호스트',
+    games_lobby_min_members: '그룹 멤버가 2명 이상일 때 게임을 초대할 수 있습니다.',
     games_lobby_wrong_tab: '다른 게임 탭에서 로비가 열려 있습니다.',
     games_lobby_wrong_game: '다른 게임이 진행 중입니다. 해당 탭 또는 배너에서 참가해 주세요.',
   },
@@ -230,6 +232,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: 'Not joined',
     games_lobby_slots: '{joined}/{max} players',
     games_lobby_you_host: 'Host',
+    games_lobby_min_members: 'Invite only when the group has at least 2 members.',
     games_lobby_wrong_tab: 'A lobby is open on another game tab.',
     games_lobby_wrong_game: 'Another game is in progress. Join from that tab or the banner.',
   },
@@ -307,6 +310,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: '未参加',
     games_lobby_slots: '{joined}/{max}人',
     games_lobby_you_host: 'ホスト',
+    games_lobby_min_members: 'グループメンバーが2人以上のとき招待できます。',
     games_lobby_wrong_tab: '別のゲームタブでロビーが開いています。',
     games_lobby_wrong_game: '別のゲームが進行中です。該当タブまたはバナーから参加してください。',
   },
@@ -384,6 +388,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: '未参与',
     games_lobby_slots: '{joined}/{max} 人',
     games_lobby_you_host: '主持人',
+    games_lobby_min_members: '群组成员至少 2 人时才能发起游戏邀请。',
     games_lobby_wrong_tab: '其他游戏标签页已打开等候室。',
     games_lobby_wrong_game: '其他游戏进行中。请从对应标签或横幅加入。',
   },
@@ -461,6 +466,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: '未參與',
     games_lobby_slots: '{joined}/{max} 人',
     games_lobby_you_host: '主持人',
+    games_lobby_min_members: '群組成員至少 2 人時才能發起遊戲邀請。',
     games_lobby_wrong_tab: '其他遊戲分頁已開啟等候室。',
     games_lobby_wrong_game: '其他遊戲進行中。請從對應分頁或橫幅加入。',
   },
@@ -538,6 +544,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: 'No unido',
     games_lobby_slots: '{joined}/{max} jugadores',
     games_lobby_you_host: 'Anfitrión',
+    games_lobby_min_members: 'Solo puede invitar cuando el grupo tenga al menos 2 miembros.',
     games_lobby_wrong_tab: 'Hay un lobby abierto en otra pestaña del juego.',
     games_lobby_wrong_game: 'Otro juego está en progreso. Únase desde esa pestaña o el banner.',
   },
@@ -615,6 +622,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: 'Non rejoint',
     games_lobby_slots: '{joined}/{max} joueurs',
     games_lobby_you_host: 'Hôte',
+    games_lobby_min_members: 'Invitez uniquement lorsque le groupe compte au moins 2 membres.',
     games_lobby_wrong_tab: 'Un lobby est ouvert sur un autre onglet de jeu.',
     games_lobby_wrong_game: 'Un autre jeu est en cours. Rejoignez-nous à partir de cet onglet ou de la bannière.',
   },
@@ -692,6 +700,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: 'Nicht beigetreten',
     games_lobby_slots: '{joined}/{max} Spieler',
     games_lobby_you_host: 'Gastgeber',
+    games_lobby_min_members: 'Einladung nur möglich, wenn die Gruppe mindestens 2 Mitglieder hat.',
     games_lobby_wrong_tab: 'Auf einer anderen Spielregisterkarte ist eine Lobby geöffnet.',
     games_lobby_wrong_game: 'Ein weiteres Spiel ist im Gange. Treten Sie über diese Registerkarte oder das Banner bei.',
   },
@@ -769,6 +778,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: 'Non iscritto',
     games_lobby_slots: '{joined}/{max} giocatori',
     games_lobby_you_host: 'Ospite',
+    games_lobby_min_members: 'Puoi invitare solo quando il gruppo ha almeno 2 membri.',
     games_lobby_wrong_tab: 'Una lobby è aperta su un\'altra scheda di gioco.',
     games_lobby_wrong_game: 'È in corso un\'altra partita. Partecipa da quella scheda o dal banner.',
   },
@@ -846,6 +856,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_lobby_status_not_joined: 'Não entrou',
     games_lobby_slots: '{joined}/{max} jogadores',
     games_lobby_you_host: 'Anfitrião',
+    games_lobby_min_members: 'Convide somente quando o grupo tiver pelo menos 2 membros.',
     games_lobby_wrong_tab: 'Há um lobby aberto em outra aba de jogo.',
     games_lobby_wrong_game: 'Outro jogo está em andamento. Entre por aquela aba ou pelo banner.',
   }

@@ -6914,6 +6914,7 @@ export default function FamilyHub() {
               games_lobby_status_not_joined: gt('games_lobby_status_not_joined'),
               games_lobby_slots: gt('games_lobby_slots'),
               games_lobby_you_host: gt('games_lobby_you_host'),
+              games_lobby_min_members: gt('games_lobby_min_members'),
               games_lobby_wrong_tab: gt('games_lobby_wrong_tab'),
               games_lobby_wrong_game: gt('games_lobby_wrong_game'),
               games_congrats_title: gt('games_congrats_title'),
