@@ -424,6 +424,7 @@ export interface WidgetLayoutEditorProps {
     GroupAdminTranslations,
     | 'widgets_restore_defaults'
     | 'widgets_restore_all'
+    | 'widgets_save_as_default'
     | 'widgets_layout_edit_hint'
     | 'widgets_preview_portrait'
     | 'widgets_preview_landscape'
@@ -437,6 +438,7 @@ export interface WidgetLayoutEditorProps {
   onToggle: (key: DashboardWidgetKey) => void;
   onRestoreOne: (key: DashboardWidgetKey) => void;
   onRestoreAll: () => void;
+  onSaveAsDefault?: () => void;
   /** 드래그 시작(true)/종료(false) 시 호출 — 부모 스크롤 컨테이너 잠금용 */
   onDragStateChange?: (active: boolean) => void;
 }
@@ -451,6 +453,7 @@ export function WidgetLayoutEditor({
   onToggle,
   onRestoreOne,
   onRestoreAll,
+  onSaveAsDefault,
   onDragStateChange,
 }: WidgetLayoutEditorProps) {
   const [previewMode, setPreviewMode] = useState<PreviewMode>(() => {
@@ -754,6 +757,33 @@ export function WidgetLayoutEditor({
     [liveResize],
   );
 
+  const disabledSection =
+    sortedDisabled.length > 0 ? (
+      <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-3">
+        <p className="mb-2 text-xs font-semibold text-slate-600">{t.widgets_disabled_section}</p>
+        <div className="flex flex-wrap gap-2">
+          {sortedDisabled.map((cfg) => (
+            <label
+              key={cfg.widget_key}
+              className={[
+                'flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm',
+                editMode && !saving ? 'cursor-pointer active:bg-slate-50' : 'opacity-80',
+              ].join(' ')}
+            >
+              <input
+                type="checkbox"
+                checked={false}
+                onChange={() => onToggle(cfg.widget_key)}
+                disabled={!editMode || saving}
+                className="h-4 w-4 shrink-0 cursor-pointer accent-blue-600"
+              />
+              <span className="font-medium">{widgetLabels[cfg.widget_key]}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div className="space-y-4 min-w-0 max-w-full overflow-x-hidden">
       {/* Toolbar: orientation toggle + restore-all */}
@@ -786,20 +816,33 @@ export function WidgetLayoutEditor({
           </button>
         ))}
         {editMode && (
-          <button
-            type="button"
-            onClick={onRestoreAll}
-            disabled={saving}
-            className="ml-auto rounded-lg border border-amber-400 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors"
-          >
-            {t.widgets_restore_all}
-          </button>
+          <div className="ml-auto flex flex-col items-stretch gap-1.5">
+            <button
+              type="button"
+              onClick={onSaveAsDefault}
+              disabled={saving || !onSaveAsDefault}
+              className="rounded-lg border border-blue-400 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+            >
+              {t.widgets_save_as_default}
+            </button>
+            <button
+              type="button"
+              onClick={onRestoreAll}
+              disabled={saving}
+              className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors"
+            >
+              {t.widgets_restore_all}
+            </button>
+          </div>
         )}
       </div>
 
       {editMode && (
         <p className="text-[11px] text-slate-400">{t.widgets_layout_edit_hint}</p>
       )}
+
+      {/* 미리보기 그리드보다 위 — 모바일/앱에서 스크롤·클리핑으로 목록이 안 보이던 문제 완화 */}
+      {disabledSection}
 
       {/* Sortable DnD grid */}
       <DndContext
@@ -971,30 +1014,6 @@ export function WidgetLayoutEditor({
           })() : null}
         </DragOverlay>
       </DndContext>
-
-      {/* Disabled widgets */}
-      {sortedDisabled.length > 0 && (
-        <div>
-          <p className="mb-2 text-xs font-semibold text-slate-500">{t.widgets_disabled_section}</p>
-          <div className="flex flex-wrap gap-2">
-            {sortedDisabled.map((cfg) => (
-              <div
-                key={cfg.widget_key}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-500"
-              >
-                <input
-                  type="checkbox"
-                  checked={false}
-                  onChange={() => onToggle(cfg.widget_key)}
-                  disabled={!editMode || saving}
-                  className="cursor-pointer"
-                />
-                <span>{widgetLabels[cfg.widget_key]}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

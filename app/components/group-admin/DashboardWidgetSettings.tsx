@@ -26,6 +26,11 @@ import {
   packOrientationLayouts,
   resetAllLayouts,
 } from '@/lib/widgets/layout-presets';
+import {
+  applyWidgetLayoutDefaults,
+  loadGroupWidgetLayoutDefaults,
+  saveGroupWidgetLayoutDefaults,
+} from '@/lib/widgets/widget-layout-defaults';
 import { WidgetLayoutEditor } from './WidgetLayoutEditor';
 import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 
@@ -47,6 +52,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
 
   const [configs, setConfigs] = useState<WidgetConfigDraft[]>([]);
   const [drafts, setDrafts] = useState<WidgetConfigDraft[]>([]);
+  const [layoutDefaults, setLayoutDefaults] = useState<WidgetConfigDraft[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -93,14 +99,24 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     if (!groupId) {
       setConfigs([]);
       setDrafts([]);
+      setLayoutDefaults(null);
       setEditMode(false);
       return;
     }
     try {
       setLoading(true);
-      const next = await ensureWidgetConfigs(groupId, isOwner);
+      const [next, defaults] = await Promise.all([
+        ensureWidgetConfigs(groupId, isOwner),
+        loadGroupWidgetLayoutDefaults(groupId).catch((e) => {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('widget layout defaults load', e);
+          }
+          return null;
+        }),
+      ]);
       setConfigs(next);
       setDrafts(next);
+      setLayoutDefaults(defaults);
     } catch (e) {
       if (process.env.NODE_ENV === 'development') {
         console.warn('widget configs load', e);
@@ -234,10 +250,42 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     [],
   );
 
-  /** 전체 위젯을 기본 크기·위치로 복구 */
+  /** 전체 위젯을 그룹 저장 기본값(없으면 코드 프리셋)으로 복구 */
   const restoreAll = useCallback(() => {
-    setDrafts((prev) => resetAllLayouts(prev));
-  }, []);
+    setDrafts((prev) =>
+      layoutDefaults && layoutDefaults.length > 0
+        ? applyWidgetLayoutDefaults(prev, layoutDefaults)
+        : resetAllLayouts(prev),
+    );
+  }, [layoutDefaults]);
+
+  const saveAsDefault = useCallback(async () => {
+    if (!groupId) return;
+    if (!drafts.some((x) => x.is_enabled)) {
+      alert(gat('widgets_alert_min_one'));
+      return;
+    }
+    try {
+      setSaving(true);
+      const packed = packDraftsOrientationCoordinates(drafts);
+      await saveGroupWidgetLayoutDefaults(groupId, packed);
+      setLayoutDefaults(packed);
+      alert(gat('widgets_save_as_default_ok'));
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'object' && e !== null && 'message' in e
+            ? String((e as { message: unknown }).message)
+            : gat('widgets_error_save_as_default');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('saveGroupWidgetLayoutDefaults', e);
+      }
+      alert(msg || gat('widgets_error_save_as_default'));
+    } finally {
+      setSaving(false);
+    }
+  }, [groupId, drafts, lang]);
 
   if (!groupId) {
     return <p className="text-sm text-slate-500">{gat('widgets_no_group')}</p>;
@@ -255,6 +303,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     t: {
       widgets_restore_defaults: gat('widgets_restore_defaults'),
       widgets_restore_all: gat('widgets_restore_all'),
+      widgets_save_as_default: gat('widgets_save_as_default'),
       widgets_layout_edit_hint: gat('widgets_layout_edit_hint'),
       widgets_preview_portrait: gat('widgets_preview_portrait'),
       widgets_preview_landscape: gat('widgets_preview_landscape'),
@@ -268,6 +317,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     onToggle: toggle,
     onRestoreOne: restoreOne,
     onRestoreAll: restoreAll,
+    onSaveAsDefault: saveAsDefault,
     onDragStateChange: setIsDragging,
   };
 
@@ -343,7 +393,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
            createPortal로 document.body에 직접 마운트:
            glass-panel의 backdrop-filter가 fixed 좌표계를 깨는 문제를 근본 해결 */}
       {isEditorOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-white overflow-hidden">
+        <div className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh flex-col overflow-hidden bg-white">
           {/* 모달 헤더 */}
           <div className="flex shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
             <h2 className="min-w-0 flex-1 truncate text-base font-bold text-slate-800">
@@ -374,10 +424,12 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
             </button>
           </div>
 
-          {/* 모달 본문 — 드래그 중에는 overflow-hidden으로 스크롤 위치 고정
-               touch-none은 제거: 전체 영역에 적용 시 복구 버튼 등 터치 이벤트도 차단됨.
-               DnD 핸들 자체에 touch-none이 있어 드래그는 정상 동작. */}
-          <div className={`flex-1 p-4 space-y-4 ${isDragging ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          {/* 모달 본문 — flex-1 자식에 min-h-0 없으면 iOS/앱에서 스크롤이 안 생기고 아래(비활성 위젯)가 잘림 */}
+          <div
+            className={`min-h-0 flex-1 space-y-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] ${
+              isDragging ? 'overflow-hidden' : 'overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]'
+            }`}
+          >
             <WidgetLayoutEditor {...editorProps} />
             {advancedPanel}
           </div>
