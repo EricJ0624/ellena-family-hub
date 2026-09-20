@@ -667,8 +667,8 @@ export default function FamilyHub() {
   /** idle | loading | ready | error — WiFi에서 그리드가 통째로 안 뜨는 경우 재시도용 */
   const [widgetConfigsStatus, setWidgetConfigsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [widgetConfigsReloadToken, setWidgetConfigsReloadToken] = useState(0);
-  /** 쇼룸/재설정 안내 중이면 false — 액자 제스처 안내 지연 */
-  const [showroomAllowsFrameHint, setShowroomAllowsFrameHint] = useState(true);
+  /** 쇼룸/재설정 안내 중이면 false — 기본 false(마운트 직후 액자 힌트 레이스 방지) */
+  const [showroomAllowsFrameHint, setShowroomAllowsFrameHint] = useState(false);
 
   // 공지사항 관련 state
   const [announcements, setAnnouncements] = useState<Array<{
@@ -6554,10 +6554,14 @@ export default function FamilyHub() {
 
   // 그룹 정보 로딩 중인지 확인
   const isGroupLoading = groupLoading && !currentGroupId;
+  /** membership(refreshMemberships) 완료 전 isOwner=false 기본값으로 액자가 먼저 뜨는 레이스 방지 */
+  const membershipReady = groupUserRole !== null;
+  const needsWidgetShowroom = groupIsOwner && groupNeedsWidgetShowroom(currentGroup);
   const frameGestureHintEnabled =
     !isGroupLoading &&
     !!currentGroup &&
-    !(groupIsOwner && groupNeedsWidgetShowroom(currentGroup)) &&
+    membershipReady &&
+    !needsWidgetShowroom &&
     showroomAllowsFrameHint;
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;

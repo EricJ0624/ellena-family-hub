@@ -95,8 +95,10 @@ export default function WidgetShowroomHost({
   }, [needsShowroom]);
 
   useEffect(() => {
-    onGestureHintEnabledChange?.(phase === 'hidden');
-  }, [phase, onGestureHintEnabledChange]);
+    // phase만 보면 첫 페인트에서 phase=hidden + needsShowroom=true 인데도 true를 내보내
+    // 액자 힌트가 쇼룸보다 먼저 뜰 수 있음 → needsShowroom일 때는 항상 막음
+    onGestureHintEnabledChange?.(phase === 'hidden' && !needsShowroom);
+  }, [phase, needsShowroom, onGestureHintEnabledChange]);
 
   const currentKey = orderedKeys[index] ?? orderedKeys[0];
   const Preview = currentKey ? WIDGET_PREVIEW_MAP[currentKey] : null;
