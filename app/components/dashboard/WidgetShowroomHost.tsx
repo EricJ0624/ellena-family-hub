@@ -1,12 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
 import { Check, Sparkles } from 'lucide-react';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import { WIDGET_PREVIEW_MAP } from '@/app/components/group-admin/WidgetPreviewComponents';
+import {
+  WIDGET_PREVIEW_MAP,
+  WidgetPreviewSurfaceProvider,
+} from '@/app/components/group-admin/WidgetPreviewComponents';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import { getGamesTranslation } from '@/lib/translations/games';
@@ -25,7 +28,9 @@ import { groupNeedsWidgetShowroom } from '@/lib/widgets/widget-showroom';
 
 type FlowPhase = 'hidden' | 'showroom' | 'tip';
 
-const SWIPE_THRESHOLD_PX = 56;
+/** 가로 스와이프 인식 (오프셋 / 속도) */
+const SWIPE_OFFSET_PX = 40;
+const SWIPE_VELOCITY = 280;
 
 interface WidgetShowroomHostProps {
   /** false면 액자 제스처 안내를 막아 둠 (쇼룸·재설정 안내 중) */
@@ -49,7 +54,6 @@ export default function WidgetShowroomHost({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [slideDir, setSlideDir] = useState<1 | -1>(1);
-  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const orderedKeys = useMemo(
     () =>
@@ -82,7 +86,6 @@ export default function WidgetShowroomHost({
 
   useEffect(() => {
     if (needsShowroom) {
-      // tip/완료 직후 로컬 단계 유지 — tip을 다시 showroom으로 되돌리지 않음
       setPhase((prev) => (prev === 'hidden' ? 'showroom' : prev));
       return;
     }
@@ -90,8 +93,7 @@ export default function WidgetShowroomHost({
   }, [needsShowroom]);
 
   useEffect(() => {
-    const enabled = phase === 'hidden';
-    onGestureHintEnabledChange?.(enabled);
+    onGestureHintEnabledChange?.(phase === 'hidden');
   }, [phase, onGestureHintEnabledChange]);
 
   const currentKey = orderedKeys[index] ?? orderedKeys[0];
@@ -107,27 +109,19 @@ export default function WidgetShowroomHost({
     setIndex((i) => Math.min(orderedKeys.length - 1, i + 1));
   }, [orderedKeys.length]);
 
-  const onCardPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button, a, input, textarea, select')) return;
-    swipeStartRef.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const onCardPointerUp = (e: React.PointerEvent) => {
-    const start = swipeStartRef.current;
-    swipeStartRef.current = null;
-    if (!start) return;
-    const dx = e.clientX - start.x;
-    const dy = e.clientY - start.y;
-    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
-    // 세로 스크롤 우선 — 가로가 뚜렷할 때만 카드 전환
-    if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
-    if (dx < 0) goNext();
-    else goPrev();
-  };
-
-  const onCardPointerCancel = () => {
-    swipeStartRef.current = null;
-  };
+  const onSwipeDragEnd = useCallback(
+    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      const { offset, velocity } = info;
+      if (offset.x <= -SWIPE_OFFSET_PX || velocity.x <= -SWIPE_VELOCITY) {
+        goNext();
+        return;
+      }
+      if (offset.x >= SWIPE_OFFSET_PX || velocity.x >= SWIPE_VELOCITY) {
+        goPrev();
+      }
+    },
+    [goNext, goPrev],
+  );
 
   const toggleAdd = () => {
     if (!currentKey) return;
@@ -169,7 +163,6 @@ export default function WidgetShowroomHost({
 
   const finishTip = () => {
     setPhase('hidden');
-    // 안내 직후 액자 힌트가 같은 틱에 켜지도록 명시
     onGestureHintEnabledChange?.(true);
   };
 
@@ -210,55 +203,61 @@ export default function WidgetShowroomHost({
   }
 
   return (
-    <div className="fixed inset-0 z-[120] flex flex-col bg-gradient-to-b from-sky-50 via-white to-violet-50">
-      <header className="shrink-0 px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))] text-center">
-        <div className="mx-auto flex max-w-lg items-center justify-center gap-2">
-          <Sparkles className="h-5 w-5 text-amber-500" aria-hidden />
-          <h1 className="m-0 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-            {t('welcome_title')}
-          </h1>
-        </div>
-        <p className="mx-auto mt-1 max-w-lg text-sm text-slate-600">{t('welcome_body')}</p>
-        <p className="mx-auto mt-2 max-w-lg text-sm font-semibold text-indigo-700">
-          {t('select_prompt')}
-        </p>
-      </header>
+    <WidgetPreviewSurfaceProvider surface="showroom">
+      <div className="fixed inset-0 z-[120] flex flex-col bg-gradient-to-b from-sky-50 via-white to-violet-50">
+        <header className="shrink-0 px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))] text-center">
+          <div className="mx-auto flex max-w-lg items-center justify-center gap-2">
+            <Sparkles className="h-5 w-5 text-amber-500" aria-hidden />
+            <h1 className="m-0 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              {t('welcome_title')}
+            </h1>
+          </div>
+          <p className="mx-auto mt-1 max-w-lg text-sm text-slate-600">{t('welcome_body')}</p>
+          <p className="mx-auto mt-2 max-w-lg text-sm font-semibold text-indigo-700">
+            {t('select_prompt')}
+          </p>
+        </header>
 
-      <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col px-3 pb-3">
-        <AnimatePresence mode="wait" custom={slideDir}>
-          <motion.div
-            key={currentKey}
-            custom={slideDir}
-            initial={{ opacity: 0, x: 28 * slideDir }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -28 * slideDir }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-            onPointerDown={onCardPointerDown}
-            onPointerUp={onCardPointerUp}
-            onPointerCancel={onCardPointerCancel}
-            className={`flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden rounded-2xl border bg-white/90 shadow-lg ${
+        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col px-3 pb-3">
+          {/* 카드 껍질 고정 — 위젯 전환 시 drag 세션이 끊기지 않음 */}
+          <div
+            className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-white/90 shadow-lg ${
               isSelected ? 'border-indigo-400 ring-2 ring-indigo-200' : 'border-slate-200'
             }`}
           >
-            <div className="shrink-0 border-b border-slate-100 px-4 py-3">
-              <h2 className="m-0 text-base font-semibold text-slate-900">
-                {currentKey ? widgetLabels[currentKey] : ''}
-              </h2>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                {currentKey ? getWidgetShowroomBlurb(lang, currentKey) : ''}
-              </p>
-            </div>
+            <motion.div
+              className="flex min-h-0 flex-1 cursor-grab touch-none flex-col active:cursor-grabbing"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              dragDirectionLock
+              onDragEnd={onSwipeDragEnd}
+            >
+              <div className="shrink-0 border-b border-slate-100 px-4 py-3">
+                <h2 className="m-0 text-base font-semibold text-slate-900">
+                  {currentKey ? widgetLabels[currentKey] : ''}
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                  {currentKey ? getWidgetShowroomBlurb(lang, currentKey) : ''}
+                </p>
+              </div>
 
-            <div className="relative min-h-0 flex-1 overflow-auto bg-slate-50/80 p-3">
-              <motion.div
-                initial={{ opacity: 0.4, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.45, ease: 'easeOut' }}
-                className="pointer-events-none origin-top select-none [&_.content-section]:shadow-none"
-              >
-                {Preview ? <Preview /> : null}
-              </motion.div>
-            </div>
+              <div className="relative min-h-0 flex-1 overflow-hidden bg-slate-50/90 p-3">
+                <AnimatePresence mode="wait" custom={slideDir}>
+                  <motion.div
+                    key={currentKey}
+                    custom={slideDir}
+                    initial={{ opacity: 0, x: 40 * slideDir }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -40 * slideDir }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="pointer-events-none h-full min-h-[12rem] select-none [&_.content-section]:shadow-none"
+                  >
+                    {Preview ? <Preview /> : null}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </motion.div>
 
             <div className="flex shrink-0 gap-2 border-t border-slate-100 p-3">
               <button
@@ -272,54 +271,58 @@ export default function WidgetShowroomHost({
                 type="button"
                 onClick={toggleAdd}
                 className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-white ${
-                  isSelected ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                  isSelected
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
                 }`}
               >
                 {isSelected ? <Check className="h-4 w-4" aria-hidden /> : null}
                 {isSelected ? t('added') : t('add')}
               </button>
             </div>
-          </motion.div>
-        </AnimatePresence>
-
-        <div className="mt-3 flex flex-col items-center gap-1">
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {orderedKeys.map((key, i) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setSlideDir(i > index ? 1 : -1);
-                  setIndex(i);
-                }}
-                className={`h-2 w-2 rounded-full transition-colors ${
-                  i === index
-                    ? 'bg-indigo-600'
-                    : selected.has(key)
-                      ? 'bg-emerald-500'
-                      : 'bg-slate-300'
-                }`}
-                aria-label={widgetLabels[key]}
-              />
-            ))}
           </div>
-          <span className="text-xs font-medium text-slate-500">
-            {t('swipe_hint')} · {t('selected_count').replace('{n}', String(selected.size))} ·{' '}
-            {index + 1}/{orderedKeys.length}
-          </span>
+
+          <div className="mt-3 flex flex-col items-center gap-1">
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {orderedKeys.map((key, i) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setSlideDir(i > index ? 1 : -1);
+                    setIndex(i);
+                  }}
+                  className={`h-2.5 w-2.5 rounded-full transition-colors ${
+                    i === index
+                      ? 'bg-indigo-600'
+                      : selected.has(key)
+                        ? 'bg-emerald-500'
+                        : 'bg-slate-300'
+                  }`}
+                  aria-label={widgetLabels[key]}
+                />
+              ))}
+            </div>
+            <span className="text-xs font-medium text-slate-500">
+              {t('swipe_hint')} · {t('selected_count').replace('{n}', String(selected.size))} ·{' '}
+              {index + 1}/{orderedKeys.length}
+            </span>
+          </div>
+
+          {error ? (
+            <p className="mt-2 text-center text-xs font-medium text-red-600">{error}</p>
+          ) : null}
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void handleStart()}
+            className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 disabled:opacity-60"
+          >
+            {saving ? t('saving') : t('start_dashboard')}
+          </button>
         </div>
-
-        {error ? <p className="mt-2 text-center text-xs font-medium text-red-600">{error}</p> : null}
-
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void handleStart()}
-          className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 disabled:opacity-60"
-        >
-          {saving ? t('saving') : t('start_dashboard')}
-        </button>
       </div>
-    </div>
+    </WidgetPreviewSurfaceProvider>
   );
 }
