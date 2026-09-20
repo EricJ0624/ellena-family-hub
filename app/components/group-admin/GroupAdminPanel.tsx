@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -255,6 +255,20 @@ export function GroupAdminPanel({
   const [composeFiles, setComposeFiles] = useState<File[]>([]);
   const [followUpFiles, setFollowUpFiles] = useState<File[]>([]);
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  /** 모달 제출 연타 방지 — setState보다 먼저 잠금 */
+  const modalSubmitLockRef = useRef(false);
+  const [modalSubmitting, setModalSubmitting] = useState(false);
+
+  const beginModalSubmit = () => {
+    if (modalSubmitLockRef.current) return false;
+    modalSubmitLockRef.current = true;
+    setModalSubmitting(true);
+    return true;
+  };
+  const endModalSubmit = () => {
+    modalSubmitLockRef.current = false;
+    setModalSubmitting(false);
+  };
 
   const attachLabels = {
     attach: gat('attach_photo'),
@@ -2094,6 +2108,7 @@ export function GroupAdminPanel({
       <GlassSafeModal
         open={showTicketForm}
         onClose={() => {
+          if (modalSubmitting) return;
           setShowTicketForm(false);
           setTicketTitle('');
           setTicketContent('');
@@ -2108,33 +2123,42 @@ export function GroupAdminPanel({
           value={ticketTitle}
           onChange={(e) => setTicketTitle(e.target.value)}
           placeholder={gat('title_placeholder')}
-          className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base"
+          disabled={modalSubmitting}
+          className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base disabled:opacity-70"
         />
         <textarea
           value={ticketContent}
           onChange={(e) => setTicketContent(e.target.value)}
           placeholder={gat('content_placeholder')}
-          className="mb-4 min-h-[300px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+          disabled={modalSubmitting}
+          className="mb-4 min-h-[300px] w-full rounded-lg border border-slate-200 p-3 text-sm disabled:opacity-70"
         />
         <SupportPendingAttachmentPicker
           files={composeFiles}
           onChange={setComposeFiles}
-          disabled={loadingData}
+          disabled={modalSubmitting}
           labels={attachLabels}
         />
         <div className="mt-4 flex justify-end gap-2">
           <button
+            type="button"
+            disabled={modalSubmitting}
             onClick={() => {
+              if (modalSubmitting) return;
               setShowTicketForm(false);
               setTicketTitle('');
               setTicketContent('');
               setComposeFiles([]);
             }}
-            className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+            className={`rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${
+              modalSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-slate-300'
+            }`}
           >
             {ct('cancel')}
           </button>
           <button
+            type="button"
+            disabled={modalSubmitting}
             onClick={async () => {
               if (!ticketTitle.trim() || !ticketContent.trim()) {
                 alert(gat('alert_title_content_required'));
@@ -2146,8 +2170,9 @@ export function GroupAdminPanel({
                 return;
               }
 
+              if (!beginModalSubmit()) return;
+
               try {
-                setLoadingData(true);
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session?.access_token) {
                   alert(gat('alert_auth'));
@@ -2194,11 +2219,14 @@ export function GroupAdminPanel({
                 console.error('ticket create', error);
                 alert(error instanceof Error ? error.message : gat('error_ticket_create'));
               } finally {
-                setLoadingData(false);
+                endModalSubmit();
               }
             }}
-            className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+            className={`inline-flex items-center justify-center gap-1.5 rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
+              modalSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-blue-600'
+            }`}
           >
+            {modalSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {gat('submit_compose')}
           </button>
         </div>
@@ -2208,6 +2236,7 @@ export function GroupAdminPanel({
         open={!!followUpForTicket}
         maxWidthClass="max-w-[560px]"
         onClose={() => {
+          if (modalSubmitting) return;
           setFollowUpForTicket(null);
           setFollowUpBody('');
           setFollowUpFiles([]);
@@ -2225,28 +2254,34 @@ export function GroupAdminPanel({
               value={followUpBody}
               onChange={(e) => setFollowUpBody(e.target.value)}
               placeholder={gat('follow_up_placeholder')}
-              className="mb-4 min-h-[160px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+              disabled={modalSubmitting}
+              className="mb-4 min-h-[160px] w-full rounded-lg border border-slate-200 p-3 text-sm disabled:opacity-70"
             />
             <SupportPendingAttachmentPicker
               files={followUpFiles}
               onChange={setFollowUpFiles}
-              disabled={loadingData}
+              disabled={modalSubmitting}
               labels={attachLabels}
             />
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
+                disabled={modalSubmitting}
                 onClick={() => {
+                  if (modalSubmitting) return;
                   setFollowUpForTicket(null);
                   setFollowUpBody('');
                   setFollowUpFiles([]);
                 }}
-                className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+                className={`rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${
+                  modalSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-slate-300'
+                }`}
               >
                 {ct('cancel')}
               </button>
               <button
                 type="button"
+                disabled={modalSubmitting}
                 onClick={async () => {
                   if (!followUpBody.trim()) {
                     alert(gat('alert_enter_content'));
@@ -2256,8 +2291,8 @@ export function GroupAdminPanel({
                     alert(gat('alert_group_info'));
                     return;
                   }
+                  if (!beginModalSubmit()) return;
                   try {
-                    setLoadingData(true);
                     const { data: { session } } = await supabase.auth.getSession();
                     if (!session?.access_token) {
                       alert(gat('alert_auth'));
@@ -2297,11 +2332,14 @@ export function GroupAdminPanel({
                   } catch (e: unknown) {
                     alert(e instanceof Error ? e.message : gat('error_follow_up_send'));
                   } finally {
-                    setLoadingData(false);
+                    endModalSubmit();
                   }
                 }}
-                className="cursor-pointer rounded-lg border-none bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+                className={`inline-flex items-center justify-center gap-1.5 rounded-lg border-none bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 ${
+                  modalSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-sky-600'
+                }`}
               >
+                {modalSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {gat('send_btn')}
               </button>
             </div>
@@ -2312,6 +2350,7 @@ export function GroupAdminPanel({
       <GlassSafeModal
         open={!!editingMemberTicket}
         onClose={() => {
+          if (modalSubmitting) return;
           setEditingMemberTicket(null);
           setMemberTicketAnswer('');
           setReplyFiles([]);
@@ -2357,34 +2396,42 @@ export function GroupAdminPanel({
               value={memberTicketAnswer}
               onChange={(e) => setMemberTicketAnswer(e.target.value)}
               placeholder={gat('reply_placeholder')}
-              className="mb-4 min-h-[220px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+              disabled={modalSubmitting}
+              className="mb-4 min-h-[220px] w-full rounded-lg border border-slate-200 p-3 text-sm disabled:opacity-70"
             />
             <SupportPendingAttachmentPicker
               files={replyFiles}
               onChange={setReplyFiles}
-              disabled={loadingData}
+              disabled={modalSubmitting}
               labels={attachLabels}
             />
             <div className="mt-4 flex justify-end gap-2">
               <button
+                type="button"
+                disabled={modalSubmitting}
                 onClick={() => {
+                  if (modalSubmitting) return;
                   setEditingMemberTicket(null);
                   setMemberTicketAnswer('');
                   setReplyFiles([]);
                 }}
-                className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+                className={`rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${
+                  modalSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-slate-300'
+                }`}
               >
                 {ct('cancel')}
               </button>
               <button
+                type="button"
+                disabled={modalSubmitting}
                 onClick={async () => {
                   if (!editingMemberTicket || !memberTicketAnswer.trim()) {
                     alert(gat('alert_reply_required'));
                     return;
                   }
                   if (!effectiveGroupId) return;
+                  if (!beginModalSubmit()) return;
                   try {
-                    setLoadingData(true);
                     const { data: { session } } = await supabase.auth.getSession();
                     if (!session?.access_token) {
                       alert(gat('auth_required'));
@@ -2430,11 +2477,14 @@ export function GroupAdminPanel({
                     console.error('member support reply save', e);
                     alert(e instanceof Error ? e.message : gat('error_reply_save'));
                   } finally {
-                    setLoadingData(false);
+                    endModalSubmit();
                   }
                 }}
-                className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+                className={`inline-flex items-center justify-center gap-1.5 rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
+                  modalSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-blue-600'
+                }`}
               >
+                {modalSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {ct('save')}
               </button>
             </div>
@@ -2445,6 +2495,7 @@ export function GroupAdminPanel({
       <GlassSafeModal
         open={showAccessRequestForm}
         onClose={() => {
+          if (modalSubmitting) return;
           setShowAccessRequestForm(false);
           setAccessRequestReason('');
         }}
@@ -2459,19 +2510,27 @@ export function GroupAdminPanel({
           value={accessRequestReason}
           onChange={(e) => setAccessRequestReason(e.target.value)}
           placeholder={gat('reason_placeholder')}
-          className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+          disabled={modalSubmitting}
+          className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm disabled:opacity-70"
         />
         <div className="flex justify-end gap-2">
           <button
+            type="button"
+            disabled={modalSubmitting}
             onClick={() => {
+              if (modalSubmitting) return;
               setShowAccessRequestForm(false);
               setAccessRequestReason('');
             }}
-            className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+            className={`rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${
+              modalSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-slate-300'
+            }`}
           >
             {ct('cancel')}
           </button>
           <button
+            type="button"
+            disabled={modalSubmitting}
             onClick={async () => {
               if (!accessRequestReason.trim()) {
                 alert(gat('alert_reason_required'));
@@ -2483,8 +2542,9 @@ export function GroupAdminPanel({
                 return;
               }
 
+              if (!beginModalSubmit()) return;
+
               try {
-                setLoadingData(true);
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session?.access_token) {
                   alert(gat('alert_auth'));
@@ -2517,11 +2577,14 @@ export function GroupAdminPanel({
                 console.error('access request create', error);
                 alert(error instanceof Error ? error.message : gat('error_request_create'));
               } finally {
-                setLoadingData(false);
+                endModalSubmit();
               }
             }}
-            className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+            className={`inline-flex items-center justify-center gap-1.5 rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
+              modalSubmitting ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-blue-600'
+            }`}
           >
+            {modalSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {gat('submit_request')}
           </button>
         </div>
