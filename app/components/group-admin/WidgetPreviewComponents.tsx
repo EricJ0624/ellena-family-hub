@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * 위젯 미리보기 컴포넌트
- * 실제 위젯의 CSS 클래스·구조를 재사용해 외관을 충실히 재현.
- * 데이터/기능 없이 정적 마크업만 사용.
+ * 위젯 미리보기 (쇼룸 · 그룹관리 레이아웃 에디터 공용)
+ * Family Friendly(kids_friendly) 한 가지 비주얼만 사용 — 테마 분기 없음.
+ * 데이터/기능 없이 정적 마크업만.
  */
 
 import { Camera, Mic, Paperclip, Plus, Send } from 'lucide-react';
@@ -22,8 +22,6 @@ import { getWidgetPreviewTranslation } from '@/lib/translations/widgetPreview';
 import { getFamilyRoleLabel } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { intlLocaleForLang } from '@/lib/language-fonts';
-import { useGroup } from '@/app/contexts/GroupContext';
-import { resolveUiTheme } from '@/lib/ui-theme';
 
 function useWidgetPreviewCopy() {
   const { lang } = useLanguage();
@@ -47,14 +45,11 @@ function useWidgetPreviewCopy() {
   );
 }
 
-// ── Tasks (kids_friendly=칠판 / 그 외=기본 위젯) ──────────────────
+// ── Tasks (Family Friendly 칠판) ─────────────────────────────────
 function TasksPreview() {
   const { lang, dt, wp } = useWidgetPreviewCopy();
-  const { currentGroup } = useGroup();
-  const isKidsTheme =
-    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
-  // 칠판 BG PNG에 한·영이 함께 박혀 있어, ko 외에는 표준 카드로 언어를 맞춤
-  const useChalkboard = isKidsTheme && lang === 'ko';
+  // 칠판 BG PNG에 한·영이 함께 박혀 있어, ko만 이미지 타이틀(a11y sr-only)
+  const titleInBg = lang === 'ko';
   const items = [
     { text: wp('preview_task_1'), done: false, assignee: '👩' },
     { text: wp('preview_task_2'), done: true, assignee: '👨' },
@@ -62,52 +57,19 @@ function TasksPreview() {
     { text: wp('preview_task_4'), done: false, assignee: null },
   ];
 
-  if (!useChalkboard) {
-    return (
-      <section className="content-section">
-        <div className="section-header">
-          <h3 className="section-title">{dt('todo_section_title')}</h3>
-        </div>
-        <div className="section-body">
-          <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {items.map((item, i) => (
-              <li
-                key={i}
-                className="flex items-center gap-2 rounded-xl border border-glass-medium bg-glass-soft px-3 py-2 shadow-glass-soft"
-              >
-                <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                    item.done
-                      ? 'border-indigo-500 bg-indigo-500 text-white'
-                      : 'border-slate-300 bg-white'
-                  }`}
-                >
-                  {item.done ? (
-                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : null}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block text-sm font-medium text-slate-800 ${item.done ? 'line-through opacity-60' : ''}`}>
-                    {item.text}
-                  </span>
-                  {item.assignee ? <span className="mt-0.5 block text-xs text-slate-500">{item.assignee}</span> : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <div className="chalkboard-frame flex w-full flex-col">
       <section className="chalkboard-container flex flex-col">
         <div className="chalkboard-top-bar">
-          {/* BG 이미지에 타이틀 포함 — HTML은 a11y만 */}
-          <h3 className="chalkboard-title chalkboard-title--sr-only">{dt('todo_section_title')}</h3>
+          <h3
+            className={
+              titleInBg
+                ? 'chalkboard-title chalkboard-title--sr-only'
+                : 'chalkboard-title'
+            }
+          >
+            {dt('todo_section_title')}
+          </h3>
         </div>
         <div className="section-body">
           <div className="todo-list">
@@ -135,7 +97,7 @@ function TasksPreview() {
   );
 }
 
-// ── Calendar (보라색 그라디언트) ────────────────────────────────
+// ── Calendar ────────────────────────────────────────────────────
 function CalendarPreview() {
   const { dt, dateLocale } = useWidgetPreviewCopy();
   const days = [
@@ -165,9 +127,9 @@ function CalendarPreview() {
         </h3>
       </div>
       <div className="section-body">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-base font-bold text-slate-800">{monthLabel}</span>
-          <div className="flex gap-1">
+          <div className="flex shrink-0 gap-1">
             <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">
               ◀ {dt('calendar_prev_month')}
             </div>
@@ -211,12 +173,9 @@ function CalendarPreview() {
   );
 }
 
-// ── Chat (메시지 스타일) ────────────────────────────────────────
+// ── Chat (Family Friendly) ──────────────────────────────────────
 function ChatPreview() {
   const { dt, ct, familyRole, wp } = useWidgetPreviewCopy();
-  const { currentGroup } = useGroup();
-  const isKidsTheme =
-    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
   const messages = [
     { user: `👩 ${familyRole('mom')}`, time: '10:30', text: wp('preview_chat_1'), mine: false },
     { user: ct('me'), time: '10:32', text: wp('preview_chat_2'), mine: true },
@@ -242,26 +201,19 @@ function ChatPreview() {
     />
   );
   return (
-    <section
-      className={`content-section chat-widget-section h-full${isKidsTheme ? ' chat-widget-section--kids' : ''}`}
-    >
-      {isKidsTheme ? <KidsChatDecorations /> : null}
+    <section className="content-section chat-widget-section chat-widget-section--kids h-full">
+      <KidsChatDecorations />
       <div className="section-header chat-section-header relative z-[3]">
-        {isKidsTheme ? (
-          <>
-            <h3 className="sr-only">{dt('section_title_chat')}</h3>
-            <img src="/family-chat/title.png" alt="" className="chat-kids-title" />
-          </>
-        ) : (
-          <h3 className="section-title">{dt('section_title_chat')}</h3>
-        )}
+        <h3 className="sr-only">{dt('section_title_chat')}</h3>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/family-chat/title.png" alt="" className="chat-kids-title" />
       </div>
       <div className="section-body chat-section-body relative z-[3]">
         <div className="chat-messages">
           {messages.map((m, i) => (
             <div key={i} className="message-item">
               <div className="message-header">
-                <span className={`message-user${isKidsTheme && m.mine ? ' chat-kids-me' : ''}`}>{m.user}</span>
+                <span className={`message-user${m.mine ? ' chat-kids-me' : ''}`}>{m.user}</span>
                 <span className="message-time">{m.time}</span>
               </div>
               <div className="message-bubble">
@@ -271,32 +223,24 @@ function ChatPreview() {
           ))}
         </div>
         <div className="chat-input-wrapper" style={{ gap: '1.5cqmin' }}>
-          {isKidsTheme ? (
-            <div className="chat-kids-composer">
-              <span className="chat-kids-mic" aria-hidden>
-                <Mic className="chat-kids-mic-icon" />
-              </span>
-              {inputField}
-              <span className="chat-kids-add" aria-hidden>
-                <Plus className="chat-kids-add-plus" />
-                <span className="chat-kids-add-label">{dt('todo_register_btn')}</span>
-              </span>
-              {attachBtn}
-            </div>
-          ) : (
-            <>
-              {inputField}
-              {attachBtn}
-            </>
-          )}
-          <div className={isKidsTheme ? 'chat-kids-send-cluster' : undefined}>
+          <div className="chat-kids-composer">
+            <span className="chat-kids-mic" aria-hidden>
+              <Mic className="chat-kids-mic-icon" />
+            </span>
+            {inputField}
+            <span className="chat-kids-add" aria-hidden>
+              <Plus className="chat-kids-add-plus" />
+              <span className="chat-kids-add-label">{dt('todo_register_btn')}</span>
+            </span>
+            {attachBtn}
+          </div>
+          <div className="chat-kids-send-cluster">
             <button type="button" tabIndex={-1} className="btn-send" aria-hidden>
               {dt('chat_send')}
-              {isKidsTheme ? <Send className="chat-kids-send-icon" aria-hidden /> : null}
+              <Send className="chat-kids-send-icon" aria-hidden />
             </button>
-            {isKidsTheme ? (
-              <img src="/family-chat/emojis/rocket.png" alt="" className="chat-kids-rocket" aria-hidden />
-            ) : null}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/family-chat/emojis/rocket.png" alt="" className="chat-kids-rocket" aria-hidden />
           </div>
         </div>
       </div>
@@ -304,7 +248,7 @@ function ChatPreview() {
   );
 }
 
-// ── Location (지도 스타일) ──────────────────────────────────────
+// ── Location ────────────────────────────────────────────────────
 function LocationPreview() {
   const { dt, gat, familyRole, wp } = useWidgetPreviewCopy();
   const city = wp('preview_location_city');
@@ -362,43 +306,14 @@ function LocationPreview() {
   );
 }
 
-// ── Album (kids=스크랩북 / 그 외=썸네일 그리드) ─────────────────
+// ── Album (Family Friendly 스크랩북) ─────────────────────────────
 function AlbumPreview() {
   const { dt } = useWidgetPreviewCopy();
-  const { currentGroup } = useGroup();
-  const isKidsTheme =
-    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
-
-  if (!isKidsTheme) {
-    return (
-      <section className="content-section h-full">
-        <div className="section-header">
-          <h3 className="section-title">{dt('section_title_memories')}</h3>
-          <div className="rounded-lg bg-[#8b5cf6] px-3 py-1.5 text-xs font-bold text-white">
-            📸 {dt('album_view_all')}
-          </div>
-        </div>
-        <div className="section-body">
-          <div className="album-photo-grid grid grid-cols-5 gap-1.5">
-            {['🏖️', '🎂', '⛰️', '🎈', '🌸', '⛺', '🎄', '🏡', '🚗', '🍎'].map((emoji) => (
-              <div
-                key={emoji}
-                className="album-photo-cell flex aspect-square items-center justify-center rounded-lg bg-slate-100 text-base"
-              >
-                {emoji}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   const left = ['🏖️', '🎂', '⛰️', '🎈', '🌸', '⛺', '🎄', '🏡', '🚗'];
   const right = ['🍎', '🎵', '📚', '🌙', '⭐', '🍀', '🎀', '🧁', '🧸'];
   return (
-    <section className="content-section album-widget-section h-full">
-      <div className="album-book-stage">
+    <section className="content-section album-widget-section min-h-[16rem]">
+      <div className="album-book-stage min-h-[12rem]">
         <div className="album-book-cover">
           <div className="album-book-fit">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -443,75 +358,46 @@ function AlbumPreview() {
   );
 }
 
-// ── Travel (여행 플래너 스타일) ─────────────────────────────────
+// ── Travel (Family Friendly) ────────────────────────────────────
 function TravelPreview() {
   const { tt, wp } = useWidgetPreviewCopy();
-  const { currentGroup } = useGroup();
-  const isKidsTheme =
-    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
   const trips = [
     { title: wp('preview_trip_1_title'), dates: wp('preview_trip_1_dates') },
     { title: wp('preview_trip_2_title'), dates: wp('preview_trip_2_dates') },
     { title: wp('preview_trip_3_title'), dates: wp('preview_trip_3_dates') },
   ];
 
-  if (isKidsTheme) {
-    return (
-      <section className="content-section travel-kids-widget">
-        <div className="travel-kids-widget-stage">
-          <div className="travel-kids-widget-head">
-            <h3 className="travel-kids-widget-title">{tt('title')}</h3>
-            <div className="travel-kids-widget-actions">
-              <div className="travel-kids-widget-import">{tt('import_open_button')}</div>
-              <div className="travel-kids-widget-add">
-                <Plus className="travel-kids-widget-add-icon" aria-hidden />
-                {tt('add_trip')}
-              </div>
-            </div>
-            <div className="travel-kids-widget-bottom">
-              <ul className="travel-kids-widget-trips">
-                {trips.map((trip, i) => (
-                  <li key={i} className="travel-kids-widget-trip-item">
-                    <div className="travel-kids-widget-trip">
-                      <div className="travel-kids-widget-trip-title">{trip.title}</div>
-                      <div className="travel-kids-widget-trip-dates">{trip.dates}</div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+  return (
+    <section className="content-section travel-kids-widget min-h-[14rem]">
+      <div className="travel-kids-widget-stage">
+        <div className="travel-kids-widget-head">
+          <h3 className="travel-kids-widget-title">{tt('title')}</h3>
+          <div className="travel-kids-widget-actions">
+            <div className="travel-kids-widget-import">{tt('import_open_button')}</div>
+            <div className="travel-kids-widget-add">
+              <Plus className="travel-kids-widget-add-icon" aria-hidden />
+              {tt('add_trip')}
             </div>
           </div>
+          <div className="travel-kids-widget-bottom">
+            <ul className="travel-kids-widget-trips">
+              {trips.map((trip, i) => (
+                <li key={i} className="travel-kids-widget-trip-item">
+                  <div className="travel-kids-widget-trip">
+                    <div className="travel-kids-widget-trip-title">{trip.title}</div>
+                    <div className="travel-kids-widget-trip-dates">{trip.dates}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="content-section h-full">
-      <div className="section-header">
-        <h3 className="section-title">{tt('title')}</h3>
-        <div className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white">
-          + {tt('add_trip')}
-        </div>
-      </div>
-      <div className="section-body">
-        <ul className="m-0 list-none p-0 grid gap-1.5">
-          {trips.map((trip, i) => (
-            <li
-              key={i}
-              className="glass-panel-soft glass-panel-interactive rounded-lg px-3 py-2.5"
-            >
-              <div className="text-[13px] font-semibold text-slate-800">{trip.title}</div>
-              <div className="mt-0.5 text-xs text-slate-500">{trip.dates}</div>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );
 }
 
-// ── Piggy Bank (저금통 스타일) ──────────────────────────────────
+// ── Piggy ───────────────────────────────────────────────────────
 function PiggyPreview() {
   const { dt, pt, wp, familyRole } = useWidgetPreviewCopy();
   const members = [
@@ -531,10 +417,7 @@ function PiggyPreview() {
         <div className="mb-2 text-xs font-semibold text-slate-600">{pt('piggy_label')}</div>
         <div className="grid gap-2">
           {members.map((m, i) => (
-            <div
-              key={i}
-              className="glass-panel-soft glass-panel-interactive rounded-xl p-3"
-            >
+            <div key={i} className="glass-panel-soft glass-panel-interactive rounded-xl p-3">
               <div className="mb-1.5 text-sm font-bold text-slate-800">{m.name}</div>
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-lg bg-amber-50 px-2 py-1.5">
@@ -554,7 +437,7 @@ function PiggyPreview() {
   );
 }
 
-// ── Games (Family Games) ───────────────────────────────────────────
+// ── Games ───────────────────────────────────────────────────────
 function GamesPreview() {
   const { gt, wp } = useWidgetPreviewCopy();
   const tabs = [gt('tab_ladder'), gt('tab_rps'), gt('tab_roulette')];
@@ -619,92 +502,58 @@ function GamesPreview() {
   );
 }
 
-// ── Travel diary (kids=스크랩북 / Original·Glass=표준 content-section) ───────
+// ── Travel diary (Family Friendly — 쇼룸에서도 높이 확보) ────────
 function TravelDiaryPreview() {
   const { tdy, wp } = useWidgetPreviewCopy();
-  const { currentGroup } = useGroup();
-  const uiTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
-  const isKidsTheme = uiTheme === 'kids_friendly';
-  const isGlassTheme = uiTheme === 'highend_glass';
-
-  if (isGlassTheme) {
-    return (
-      <section className="content-section h-full">
-        <div className="section-header">
-          <h3 className="section-title m-0 inline-flex items-center gap-1.5">
-            <span aria-hidden>📔</span>
-            {tdy('section_title')}
-          </h3>
-        </div>
-        <div className="section-body">
-          <ul className="m-0 list-none p-0">
-            <li className="glass-panel-soft glass-panel-interactive cursor-pointer rounded-lg px-3 py-2.5 transition-colors hover:bg-white/50">
-              <div className="text-[13px] font-semibold text-slate-800">
-                {wp('preview_diary_sample_title')}
-              </div>
-              <div className="mt-0.5 text-xs text-slate-500">{wp('preview_diary_sample_dates')}</div>
-            </li>
-          </ul>
-        </div>
-      </section>
-    );
-  }
-
-  /* Original: Family Friendly 스크랩북/파스텔 배경이 아닌 표준 카드 */
-  if (!isKidsTheme) {
-    return (
-      <section className="content-section h-full">
-        <div className="section-header">
-          <h3 className="section-title m-0 inline-flex items-center gap-1.5">
-            <span aria-hidden>📔</span>
-            {tdy('section_title')}
-          </h3>
-        </div>
-        <div className="section-body">
-          <ul className="m-0 list-none space-y-2 p-0">
-            <li className="rounded-xl bg-transparent px-0 py-1.5">
-              <div className="text-[13px] font-semibold text-slate-800">
-                {wp('preview_diary_sample_title')}
-              </div>
-              <div className="mt-0.5 text-xs text-slate-500">{wp('preview_diary_sample_dates')}</div>
-              <div className="mt-2">
-                <div className="inline-flex rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white">
-                  {tdy('open_diary')}
-                </div>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="content-section travel-diary-widget travel-diary-widget--book relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
-      <div className="diary-book-stage">
-        <div className="diary-book-cover">
-          <h3 className="diary-book-title travel-kids-widget-title m-0 inline-flex items-center gap-1.5 normal-case">
-            <span aria-hidden className="text-[0.95em] leading-none">
-              📔
-            </span>
-            {tdy('section_title')}
-          </h3>
-          <div className="diary-book-spread">
-            <div className="diary-book-page diary-book-page--left">
-              <ul className="travel-kids-widget-trips diary-book-trips">
-                <li className="travel-kids-widget-trip-item">
-                  <div className="travel-kids-widget-trip">
-                    <div className="travel-kids-widget-trip-title">
-                      {wp('preview_diary_sample_title')}
-                    </div>
-                    <div className="travel-kids-widget-trip-dates">
-                      {wp('preview_diary_sample_dates')}
-                    </div>
-                  </div>
-                </li>
-              </ul>
+    <section className="content-section travel-diary-widget relative isolate min-h-[14rem] overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-cover bg-center opacity-90"
+        style={{ backgroundImage: "url('/travel-diary/widget-bg.png?v=8')" }}
+      />
+      <div className="section-header relative z-[2]">
+        <h3 className="travel-kids-widget-title m-0 inline-flex items-center gap-1.5 normal-case">
+          <span aria-hidden className="text-[0.95em] leading-none">
+            📔
+          </span>
+          {tdy('section_title')}
+        </h3>
+      </div>
+      <div className="section-body relative z-[2]">
+        <ul className="travel-kids-widget-trips m-0 list-none p-0">
+          <li className="travel-kids-widget-trip-item mb-2">
+            <div className="travel-kids-widget-trip rounded-xl bg-white/85 px-3 py-2.5 shadow-sm">
+              <div className="travel-kids-widget-trip-title">{wp('preview_diary_sample_title')}</div>
+              <div className="travel-kids-widget-trip-dates">{wp('preview_diary_sample_dates')}</div>
+              <div className="mt-2">
+                <span className="inline-flex rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold text-white">
+                  {tdy('open_diary')}
+                </span>
+              </div>
             </div>
-            <div className="diary-book-page diary-book-page--right" />
+          </li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+// ── Quick travel record (Family Friendly) ───────────────────────
+function TravelQuickRecordPreview() {
+  const { tt } = useWidgetPreviewCopy();
+  return (
+    <section className="content-section travel-quick-record-widget travel-quick-record-widget--kids min-h-[11rem]">
+      <div className="travel-quick-record-stage">
+        <h3 className="travel-kids-widget-title">{tt('quick_record_title')}</h3>
+        <div className="travel-quick-record-body">
+          <div className="flex w-full items-center justify-center gap-3">
+            <div className="flex aspect-square w-[4.75rem] flex-col items-center justify-center rounded-full bg-emerald-600 px-1.5 text-center text-[10px] font-bold leading-tight text-white shadow-sm">
+              {tt('quick_record_checkin')}
+            </div>
+            <div className="flex aspect-square w-[4.75rem] flex-col items-center justify-center rounded-full bg-violet-600 px-1.5 text-center text-[10px] font-bold leading-tight text-white shadow-sm">
+              {tt('quick_record_route')}
+            </div>
           </div>
         </div>
       </div>
@@ -712,54 +561,15 @@ function TravelDiaryPreview() {
   );
 }
 
-function TravelQuickRecordPreview() {
-  const { tt } = useWidgetPreviewCopy();
-  const { currentGroup } = useGroup();
-  const isKidsTheme =
-    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
-
-  const circles = (
-    <div className="flex w-full items-center justify-center gap-3">
-      <div className="flex aspect-square w-[4.75rem] flex-col items-center justify-center rounded-full bg-emerald-600 px-1.5 text-center text-[10px] font-bold leading-tight text-white shadow-sm">
-        {tt('quick_record_checkin')}
-      </div>
-      <div className="flex aspect-square w-[4.75rem] flex-col items-center justify-center rounded-full bg-violet-600 px-1.5 text-center text-[10px] font-bold leading-tight text-white shadow-sm">
-        {tt('quick_record_route')}
-      </div>
-    </div>
-  );
-
-  if (isKidsTheme) {
-    return (
-      <section className="content-section travel-quick-record-widget travel-quick-record-widget--kids">
-        <div className="travel-quick-record-stage">
-          <h3 className="travel-kids-widget-title">{tt('quick_record_title')}</h3>
-          <div className="travel-quick-record-body">{circles}</div>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="content-section travel-quick-record-widget">
-      <div className="section-header">
-        <h3 className="section-title m-0">{tt('quick_record_title')}</h3>
-      </div>
-      <div className="section-body">{circles}</div>
-    </section>
-  );
-}
-
-// ── 통합 레코드 ──────────────────────────────────────────────────
 export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNode> = {
-  tasks:    () => <TasksPreview />,
+  tasks: () => <TasksPreview />,
   calendar: () => <CalendarPreview />,
-  chat:     () => <ChatPreview />,
+  chat: () => <ChatPreview />,
   location: () => <LocationPreview />,
-  album:    () => <AlbumPreview />,
-  travel:   () => <TravelPreview />,
-  piggy:    () => <PiggyPreview />,
-  games:        () => <GamesPreview />,
+  album: () => <AlbumPreview />,
+  travel: () => <TravelPreview />,
+  piggy: () => <PiggyPreview />,
+  games: () => <GamesPreview />,
   travel_diary: () => <TravelDiaryPreview />,
   travel_quick_record: () => <TravelQuickRecordPreview />,
 };
