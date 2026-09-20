@@ -58,20 +58,15 @@ export default function LeaveGroupSection() {
   }, [groups, userId]);
 
   const afterGroupRemoved = async (removedId: string) => {
-    const remaining = (groups || []).filter((g) => !sameGroupId(g.id, removedId));
+    const wasCurrent = Boolean(currentGroupId && sameGroupId(currentGroupId, removedId));
     await refreshGroups?.();
-    if (currentGroupId && sameGroupId(currentGroupId, removedId)) {
-      if (remaining.length > 0) {
-        const nextId = String(remaining[0].id);
-        setCurrentGroupId?.(nextId);
-        writeStoredGroupId(nextId);
-        router.push('/dashboard');
-      } else {
-        setCurrentGroupId?.(null);
-        writeStoredGroupId(null);
-        router.push('/onboarding');
-      }
-    }
+    // 다른 그룹 삭제: 현재 대시보드 유지 (리다이렉트 없음)
+    if (!wasCurrent) return;
+    // 현재 그룹 삭제/탈퇴: 남은 그룹이 있어도 자동 전환하지 않고 선택 화면으로
+    // (refreshGroups가 다른 그룹을 골라 둘 수 있어 선택값을 다시 비움)
+    setCurrentGroupId?.(null);
+    writeStoredGroupId(null);
+    router.push('/onboarding');
   };
 
   const openTransferPicker = async (group: Group) => {

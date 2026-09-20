@@ -400,9 +400,9 @@ button.travel-kids-add-trip-submit {
   flex: 1 1 auto;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
-  margin-top: 0;
+  margin-top: 0.15rem;
   min-height: 0;
 }
 
@@ -546,7 +546,7 @@ button.travel-kids-add-trip-submit {
 :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .section-body,
 .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .section-body {
   overflow: visible;
-  justify-content: center;
+  justify-content: flex-start;
   padding-bottom: 0.35rem;
 }
 :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .travel-quick-record-circle-row,

@@ -49,10 +49,12 @@ function useWidgetPreviewCopy() {
 
 // ── Tasks (kids_friendly=칠판 / 그 외=기본 위젯) ──────────────────
 function TasksPreview() {
-  const { dt, wp } = useWidgetPreviewCopy();
+  const { lang, dt, wp } = useWidgetPreviewCopy();
   const { currentGroup } = useGroup();
   const isKidsTheme =
     resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
+  // 칠판 BG PNG에 한·영이 함께 박혀 있어, ko 외에는 표준 카드로 언어를 맞춤
+  const useChalkboard = isKidsTheme && lang === 'ko';
   const items = [
     { text: wp('preview_task_1'), done: false, assignee: '👩' },
     { text: wp('preview_task_2'), done: true, assignee: '👨' },
@@ -60,7 +62,7 @@ function TasksPreview() {
     { text: wp('preview_task_4'), done: false, assignee: null },
   ];
 
-  if (!isKidsTheme) {
+  if (!useChalkboard) {
     return (
       <section className="content-section">
         <div className="section-header">
@@ -104,7 +106,8 @@ function TasksPreview() {
     <div className="chalkboard-frame flex w-full flex-col">
       <section className="chalkboard-container flex flex-col">
         <div className="chalkboard-top-bar">
-          <h3 className="chalkboard-title">{dt('todo_section_title')}</h3>
+          {/* BG 이미지에 타이틀 포함 — HTML은 a11y만 */}
+          <h3 className="chalkboard-title chalkboard-title--sr-only">{dt('todo_section_title')}</h3>
         </div>
         <div className="section-body">
           <div className="todo-list">
@@ -276,7 +279,7 @@ function ChatPreview() {
               {inputField}
               <span className="chat-kids-add" aria-hidden>
                 <Plus className="chat-kids-add-plus" />
-                <span className="chat-kids-add-label">Add</span>
+                <span className="chat-kids-add-label">{dt('todo_register_btn')}</span>
               </span>
               {attachBtn}
             </div>
@@ -304,9 +307,10 @@ function ChatPreview() {
 // ── Location (지도 스타일) ──────────────────────────────────────
 function LocationPreview() {
   const { dt, gat, familyRole, wp } = useWidgetPreviewCopy();
+  const city = wp('preview_location_city');
   const members = [
-    { emoji: '👩', name: familyRole('mom'), location: 'Seoul' },
-    { emoji: '👨', name: familyRole('dad'), location: 'Seoul' },
+    { emoji: '👩', name: familyRole('mom'), location: city },
+    { emoji: '👨', name: familyRole('dad'), location: city },
     { emoji: '👧', name: familyRole('daughter'), location: wp('preview_location_school') },
   ];
   return (
@@ -330,16 +334,17 @@ function LocationPreview() {
           </button>
         </div>
       </div>
-      <div className="section-body location-section-body min-h-0">
-        <div className="location-map-slot mb-3 flex min-h-0 flex-1 flex-col">
-        <div className="location-map-surface flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <div className="mb-2 grid grid-cols-3 gap-2 w-full">
-            {[...Array(9)].map((_, i) => (
-              <div key={i} className={`h-8 rounded ${i % 3 === 0 ? 'bg-green-100' : i % 3 === 1 ? 'bg-slate-100' : 'bg-blue-50'}`} />
-            ))}
+      <div className="section-body location-section-body min-h-0 gap-2">
+        <div className="location-map-slot flex min-h-[7.5rem] flex-1 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br from-emerald-50 via-sky-50 to-slate-100">
+          <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center p-3">
+            <div className="pointer-events-none absolute inset-3 rounded-lg border border-dashed border-emerald-200/80" />
+            <span className="text-3xl" aria-hidden>
+              🗺️
+            </span>
+            <span className="mt-1 text-xs font-medium text-slate-500">
+              {gat('widgets_preview_map_area')}
+            </span>
           </div>
-          <span className="text-xs text-slate-400">🗺️ {gat('widgets_preview_map_area')}</span>
-        </div>
         </div>
         <div className="location-requests-panel grid shrink-0 gap-1.5 overflow-hidden">
           {members.map((m, i) => (
@@ -374,12 +379,11 @@ function AlbumPreview() {
           </div>
         </div>
         <div className="section-body">
-          <div className="album-photo-grid" style={{ gap: 6 }}>
+          <div className="album-photo-grid grid grid-cols-5 gap-1.5">
             {['🏖️', '🎂', '⛰️', '🎈', '🌸', '⛺', '🎄', '🏡', '🚗', '🍎'].map((emoji) => (
               <div
                 key={emoji}
-                className="album-photo-cell flex items-center justify-center bg-slate-100 text-sm"
-                style={{ width: 44, flex: '0 0 44px' }}
+                className="album-photo-cell flex aspect-square items-center justify-center rounded-lg bg-slate-100 text-base"
               >
                 {emoji}
               </div>
@@ -509,7 +513,7 @@ function TravelPreview() {
 
 // ── Piggy Bank (저금통 스타일) ──────────────────────────────────
 function PiggyPreview() {
-  const { pt, wp, familyRole } = useWidgetPreviewCopy();
+  const { dt, pt, wp, familyRole } = useWidgetPreviewCopy();
   const members = [
     { name: familyRole('mom'), wallet: '₩ 50,000', bank: '₩ 1,200,000' },
     { name: familyRole('dad'), wallet: '₩ 30,000', bank: '₩ 2,500,000' },
@@ -518,12 +522,13 @@ function PiggyPreview() {
   return (
     <section className="content-section h-full">
       <div className="section-header">
-        <h3 className="section-title">{pt('piggy_label')}</h3>
+        <h3 className="section-title">{dt('piggy_section_admin_title')}</h3>
         <div className="flex items-center gap-1.5 rounded-lg bg-red-500 px-2.5 py-1.5 text-xs font-semibold text-white">
           <span>🐷</span> {wp('preview_manage_btn')}
         </div>
       </div>
       <div className="section-body">
+        <div className="mb-2 text-xs font-semibold text-slate-600">{pt('piggy_label')}</div>
         <div className="grid gap-2">
           {members.map((m, i) => (
             <div
@@ -675,38 +680,33 @@ function TravelDiaryPreview() {
   }
 
   return (
-    <section className="content-section travel-diary-widget relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
-      <div
-        aria-hidden
-        className="travel-diary-widget-gradient pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-gradient-to-br from-[#d4c8fc] via-[#f3d0fe] to-[#fecdd3]"
-      />
-      <span
-        aria-hidden
-        className="travel-diary-widget-deco pointer-events-none absolute bottom-2 right-3 z-[1] select-none text-[2rem] leading-none opacity-25"
-      >
-        🌴
-      </span>
-      <div className="section-header relative z-[2]">
-        <h3 className="travel-kids-widget-title m-0 inline-flex items-center gap-1.5 normal-case">
-          <span aria-hidden className="text-[0.95em] leading-none">
-            📔
-          </span>
-          {tdy('section_title')}
-        </h3>
-      </div>
-      <div className="section-body relative z-[2]">
-        <ul className="travel-kids-widget-trips">
-          <li className="travel-kids-widget-trip-item">
-            <div className="travel-kids-widget-trip">
-              <div className="travel-kids-widget-trip-title">
-                {wp('preview_diary_sample_title')}
-              </div>
-              <div className="travel-kids-widget-trip-dates">
-                {wp('preview_diary_sample_dates')}
-              </div>
+    <section className="content-section travel-diary-widget travel-diary-widget--book relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
+      <div className="diary-book-stage">
+        <div className="diary-book-cover">
+          <h3 className="diary-book-title travel-kids-widget-title m-0 inline-flex items-center gap-1.5 normal-case">
+            <span aria-hidden className="text-[0.95em] leading-none">
+              📔
+            </span>
+            {tdy('section_title')}
+          </h3>
+          <div className="diary-book-spread">
+            <div className="diary-book-page diary-book-page--left">
+              <ul className="travel-kids-widget-trips diary-book-trips">
+                <li className="travel-kids-widget-trip-item">
+                  <div className="travel-kids-widget-trip">
+                    <div className="travel-kids-widget-trip-title">
+                      {wp('preview_diary_sample_title')}
+                    </div>
+                    <div className="travel-kids-widget-trip-dates">
+                      {wp('preview_diary_sample_dates')}
+                    </div>
+                  </div>
+                </li>
+              </ul>
             </div>
-          </li>
-        </ul>
+            <div className="diary-book-page diary-book-page--right" />
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -714,21 +714,38 @@ function TravelDiaryPreview() {
 
 function TravelQuickRecordPreview() {
   const { tt } = useWidgetPreviewCopy();
+  const { currentGroup } = useGroup();
+  const isKidsTheme =
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
+
+  const circles = (
+    <div className="flex w-full items-center justify-center gap-3">
+      <div className="flex aspect-square w-[4.75rem] flex-col items-center justify-center rounded-full bg-emerald-600 px-1.5 text-center text-[10px] font-bold leading-tight text-white shadow-sm">
+        {tt('quick_record_checkin')}
+      </div>
+      <div className="flex aspect-square w-[4.75rem] flex-col items-center justify-center rounded-full bg-violet-600 px-1.5 text-center text-[10px] font-bold leading-tight text-white shadow-sm">
+        {tt('quick_record_route')}
+      </div>
+    </div>
+  );
+
+  if (isKidsTheme) {
+    return (
+      <section className="content-section travel-quick-record-widget travel-quick-record-widget--kids">
+        <div className="travel-quick-record-stage">
+          <h3 className="travel-kids-widget-title">{tt('quick_record_title')}</h3>
+          <div className="travel-quick-record-body">{circles}</div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="content-section travel-quick-record-widget">
       <div className="section-header">
         <h3 className="section-title m-0">{tt('quick_record_title')}</h3>
       </div>
-      <div className="section-body">
-        <div className="flex w-full items-center justify-evenly gap-2 py-1">
-          <div className="flex aspect-square w-14 flex-col items-center justify-center rounded-full bg-emerald-600 px-1 text-center text-[9px] font-bold text-white">
-            {tt('quick_record_checkin')}
-          </div>
-          <div className="flex aspect-square w-14 flex-col items-center justify-center rounded-full bg-violet-600 px-1 text-center text-[9px] font-bold text-white">
-            {tt('quick_record_route')}
-          </div>
-        </div>
-      </div>
+      <div className="section-body">{circles}</div>
     </section>
   );
 }

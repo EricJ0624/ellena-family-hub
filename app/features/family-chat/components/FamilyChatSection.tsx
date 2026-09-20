@@ -12,7 +12,9 @@ import type { UiTheme } from '@/lib/ui-theme';
 import type { ChatUiMessage } from '../types';
 import { getChatMessageDisplayText } from '@/lib/chat-messages';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { getDashboardTranslation } from '@/lib/translations/dashboard';
 import { isValidLang } from '@/lib/language-fonts';
+import type { LangCode } from '@/lib/language-fonts';
 
 interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
@@ -356,7 +358,12 @@ export function FamilyChatSection({
               {inputField}
               <span className="chat-kids-add" aria-hidden>
                 <Plus className="chat-kids-add-plus" />
-                <span className="chat-kids-add-label">Add</span>
+                <span className="chat-kids-add-label">
+                  {getDashboardTranslation(
+                    (isValidLang(lang) ? lang : 'en') as LangCode,
+                    'todo_register_btn',
+                  )}
+                </span>
               </span>
               {attachControls}
             </div>

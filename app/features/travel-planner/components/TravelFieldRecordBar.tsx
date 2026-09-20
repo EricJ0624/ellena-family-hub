@@ -53,7 +53,7 @@ export function TravelFieldRecordBar({
 
     return (
       <div className="flex w-full min-w-0 flex-col gap-[1.5cqmin]" data-travel-field-bar="circles">
-        <div className="travel-quick-record-circle-row flex w-full min-w-0 items-center justify-evenly gap-[2cqmin] py-[1.5cqmin]">
+        <div className="travel-quick-record-circle-row flex w-full min-w-0 items-center justify-center gap-[3.5cqmin] py-[0.5cqmin]">
           <button
             type="button"
             onClick={onCheckIn}

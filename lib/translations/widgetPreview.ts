@@ -9,6 +9,7 @@ export type WidgetPreviewTranslations = {
   preview_chat_2: string;
   preview_chat_3: string;
   preview_location_school: string;
+  preview_location_city: string;
   preview_wallet: string;
   preview_bank: string;
   preview_manage_btn: string;
@@ -41,6 +42,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: '치킨 어때요? 😋',
     preview_chat_3: '좋아! 오늘 내가 시킬게',
     preview_location_school: '학교',
+    preview_location_city: '서울',
     preview_wallet: '지갑',
     preview_bank: '은행',
     preview_manage_btn: '관리',
@@ -71,6 +73,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: 'How about chicken? 😋',
     preview_chat_3: 'Sounds good! I will order today',
     preview_location_school: 'School',
+    preview_location_city: 'Seoul',
     preview_wallet: 'Wallet',
     preview_bank: 'Bank',
     preview_manage_btn: 'Manage',
@@ -101,6 +104,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: 'チキンはどう？ 😋',
     preview_chat_3: 'いいね！今日は私が注文するね',
     preview_location_school: '学校',
+    preview_location_city: 'ソウル',
     preview_wallet: '財布',
     preview_bank: '銀行',
     preview_manage_btn: '管理',
@@ -131,6 +135,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: '炸鸡怎么样？ 😋',
     preview_chat_3: '好！今天我来点',
     preview_location_school: '学校',
+    preview_location_city: '首尔',
     preview_wallet: '钱包',
     preview_bank: '银行',
     preview_manage_btn: '管理',
@@ -161,6 +166,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: '炸雞怎麼樣？ 😋',
     preview_chat_3: '好！今天我來點',
     preview_location_school: '學校',
+    preview_location_city: '首爾',
     preview_wallet: '錢包',
     preview_bank: '銀行',
     preview_manage_btn: '管理',
@@ -191,6 +197,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: '¿Qué tal pollo? 😋',
     preview_chat_3: '¡Genial! Yo pido hoy',
     preview_location_school: 'Colegio',
+    preview_location_city: 'Seúl',
     preview_wallet: 'Monedero',
     preview_bank: 'Banco',
     preview_manage_btn: 'Gestionar',
@@ -221,6 +228,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: 'Du poulet ? 😋',
     preview_chat_3: 'Super ! Je commande aujourd\'hui',
     preview_location_school: 'École',
+    preview_location_city: 'Séoul',
     preview_wallet: 'Portefeuille',
     preview_bank: 'Banque',
     preview_manage_btn: 'Gérer',
@@ -251,6 +259,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: 'Wie wäre es mit Hähnchen? 😋',
     preview_chat_3: 'Gut! Ich bestelle heute',
     preview_location_school: 'Schule',
+    preview_location_city: 'Seoul',
     preview_wallet: 'Geldbörse',
     preview_bank: 'Bank',
     preview_manage_btn: 'Verwalten',
@@ -281,6 +290,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: 'Che ne dici del pollo? 😋',
     preview_chat_3: 'Ottimo! Ordino io oggi',
     preview_location_school: 'Scuola',
+    preview_location_city: 'Seoul',
     preview_wallet: 'Portafoglio',
     preview_bank: 'Banca',
     preview_manage_btn: 'Gestisci',
@@ -311,6 +321,7 @@ const widgetPreview: Record<LangCode, WidgetPreviewTranslations> = {
     preview_chat_2: 'Que tal frango? 😋',
     preview_chat_3: 'Boa! Eu peço hoje',
     preview_location_school: 'Escola',
+    preview_location_city: 'Seul',
     preview_wallet: 'Carteira',
     preview_bank: 'Banco',
     preview_manage_btn: 'Gerenciar',

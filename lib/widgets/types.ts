@@ -32,8 +32,11 @@ export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }>
 /** Travel planner M 기본 높이. 전역 M(8)보다 낮고 너비(12)는 유지. */
 export const TRAVEL_M_LAYOUT_H = 6;
 
+/** 여행 다이어리 M 기본 높이. 스크랩북 비율 유지하되 초기 빈 여백을 줄임. */
+export const TRAVEL_DIARY_M_LAYOUT_H = 6;
+
 /** 빠른 여행 기록 M 기본 높이. 타이틀+원형 버튼(+Neo 섀도우)용으로 travel보다 짧게. */
-export const TRAVEL_QUICK_RECORD_M_LAYOUT_H = 5;
+export const TRAVEL_QUICK_RECORD_M_LAYOUT_H = 4;
 
 /**
  * Family Location M 기본 높이. 전역 M(8)보다 높여 세로 나무 프레임(992×1070)에 맞춤.
@@ -200,6 +203,13 @@ const _layoutTravel = {
   layoutLandscapeH: TRAVEL_M_LAYOUT_H,
 } as const;
 
+const _layoutTravelDiary = {
+  ..._layoutM,
+  layoutH: TRAVEL_DIARY_M_LAYOUT_H,
+  layoutPortraitH: TRAVEL_DIARY_M_LAYOUT_H,
+  layoutLandscapeH: TRAVEL_DIARY_M_LAYOUT_H,
+} as const;
+
 const _layoutTravelQuickRecord = {
   ..._layoutM,
   layoutH: TRAVEL_QUICK_RECORD_M_LAYOUT_H,
@@ -225,7 +235,18 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'chat',     is_enabled: false, display_order: 30, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'piggy',    is_enabled: false, display_order: 40, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'travel',   is_enabled: false, display_order: 50, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutTravel },
-  { widget_key: 'travel_diary', is_enabled: false, display_order: 55, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
+  {
+    widget_key: 'travel_diary',
+    is_enabled: false,
+    display_order: 55,
+    size: 'M',
+    colSpan: _spanM.colSpan,
+    rowSpan: Math.min(6, Math.max(1, Math.round(TRAVEL_DIARY_M_LAYOUT_H))),
+    minW: null,
+    minH: null,
+    priority: 0,
+    ..._layoutTravelDiary,
+  },
   {
     widget_key: 'travel_quick_record',
     is_enabled: false,
