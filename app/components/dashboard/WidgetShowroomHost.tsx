@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
-import { Check, Sparkles } from 'lucide-react';
+import { Check, Play, Sparkles } from 'lucide-react';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import {
   WIDGET_PREVIEW_MAP,
   WidgetPreviewSurfaceProvider,
 } from '@/app/components/group-admin/WidgetPreviewComponents';
+import { WidgetShowroomDemoOverlay } from '@/app/components/dashboard/WidgetShowroomDemoOverlay';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import { getGamesTranslation } from '@/lib/translations/games';
@@ -54,6 +55,7 @@ export default function WidgetShowroomHost({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [slideDir, setSlideDir] = useState<1 | -1>(1);
+  const [demoOpen, setDemoOpen] = useState(false);
 
   const orderedKeys = useMemo(
     () =>
@@ -100,6 +102,10 @@ export default function WidgetShowroomHost({
   const Preview = currentKey ? WIDGET_PREVIEW_MAP[currentKey] : null;
   const isSelected = currentKey ? selected.has(currentKey) : false;
 
+  useEffect(() => {
+    setDemoOpen(false);
+  }, [currentKey]);
+
   const goPrev = useCallback(() => {
     setSlideDir(-1);
     setIndex((i) => Math.max(0, i - 1));
@@ -134,8 +140,9 @@ export default function WidgetShowroomHost({
     setError(null);
   };
 
-  const handleSkip = () => {
-    if (index < orderedKeys.length - 1) goNext();
+  const openDemo = () => {
+    if (!currentKey) return;
+    setDemoOpen(true);
   };
 
   const handleStart = async () => {
@@ -262,10 +269,11 @@ export default function WidgetShowroomHost({
             <div className="flex shrink-0 gap-2 border-t border-slate-100 p-3">
               <button
                 type="button"
-                onClick={handleSkip}
-                className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                onClick={openDemo}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
               >
-                {t('skip')}
+                <Play className="h-4 w-4" aria-hidden />
+                {t('preview')}
               </button>
               <button
                 type="button"
@@ -323,6 +331,17 @@ export default function WidgetShowroomHost({
           </button>
         </div>
       </div>
+      <AnimatePresence>
+        {demoOpen && currentKey ? (
+          <WidgetShowroomDemoOverlay
+            key={currentKey}
+            lang={lang}
+            widgetKey={currentKey}
+            widgetLabel={widgetLabels[currentKey]}
+            onClose={() => setDemoOpen(false)}
+          />
+        ) : null}
+      </AnimatePresence>
     </WidgetPreviewSurfaceProvider>
   );
 }
