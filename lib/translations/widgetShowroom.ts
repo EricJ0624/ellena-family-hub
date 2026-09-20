@@ -6,6 +6,7 @@ export type WidgetShowroomTranslations = {
   welcome_title: string;
   welcome_body: string;
   select_prompt: string;
+  swipe_hint: string;
   add: string;
   added: string;
   skip: string;
@@ -35,6 +36,7 @@ const ko: WidgetShowroomTranslations = {
   welcome_title: '그룹에 오신 걸 환영해요!',
   welcome_body: '가족 대시보드에 넣을 기능을 골라 보세요.',
   select_prompt: '필요한 기능을 선택해서 추가하세요',
+  swipe_hint: '좌우로 밀어 넘기기',
   add: '추가',
   added: '추가됨',
   skip: '지나감',
@@ -64,6 +66,7 @@ const en: WidgetShowroomTranslations = {
   welcome_title: 'Welcome to your group!',
   welcome_body: 'Pick the features you want on your family dashboard.',
   select_prompt: 'Select the features you need and add them',
+  swipe_hint: 'Swipe left or right',
   add: 'Add',
   added: 'Added',
   skip: 'Skip',

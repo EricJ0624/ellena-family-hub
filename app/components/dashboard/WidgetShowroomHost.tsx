@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Check, Sparkles } from 'lucide-react';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { WIDGET_PREVIEW_MAP } from '@/app/components/group-admin/WidgetPreviewComponents';
@@ -24,6 +24,8 @@ import {
 import { groupNeedsWidgetShowroom } from '@/lib/widgets/widget-showroom';
 
 type FlowPhase = 'hidden' | 'showroom' | 'tip';
+
+const SWIPE_THRESHOLD_PX = 56;
 
 interface WidgetShowroomHostProps {
   /** false면 액자 제스처 안내를 막아 둠 (쇼룸·재설정 안내 중) */
@@ -46,6 +48,8 @@ export default function WidgetShowroomHost({
   const [selected, setSelected] = useState<Set<DashboardWidgetKey>>(() => new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [slideDir, setSlideDir] = useState<1 | -1>(1);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const orderedKeys = useMemo(
     () =>
@@ -94,8 +98,36 @@ export default function WidgetShowroomHost({
   const Preview = currentKey ? WIDGET_PREVIEW_MAP[currentKey] : null;
   const isSelected = currentKey ? selected.has(currentKey) : false;
 
-  const goPrev = () => setIndex((i) => Math.max(0, i - 1));
-  const goNext = () => setIndex((i) => Math.min(orderedKeys.length - 1, i + 1));
+  const goPrev = useCallback(() => {
+    setSlideDir(-1);
+    setIndex((i) => Math.max(0, i - 1));
+  }, []);
+  const goNext = useCallback(() => {
+    setSlideDir(1);
+    setIndex((i) => Math.min(orderedKeys.length - 1, i + 1));
+  }, [orderedKeys.length]);
+
+  const onCardPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button, a, input, textarea, select')) return;
+    swipeStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const onCardPointerUp = (e: React.PointerEvent) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+    // 세로 스크롤 우선 — 가로가 뚜렷할 때만 카드 전환
+    if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
+    if (dx < 0) goNext();
+    else goPrev();
+  };
+
+  const onCardPointerCancel = () => {
+    swipeStartRef.current = null;
+  };
 
   const toggleAdd = () => {
     if (!currentKey) return;
@@ -193,14 +225,18 @@ export default function WidgetShowroomHost({
       </header>
 
       <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col px-3 pb-3">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={slideDir}>
           <motion.div
             key={currentKey}
-            initial={{ opacity: 0, x: 28 }}
+            custom={slideDir}
+            initial={{ opacity: 0, x: 28 * slideDir }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -28 }}
+            exit={{ opacity: 0, x: -28 * slideDir }}
             transition={{ duration: 0.28, ease: 'easeOut' }}
-            className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-white/90 shadow-lg ${
+            onPointerDown={onCardPointerDown}
+            onPointerUp={onCardPointerUp}
+            onPointerCancel={onCardPointerCancel}
+            className={`flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden rounded-2xl border bg-white/90 shadow-lg ${
               isSelected ? 'border-indigo-400 ring-2 ring-indigo-200' : 'border-slate-200'
             }`}
           >
@@ -246,48 +282,31 @@ export default function WidgetShowroomHost({
           </motion.div>
         </AnimatePresence>
 
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={goPrev}
-            disabled={index === 0}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
-            aria-label="Previous"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div className="flex flex-1 flex-col items-center gap-1">
-            <div className="flex flex-wrap justify-center gap-1">
-              {orderedKeys.map((key, i) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setIndex(i)}
-                  className={`h-2 w-2 rounded-full transition-colors ${
-                    i === index
-                      ? 'bg-indigo-600'
-                      : selected.has(key)
-                        ? 'bg-emerald-500'
-                        : 'bg-slate-300'
-                  }`}
-                  aria-label={widgetLabels[key]}
-                />
-              ))}
-            </div>
-            <span className="text-xs font-medium text-slate-500">
-              {t('selected_count').replace('{n}', String(selected.size))} · {index + 1}/
-              {orderedKeys.length}
-            </span>
+        <div className="mt-3 flex flex-col items-center gap-1">
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {orderedKeys.map((key, i) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setSlideDir(i > index ? 1 : -1);
+                  setIndex(i);
+                }}
+                className={`h-2 w-2 rounded-full transition-colors ${
+                  i === index
+                    ? 'bg-indigo-600'
+                    : selected.has(key)
+                      ? 'bg-emerald-500'
+                      : 'bg-slate-300'
+                }`}
+                aria-label={widgetLabels[key]}
+              />
+            ))}
           </div>
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={index >= orderedKeys.length - 1}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
-            aria-label="Next"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          <span className="text-xs font-medium text-slate-500">
+            {t('swipe_hint')} · {t('selected_count').replace('{n}', String(selected.size))} ·{' '}
+            {index + 1}/{orderedKeys.length}
+          </span>
         </div>
 
         {error ? <p className="mt-2 text-center text-xs font-medium text-red-600">{error}</p> : null}
