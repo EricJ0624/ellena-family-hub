@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase';
 import type { NormalizedRegion } from './types';
 
 const PATCH_COLORS = ['#f97316', '#22c55e', '#3b82f6', '#ec4899', '#eab308', '#8b5cf6', '#14b8a6', '#ef4444'];
@@ -9,10 +10,10 @@ export async function generateSpotDiffVariantDataUrl(
   imageUrl: string,
   regions: NormalizedRegion[],
 ): Promise<string> {
-  const img = await loadImage(imageUrl);
+  const img = await loadImageForCanvas(imageUrl);
   const canvas = document.createElement('canvas');
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas unsupported');
 
@@ -39,14 +40,36 @@ export async function generateSpotDiffVariantDataUrl(
   return canvas.toDataURL('image/jpeg', 0.92);
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('IMAGE_LOAD_FAILED'));
-    img.src = src;
-  });
+async function resolveCanvasSourceUrl(src: string): Promise<string> {
+  if (!src.startsWith('http://') && !src.startsWith('https://')) {
+    return src;
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error('IMAGE_LOAD_FAILED');
+
+  const res = await fetch(
+    `/api/v1/picture-find/image-proxy?url=${encodeURIComponent(src)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error('IMAGE_LOAD_FAILED');
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+function loadImageForCanvas(src: string): Promise<HTMLImageElement> {
+  return (async () => {
+    const url = await resolveCanvasSourceUrl(src);
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('IMAGE_LOAD_FAILED'));
+      img.src = url;
+    });
+  })();
 }
 
 export async function resolveSpotDiffPair(

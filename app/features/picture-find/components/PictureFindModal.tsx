@@ -300,25 +300,39 @@ export function PictureFindModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 sm:py-5">
           {step === 'mode' && (
-            <div className="mx-auto grid max-w-lg gap-3 sm:grid-cols-2">
-              <ModeCard
-                icon={<Search className="h-8 w-8 text-indigo-600" />}
-                title={t.mode_hidden}
-                description={t.mode_hidden_desc}
+            <div className="mx-auto flex max-w-lg flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ModeCard
+                  icon={<Search className="h-8 w-8 text-indigo-600" />}
+                  title={t.mode_hidden}
+                  description={t.mode_hidden_desc}
+                  onClick={() => {
+                    setMode('hidden');
+                    setStep('scenes');
+                  }}
+                />
+                <ModeCard
+                  icon={<ImageIcon className="h-8 w-8 text-violet-600" />}
+                  title={t.mode_spot_diff}
+                  description={t.mode_spot_diff_desc}
+                  onClick={() => {
+                    setMode('spot_diff');
+                    setStep('scenes');
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={!groupId}
                 onClick={() => {
-                  setMode('hidden');
-                  setStep('scenes');
+                  if (!mode) setMode('hidden');
+                  setStep('upload');
                 }}
-              />
-              <ModeCard
-                icon={<ImageIcon className="h-8 w-8 text-violet-600" />}
-                title={t.mode_spot_diff}
-                description={t.mode_spot_diff_desc}
-                onClick={() => {
-                  setMode('spot_diff');
-                  setStep('scenes');
-                }}
-              />
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100 disabled:opacity-40"
+              >
+                <Upload className="h-4 w-4" />
+                {t.upload_cta_mode}
+              </button>
             </div>
           )}
 
@@ -396,7 +410,16 @@ export function PictureFindModal({
               </div>
 
               {!loading && groupScenes.length === 0 ? (
-                <p className="text-sm text-slate-500">{t.scenes_group_empty}</p>
+                <button
+                  type="button"
+                  disabled={!groupId}
+                  onClick={() => setStep('upload')}
+                  className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-indigo-300 bg-indigo-50/80 px-4 py-6 text-center disabled:opacity-40"
+                >
+                  <Upload className="h-6 w-6 text-indigo-600" />
+                  <span className="text-sm font-bold text-indigo-900">{t.upload_open}</span>
+                  <span className="text-xs text-indigo-700/80">{t.upload_cta_empty}</span>
+                </button>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {groupScenes.map((item) => (
@@ -416,6 +439,7 @@ export function PictureFindModal({
               <p className="text-xs text-slate-400">{t.manage_hint}</p>
 
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t.scenes_system}</p>
+              <p className="text-xs text-slate-500">{t.scenes_system_hint}</p>
               {!loading && systemScenes.length === 0 && groupScenes.length === 0 && (
                 <p className="text-sm text-slate-500">{t.scenes_empty}</p>
               )}

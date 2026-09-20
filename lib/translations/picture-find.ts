@@ -51,6 +51,9 @@ export type PictureFindTranslations = {
   upload_need_group: string;
   upload_need_original: string;
   upload_need_variant: string;
+  upload_cta_mode: string;
+  upload_cta_empty: string;
+  scenes_system_hint: string;
   delete_scene: string;
   delete_confirm: string;
   delete_failed: string;
@@ -124,6 +127,9 @@ const ko: PictureFindTranslations = {
   upload_need_group: '그룹을 선택한 뒤 올려 주세요.',
   upload_need_original: '원본 사진을 선택해 주세요.',
   upload_need_variant: '비교 사진을 선택해 주세요.',
+  upload_cta_mode: '우리 가족 사진으로 바로 만들기',
+  upload_cta_empty: '사진을 올리면 숨은그림·틀린그림을 바로 할 수 있어요',
+  scenes_system_hint: '기본 장면으로 바로 플레이하거나, 위 「사진 올리기」로 가족 사진을 추가하세요.',
   delete_scene: '삭제',
   delete_confirm: '이 가족 사진을 목록에서 제거할까요?',
   delete_failed: '삭제에 실패했습니다.',
@@ -197,6 +203,9 @@ const en: PictureFindTranslations = {
   upload_need_group: 'Select a group first.',
   upload_need_original: 'Please choose an original photo.',
   upload_need_variant: 'Please choose a compare photo.',
+  upload_cta_mode: 'Make a game from a family photo',
+  upload_cta_empty: 'Upload a photo to play hidden objects or spot the difference',
+  scenes_system_hint: 'Play a default scene, or tap Upload photo above to add a family photo.',
   delete_scene: 'Delete',
   delete_confirm: 'Remove this family photo from the list?',
   delete_failed: 'Failed to delete.',

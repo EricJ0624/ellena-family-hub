@@ -1,14 +1,12 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fbcfe8"/>
-      <stop offset="100%" stop-color="#ec4899"/>
-    </linearGradient>
-  </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <circle cx="120" cy="120" r="48" fill="rgba(255,255,255,0.35)"/>
-  <circle cx="680" cy="140" r="36" fill="rgba(255,255,255,0.28)"/>
-  <rect x="80" y="380" width="200" height="120" rx="16" fill="rgba(255,255,255,0.22)"/>
-  <rect x="520" y="360" width="180" height="140" rx="16" fill="rgba(255,255,255,0.18)"/>
-  <text x="400" y="300" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" fill="rgba(255,255,255,0.85)" font-weight="700">아이 방</text>
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#e0e7ff"/>
+  <rect y="0" width="800" height="220" fill="#c7d2fe"/>
+  <rect x="100" y="160" width="200" height="140" rx="12" fill="#fde68a" stroke="#f59e0b" stroke-width="6"/>
+  <rect x="500" y="140" width="180" height="160" rx="12" fill="#bbf7d0" stroke="#22c55e" stroke-width="6"/>
+  <circle cx="200" cy="230" r="35" fill="#f9a8d4"/>
+  <rect x="140" y="360" width="120" height="80" rx="8" fill="#93c5fd"/>
+  <rect x="340" y="360" width="120" height="80" rx="8" fill="#fca5a5"/>
+  <rect x="540" y="360" width="120" height="80" rx="8" fill="#86efac"/>
+  <ellipse cx="400" cy="520" rx="280" ry="40" fill="#a5b4fc" opacity=".5"/>
+  <text x="400" y="70" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" font-weight="700" fill="#312e81">아이 방</text>
 </svg>

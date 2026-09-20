@@ -1,14 +1,11 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ddd6fe"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
-    </linearGradient>
-  </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <circle cx="120" cy="120" r="48" fill="rgba(255,255,255,0.35)"/>
-  <circle cx="680" cy="140" r="36" fill="rgba(255,255,255,0.28)"/>
-  <rect x="80" y="380" width="200" height="120" rx="16" fill="rgba(255,255,255,0.22)"/>
-  <rect x="520" y="360" width="180" height="140" rx="16" fill="rgba(255,255,255,0.18)"/>
-  <text x="400" y="300" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" fill="rgba(255,255,255,0.85)" font-weight="700">마트</text>
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#f1f5f9"/>
+  <rect y="0" width="800" height="120" fill="#64748b"/>
+  <rect x="60" y="160" width="160" height="200" rx="8" fill="#fecaca"/>
+  <rect x="250" y="160" width="160" height="200" rx="8" fill="#bbf7d0"/>
+  <rect x="440" y="160" width="160" height="200" rx="8" fill="#bfdbfe"/>
+  <rect x="630" y="160" width="110" height="200" rx="8" fill="#fde68a"/>
+  <rect x="100" y="420" width="600" height="70" rx="10" fill="#94a3b8"/>
+  <circle cx="180" cy="520" r="30" fill="#475569"/><circle cx="620" cy="520" r="30" fill="#475569"/>
+  <text x="400" y="75" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" font-weight="700" fill="#f8fafc">마트</text>
 </svg>

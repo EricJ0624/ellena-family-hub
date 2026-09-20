@@ -1,14 +1,13 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#bbf7d0"/>
-      <stop offset="100%" stop-color="#15803d"/>
-    </linearGradient>
-  </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <circle cx="120" cy="120" r="48" fill="rgba(255,255,255,0.35)"/>
-  <circle cx="680" cy="140" r="36" fill="rgba(255,255,255,0.28)"/>
-  <rect x="80" y="380" width="200" height="120" rx="16" fill="rgba(255,255,255,0.22)"/>
-  <rect x="520" y="360" width="180" height="140" rx="16" fill="rgba(255,255,255,0.18)"/>
-  <text x="400" y="300" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" fill="rgba(255,255,255,0.85)" font-weight="700">정원</text>
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#dcfce7"/>
+  <rect y="400" width="800" height="200" fill="#86efac"/>
+  <circle cx="180" cy="280" r="90" fill="#22c55e"/>
+  <circle cx="280" cy="300" r="70" fill="#16a34a"/>
+  <rect x="220" y="340" width="30" height="120" fill="#854d0e"/>
+  <circle cx="560" cy="240" r="80" fill="#4ade80"/>
+  <circle cx="640" cy="280" r="60" fill="#22c55e"/>
+  <rect x="580" y="300" width="28" height="140" fill="#a16207"/>
+  <circle cx="400" cy="480" r="24" fill="#f472b6"/>
+  <circle cx="450" cy="500" r="18" fill="#fbbf24"/>
+  <text x="400" y="70" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" font-weight="700" fill="#14532d">정원</text>
 </svg>
