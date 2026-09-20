@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
+import { notifyGroupAdminsOfDashboardAccessRequest } from '@/lib/support-ticket-notify';
 
 /**
  * 대시보드 접근 요청 목록 조회 (시스템 관리자용 — 전체)
@@ -116,6 +117,27 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '대기중인 요청만 처리할 수 있습니다.' }, { status: 400 });
       }
 
+      // 상대방 승인만 허용: 본인 요청·시스템관리자끼리 요청은 그룹 관리자 승인 대상
+      if (String(existing.requested_by) === user.id) {
+        return NextResponse.json(
+          { error: '본인이 보낸 요청은 승인/거절할 수 없습니다. 그룹 관리자 승인을 기다려 주세요.' },
+          { status: 400 }
+        );
+      }
+
+      const { data: requesterAdmin } = await supabase
+        .from('system_admins')
+        .select('user_id')
+        .eq('user_id', existing.requested_by)
+        .maybeSingle();
+
+      if (requesterAdmin) {
+        return NextResponse.json(
+          { error: '시스템 관리자의 접근 요청은 해당 그룹 관리자가 승인해야 합니다.' },
+          { status: 400 }
+        );
+      }
+
       let updateData: Record<string, unknown>;
       if (action === 'approve') {
         const expiresHours = Number(expires_hours) > 0 ? Number(expires_hours) : 24;
@@ -189,21 +211,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const expiresHours = 24;
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + expiresHours);
-
-    // 시스템 관리자 직접 신청은 즉시 승인(기한부 접근)
+    // 시스템 관리자 신청 → pending (그룹 관리자 승인 필요)
     const { data: accessRequest, error } = await supabase
       .from('dashboard_access_requests')
       .insert({
         group_id,
         requested_by: user.id,
         reason: String(reason).trim(),
-        status: 'approved',
-        approved_by: user.id,
-        approved_at: new Date().toISOString(),
-        expires_at: expiresAt.toISOString(),
+        status: 'pending',
       })
       .select()
       .single();
@@ -215,6 +230,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    void notifyGroupAdminsOfDashboardAccessRequest({
+      actorUserId: user.id,
+      requestId: String(accessRequest.id),
+      groupId: group_id,
+      reason: String(reason).trim(),
+    });
 
     const { ipAddress, userAgent } = getAuditRequestMeta(request);
     await writeAdminAuditLog(supabase, {
@@ -321,5 +343,73 @@ export async function DELETE(request: NextRequest) {
       { error: errorMessage },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * 승인된 접근 권한 철회 (시스템 관리자)
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const { user } = authResult;
+
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
+
+    const body = await request.json();
+    const { id } = body || {};
+    if (!id) {
+      return NextResponse.json({ error: '요청 ID가 필요합니다.' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseServerClient();
+    const { data: existing, error: fetchErr } = await supabase
+      .from('dashboard_access_requests')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchErr || !existing) {
+      return NextResponse.json({ error: '접근 요청을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    if (existing.status !== 'approved') {
+      return NextResponse.json({ error: '승인된 요청만 철회할 수 있습니다.' }, { status: 400 });
+    }
+
+    const { data: accessRequest, error } = await supabase
+      .from('dashboard_access_requests')
+      .update({
+        status: 'revoked',
+        revoked_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('접근 권한 철회 오류:', error);
+      return NextResponse.json({ error: '접근 권한 철회에 실패했습니다.' }, { status: 500 });
+    }
+
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'UPDATE',
+      resourceType: 'dashboard_access_request',
+      resourceId: id,
+      groupId: accessRequest?.group_id ?? existing.group_id,
+      details: { kind: 'revoke' },
+      ipAddress,
+      userAgent,
+    });
+
+    return NextResponse.json({ success: true, data: accessRequest });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '접근 권한 철회 중 오류가 발생했습니다.';
+    console.error('접근 권한 철회 오류:', error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

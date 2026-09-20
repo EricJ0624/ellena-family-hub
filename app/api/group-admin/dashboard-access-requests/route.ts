@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // --- 승인/거절 ---
+    // --- 승인/거절 (시스템 관리자가 보낸 요청만 그룹 관리자가 처리) ---
     if (!id || !group_id || !action) {
       return NextResponse.json(
         { error: '요청 ID, 그룹 ID, 액션이 필요합니다.' },
@@ -149,6 +149,41 @@ export async function POST(request: NextRequest) {
     if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
+
+    const { data: existing, error: fetchErr } = await supabase
+      .from('dashboard_access_requests')
+      .select('*')
+      .eq('id', id)
+      .eq('group_id', group_id)
+      .maybeSingle();
+
+    if (fetchErr || !existing) {
+      return NextResponse.json({ error: '접근 요청을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    if (existing.status !== 'pending') {
+      return NextResponse.json({ error: '대기중인 요청만 처리할 수 있습니다.' }, { status: 400 });
+    }
+
+    if (String(existing.requested_by) === user.id) {
+      return NextResponse.json(
+        { error: '본인이 보낸 요청은 승인/거절할 수 없습니다. 시스템 관리자 승인을 기다려 주세요.' },
+        { status: 400 }
+      );
+    }
+
+    const { data: requesterAdmin } = await supabase
+      .from('system_admins')
+      .select('user_id')
+      .eq('user_id', existing.requested_by)
+      .maybeSingle();
+
+    if (!requesterAdmin) {
+      return NextResponse.json(
+        { error: '그룹 관리자가 보낸 요청은 시스템 관리자가 승인해야 합니다.' },
+        { status: 400 }
+      );
+    }
 
     let updateData: Record<string, unknown> = {};
 

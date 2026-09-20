@@ -225,6 +225,7 @@ export function GroupAdminPanel({
   const displayGroupName = getGroupSelectorLabel(labelGroup, appTitle);
 
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<GroupAdminTabId>('dashboard');
   const [stats, setStats] = useState<GroupStats | null>(null);
@@ -416,6 +417,9 @@ export function GroupAdminPanel({
       if (embeddedGroupId) {
         setIsAuthorized(true);
         setLoading(false);
+        void supabase.auth.getUser().then(({ data }) => {
+          if (data.user?.id) setCurrentUserId(data.user.id);
+        });
       } else {
         setIsAuthorized(false);
         setLoading(false);
@@ -440,6 +444,9 @@ export function GroupAdminPanel({
         router.push('/dashboard');
         return;
       }
+
+      const { data } = await supabase.auth.getUser();
+      if (data.user?.id) setCurrentUserId(data.user.id);
 
       setIsAuthorized(true);
       setLoading(false);
@@ -1894,9 +1901,11 @@ export function GroupAdminPanel({
                         </div>
                       </div>
                       {request.status === 'pending' && (
-                        <div className="mt-4 flex gap-2">
-                          <button
-                            onClick={async () => {
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {currentUserId && request.requested_by === currentUserId ? (
+                            <button
+                              type="button"
+                              onClick={async () => {
                               if (!confirm(gat('confirm_cancel_request'))) {
                                 return;
                               }
@@ -1926,7 +1935,7 @@ export function GroupAdminPanel({
                                 alert(gat('request_cancelled'));
                                 loadAccessRequests();
                               } catch (error: any) {
-                                console.error('announcement mark read', error);
+                                console.error('access request cancel', error);
                                 alert(error.message || gat('error_request_cancel'));
                               } finally {
                                 setLoadingData(false);
@@ -1936,6 +1945,98 @@ export function GroupAdminPanel({
                           >
                             {ct('cancel')}
                           </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!effectiveGroupId) {
+                                    alert(gat('alert_group_info'));
+                                    return;
+                                  }
+                                  try {
+                                    setLoadingData(true);
+                                    const { data: { session } } = await supabase.auth.getSession();
+                                    if (!session?.access_token) {
+                                      alert(gat('alert_auth'));
+                                      return;
+                                    }
+                                    const response = await fetch('/api/group-admin/dashboard-access-requests', {
+                                      method: 'POST',
+                                      headers: {
+                                        Authorization: `Bearer ${session.access_token}`,
+                                        'Content-Type': 'application/json',
+                                      },
+                                      body: JSON.stringify({
+                                        id: request.id,
+                                        group_id: effectiveGroupId,
+                                        action: 'approve',
+                                        expires_hours: 24,
+                                      }),
+                                    });
+                                    const result = await response.json();
+                                    if (!response.ok) {
+                                      throw new Error(result.error || atPiggy('error_approve_failed'));
+                                    }
+                                    alert(atPiggy('success_request_approved'));
+                                    loadAccessRequests();
+                                  } catch (error: unknown) {
+                                    alert(error instanceof Error ? error.message : atPiggy('error_approve_failed'));
+                                  } finally {
+                                    setLoadingData(false);
+                                  }
+                                }}
+                                className="cursor-pointer rounded-md border-none bg-emerald-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+                              >
+                                {atPiggy('approve_btn')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!effectiveGroupId) {
+                                    alert(gat('alert_group_info'));
+                                    return;
+                                  }
+                                  const reason = prompt(atPiggy('prompt_reject_reason'));
+                                  if (!reason) return;
+                                  try {
+                                    setLoadingData(true);
+                                    const { data: { session } } = await supabase.auth.getSession();
+                                    if (!session?.access_token) {
+                                      alert(gat('alert_auth'));
+                                      return;
+                                    }
+                                    const response = await fetch('/api/group-admin/dashboard-access-requests', {
+                                      method: 'POST',
+                                      headers: {
+                                        Authorization: `Bearer ${session.access_token}`,
+                                        'Content-Type': 'application/json',
+                                      },
+                                      body: JSON.stringify({
+                                        id: request.id,
+                                        group_id: effectiveGroupId,
+                                        action: 'reject',
+                                        rejection_reason: reason,
+                                      }),
+                                    });
+                                    const result = await response.json();
+                                    if (!response.ok) {
+                                      throw new Error(result.error || atPiggy('error_reject_failed'));
+                                    }
+                                    alert(atPiggy('success_request_rejected'));
+                                    loadAccessRequests();
+                                  } catch (error: unknown) {
+                                    alert(error instanceof Error ? error.message : atPiggy('error_reject_failed'));
+                                  } finally {
+                                    setLoadingData(false);
+                                  }
+                                }}
+                                className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
+                              >
+                                {atPiggy('reject_btn')}
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                       <div className="mt-3 text-xs text-slate-400">

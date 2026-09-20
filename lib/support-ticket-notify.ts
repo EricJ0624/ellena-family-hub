@@ -233,3 +233,38 @@ export async function notifySystemAdminsOfDashboardAccessRequest(params: {
     console.error('[notifySystemAdminsOfDashboardAccessRequest] 오류:', error);
   }
 }
+
+/**
+ * 시스템 관리자 → 그룹 관리자: 대시보드 접근 요청
+ */
+export async function notifyGroupAdminsOfDashboardAccessRequest(params: {
+  actorUserId: string;
+  requestId: string;
+  groupId: string;
+  reason: string;
+}): Promise<void> {
+  try {
+    const admins = await getGroupAdminUserIds(params.groupId);
+    if (admins.length === 0) return;
+
+    const appId = await resolveGroupAppId(params.groupId);
+    const body = clipBody(params.reason);
+
+    await notifyFamily({
+      groupId: params.groupId,
+      actorUserId: params.actorUserId,
+      recipientUserIds: admins,
+      widgetKey: 'group',
+      eventType: 'DASHBOARD_ACCESS_REQUEST',
+      title: '🔑 대시보드 접근 요청',
+      body,
+      url: '/group-admin',
+      entityId: params.requestId,
+      appId,
+      tag: `dashboard-access-${params.requestId}`,
+      payload: { requestId: params.requestId },
+    });
+  } catch (error) {
+    console.error('[notifyGroupAdminsOfDashboardAccessRequest] 오류:', error);
+  }
+}

@@ -41,7 +41,8 @@ export type NotificationEventType =
   | 'GROUP_JOIN_RESOLVED'
   | 'SUPPORT_TICKET_CREATED'
   | 'SUPPORT_TICKET_FOLLOW_UP'
-  | 'SUPPORT_TICKET_REPLY';
+  | 'SUPPORT_TICKET_REPLY'
+  | 'DASHBOARD_ACCESS_REQUEST';
 
 export interface NotifyFamilyInput {
   groupId: string;

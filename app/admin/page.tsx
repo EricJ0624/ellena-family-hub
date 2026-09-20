@@ -3483,7 +3483,50 @@ export default function AdminPage() {
                         </div>
                       </div>
                       {request.status === 'pending' && (
-                        <div className="mt-4 flex gap-2">
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {currentAdminUserId && request.requested_by === currentAdminUserId ? (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm(at('confirm_revoke_request'))) {
+                                  return;
+                                }
+                                try {
+                                  setLoadingData(true);
+                                  const { data: { session } } = await supabase.auth.getSession();
+                                  if (!session?.access_token) {
+                                    alert(at('error_auth'));
+                                    return;
+                                  }
+                                  const response = await fetch(
+                                    `/api/admin/dashboard-access-requests?id=${encodeURIComponent(request.id)}`,
+                                    {
+                                      method: 'DELETE',
+                                      headers: {
+                                        Authorization: `Bearer ${session.access_token}`,
+                                        'Content-Type': 'application/json',
+                                      },
+                                    }
+                                  );
+                                  const result = await response.json();
+                                  if (!response.ok) {
+                                    throw new Error(result.error || at('error_revoke_failed'));
+                                  }
+                                  alert(adminLang === 'ko' ? '접근 요청이 취소되었습니다.' : 'Access request cancelled.');
+                                  loadAccessRequests();
+                                } catch (error: any) {
+                                  console.error('access request cancel', error);
+                                  alert(error.message || at('error_revoke_failed'));
+                                } finally {
+                                  setLoadingData(false);
+                                }
+                              }}
+                              className="cursor-pointer rounded-md border-none bg-slate-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
+                            >
+                              {at('cancel_btn')}
+                            </button>
+                          ) : (
+                            <>
                           <button
                             onClick={async () => {
                               try {
@@ -3571,6 +3614,8 @@ export default function AdminPage() {
                           >
 {at('reject_btn')}
                             </button>
+                            </>
+                          )}
                         </div>
                       )}
                       {request.status === 'approved' && request.expires_at && new Date(request.expires_at) > new Date() && (
