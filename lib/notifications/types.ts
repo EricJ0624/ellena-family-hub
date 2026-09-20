@@ -38,7 +38,10 @@ export type NotificationEventType =
   | 'TRAVEL_TRIP_CREATED'
   | 'TRAVEL_DETAIL_CHANGED'
   | 'GROUP_JOIN_REQUEST'
-  | 'GROUP_JOIN_RESOLVED';
+  | 'GROUP_JOIN_RESOLVED'
+  | 'SUPPORT_TICKET_CREATED'
+  | 'SUPPORT_TICKET_FOLLOW_UP'
+  | 'SUPPORT_TICKET_REPLY';
 
 export interface NotifyFamilyInput {
   groupId: string;

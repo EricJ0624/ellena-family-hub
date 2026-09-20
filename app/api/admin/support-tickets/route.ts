@@ -4,6 +4,7 @@ import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { deleteAttachmentsForSupportTicket } from '@/lib/support-ticket-attachments-cleanup';
+import { notifyGroupAdminsOfSupportReply } from '@/lib/support-ticket-notify';
 
 /**
  * 문의 목록 조회 (시스템 관리자용)
@@ -191,6 +192,16 @@ export async function POST(request: NextRequest) {
       ipAddress,
       userAgent,
     });
+
+    if (ticket?.group_id) {
+      void notifyGroupAdminsOfSupportReply({
+        actorUserId: user.id,
+        ticketId: String(id),
+        groupId: String(ticket.group_id),
+        title: String(ticket.title || existing.title || ''),
+        answer: trimmed,
+      });
+    }
 
     return NextResponse.json({
       success: true,

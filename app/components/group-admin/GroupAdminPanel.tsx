@@ -2245,7 +2245,7 @@ export function GroupAdminPanel({
         {followUpForTicket && (
           <>
             <h3 className="mb-3 text-lg font-semibold text-slate-800">
-              {gat('follow_up_btn')}
+              {gat('follow_up_modal_title')}
             </h3>
             <p className="mb-3 text-[13px] text-slate-500">
               {followUpForTicket.title}

@@ -4,6 +4,7 @@ import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { deleteAttachmentsForSupportTicket } from '@/lib/support-ticket-attachments-cleanup';
+import { notifySystemAdminsOfSupportTicket } from '@/lib/support-ticket-notify';
 
 /**
  * 문의 목록 조회 (그룹 관리자용)
@@ -102,6 +103,15 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    void notifySystemAdminsOfSupportTicket({
+      actorUserId: user.id,
+      ticketId: String(ticket.id),
+      groupId: group_id,
+      title: title.trim(),
+      content: content.trim(),
+      kind: 'new',
+    });
 
     return NextResponse.json({
       success: true,
@@ -283,6 +293,15 @@ export async function PATCH(request: NextRequest) {
       details: { kind: 'group_follow_up' },
       ipAddress,
       userAgent,
+    });
+
+    void notifySystemAdminsOfSupportTicket({
+      actorUserId: user.id,
+      ticketId: String(id),
+      groupId: group_id,
+      title: String(existing.title || ''),
+      content: String(follow_up).trim(),
+      kind: 'follow_up',
     });
 
     return NextResponse.json({ success: true, data: ticket });
