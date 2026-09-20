@@ -90,6 +90,10 @@ interface DailyPhotoFrameProps {
   groupCaptionName?: string;
   /** 사진 세로/가로 — 대시보드 타이틀 정렬 연동 */
   onPhotoOrientationChange?: (isPortrait: boolean) => void;
+  /** false면 액자 제스처 안내를 시작하지 않음 (위젯 쇼룸 등 선행 온보딩) */
+  gestureHintEnabled?: boolean;
+  /** 제스처 안내 완료 저장 스코프 (그룹 ID). 없으면 레거시 전역 키 */
+  gestureHintScope?: string | null;
 }
 
 const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
@@ -99,6 +103,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   onFrameClick,
   groupCaptionName,
   onPhotoOrientationChange,
+  gestureHintEnabled = true,
+  gestureHintScope = null,
 }) => {
   const { lang } = useLanguage();
   const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
@@ -184,15 +190,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const completeHint = useCallback(() => {
     setHintPhase(null);
-    writePhotoFrameGestureHintSeen();
-  }, []);
+    writePhotoFrameGestureHintSeen(gestureHintScope);
+  }, [gestureHintScope]);
 
   useEffect(() => {
     if (!mounted) return;
-    if (readPhotoFrameGestureHintSeen()) return;
+    if (!gestureHintEnabled) {
+      setHintPhase(null);
+      return;
+    }
+    if (readPhotoFrameGestureHintSeen(gestureHintScope)) return;
     const showTimer = setTimeout(() => setHintPhase('h'), 0);
     return () => clearTimeout(showTimer);
-  }, [mounted]);
+  }, [mounted, gestureHintEnabled, gestureHintScope]);
 
   const photoUndoRef = useRef<{ fromId: string | number; dir: number } | null>(null);
 
@@ -875,6 +885,8 @@ interface TitlePageProps {
   frameStyleStorageScope?: string | null;
   /** 액자 사진 세로 여부 — 대시보드 타이틀 정렬 */
   onPhotoOrientationChange?: (isPortrait: boolean) => void;
+  /** false면 액자 제스처 안내 비활성 (기본 true) */
+  gestureHintEnabled?: boolean;
 }
 
 const TitlePage: React.FC<TitlePageProps> = ({
@@ -890,6 +902,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
   frameStyleStorageScope,
   frameCaptionName,
   onPhotoOrientationChange,
+  gestureHintEnabled = true,
 }) => {
   const { lang } = useLanguage();
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
@@ -1020,6 +1033,8 @@ const TitlePage: React.FC<TitlePageProps> = ({
           onFrameClick={onFrameClick}
           groupCaptionName={frameCaptionName ?? title ?? 'Hearth'}
           onPhotoOrientationChange={onPhotoOrientationChange}
+          gestureHintEnabled={gestureHintEnabled}
+          gestureHintScope={frameStyleStorageScope}
         />
 
         {/* 타이틀 텍스트 (showTitle이 true일 때만) */}

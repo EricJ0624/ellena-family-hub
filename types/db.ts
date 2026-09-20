@@ -33,6 +33,8 @@ export interface Database {
           ui_theme: 'default' | 'kids_friendly' | 'highend_glass'
           display_name_pending: boolean
           app_id: string
+          /** null = 생성자 쇼룸 미완료(마이그레이션 이후 신규만). non-null = 완료/레거시 스킵 */
+          widget_showroom_completed_at: string | null
         }
         Insert: {
           id?: string
@@ -50,6 +52,7 @@ export interface Database {
           ui_theme?: 'default' | 'kids_friendly' | 'highend_glass'
           display_name_pending?: boolean
           app_id?: string
+          widget_showroom_completed_at?: string | null
         }
         Update: {
           id?: string
@@ -67,6 +70,7 @@ export interface Database {
           ui_theme?: 'default' | 'kids_friendly' | 'highend_glass'
           display_name_pending?: boolean
           app_id?: string
+          widget_showroom_completed_at?: string | null
         }
         Relationships: [
           {

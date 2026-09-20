@@ -232,7 +232,7 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
       return cached;
     }
 
-    // 신규 그룹(행 없음) + owner만 시드. DEFAULT를 화면에 바로 쓰지 않는다(travel_diary 기본 off).
+    // 신규 그룹(행 없음) + owner만 시드. DEFAULT는 전부 off(쇼룸에서 선택 후 on).
     const isEmpty =
       error instanceof Error &&
       (error.message === 'WIDGET_CONFIGS_EMPTY_ROWS' || error.message.includes('EMPTY_ROWS'));

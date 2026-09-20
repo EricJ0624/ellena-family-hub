@@ -146,6 +146,8 @@ import {
 import { WIDGET_CONFIGS_UPDATED_EVENT, dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
 import { WidgetMagnifyModal } from '@/app/components/dashboard/WidgetMagnifyModal';
+import WidgetShowroomHost from '@/app/components/dashboard/WidgetShowroomHost';
+import { groupNeedsWidgetShowroom } from '@/lib/widgets/widget-showroom';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -665,6 +667,8 @@ export default function FamilyHub() {
   /** idle | loading | ready | error — WiFi에서 그리드가 통째로 안 뜨는 경우 재시도용 */
   const [widgetConfigsStatus, setWidgetConfigsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [widgetConfigsReloadToken, setWidgetConfigsReloadToken] = useState(0);
+  /** 쇼룸/재설정 안내 중이면 false — 액자 제스처 안내 지연 */
+  const [showroomAllowsFrameHint, setShowroomAllowsFrameHint] = useState(true);
 
   // 공지사항 관련 state
   const [announcements, setAnnouncements] = useState<Array<{
@@ -6550,6 +6554,11 @@ export default function FamilyHub() {
 
   // 그룹 정보 로딩 중인지 확인
   const isGroupLoading = groupLoading && !currentGroupId;
+  const frameGestureHintEnabled =
+    !isGroupLoading &&
+    !!currentGroup &&
+    !(groupIsOwner && groupNeedsWidgetShowroom(currentGroup)) &&
+    showroomAllowsFrameHint;
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
 
@@ -6943,6 +6952,7 @@ export default function FamilyHub() {
 
   return (
     <>
+      <WidgetShowroomHost onGestureHintEnabledChange={setShowroomAllowsFrameHint} />
       {previewOrientationToggle}
       <div
         className="app-container"
@@ -7175,6 +7185,7 @@ export default function FamilyHub() {
             noBackground
             frameStyleStorageScope={currentGroupId}
             onFrameClick={() => router.push('/memories')}
+            gestureHintEnabled={frameGestureHintEnabled}
           />
           <div className="status-indicator">
             <span className="status-dot">

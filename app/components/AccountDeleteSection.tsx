@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/app/contexts/LanguageContext';
+import { useGroup } from '@/app/contexts/GroupContext';
 import { getAccountTranslation } from '@/lib/translations/account';
-import { getOnboardingTranslation } from '@/lib/translations/onboarding';
-import { getCommonTranslation } from '@/lib/translations/common';
 import { SystemAdminTransferModal } from '@/app/components/admin/SystemAdminTransferModal';
+import { sameGroupId } from '@/lib/group-id-resolve';
 
 type UserRow = { id: string; email: string; nickname: string | null };
 
@@ -17,10 +17,29 @@ export default function AccountDeleteSection() {
   const router = useRouter();
   const { lang } = useLanguage();
   const at = (key: Parameters<typeof getAccountTranslation>[1]) => getAccountTranslation(lang, key);
-  const ct = (key: 'member') => getCommonTranslation(lang, key);
+  const { groups, loading: groupsLoading } = useGroup();
+  const [userId, setUserId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showSuccessorModal, setShowSuccessorModal] = useState(false);
   const [candidates, setCandidates] = useState<UserRow[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUserId(user?.id ?? null);
+    })();
+  }, []);
+
+  const ownedCount = useMemo(() => {
+    if (!userId) return 0;
+    return (groups || []).filter(
+      (g) => typeof g.owner_id === 'string' && sameGroupId(g.owner_id, userId),
+    ).length;
+  }, [groups, userId]);
+
+  const blockedByOwnedGroups = !groupsLoading && userId != null && ownedCount > 0;
 
   const finishDelete = async () => {
     alert(at('delete_success'));
@@ -30,11 +49,13 @@ export default function AccountDeleteSection() {
     router.push('/');
   };
 
-  const handleDeleteAccount = async (confirmGroupDeletion = false) => {
-    if (!confirmGroupDeletion) {
-      if (!confirm(at('delete_confirm_1'))) return;
-      if (!confirm(at('delete_confirm_2'))) return;
+  const handleDeleteAccount = async () => {
+    if (blockedByOwnedGroups) {
+      alert(at('delete_blocked_owned'));
+      return;
     }
+    if (!confirm(at('delete_confirm_1'))) return;
+    if (!confirm(at('delete_confirm_2'))) return;
 
     setBusy(true);
     try {
@@ -52,12 +73,13 @@ export default function AccountDeleteSection() {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ confirm_group_deletion: confirmGroupDeletion }),
+        body: JSON.stringify({}),
       });
 
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        // 시스템 관리자 분기 — 기존 후임 지정 플로우 유지 (로직 변경 없음)
         if (result.error === 'ADMIN_ACCOUNT' && result.isSystemAdmin) {
           alert(typeof result.message === 'string' ? result.message : at('delete_failed'));
           const usersResponse = await fetch('/api/admin/users/list', {
@@ -83,19 +105,10 @@ export default function AccountDeleteSection() {
           return;
         }
 
-        if (result.error === 'GROUP_OWNER_CONFIRMATION_REQUIRED' && result.requireConfirmation) {
-          const ownedGroups = Array.isArray(result.ownedGroups) ? result.ownedGroups : [];
-          const memberSuffix = getOnboardingTranslation(lang, 'member_count_suffix');
-          const groupInfo = ownedGroups
-            .map(
-              (g: { name?: string; memberCount?: number }) =>
-                `• ${g.name ?? ''} (${ct('member')} ${g.memberCount ?? 0}${memberSuffix})`,
-            )
-            .join('\n');
-          const warningMessage = `${at('delete_warning_owner_title')}\n\n${at('delete_warning_owner_groups')}\n${groupInfo}\n\n${at('delete_warning_owner_deleted')}\n\n${at('delete_warning_owner_final')}`;
-          if (confirm(warningMessage)) {
-            await handleDeleteAccount(true);
-          }
+        if (result.error === 'OWNED_GROUPS_REMAIN') {
+          alert(
+            typeof result.message === 'string' ? result.message : at('delete_blocked_owned'),
+          );
           return;
         }
 
@@ -128,9 +141,17 @@ export default function AccountDeleteSection() {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({}),
       });
       const deleteResult = await deleteResponse.json().catch(() => ({}));
       if (!deleteResponse.ok) {
+        if (deleteResult.error === 'OWNED_GROUPS_REMAIN') {
+          throw new Error(
+            typeof deleteResult.message === 'string'
+              ? deleteResult.message
+              : at('delete_blocked_owned'),
+          );
+        }
         throw new Error(
           typeof deleteResult.error === 'string' ? deleteResult.error : at('delete_failed'),
         );
@@ -148,10 +169,17 @@ export default function AccountDeleteSection() {
     <>
       <section className="rounded-2xl border border-rose-200 bg-rose-50/60 p-5">
         <h2 className="m-0 text-base font-bold text-rose-900">{at('delete_section_title')}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-rose-800/90">{at('delete_section_hint')}</p>
+        <p className="mt-2 text-sm leading-relaxed text-rose-800/90">
+          {blockedByOwnedGroups ? at('delete_section_hint_owned') : at('delete_section_hint')}
+        </p>
+        {blockedByOwnedGroups ? (
+          <p className="mt-3 m-0 rounded-lg bg-rose-100/80 px-3 py-2 text-sm font-medium text-rose-900">
+            {at('delete_blocked_owned')}
+          </p>
+        ) : null}
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || blockedByOwnedGroups || groupsLoading}
           onClick={() => void handleDeleteAccount()}
           className="mt-4 inline-flex items-center gap-2 rounded-lg border-0 bg-rose-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-800 disabled:opacity-60"
           aria-label={at('delete_account_aria')}

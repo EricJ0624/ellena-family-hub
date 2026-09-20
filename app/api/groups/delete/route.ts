@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient, deleteFromS3 } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 /**
  * 그룹 소유자 전용: 가족(그룹) 영구 삭제
@@ -25,9 +26,10 @@ export async function DELETE(request: NextRequest) {
 
     const { data: groupRow, error: groupFetchError } = await supabase
       .from('groups')
-      .select('id, owner_id')
+      .select('id, owner_id, app_id')
       .eq('id', groupId)
-      .single();
+      .eq('app_id', CURRENT_APP_ID)
+      .maybeSingle();
 
     if (groupFetchError || !groupRow) {
       return NextResponse.json({ error: '그룹을 찾을 수 없습니다.' }, { status: 404 });
@@ -40,7 +42,10 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { data: photos } = await supabase.from(DB_TABLES.FAMILY_ALBUM_ITEMS).select('id, s3_key').eq('group_id', groupId);
+    const { data: photos } = await supabase
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
+      .select('id, s3_key')
+      .eq('group_id', groupId);
 
     if (photos && photos.length > 0) {
       const deletePromises: Promise<boolean>[] = [];
