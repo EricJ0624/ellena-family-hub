@@ -32,6 +32,24 @@ const COMPRESSION_OPTIONS = {
 /** 이 길이를 넘는 압축/원본 라벨은 헤더에서 세로 배치 (예: Compressed / Original) */
 const UPLOAD_MODE_LABEL_STACK_MAX_LEN = 7;
 
+/** PC 앨범 목록: 이 너비부터 한 장 최대 너비를 제한 */
+const ALBUM_WIDE_MIN_PX = 640;
+const ALBUM_PC_CARD_MAX_PX = 420;
+const ALBUM_PC_GAP_PX = 8;
+
+function albumGridColumnCount(visualW: number, photoCount: number): number {
+  const n = Math.max(0, photoCount);
+  if (visualW < ALBUM_WIDE_MIN_PX) {
+    // 좁은 화면: 11장 이하는 1열, 그 이상은 뷰포트 열 수
+    const viewportCols =
+      visualW < 200 ? 1 : visualW < 260 ? 2 : visualW < 320 ? 3 : visualW < 380 ? 4 : visualW < 440 ? 5 : visualW < 520 ? 6 : 7;
+    return n <= 11 ? 1 : viewportCols;
+  }
+  const contentW = Math.min(1200, visualW) - 32;
+  const fit = Math.max(1, Math.floor((contentW + ALBUM_PC_GAP_PX) / (380 + ALBUM_PC_GAP_PX)));
+  return Math.min(3, Math.max(1, n), fit);
+}
+
 function formatMemorySectionDate(date: Date, lang: LangCode): string {
   return new Intl.DateTimeFormat(intlLocaleForLang(lang), {
     year: 'numeric',
@@ -168,10 +186,10 @@ function MemoriesPageContent() {
         const vv = window.visualViewport;
         const visualW = vv ? vv.width : window.innerWidth;
         setViewportWidth(visualW);
-        // 아이폰 사진처럼: 뷰포트만으로 열 수, 390px에서도 줌아웃 시 5~6열
-        const viewportCols = visualW < 200 ? 1 : visualW < 260 ? 2 : visualW < 320 ? 3 : visualW < 380 ? 4 : visualW < 440 ? 5 : visualW < 520 ? 6 : 7;
-        const cols = n <= 11 ? 1 : viewportCols;
-        setGridColumns(cols);
+        setGridColumns((prev) => {
+          const next = albumGridColumnCount(visualW, n);
+          return prev === next ? prev : next;
+        });
       });
     };
     updateColumns();
@@ -566,6 +584,15 @@ function MemoriesPageContent() {
   const closeLightbox = () => setSelectedIndex(null);
 
   const mainMaxWidth = Math.min(1200, viewportWidth);
+  const isWideAlbum = viewportWidth >= ALBUM_WIDE_MIN_PX;
+  const albumGridMaxPx =
+    gridColumns * ALBUM_PC_CARD_MAX_PX + Math.max(0, gridColumns - 1) * ALBUM_PC_GAP_PX;
+  const albumGridClassName = `mx-auto grid w-full min-w-0 gap-2 [grid-template-columns:repeat(${gridColumns},minmax(0,1fr))]${
+    isWideAlbum ? ' max-w-[var(--album-grid-max)]' : ''
+  }`;
+  const albumGridStyle = isWideAlbum
+    ? ({ ['--album-grid-max' as string]: `${albumGridMaxPx}px` } as React.CSSProperties)
+    : undefined;
 
   return (
     <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip bg-[var(--surface-base)] pb-20">
@@ -669,7 +696,7 @@ function MemoriesPageContent() {
               </button>
             </div>
             {viewMode === 'latest' ? (
-          <div className={`grid min-w-0 gap-2 [grid-template-columns:repeat(${gridColumns},minmax(0,1fr))]`}>
+          <div className={albumGridClassName} style={albumGridStyle}>
             {album.map((p, index) => (
               <motion.div
                 key={p.id}
@@ -743,9 +770,7 @@ function MemoriesPageContent() {
                     <h2 className="mb-3 mt-0 text-base font-bold text-slate-700">
                       {section.label} ({section.photos.length}{dt('memories_photo_count_suffix')})
                     </h2>
-                    <div
-                      className={`grid min-w-0 gap-2 [grid-template-columns:repeat(${gridColumns},minmax(0,1fr))]`}
-                    >
+                    <div className={albumGridClassName} style={albumGridStyle}>
                       {section.photos.map((p) => {
                         const globalIndex = displayListForLightbox.findIndex((x) => String(x.id) === String(p.id));
                         return (
