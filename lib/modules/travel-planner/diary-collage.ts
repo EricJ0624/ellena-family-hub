@@ -82,6 +82,27 @@ export function resolveCollageSlots(
   return saved.map((id) => (id && known.has(id) ? id : null));
 }
 
+/** 새로 올라온 첨부만 빈 칸에 넣는다. 사용자가 뺀 기존 사진은 다시 채우지 않는다. */
+export function placeNewAttachmentsInEmptySlots(
+  slots: CollageSlotIds,
+  previousIds: ReadonlySet<string>,
+  attachmentIds: string[],
+): CollageSlotIds {
+  const next = emptyCollageSlots();
+  for (let i = 0; i < COLLAGE_SLOT_COUNT; i += 1) {
+    next[i] = slots[i] ?? null;
+  }
+  const used = new Set(next.filter((id): id is string => Boolean(id)));
+  for (const id of attachmentIds) {
+    if (!id || previousIds.has(id) || used.has(id)) continue;
+    const empty = next.findIndex((slot) => !slot);
+    if (empty < 0) break;
+    next[empty] = id;
+    used.add(id);
+  }
+  return next;
+}
+
 export function placePhotoInSlot(
   slots: CollageSlotIds,
   photoId: string,

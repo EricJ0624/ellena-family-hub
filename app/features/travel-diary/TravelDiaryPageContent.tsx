@@ -295,6 +295,58 @@ export function TravelDiaryPageContent() {
     };
   };
 
+  const renameSlotTitle = async (slot: (typeof timelineSlots)[0], title: string) => {
+    if (!currentGroupId || !slot.source_kind || !slot.source_id) return;
+    const next = title.trim();
+    if (!next || next === slot.title) return;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) throw new Error('auth');
+
+    const body: Record<string, unknown> = { groupId: currentGroupId };
+    let path = '';
+    if (slot.source_kind === 'itinerary') {
+      path = `itineraries/${slot.source_id}`;
+      body.title = next;
+    } else if (
+      slot.source_kind === 'attraction' ||
+      slot.source_kind === 'dining' ||
+      slot.source_kind === 'accommodation'
+    ) {
+      path =
+        slot.source_kind === 'attraction'
+          ? `attractions/${slot.source_id}`
+          : slot.source_kind === 'dining'
+            ? `dining/${slot.source_id}`
+            : `accommodations/${slot.source_id}`;
+      body.name = next;
+    } else if (slot.source_kind === 'transport') {
+      path = `transports/${slot.source_id}`;
+      const parts = next.split(/\s*(?:→|->)\s*/);
+      if (parts.length >= 2 && parts[0]?.trim() && parts[1]?.trim()) {
+        body.departure = parts[0].trim();
+        body.arrival = parts.slice(1).join(' → ').trim();
+      } else {
+        body.departure = next;
+        body.arrival = null;
+      }
+    } else {
+      return;
+    }
+
+    const res = await fetch(`${API}/${path}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || 'rename');
+    await loadAll();
+  };
+
   const saveCollage = async (payload: {
     entryId: string;
     collage_attachment_ids?: (string | null)[];
@@ -637,6 +689,10 @@ export function TravelDiaryPageContent() {
                     note_placeholder: t('note_placeholder'),
                     mood_label: t('mood_label'),
                     photos_label: t('photos_label'),
+                    photos_uploading: t('photos_uploading'),
+                    photos_adjust: t('photos_adjust'),
+                    slot_title_label: t('slot_title_label'),
+                    title_required: t('title_required'),
                     rating_label: t('rating_label'),
                     revisit_label: t('revisit_label'),
                     expense_label: t('expense_label'),
@@ -672,6 +728,7 @@ export function TravelDiaryPageContent() {
                   }}
                   onSave={(p) => saveSlot(slot, p)}
                   onCollageSave={saveCollage}
+                  onRenameTitle={(title) => renameSlotTitle(slot, title)}
                   onHide={() => hideSlot(slot)}
                 />
               );

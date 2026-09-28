@@ -106,12 +106,16 @@ function GalleryPhoto({
   selected,
   objectPosition,
   onTap,
+  adjustLabel,
+  onAdjust,
 }: {
   attachment: UploadedAttachment;
   slotNumber: number | null;
   selected: boolean;
   objectPosition: string;
   onTap: () => void;
+  adjustLabel?: string;
+  onAdjust?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `gallery-${attachment.id}`,
@@ -119,30 +123,44 @@ function GalleryPhoto({
   });
 
   return (
-    <button
-      type="button"
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      onClick={onTap}
-      className={[
-        'relative overflow-hidden rounded-lg border-2 bg-slate-100 p-0',
-        selected ? 'border-violet-500 ring-2 ring-violet-300' : 'border-transparent',
-        isDragging ? 'opacity-40' : '',
-      ].join(' ')}
-    >
-      <img
-        src={photoSrc(attachment)}
-        alt=""
-        className="aspect-[4/3] h-auto w-full object-cover"
-        style={{ objectPosition }}
-      />
-      {slotNumber != null ? (
-        <span className="absolute left-1 top-1 rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-          {slotNumber}
-        </span>
+    <div className={['relative', isDragging ? 'opacity-40' : ''].join(' ')}>
+      <button
+        type="button"
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        onClick={onTap}
+        className={[
+          'block w-full overflow-hidden rounded-lg border-2 bg-slate-100 p-0',
+          selected ? 'border-violet-500 ring-2 ring-violet-300' : 'border-transparent',
+        ].join(' ')}
+      >
+        <img
+          src={photoSrc(attachment)}
+          alt=""
+          className="aspect-[4/3] h-auto w-full object-cover"
+          style={{ objectPosition }}
+        />
+        {slotNumber != null ? (
+          <span className="absolute left-1 top-1 rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+            {slotNumber}
+          </span>
+        ) : null}
+      </button>
+      {onAdjust && adjustLabel ? (
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAdjust();
+          }}
+          className="absolute bottom-1 right-1 z-[1] cursor-pointer rounded-full border-0 bg-zinc-900/75 px-1.5 py-0.5 text-[10px] font-medium text-white"
+        >
+          {adjustLabel}
+        </button>
       ) : null}
-    </button>
+    </div>
   );
 }
 
@@ -154,6 +172,9 @@ export function DiaryPhotoGalleryModal({
   labels,
   photoFocus,
   onSlotIdsChange,
+  editable = true,
+  adjustLabel,
+  onAdjustFocus,
 }: {
   open: boolean;
   onClose: () => void;
@@ -162,6 +183,9 @@ export function DiaryPhotoGalleryModal({
   labels: GalleryLabels;
   photoFocus?: PhotoFocusMap;
   onSlotIdsChange: (next: CollageSlotIds) => void;
+  editable?: boolean;
+  adjustLabel?: string;
+  onAdjustFocus?: (attachment: UploadedAttachment) => void;
 }) {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [activeSrc, setActiveSrc] = useState<string | null>(null);
@@ -184,7 +208,13 @@ export function DiaryPhotoGalleryModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  const changeSlots = (next: CollageSlotIds) => {
+    if (!editable) return;
+    onSlotIdsChange(next);
+  };
+
   const onDragStart = (event: DragStartEvent) => {
+    if (!editable) return;
     const id = event.active.data.current?.attachmentId as string | undefined;
     const photo = id ? byId.get(id) : null;
     setActiveSrc(photo ? photoSrc(photo) : null);
@@ -197,14 +227,15 @@ export function DiaryPhotoGalleryModal({
     if (!photoId) return;
     if (overId.startsWith('slot-')) {
       const index = Number(overId.slice(5));
-      if (Number.isInteger(index)) onSlotIdsChange(placePhotoInSlot(slotIds, photoId, index));
+      if (Number.isInteger(index)) changeSlots(placePhotoInSlot(slotIds, photoId, index));
       setPickedId(null);
     }
   };
 
   const tapSlot = (index: number) => {
+    if (!editable) return;
     if (pickedId) {
-      onSlotIdsChange(placePhotoInSlot(slotIds, pickedId, index));
+      changeSlots(placePhotoInSlot(slotIds, pickedId, index));
       setPickedId(null);
       return;
     }
@@ -235,6 +266,19 @@ export function DiaryPhotoGalleryModal({
         </button>
       </div>
 
+      {!editable ? (
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {attachments.map((attachment) => (
+            <img
+              key={attachment.id}
+              src={photoSrc(attachment)}
+              alt=""
+              className="aspect-[4/3] h-auto w-full rounded-lg object-cover"
+              style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
+            />
+          ))}
+        </div>
+      ) : (
       <DndContext
         sensors={sensors}
         onDragStart={onDragStart}
@@ -257,7 +301,7 @@ export function DiaryPhotoGalleryModal({
                   removeLabel={labels.slotRemove}
                   objectPosition={objectPositionCss(photo ? photoFocus?.[photo.id] : undefined)}
                   onTap={() => tapSlot(index)}
-                  onClear={() => onSlotIdsChange(clearCollageSlot(slotIds, index))}
+                  onClear={() => changeSlots(clearCollageSlot(slotIds, index))}
                 />
               );
             })}
@@ -278,6 +322,15 @@ export function DiaryPhotoGalleryModal({
                   onTap={() =>
                     setPickedId((prev) => (prev === attachment.id ? null : attachment.id))
                   }
+                  adjustLabel={adjustLabel}
+                  onAdjust={
+                    onAdjustFocus
+                      ? () => {
+                          setPickedId(null);
+                          onAdjustFocus(attachment);
+                        }
+                      : undefined
+                  }
                 />
               );
             })}
@@ -289,6 +342,7 @@ export function DiaryPhotoGalleryModal({
           ) : null}
         </DragOverlay>
       </DndContext>
+      )}
     </GlassSafeModal>
   );
 }

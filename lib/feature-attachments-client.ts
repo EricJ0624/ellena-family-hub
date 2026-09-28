@@ -154,6 +154,13 @@ async function getUploadUrl(groupId: string, fileName: string, mimeType: string,
   return json as { presignedUrl: string; s3Key: string; s3Url: string };
 }
 
+export async function sha256HexOfFile(file: Blob): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 export async function uploadFeatureAttachment(params: {
   groupId: string;
   featureType: FeatureType;
@@ -162,8 +169,10 @@ export async function uploadFeatureAttachment(params: {
   file: File;
   signal?: AbortSignal;
   onProgress?: (progress: number) => void;
+  /** SHA-256 of the original file. Diary album mirror uses it to skip duplicates. */
+  contentSha256?: string;
 }) {
-  const { groupId, featureType, entityType, entityId, signal, onProgress } = params;
+  const { groupId, featureType, entityType, entityId, signal, onProgress, contentSha256 } = params;
   const normalizedIn = ensureImageFileWithKnownMime(params.file);
   const file = await compressImageAuto(normalizedIn);
   const validationError = validateAttachmentFile(file);
@@ -221,6 +230,7 @@ export async function uploadFeatureAttachment(params: {
       imageUrl: originalMeta.s3Url,
       thumbnailS3Key,
       thumbnailUrl,
+      contentSha256: contentSha256 || undefined,
     }),
   });
   const completeJson = await completeRes.json().catch(() => ({}));
@@ -239,6 +249,7 @@ export async function uploadFeatureAttachments(params: {
   retryCount?: number;
   onJobsChange?: (jobs: UploadJob[]) => void;
   signal?: AbortSignal;
+  contentSha256ForFile?: (file: File) => string | undefined;
 }) {
   const {
     groupId,
@@ -248,6 +259,7 @@ export async function uploadFeatureAttachments(params: {
     files,
     signal,
   } = params;
+  const contentSha256ForFile = params.contentSha256ForFile;
   const maxConcurrent = Math.max(1, params.maxConcurrent ?? 3);
   const retryCount = Math.max(0, params.retryCount ?? 1);
 
@@ -288,6 +300,7 @@ export async function uploadFeatureAttachments(params: {
               job.progress = p;
               emit();
             },
+            contentSha256: contentSha256ForFile?.(file),
           });
           job.status = 'success';
           job.attachment = attachment;

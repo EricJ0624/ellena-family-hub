@@ -8,6 +8,7 @@ import { formatMoneyAmount } from '@/lib/format-currency';
 import {
   deleteAttachment,
   getAttachmentsForEntity,
+  sha256HexOfFile,
   uploadFeatureAttachments,
   validateAttachmentFile,
   type UploadedAttachment,
@@ -19,11 +20,13 @@ import {
   mergePhotoFocus,
   parseCollageStyle,
   parsePhotoFocus,
+  placeNewAttachmentsInEmptySlots,
   resolveCollageSlots,
   type CollageSlotIds,
   type DiaryCollageStyle,
   type PhotoFocusMap,
 } from '@/lib/modules/travel-planner/diary-collage';
+import { DB_TABLES } from '@/lib/db-table-names';
 import { supabase } from '@/lib/supabase';
 import { parseShowMap } from '@/lib/modules/travel-planner/diary-types';
 import { canShowDiaryPlaceMap } from '@/lib/modules/travel-planner/google-maps-embed';
@@ -47,6 +50,10 @@ type Labels = {
   note_placeholder: string;
   mood_label: string;
   photos_label: string;
+  photos_uploading: string;
+  photos_adjust: string;
+  slot_title_label: string;
+  title_required: string;
   rating_label: string;
   revisit_label: string;
   expense_label: string;
@@ -104,6 +111,7 @@ type Props = {
     collage_style?: DiaryCollageStyle;
     photo_focus?: PhotoFocusMap;
   }) => Promise<void>;
+  onRenameTitle?: (title: string) => Promise<void>;
   onHide?: () => Promise<void>;
 };
 
@@ -119,6 +127,11 @@ type PendingReceipt = {
   file: File;
   previewUrl: string;
 };
+
+function isGenericLibraryFilename(name: string): boolean {
+  const base = name.trim().toLowerCase();
+  return /^(image|img|photo|picture|사진)(\s*\(\d+\))?\.(jpe?g|png|webp|heic|heif)$/.test(base);
+}
 
 function revokePendingReceipts(items: PendingReceipt[]) {
   for (const item of items) {
@@ -140,6 +153,7 @@ export function DiaryEntryCard({
   labels,
   onSave,
   onCollageSave,
+  onRenameTitle,
   onHide,
 }: Props) {
   const { uiTheme } = useGroup();
@@ -176,16 +190,18 @@ export function DiaryEntryCard({
     parsePhotoFocus(entry?.photo_focus),
   );
   const [focusQueue, setFocusQueue] = useState<UploadedAttachment[]>([]);
-  const [focusSaving, setFocusSaving] = useState(false);
+  const [manualFocus, setManualFocus] = useState<UploadedAttachment | null>(null);
+  const [titleDraft, setTitleDraft] = useState(slot.title);
   const slotsCustomized = useRef(entry?.collage_attachment_ids != null);
   const slotIdsRef = useRef<CollageSlotIds>(emptyCollageSlots());
   const photoFocusRef = useRef<PhotoFocusMap>(parsePhotoFocus(entry?.photo_focus));
+  const attachmentLoadGen = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const receiptFileRef = useRef<HTMLInputElement>(null);
   const pendingReceiptsRef = useRef<PendingReceipt[]>([]);
   const entryId = entry?.id ?? null;
 
-  const focusCurrent = focusQueue[0] ?? null;
+  const focusCurrent = manualFocus ?? focusQueue[0] ?? null;
 
   useEffect(() => {
     pendingReceiptsRef.current = pendingReceipts;
@@ -203,8 +219,17 @@ export function DiaryEntryCard({
   }, [entry?.id, entry?.note, entry?.mood_tags]);
 
   useEffect(() => {
-    setMode(entry?.id ? 'view' : 'edit');
+    setMode((current) => {
+      if (!entry?.id) return 'edit';
+      if (current === 'edit') return 'edit';
+      return 'view';
+    });
   }, [entry?.id]);
+
+  useEffect(() => {
+    if (mode === 'edit') return;
+    setTitleDraft(slot.title);
+  }, [slot.title, mode]);
 
   useEffect(() => {
     setRating(feedback?.rating ?? null);
@@ -217,13 +242,14 @@ export function DiaryEntryCard({
   }, [linkedExpense?.id, linkedExpense?.amount, mode]);
 
   useEffect(() => {
+    if (mode === 'edit') return;
     setCollageStyle(parseCollageStyle(entry?.collage_style));
     setShowMapPref(parseShowMap(entry?.show_map));
     const nextFocus = parsePhotoFocus(entry?.photo_focus);
     setPhotoFocus(nextFocus);
     photoFocusRef.current = nextFocus;
     slotsCustomized.current = entry?.collage_attachment_ids != null;
-  }, [entry?.id, entry?.collage_style, entry?.collage_attachment_ids, entry?.show_map, entry?.photo_focus]);
+  }, [mode, entry?.id, entry?.collage_style, entry?.collage_attachment_ids, entry?.show_map, entry?.photo_focus]);
 
   useEffect(() => {
     photoFocusRef.current = photoFocus;
@@ -231,12 +257,20 @@ export function DiaryEntryCard({
 
   useEffect(() => {
     if (!entryId) {
+      attachmentLoadGen.current += 1;
       setAttachments([]);
       return;
     }
+    const gen = ++attachmentLoadGen.current;
     void getAttachmentsForEntity({ groupId, entityType: 'travel_diary_entry', entityId: entryId })
-      .then(setAttachments)
-      .catch(() => setAttachments([]));
+      .then((rows) => {
+        if (gen !== attachmentLoadGen.current) return;
+        setAttachments(rows);
+      })
+      .catch(() => {
+        if (gen !== attachmentLoadGen.current) return;
+        setAttachments([]);
+      });
   }, [groupId, entryId]);
 
   useEffect(() => {
@@ -377,6 +411,14 @@ export function DiaryEntryCard({
     setExpense(expenseInputValue(linkedExpense));
     setCollageStyle(parseCollageStyle(entry?.collage_style));
     setShowMapPref(parseShowMap(entry?.show_map));
+    setTitleDraft(slot.title);
+    const nextFocus = parsePhotoFocus(entry?.photo_focus);
+    setPhotoFocus(nextFocus);
+    photoFocusRef.current = nextFocus;
+    slotsCustomized.current = entry?.collage_attachment_ids != null;
+    setSlotIds(resolveCollageSlots(attachments.map((item) => item.id), entry?.collage_attachment_ids ?? null));
+    setManualFocus(null);
+    setFocusQueue([]);
     clearPendingReceipts();
   };
 
@@ -402,17 +444,25 @@ export function DiaryEntryCard({
   };
 
   const handleSlotIdsChange = (next: CollageSlotIds) => {
+    if (mode !== 'edit') return;
     slotsCustomized.current = true;
     setSlotIds(next);
-    void persistCollage(next, collageStyle);
   };
 
   const handleStyleChange = (next: DiaryCollageStyle) => {
     setCollageStyle(next);
-    void persistCollage(slotsCustomized.current ? slotIds : undefined, next);
   };
 
   const handleSave = async (opts?: { stayInEdit?: boolean }) => {
+    if (uploading) return null;
+    const nextTitle = titleDraft.trim();
+    if (!opts?.stayInEdit && slot.source_id && !nextTitle) {
+      alert(labels.title_required);
+      return null;
+    }
+    const slotsSnapshot = [...slotIdsRef.current];
+    const focusSnapshot = { ...photoFocusRef.current };
+    const styleSnapshot = collageStyle;
     setSaving(true);
     try {
       const exp = parseExpenseAmount();
@@ -422,7 +472,7 @@ export function DiaryEntryCard({
         rating,
         is_revisit: isRevisit,
         actual_expense: exp,
-        collage_style: collageStyle,
+        collage_style: styleSnapshot,
         show_map: showMapPref,
       });
 
@@ -430,6 +480,18 @@ export function DiaryEntryCard({
         const expenseId = result?.expenseId ?? linkedExpense?.id ?? null;
         const pendingFiles = pendingReceiptsRef.current;
         const deleteIds = pendingReceiptDeleteIds;
+
+        if (result?.entryId) {
+          await onCollageSave({
+            entryId: result.entryId,
+            collage_attachment_ids: slotsSnapshot,
+            collage_style: styleSnapshot,
+            photo_focus: focusSnapshot,
+          });
+          if (onRenameTitle && slot.source_id && nextTitle && nextTitle !== slot.title) {
+            await onRenameTitle(nextTitle);
+          }
+        }
 
         if (pendingFiles.length > 0 && !expenseId) {
           alert(labels.receipt_need_expense);
@@ -466,9 +528,10 @@ export function DiaryEntryCard({
           setReceipts([]);
         }
 
+        if (result?.entryId) setMode('view');
+
         setSavedFlash(true);
         setTimeout(() => setSavedFlash(false), 1500);
-        if (result?.entryId) setMode('view');
         return result;
       }
 
@@ -527,39 +590,45 @@ export function DiaryEntryCard({
 
   const refreshAttachments = async (targetId: string, previousIds?: Set<string>) => {
     const before = previousIds ?? new Set(attachments.map((item) => item.id));
+    const gen = ++attachmentLoadGen.current;
     const rows = await getAttachmentsForEntity({
       groupId,
       entityType: 'travel_diary_entry',
       entityId: targetId,
     });
+    if (gen !== attachmentLoadGen.current) return;
     setAttachments(rows);
+    const ids = rows.map((row) => row.id);
+    const localNext = placeNewAttachmentsInEmptySlots(slotIdsRef.current, before, ids);
+    const localChanged = localNext.some((id, index) => id !== slotIdsRef.current[index]);
+    if (localChanged) {
+      slotsCustomized.current = true;
+      slotIdsRef.current = localNext;
+      setSlotIds(localNext);
+    }
+    if (entry?.collage_attachment_ids != null) {
+      const savedResolved = resolveCollageSlots(ids, entry.collage_attachment_ids);
+      const savedNext = placeNewAttachmentsInEmptySlots(savedResolved, before, ids);
+      const savedChanged = savedNext.some((id, index) => id !== savedResolved[index]);
+      if (savedChanged) await persistCollage(savedNext, undefined, targetId);
+    }
     void enqueuePortraitFocus(rows, before);
   };
 
-  const persistPhotoFocus = async (nextFocus: PhotoFocusMap, targetId: string) => {
-    setPhotoFocus(nextFocus);
-    photoFocusRef.current = nextFocus;
-    setFocusSaving(true);
-    try {
-      await onCollageSave({ entryId: targetId, photo_focus: nextFocus });
-    } catch {
-      alert(labels.save_failed);
-    } finally {
-      setFocusSaving(false);
-    }
-  };
-
   const finishFocusCurrent = () => {
+    if (manualFocus) {
+      setManualFocus(null);
+      return;
+    }
     setFocusQueue((prev) => prev.slice(1));
   };
 
-  const onFocusConfirm = async (y: number) => {
-    if (!focusCurrent || !entryId) {
-      finishFocusCurrent();
-      return;
+  const onFocusConfirm = (y: number) => {
+    if (focusCurrent) {
+      const nextFocus = mergePhotoFocus(photoFocusRef.current, focusCurrent.id, y);
+      setPhotoFocus(nextFocus);
+      photoFocusRef.current = nextFocus;
     }
-    const nextFocus = mergePhotoFocus(photoFocusRef.current, focusCurrent.id, y);
-    await persistPhotoFocus(nextFocus, entryId);
     finishFocusCurrent();
   };
 
@@ -569,30 +638,96 @@ export function DiaryEntryCard({
     return result?.entryId ?? null;
   };
 
+  const findExistingAlbumItemId = async (file: File, contentSha256: string): Promise<string | null> => {
+    const hashMarker = `sha256:${contentSha256}`;
+    const { data: byHash } = await supabase
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('description', hashMarker)
+      .limit(1)
+      .maybeSingle();
+    const hashId = (byHash as { id?: string } | null)?.id;
+    if (hashId) return String(hashId);
+
+    if (!file.name || file.size <= 0 || isGenericLibraryFilename(file.name)) return null;
+    const { data: byFile } = await supabase
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('original_filename', file.name)
+      .eq('original_file_size', file.size)
+      .limit(1)
+      .maybeSingle();
+    const fileId = (byFile as { id?: string } | null)?.id;
+    return fileId ? String(fileId) : null;
+  };
+
+  const linkAlbumItems = async (targetId: string, albumItemIds: string[], previousIds: Set<string>) => {
+    if (albumItemIds.length === 0) return;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) throw new Error('auth');
+    const res = await fetch(`/api/v1/travel/diary-entries/${targetId}/from-album`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId, albumItemIds }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || 'album');
+    await refreshAttachments(targetId, previousIds);
+  };
+
   const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = '';
     if (files.length === 0) return;
+    if (uploading) return;
 
     const targetId = await ensureEntryId();
     if (!targetId) return;
 
     setUploading(true);
     try {
-      const toUpload = files.filter((f) => validateAttachmentFile(f) === null);
+      const toUpload = files.filter((file) => validateAttachmentFile(file) === null);
       if (toUpload.length === 0) {
         alert(labels.upload_failed);
         return;
       }
       const before = new Set(attachments.map((item) => item.id));
-      await uploadFeatureAttachments({
-        groupId,
-        featureType: 'travel',
-        entityType: 'travel_diary_entry',
-        entityId: targetId,
-        files: toUpload,
-      });
-      await refreshAttachments(targetId, before);
+      const albumIds: string[] = [];
+      const fresh: File[] = [];
+      const hashes = new Map<File, string>();
+      for (const file of toUpload) {
+        const hash = await sha256HexOfFile(file);
+        hashes.set(file, hash);
+        let existingId: string | null = null;
+        try {
+          existingId = await findExistingAlbumItemId(file, hash);
+        } catch {
+          existingId = null;
+        }
+        if (existingId) albumIds.push(existingId);
+        else fresh.push(file);
+      }
+      const uniqueAlbumIds = [...new Set(albumIds)];
+      if (uniqueAlbumIds.length > 0) {
+        await linkAlbumItems(targetId, uniqueAlbumIds, before);
+      }
+      if (fresh.length > 0) {
+        const jobs = await uploadFeatureAttachments({
+          groupId,
+          featureType: 'travel',
+          entityType: 'travel_diary_entry',
+          entityId: targetId,
+          files: fresh,
+          contentSha256ForFile: (file) => hashes.get(file),
+        });
+        if (jobs.some((job) => job.status === 'failed')) {
+          alert(labels.upload_failed);
+        }
+        await refreshAttachments(targetId, before);
+      }
     } catch {
       alert(labels.upload_failed);
     } finally {
@@ -601,25 +736,13 @@ export function DiaryEntryCard({
   };
 
   const onAlbumConfirm = async (albumItemIds: string[]) => {
+    if (uploading) return;
     const targetId = await ensureEntryId();
     if (!targetId) return;
-    const { data: session } = await supabase.auth.getSession();
-    const token = session.session?.access_token;
-    if (!token) {
-      alert(labels.save_failed);
-      return;
-    }
     setUploading(true);
     try {
-      const res = await fetch(`/api/v1/travel/diary-entries/${targetId}/from-album`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, albumItemIds }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error);
       const before = new Set(attachments.map((item) => item.id));
-      await refreshAttachments(targetId, before);
+      await linkAlbumItems(targetId, albumItemIds, before);
     } catch {
       alert(labels.upload_failed);
     } finally {
@@ -652,9 +775,25 @@ export function DiaryEntryCard({
 
   return (
     <div className={['rounded-2xl p-4', diaryCardShellClass(themeOpts)].join(' ')}>
-      <div className={['text-sm font-semibold tracking-tight', diaryTitleClass(themeOpts)].join(' ')}>
-        {slot.title}
-      </div>
+      {!isView && slot.source_id ? (
+        <label className="block">
+          <span className={['text-xs font-medium', labelMutedClass].join(' ')}>
+            {labels.slot_title_label}
+          </span>
+          <input
+            type="text"
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            maxLength={200}
+            aria-label={labels.slot_title_label}
+            className="mt-1 w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-800"
+          />
+        </label>
+      ) : (
+        <div className={['text-sm font-semibold tracking-tight', diaryTitleClass(themeOpts)].join(' ')}>
+          {slot.title}
+        </div>
+      )}
       <div
         className={[
           'mt-0.5 text-xs font-semibold tabular-nums tracking-wide',
@@ -1054,7 +1193,7 @@ export function DiaryEntryCard({
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={saving}
+              disabled={saving || uploading}
               onClick={() => void handleSave()}
               className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
             >
@@ -1062,11 +1201,11 @@ export function DiaryEntryCard({
             </button>
             <button
               type="button"
-              disabled={uploading}
+              disabled={uploading || saving}
               onClick={() => fileRef.current?.click()}
               className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
             >
-              {labels.photos_label}
+              {uploading ? labels.photos_uploading : labels.photos_label}
             </button>
             <button
               type="button"
@@ -1079,7 +1218,7 @@ export function DiaryEntryCard({
             {entryId && (
               <button
                 type="button"
-                disabled={saving}
+                disabled={saving || uploading}
                 onClick={() => {
                   restoreFromSaved();
                   setMode('view');
@@ -1121,6 +1260,12 @@ export function DiaryEntryCard({
         attachments={attachments}
         slotIds={slotIds}
         photoFocus={photoFocus}
+        editable={!isView}
+        adjustLabel={labels.photos_adjust}
+        onAdjustFocus={(attachment) => {
+          setGalleryOpen(false);
+          setManualFocus(attachment);
+        }}
         labels={{
           photosLabel: labels.photos_label,
           closeLabel: labels.photos_close,
@@ -1132,14 +1277,14 @@ export function DiaryEntryCard({
       />
 
       <DiaryPhotoFocusModal
-        open={Boolean(focusCurrent) && !focusSaving}
+        open={mode === 'edit' && Boolean(focusCurrent)}
         imageUrl={focusCurrent?.image_url || focusCurrent?.thumbnail_url || ''}
         initialY={focusCurrent ? photoFocus[focusCurrent.id]?.y ?? 50 : 50}
         title={labels.photo_focus_title}
         hint={labels.photo_focus_hint}
         confirmLabel={labels.photo_focus_confirm}
         skipLabel={labels.photo_focus_skip}
-        onConfirm={(y) => void onFocusConfirm(y)}
+        onConfirm={onFocusConfirm}
         onSkip={finishFocusCurrent}
       />
 

@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       imageUrl,
       thumbnailS3Key,
       thumbnailUrl,
+      contentSha256,
     } = body ?? {};
 
     if (!groupId || !featureType || !entityType || !entityId || !originalFilename || !mimeType || !sizeBytes || !s3Key || !imageUrl) {
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
         originalFilename: String(originalFilename),
         mimeType: mimeNorm === 'image/heif' ? 'image/heic' : mimeNorm,
         sizeBytes,
+        contentSha256: typeof contentSha256 === 'string' ? contentSha256 : null,
       });
     }
 

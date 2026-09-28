@@ -54,7 +54,7 @@ export async function deleteS3IfUnreferenced(
   return deleteFromS3(key);
 }
 
-/** Diary upload: one S3 object, also visible in family album. Skip if that key already exists. */
+/** Diary upload: one S3 object, also visible in family album. Skip duplicates. */
 export async function ensureFamilyAlbumItemForDiaryPhoto(
   supabase: ServerClient,
   params: {
@@ -64,12 +64,17 @@ export async function ensureFamilyAlbumItemForDiaryPhoto(
     originalFilename: string;
     mimeType: string;
     sizeBytes: number;
+    /** SHA-256 of the original file bytes, before compression. */
+    contentSha256?: string | null;
   },
 ): Promise<void> {
   const s3Key = String(params.s3Key || '').trim();
   if (!s3Key) return;
 
-  const { data: existing } = await supabase
+  const contentSha256 = String(params.contentSha256 || '').trim().toLowerCase();
+  const hashMarker = /^[a-f0-9]{64}$/.test(contentSha256) ? `sha256:${contentSha256}` : '';
+
+  const { data: existingByKey } = await supabase
     .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
     .select('id')
     .eq('group_id', params.groupId)
@@ -77,7 +82,18 @@ export async function ensureFamilyAlbumItemForDiaryPhoto(
     .limit(1)
     .maybeSingle();
 
-  if (existing?.id) return;
+  if (existingByKey?.id) return;
+
+  if (hashMarker) {
+    const { data: existingByHash } = await supabase
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
+      .select('id')
+      .eq('group_id', params.groupId)
+      .eq('description', hashMarker)
+      .limit(1)
+      .maybeSingle();
+    if (existingByHash?.id) return;
+  }
 
   const imageUrl = generatePublicAssetUrl(s3Key);
   const { error } = await supabase.from(DB_TABLES.FAMILY_ALBUM_ITEMS).insert({
@@ -91,6 +107,7 @@ export async function ensureFamilyAlbumItemForDiaryPhoto(
     mime_type: params.mimeType,
     original_filename: params.originalFilename,
     upload_mode: 'normal',
+    description: hashMarker || null,
   });
 
   if (error) {
