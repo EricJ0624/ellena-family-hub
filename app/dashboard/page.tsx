@@ -1834,8 +1834,10 @@ export default function FamilyHub() {
   const isAdminTitleContext = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const customFontSizeCap = typeof effectiveTitleStyle?.fontSize === 'number' ? effectiveTitleStyle.fontSize : null;
   const titleRole = isAdminTitleContext ? 'admin' : 'user';
-  const titleFontMin = (TITLE_FONT_MIN[titleRole] as Record<string, number>)[lang] ?? TITLE_FONT_MIN[titleRole].en;
-  const titleVw = isAdminTitleContext ? 7 : 9;
+  /** 일반 사용자는 관리 버튼이 없어 행 전체 폭으로 커지므로, 크기 상한만 관리자와 같게 둔다 */
+  const titleSizeRole = isAdminTitleContext ? titleRole : 'admin';
+  const titleFontMin = (TITLE_FONT_MIN[titleSizeRole] as Record<string, number>)[lang] ?? TITLE_FONT_MIN[titleSizeRole].en;
+  const titleVw = titleSizeRole === 'admin' ? 7 : 9;
   const titleRowRef = useRef<HTMLDivElement>(null);
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const titleH1Ref = useRef<HTMLHeadingElement>(null);
@@ -1851,11 +1853,18 @@ export default function FamilyHub() {
   const getTitleFitMaxWidth = useCallback(() => {
     /** kids: 하트·패딩은 em이라 fitKidsGlassTitleFontSize가 글자 크기와 함께 계산. 관리자 버튼은 h1 폭에서 이미 제외 */
     const kidsGlassInsetPx = 0;
+    const capMemberTitleWidth = (px: number) => {
+      if (isAdminTitleContext) return px;
+      const frameCap = frameIsPortrait
+        ? portraitTitleMaxWidthPx
+        : DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.landscape;
+      return Math.min(px, frameCap);
+    };
     if (frameIsPortrait) {
       const h1 = titleH1Ref.current;
       // 레이아웃 확정 후 실측 폭이 최우선 (추정치/ellipsis 불일치 방지)
       if (h1 && h1.clientWidth > 0) {
-        return Math.max(80, h1.clientWidth - kidsGlassInsetPx);
+        return capMemberTitleWidth(Math.max(80, h1.clientWidth - kidsGlassInsetPx));
       }
       const row = titleRowRef.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
@@ -1867,14 +1876,14 @@ export default function FamilyHub() {
         : (hasAdminButton ? DASHBOARD_TITLE_ADMIN_RESERVE_PX : 0))
         + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
-      return Math.max(
+      return capMemberTitleWidth(Math.max(
         80,
         getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton || !!notifEl)
           - kidsGlassInsetPx,
-      );
+      ));
     }
     const row = titleRowRef.current;
-    if (!row) return Math.max(80, DASHBOARD_TITLE_MAX_WIDTH[titleRole] - kidsGlassInsetPx);
+    if (!row) return capMemberTitleWidth(Math.max(80, DASHBOARD_TITLE_MAX_WIDTH[titleRole] - kidsGlassInsetPx));
     const adminBtn = row.querySelector('[data-dashboard-admin-btn]') as HTMLElement | null;
     const notifEl = row.querySelector('[data-notification-center]') as HTMLElement | null;
     const hasAdminButton = !!adminBtn || isAdminTitleContext;
@@ -1885,8 +1894,8 @@ export default function FamilyHub() {
           ? DASHBOARD_TITLE_ADMIN_RESERVE_PX
           : 0)
       + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
-    return Math.max(120, row.clientWidth - btnWidth - 16 - kidsGlassInsetPx);
-  }, [frameIsPortrait, titleRole, isAdminTitleContext, isKidsTheme]);
+    return capMemberTitleWidth(Math.max(120, row.clientWidth - btnWidth - 16 - kidsGlassInsetPx));
+  }, [frameIsPortrait, titleRole, isAdminTitleContext, isKidsTheme, portraitTitleMaxWidthPx]);
 
   const customTitleFontFamily = isDefaultDashboardTitle
     ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1899,7 +1908,7 @@ export default function FamilyHub() {
     : BAROQUE_MAT_DASHBOARD_TITLE.letterSpacingPx;
   const customTitleMaxPx = customTitleMaxFontSize(
     dashboardTitleText,
-    titleRole,
+    titleSizeRole,
     customFontSizeCap,
   );
   // 세로 커스텀 타이틀 — 좌측 정렬 가용 폭이 넓어져도 상한이 28이면 여전히 작아 보임
@@ -7079,7 +7088,11 @@ export default function FamilyHub() {
             <h1
               ref={titleH1Ref}
               style={dashboardTitleStyle}
-              className={frameIsPortrait ? 'leading-[1.15]' : undefined}
+              className={[
+                frameIsPortrait ? 'leading-[1.15]' : '',
+                /* 글래스 띠가 줄박스 밖으로 나가 액자 위에 그려지지 않게 행 높이에 포함 */
+                !isAdminTitleContext ? 'flex min-w-0 items-center' : '',
+              ].filter(Boolean).join(' ') || undefined}
             >
               {isKidsTheme ? (
                 <span className="dashboard-family-title-glass">
