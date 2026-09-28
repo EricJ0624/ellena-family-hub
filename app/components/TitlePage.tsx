@@ -37,6 +37,8 @@ import {
 const SWIPE_THRESHOLD_PX = 48;
 const SLIDE_OFFSET_PX = 28;
 const SLIDE_DURATION_SEC = 0.32;
+/** 첫 안내 중에만 사진·액자 전환을 느리게 */
+const HINT_SLIDE_DURATION_SEC = 0.95;
 
 
 // 날짜 기반 해시 시드 생성 함수
@@ -92,7 +94,7 @@ interface DailyPhotoFrameProps {
   onPhotoOrientationChange?: (isPortrait: boolean) => void;
   /** false면 액자 제스처 안내를 시작하지 않음 (위젯 쇼룸 등 선행 온보딩) */
   gestureHintEnabled?: boolean;
-  /** 제스처 안내 완료 저장 스코프 (그룹 ID). 없으면 레거시 전역 키 */
+  /** @deprecated 안내는 브라우저당 한 번이라 그룹 ID를 쓰지 않습니다. */
   gestureHintScope?: string | null;
 }
 
@@ -104,7 +106,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   groupCaptionName,
   onPhotoOrientationChange,
   gestureHintEnabled = true,
-  gestureHintScope = null,
 }) => {
   const { lang } = useLanguage();
   const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
@@ -190,8 +191,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const completeHint = useCallback(() => {
     setHintPhase(null);
-    writePhotoFrameGestureHintSeen(gestureHintScope);
-  }, [gestureHintScope]);
+    writePhotoFrameGestureHintSeen();
+  }, []);
 
   useEffect(() => {
     if (!mounted) return;
@@ -199,10 +200,10 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
       setHintPhase(null);
       return;
     }
-    if (readPhotoFrameGestureHintSeen(gestureHintScope)) return;
+    if (readPhotoFrameGestureHintSeen()) return;
     const showTimer = setTimeout(() => setHintPhase('h'), 0);
     return () => clearTimeout(showTimer);
-  }, [mounted, gestureHintEnabled, gestureHintScope]);
+  }, [mounted, gestureHintEnabled]);
 
   const photoUndoRef = useRef<{ fromId: string | number; dir: number } | null>(null);
 
@@ -366,6 +367,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const slideEnterOffset = -slideDir * SLIDE_OFFSET_PX;
   const slideExitOffset = slideDir * SLIDE_OFFSET_PX;
+  const slideDurationSec = hintPhase ? HINT_SLIDE_DURATION_SEC : SLIDE_DURATION_SEC;
 
   return (
     <motion.div
@@ -413,7 +415,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
               initial={slideAxis === 'y' ? { opacity: 0, y: slideEnterOffset } : { opacity: 1 }}
               animate={{ opacity: 1, y: 0 }}
               exit={slideAxis === 'y' ? { opacity: 0, y: slideExitOffset } : { opacity: 1 }}
-              transition={{ duration: SLIDE_DURATION_SEC, ease: 'easeOut' }}
+              transition={{ duration: slideDurationSec, ease: 'easeOut' }}
               className="absolute inset-0"
             >
               <PhotoFrameSVG frameStyle={frameStyle} />
@@ -454,7 +456,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     x: slideAxis === 'x' ? slideExitOffset : 0,
                     y: slideAxis === 'y' ? slideExitOffset : 0,
                   }}
-                  transition={{ duration: SLIDE_DURATION_SEC, ease: 'easeOut' }}
+                  transition={{ duration: slideDurationSec, ease: 'easeOut' }}
                   className="absolute inset-0 overflow-hidden"
                 >
                   <Image
@@ -502,7 +504,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     x: slideAxis === 'x' ? slideExitOffset : 0,
                     y: slideAxis === 'y' ? slideExitOffset : 0,
                   }}
-                  transition={{ duration: SLIDE_DURATION_SEC, ease: 'easeOut' }}
+                  transition={{ duration: slideDurationSec, ease: 'easeOut' }}
                   className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a]"
                 >
                   <img
