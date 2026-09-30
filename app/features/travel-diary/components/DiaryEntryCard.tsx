@@ -185,6 +185,7 @@ export function DiaryEntryCard({
   const [showMapPref, setShowMapPref] = useState(() => parseShowMap(entry?.show_map));
   const [slotIds, setSlotIds] = useState<CollageSlotIds>(() => emptyCollageSlots());
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryZoomId, setGalleryZoomId] = useState<string | null>(null);
   const [albumOpen, setAlbumOpen] = useState(false);
   const [photoFocus, setPhotoFocus] = useState<PhotoFocusMap>(() =>
     parsePhotoFocus(entry?.photo_focus),
@@ -809,7 +810,18 @@ export function DiaryEntryCard({
           style={collageStyle}
           photosLabel={labels.photos_label}
           photoFocus={photoFocus}
-          onOpen={() => setGalleryOpen(true)}
+          onOpen={() => {
+            setGalleryZoomId(null);
+            setGalleryOpen(true);
+          }}
+          onSelectPhoto={
+            isView
+              ? (photo) => {
+                  setGalleryZoomId(photo.id);
+                  setGalleryOpen(true);
+                }
+              : undefined
+          }
         />
       ) : null}
 
@@ -1256,8 +1268,12 @@ export function DiaryEntryCard({
 
       <DiaryPhotoGalleryModal
         open={galleryOpen}
-        onClose={() => setGalleryOpen(false)}
+        onClose={() => {
+          setGalleryOpen(false);
+          setGalleryZoomId(null);
+        }}
         attachments={attachments}
+        initialZoomId={isView ? galleryZoomId : null}
         slotIds={slotIds}
         photoFocus={photoFocus}
         editable={!isView}

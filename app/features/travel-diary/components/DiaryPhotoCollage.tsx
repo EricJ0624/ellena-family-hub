@@ -87,12 +87,14 @@ export function DiaryPhotoCollage({
   style,
   photosLabel,
   onOpen,
+  onSelectPhoto,
   photoFocus,
 }: {
   photos: UploadedAttachment[];
   style: DiaryCollageStyle;
   photosLabel: string;
   onOpen: () => void;
+  onSelectPhoto?: (attachment: UploadedAttachment) => void;
   photoFocus?: PhotoFocusMap;
 }) {
   const count = Math.min(Math.max(photos.length, 0), COLLAGE_SLOT_COUNT) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -112,45 +114,74 @@ export function DiaryPhotoCollage({
 
   const slots = (style === 'postal' ? POSTAL_SLOTS : FILM_SLOTS)[count];
   const isPostal = style === 'postal';
+  const frames = photos.slice(0, count).map((attachment, index) => {
+    const frame = isPostal ? (
+      <div className="h-full w-full bg-white p-[4px] pb-5 shadow-[0_4px_10px_rgba(30,27,75,0.1)]">
+        <img
+          src={photoSrc(attachment)}
+          alt=""
+          className="h-full w-full object-cover"
+          style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
+        />
+      </div>
+    ) : (
+      <div className="h-full w-full overflow-hidden rounded-[2px] bg-zinc-950 p-[3px] shadow-[0_4px_10px_rgba(15,23,42,0.16)]">
+        <img
+          src={photoSrc(attachment)}
+          alt=""
+          className="h-full w-full object-cover"
+          style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
+        />
+      </div>
+    );
+
+    return (
+      <div
+        key={attachment.id}
+        className={['absolute origin-center', slots[index] ?? ''].join(' ')}
+      >
+        {onSelectPhoto ? (
+          <button
+            type="button"
+            onClick={() => onSelectPhoto(attachment)}
+            className="h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
+            aria-label={photosLabel}
+          >
+            {frame}
+          </button>
+        ) : (
+          frame
+        )}
+      </div>
+    );
+  });
+
+  const shellClass = [
+    'relative mt-3 block w-full appearance-none border-0 bg-transparent p-0 text-left shadow-none',
+    panoramaClass(count),
+    onSelectPhoto ? '' : 'cursor-pointer',
+  ].join(' ');
+
+  if (onSelectPhoto) {
+    return (
+      <div
+        className={shellClass}
+        style={{ backgroundColor: 'transparent', backgroundImage: 'none' }}
+      >
+        {frames}
+      </div>
+    );
+  }
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className={[
-        // No fill / clip panel — photos float on the parent card color
-        'relative mt-3 block w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-left shadow-none',
-        panoramaClass(count),
-      ].join(' ')}
+      className={shellClass}
       style={{ backgroundColor: 'transparent', backgroundImage: 'none' }}
       aria-label={photosLabel}
     >
-      {photos.slice(0, count).map((attachment, index) => (
-        <div
-          key={attachment.id}
-          className={['absolute origin-center', slots[index] ?? ''].join(' ')}
-        >
-          {isPostal ? (
-            <div className="h-full w-full bg-white p-[4px] pb-5 shadow-[0_4px_10px_rgba(30,27,75,0.1)]">
-              <img
-                src={photoSrc(attachment)}
-                alt=""
-                className="h-full w-full object-cover"
-                style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
-              />
-            </div>
-          ) : (
-            <div className="h-full w-full overflow-hidden rounded-[2px] bg-zinc-950 p-[3px] shadow-[0_4px_10px_rgba(15,23,42,0.16)]">
-              <img
-                src={photoSrc(attachment)}
-                alt=""
-                className="h-full w-full object-cover"
-                style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
-              />
-            </div>
-          )}
-        </div>
-      ))}
+      {frames}
     </button>
   );
 }
