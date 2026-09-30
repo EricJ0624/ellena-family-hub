@@ -120,6 +120,7 @@ export function DiaryPhotoCollage({
         <img
           src={photoSrc(attachment)}
           alt=""
+          draggable={false}
           className="h-full w-full object-cover"
           style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
         />
@@ -129,6 +130,7 @@ export function DiaryPhotoCollage({
         <img
           src={photoSrc(attachment)}
           alt=""
+          draggable={false}
           className="h-full w-full object-cover"
           style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
         />
@@ -143,6 +145,7 @@ export function DiaryPhotoCollage({
         {onSelectPhoto ? (
           <button
             type="button"
+            draggable={false}
             onClick={() => onSelectPhoto(attachment)}
             className="h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
             aria-label={photosLabel}

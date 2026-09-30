@@ -22,12 +22,17 @@ import type { TravelDiaryEntry } from '@/lib/modules/travel-planner/diary-types'
 import { buildUnifiedItineraries } from '@/lib/modules/travel-planner/unified-itinerary';
 import { buildDiaryTimelineSlots, buildHiddenDiarySlots } from '@/lib/modules/travel-planner/diary-timeline';
 import { canWriteDiary } from '@/lib/modules/travel-planner/diary-eligibility';
+import { listAttachments, type UploadedAttachment } from '@/lib/feature-attachments-client';
 import { DiaryEntryCard } from '@/app/features/travel-diary/components/DiaryEntryCard';
 import { DiaryHiddenSlotList } from '@/app/features/travel-diary/components/DiaryHiddenSlotList';
+import { DiaryHorizontalPager } from '@/app/features/travel-diary/components/DiaryHorizontalPager';
 import { TravelFieldRecordHost } from '@/app/features/travel-planner/components/TravelFieldRecordHost';
 import { getTravelTranslation } from '@/lib/translations/travel';
 
 const API = '/api/v1/travel';
+const VIEW_MODE_KEY = 'ellena-travel-diary-view';
+
+type DiaryViewMode = 'vertical' | 'horizontal';
 
 type PlannerBundle = {
   accommodations: TravelAccommodation[];
@@ -63,6 +68,9 @@ export function TravelDiaryPageContent() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
+  const [viewMode, setViewMode] = useState<DiaryViewMode>('vertical');
+  const [entryPhotos, setEntryPhotos] = useState<Map<string, UploadedAttachment[]> | null>(null);
+  const shownTripRef = useRef<string | null>(null);
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
 
   const loadAll = useCallback(async () => {
@@ -73,10 +81,12 @@ export function TravelDiaryPageContent() {
       setFeedback([]);
       setExpenses([]);
       setPlanner(null);
+      setEntryPhotos(null);
       setLoading(false);
       return;
     }
-    setLoading(true);
+    const firstPaint = shownTripRef.current !== tripIdParam;
+    if (firstPaint) setLoading(true);
     try {
       const { data: session } = await supabase.auth.getSession();
       const token = session.session?.access_token;
@@ -85,27 +95,41 @@ export function TravelDiaryPageContent() {
       const gid = currentGroupId;
       const tid = tripIdParam;
 
-      const [tripRes, entRes, fbRes, expRes, accRes, dinRes, attRes, trRes, itRes] = await Promise.all([
-        fetch(`${API}/trips/${tid}?groupId=${gid}`, { headers }),
-        fetch(`${API}/trips/${tid}/diary-entries?groupId=${gid}&includeDeleted=1`, { headers }),
-        fetch(`${API}/trips/${tid}/place-feedback?groupId=${gid}`, { headers }),
-        fetch(`${API}/trips/${tid}/expenses?groupId=${gid}`, { headers }),
-        fetch(`${API}/trips/${tid}/accommodations?groupId=${gid}`, { headers }),
-        fetch(`${API}/trips/${tid}/dining?groupId=${gid}`, { headers }),
-        fetch(`${API}/trips/${tid}/attractions?groupId=${gid}`, { headers }),
-        fetch(`${API}/trips/${tid}/transports?groupId=${gid}`, { headers }),
-        fetch(`${API}/trips/${tid}/itineraries?groupId=${gid}`, { headers }),
-      ]);
+      const tripP = fetch(`${API}/trips/${tid}?groupId=${gid}`, { headers });
+      const entP = fetch(`${API}/trips/${tid}/diary-entries?groupId=${gid}&includeDeleted=1`, { headers });
+      const itP = fetch(`${API}/trips/${tid}/itineraries?groupId=${gid}`, { headers });
+      const fbP = fetch(`${API}/trips/${tid}/place-feedback?groupId=${gid}`, { headers });
+      const expP = fetch(`${API}/trips/${tid}/expenses?groupId=${gid}`, { headers });
+      const accP = fetch(`${API}/trips/${tid}/accommodations?groupId=${gid}`, { headers });
+      const dinP = fetch(`${API}/trips/${tid}/dining?groupId=${gid}`, { headers });
+      const attP = fetch(`${API}/trips/${tid}/attractions?groupId=${gid}`, { headers });
+      const trP = fetch(`${API}/trips/${tid}/transports?groupId=${gid}`, { headers });
 
+      const [tripRes, entRes, itRes] = await Promise.all([tripP, entP, itP]);
       const tripJson = await tripRes.json();
       const entJson = await entRes.json();
-      const fbJson = await fbRes.json();
-      const expJson = await expRes.json();
+      const itJson = await itRes.json();
       if (!tripRes.ok) throw new Error(tripJson.error);
 
+      const nextEntries = Array.isArray(entJson.data) ? (entJson.data as TravelDiaryEntry[]) : [];
+      const photoIds = nextEntries.map((entry) => entry.id).filter((id) => Boolean(id));
+
       setTrip(tripJson.data);
-      setEntries(Array.isArray(entJson.data) ? entJson.data : []);
+      setEntries(nextEntries);
       setHiddenEntries(Array.isArray(entJson.hidden) ? entJson.hidden : []);
+      setPlanner({
+        accommodations: [],
+        dining: [],
+        attractions: [],
+        transports: [],
+        itineraries: (itJson.data ?? []) as TravelItinerary[],
+      });
+      shownTripRef.current = tripIdParam;
+      setLoading(false);
+
+      const [fbRes, expRes, accRes, dinRes, attRes, trRes] = await Promise.all([fbP, expP, accP, dinP, attP, trP]);
+      const fbJson = await fbRes.json();
+      const expJson = await expRes.json();
       setFeedback(Array.isArray(fbJson.data) ? fbJson.data : []);
       setExpenses(Array.isArray(expJson.data) ? (expJson.data as TravelExpense[]) : []);
       setPlanner({
@@ -113,8 +137,27 @@ export function TravelDiaryPageContent() {
         dining: ((await dinRes.json()).data ?? []) as TravelDining[],
         attractions: ((await attRes.json()).data ?? []) as TravelAttraction[],
         transports: ((await trRes.json()).data ?? []) as TravelTransport[],
-        itineraries: ((await itRes.json()).data ?? []) as TravelItinerary[],
+        itineraries: (itJson.data ?? []) as TravelItinerary[],
       });
+
+      const photoMap = new Map<string, UploadedAttachment[]>();
+      if (photoIds.length > 0) {
+        try {
+          const rows = await listAttachments({
+            groupId: gid,
+            entityType: 'travel_diary_entry',
+            entityIds: photoIds,
+          });
+          for (const row of rows) {
+            const bucket = photoMap.get(row.entity_id) ?? [];
+            bucket.push(row);
+            photoMap.set(row.entity_id, bucket);
+          }
+        } catch (photoError) {
+          console.error(photoError);
+        }
+      }
+      setEntryPhotos(photoMap);
     } catch (e) {
       console.error(e);
     } finally {
@@ -169,6 +212,24 @@ export function TravelDiaryPageContent() {
     if (!planner) return [];
     return buildHiddenDiarySlots(unifiedItems, hiddenEntries);
   }, [planner, unifiedItems, hiddenEntries]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_MODE_KEY);
+      if (saved === 'horizontal' || saved === 'vertical') setViewMode(saved);
+    } catch {
+      /* 저장소를 쓸 수 없는 환경 */
+    }
+  }, []);
+
+  const chooseViewMode = (mode: DiaryViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      /* 저장소를 쓸 수 없는 환경 */
+    }
+  };
 
   const feedbackBySource = useMemo(() => {
     const m = new Map<string, TravelPlaceFeedback>();
@@ -457,6 +518,78 @@ export function TravelDiaryPageContent() {
     await loadAll();
   };
 
+  const renderSlotCard = (slot: (typeof timelineSlots)[number]) => {
+    const fb =
+      slot.source_kind && slot.source_id
+        ? feedbackBySource.get(`${slot.source_kind}:${slot.source_id}`) ?? null
+        : null;
+    const linkedExpense =
+      (fb?.travel_expense_id
+        ? expenses.find((e) => e.id === fb.travel_expense_id) ?? null
+        : null) ??
+      (slot.source_kind && slot.source_id
+        ? expenseBySource.get(`${slot.source_kind}:${slot.source_id}`) ?? null
+        : null);
+    return (
+      <DiaryEntryCard
+        key={slot.key}
+        slot={slot}
+        groupId={currentGroupId ?? ''}
+        feedback={fb}
+        linkedExpense={linkedExpense}
+        entryPhotos={entryPhotos}
+        fitFrame={viewMode === 'horizontal'}
+        tripCurrency={tripCurrency}
+        moneyLocale={moneyLocale}
+        labels={{
+          note_placeholder: t('note_placeholder'),
+          mood_label: t('mood_label'),
+          photos_label: t('photos_label'),
+          photos_uploading: t('photos_uploading'),
+          photos_adjust: t('photos_adjust'),
+          slot_title_label: t('slot_title_label'),
+          title_required: t('title_required'),
+          rating_label: t('rating_label'),
+          revisit_label: t('revisit_label'),
+          expense_label: t('expense_label'),
+          receipt_upload: t('receipt_upload'),
+          receipt_need_expense: t('receipt_need_expense'),
+          receipt_upload_failed: t('receipt_upload_failed'),
+          save: t('save'),
+          saved: t('saved'),
+          edit: t('edit'),
+          cancel: t('cancel'),
+          save_failed: t('save_failed'),
+          upload_failed: t('upload_failed'),
+          photos_close: t('photos_close'),
+          photos_slots_label: t('photos_slots_label'),
+          photos_slots_hint: t('photos_slots_hint'),
+          photos_slot_remove: t('photos_slot_remove'),
+          photos_style_label: t('photos_style_label'),
+          photos_style_film: t('photos_style_film'),
+          photos_style_postal: t('photos_style_postal'),
+          photos_album: t('photos_album'),
+          photos_album_empty: t('photos_album_empty'),
+          photos_album_add: t('photos_album_add'),
+          photo_focus_title: t('photo_focus_title'),
+          photo_focus_hint: t('photo_focus_hint'),
+          photo_focus_confirm: t('photo_focus_confirm'),
+          photo_focus_skip: t('photo_focus_skip'),
+          map_label: t('map_label'),
+          map_add: t('map_add'),
+          map_remove: t('map_remove'),
+          hide: t('hide'),
+          hide_failed: t('hide_failed'),
+          hide_confirm: t('hide_confirm'),
+        }}
+        onSave={(p) => saveSlot(slot, p)}
+        onCollageSave={saveCollage}
+        onRenameTitle={(title) => renameSlotTitle(slot, title)}
+        onHide={() => hideSlot(slot)}
+      />
+    );
+  };
+
   if (!currentGroupId) {
     return (
       <div
@@ -663,77 +796,45 @@ export function TravelDiaryPageContent() {
           </p>
         ) : (
           <>
-          <div className="mt-6 space-y-4">
-            {timelineSlots.map((slot) => {
-              const fb =
-                slot.source_kind && slot.source_id
-                  ? feedbackBySource.get(`${slot.source_kind}:${slot.source_id}`) ?? null
-                  : null;
-              const linkedExpense =
-                (fb?.travel_expense_id
-                  ? expenses.find((e) => e.id === fb.travel_expense_id) ?? null
-                  : null) ??
-                (slot.source_kind && slot.source_id
-                  ? expenseBySource.get(`${slot.source_kind}:${slot.source_id}`) ?? null
-                  : null);
-              return (
-                <DiaryEntryCard
-                  key={slot.key}
-                  slot={slot}
-                  groupId={currentGroupId}
-                  feedback={fb}
-                  linkedExpense={linkedExpense}
-                  tripCurrency={tripCurrency}
-                  moneyLocale={moneyLocale}
-                  labels={{
-                    note_placeholder: t('note_placeholder'),
-                    mood_label: t('mood_label'),
-                    photos_label: t('photos_label'),
-                    photos_uploading: t('photos_uploading'),
-                    photos_adjust: t('photos_adjust'),
-                    slot_title_label: t('slot_title_label'),
-                    title_required: t('title_required'),
-                    rating_label: t('rating_label'),
-                    revisit_label: t('revisit_label'),
-                    expense_label: t('expense_label'),
-                    receipt_upload: t('receipt_upload'),
-                    receipt_need_expense: t('receipt_need_expense'),
-                    receipt_upload_failed: t('receipt_upload_failed'),
-                    save: t('save'),
-                    saved: t('saved'),
-                    edit: t('edit'),
-                    cancel: t('cancel'),
-                    save_failed: t('save_failed'),
-                    upload_failed: t('upload_failed'),
-                    photos_close: t('photos_close'),
-                    photos_slots_label: t('photos_slots_label'),
-                    photos_slots_hint: t('photos_slots_hint'),
-                    photos_slot_remove: t('photos_slot_remove'),
-                    photos_style_label: t('photos_style_label'),
-                    photos_style_film: t('photos_style_film'),
-                    photos_style_postal: t('photos_style_postal'),
-                    photos_album: t('photos_album'),
-                    photos_album_empty: t('photos_album_empty'),
-                    photos_album_add: t('photos_album_add'),
-                    photo_focus_title: t('photo_focus_title'),
-                    photo_focus_hint: t('photo_focus_hint'),
-                    photo_focus_confirm: t('photo_focus_confirm'),
-                    photo_focus_skip: t('photo_focus_skip'),
-                    map_label: t('map_label'),
-                    map_add: t('map_add'),
-                    map_remove: t('map_remove'),
-                    hide: t('hide'),
-                    hide_failed: t('hide_failed'),
-                    hide_confirm: t('hide_confirm'),
-                  }}
-                  onSave={(p) => saveSlot(slot, p)}
-                  onCollageSave={saveCollage}
-                  onRenameTitle={(title) => renameSlotTitle(slot, title)}
-                  onHide={() => hideSlot(slot)}
-                />
-              );
-            })}
-          </div>
+          {timelineSlots.length > 0 ? (
+            <div
+              role="group"
+              aria-label={t('view_mode')}
+              className={[
+                'mt-6 inline-flex rounded-lg border p-0.5',
+                isDarkPage ? 'border-white/20 bg-white/5' : 'border-slate-200 bg-white',
+              ].join(' ')}
+            >
+              {(['vertical', 'horizontal'] as const).map((mode) => {
+                const active = viewMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => chooseViewMode(mode)}
+                    className={[
+                      'cursor-pointer rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                      active
+                        ? isDarkPage
+                          ? 'bg-white text-slate-900'
+                          : 'bg-sky-600 text-white'
+                        : isDarkPage
+                          ? 'text-slate-300 hover:bg-white/10'
+                          : 'text-slate-600 hover:bg-slate-50',
+                    ].join(' ')}
+                  >
+                    {mode === 'vertical' ? t('view_vertical') : t('view_horizontal')}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          {timelineSlots.length > 0 ? (
+            <DiaryHorizontalPager layout={viewMode} label={t('view_horizontal')} isDark={isDarkPage}>
+              {timelineSlots.map(renderSlotCard)}
+            </DiaryHorizontalPager>
+          ) : null}
           {hiddenSlots.length > 0 ? (
             <DiaryHiddenSlotList
               slots={hiddenSlots}

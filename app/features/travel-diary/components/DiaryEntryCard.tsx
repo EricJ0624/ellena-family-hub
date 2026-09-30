@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pencil, Star, Trash2 } from 'lucide-react';
 import type { DiaryTimelineSlot } from '@/lib/modules/travel-planner/diary-timeline';
 import type { TravelExpense, TravelPlaceFeedback } from '@/lib/modules/travel-planner/types';
@@ -113,7 +113,56 @@ type Props = {
   }) => Promise<void>;
   onRenameTitle?: (title: string) => Promise<void>;
   onHide?: () => Promise<void>;
+  entryPhotos?: Map<string, UploadedAttachment[]> | null;
+  /** 가로 보기: 카드 높이에 맞춰 내용을 줄이고 안쪽 스크롤은 쓰지 않는다. */
+  fitFrame?: boolean;
 };
+
+function FrameFit({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    if (!enabled) {
+      setScale((prev) => (prev === 1 ? prev : 1));
+      return;
+    }
+    const frame = frameRef.current;
+    const inner = innerRef.current;
+    if (!frame || !inner) return;
+    const measure = () => {
+      const available = frame.clientHeight;
+      const needed = inner.scrollHeight;
+      if (available <= 0 || needed <= 0) return;
+      const next = Math.min(1, available / needed);
+      setScale((prev) => (Math.abs(prev - next) < 0.015 ? prev : next));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, [enabled]);
+
+  const scaled = enabled && scale < 0.995;
+
+  return (
+    <div ref={frameRef} className={enabled ? 'min-h-0 flex-1 overflow-hidden' : 'contents'}>
+      <div
+        ref={innerRef}
+        className={enabled ? undefined : 'contents'}
+        style={
+          scaled
+            ? { transform: `scale(${scale})`, transformOrigin: 'top center' }
+            : undefined
+        }
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function expenseInputValue(linkedExpense?: TravelExpense | null): string {
   if (linkedExpense == null) return '';
@@ -155,6 +204,8 @@ export function DiaryEntryCard({
   onCollageSave,
   onRenameTitle,
   onHide,
+  entryPhotos = null,
+  fitFrame = false,
 }: Props) {
   const { uiTheme } = useGroup();
   const isFamilyTheme = uiTheme === 'kids_friendly';
@@ -257,22 +308,13 @@ export function DiaryEntryCard({
   }, [photoFocus]);
 
   useEffect(() => {
-    if (!entryId) {
-      attachmentLoadGen.current += 1;
+    attachmentLoadGen.current += 1;
+    if (!entryPhotos || !entryId) {
       setAttachments([]);
       return;
     }
-    const gen = ++attachmentLoadGen.current;
-    void getAttachmentsForEntity({ groupId, entityType: 'travel_diary_entry', entityId: entryId })
-      .then((rows) => {
-        if (gen !== attachmentLoadGen.current) return;
-        setAttachments(rows);
-      })
-      .catch(() => {
-        if (gen !== attachmentLoadGen.current) return;
-        setAttachments([]);
-      });
-  }, [groupId, entryId]);
+    setAttachments(entryPhotos.get(entryId) ?? []);
+  }, [entryId, entryPhotos]);
 
   useEffect(() => {
     if (!linkedExpense?.id) {
@@ -775,7 +817,14 @@ export function DiaryEntryCard({
     : null;
 
   return (
-    <div className={['rounded-2xl p-4', diaryCardShellClass(themeOpts)].join(' ')}>
+    <div
+      className={[
+        'rounded-2xl p-4',
+        fitFrame ? 'flex h-full min-h-0 flex-col overflow-hidden' : '',
+        diaryCardShellClass(themeOpts),
+      ].join(' ')}
+    >
+      <FrameFit enabled={fitFrame}>
       {!isView && slot.source_id ? (
         <label className="block">
           <span className={['text-xs font-medium', labelMutedClass].join(' ')}>
@@ -1266,6 +1315,7 @@ export function DiaryEntryCard({
         </>
       )}
 
+      </FrameFit>
       <DiaryPhotoGalleryModal
         open={galleryOpen}
         onClose={() => {

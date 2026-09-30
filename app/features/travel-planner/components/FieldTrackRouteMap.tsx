@@ -38,6 +38,10 @@ function RouteMapCanvas({ path, className, interactive }: MapHostProps) {
   const mapRef = useRef<google.maps.Map | null>(null);
   const polyRef = useRef<google.maps.Polyline | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const pathRef = useRef(path);
+  const interactiveRef = useRef(interactive);
+  pathRef.current = path;
+  interactiveRef.current = interactive;
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +132,30 @@ function RouteMapCanvas({ path, className, interactive }: MapHostProps) {
       mapRef.current = null;
     };
   }, [path, interactive]);
+
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const map = mapRef.current;
+        const g = getMaps();
+        const pts = pathRef.current;
+        if (!map || !g?.event || pts.length === 0) return;
+        g.event.trigger(map, 'resize');
+        const bounds = new g.LatLngBounds();
+        pts.forEach((p) => bounds.extend(p));
+        map.fitBounds(bounds, interactiveRef.current ? 48 : 24);
+      });
+    });
+    observer.observe(el);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <div className={className ?? 'relative h-full w-full'}>

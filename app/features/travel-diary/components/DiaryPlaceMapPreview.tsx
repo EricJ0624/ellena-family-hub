@@ -42,6 +42,8 @@ function FixedPointMapCanvas({ lat, lng, title, interactive, className }: FixedP
   const elRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
+  const pointRef = useRef({ lat, lng });
+  pointRef.current = { lat, lng };
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +96,27 @@ function FixedPointMapCanvas({ lat, lng, title, interactive, className }: FixedP
       mapRef.current = null;
     };
   }, [lat, lng, title, interactive]);
+
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const map = mapRef.current;
+        const g = getMaps();
+        if (!map || !g?.event) return;
+        g.event.trigger(map, 'resize');
+        map.setCenter(pointRef.current);
+      });
+    });
+    observer.observe(el);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <div className={className ?? 'relative h-full w-full'}>

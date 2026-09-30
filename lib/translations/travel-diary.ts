@@ -60,6 +60,11 @@ export type TravelDiaryTranslations = {
   hide_all_confirm: string;
   hide_all_failed: string;
   hidden_section: string;
+  view_mode: string;
+  view_vertical: string;
+  view_horizontal: string;
+  view_prev: string;
+  view_next: string;
 };
 
 const td: Record<LangCode, TravelDiaryTranslations> = {
@@ -123,6 +128,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
       '이 여행을 다이어리에서 삭제할까요?\n\n삭제하면 복구할 수 없고, 다이어리 위젯 목록에서도 사라집니다.\n여행 플래너의 일정·여행은 그대로 유지되며, 플래너에서 「다이어리 작성 시작」을 눌러 일정을 다시 보낼 수 있습니다.',
     hide_all_failed: '전체 삭제에 실패했습니다.',
     hidden_section: '다이어리에서 뺀 행사',
+    view_mode: '일정 보기',
+    view_vertical: '세로',
+    view_horizontal: '가로',
+    view_prev: '이전 일정',
+    view_next: '다음 일정',
   },
   en: {
     section_title: 'Trip diary',
@@ -184,6 +194,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
       'Remove this trip from the diary?\n\nThis cannot be undone, and it will leave the diary widget list.\nPlanner trips and schedules are kept, and you can send them again by tapping 「Start trip diary」 in the planner.',
     hide_all_failed: 'Could not remove all events.',
     hidden_section: 'Removed from diary',
+    view_mode: 'Itinerary view',
+    view_vertical: 'Vertical',
+    view_horizontal: 'Horizontal',
+    view_prev: 'Previous stop',
+    view_next: 'Next stop',
   },
   ja: {
     section_title: '旅行ダイアリー',
@@ -244,6 +259,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_all_confirm: 'ダイアリーの予定をすべて削除しますか？\n\n削除後は元に戻せません。\nプランナーの日程はそのままです。',
     hide_all_failed: '一括削除に失敗しました。',
     hidden_section: 'ダイアリーから外した予定',
+    view_mode: '予定の見方',
+    view_vertical: '縦',
+    view_horizontal: '横',
+    view_prev: '前の予定',
+    view_next: '次の予定',
   },
   'zh-CN': {
     section_title: '旅行日记',
@@ -304,6 +324,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_all_confirm: '要从日记删除全部行程吗？\n\n删除后无法恢复。\n旅行规划日程会保留。',
     hide_all_failed: '全部删除失败。',
     hidden_section: '已从日记移除的行程',
+    view_mode: '行程查看',
+    view_vertical: '纵向',
+    view_horizontal: '横向',
+    view_prev: '上一项',
+    view_next: '下一项',
   },
   'zh-TW': {
     section_title: '旅行日記',
@@ -364,6 +389,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_all_confirm: '要從日記刪除全部行程嗎？\n\n刪除後無法復原。\n旅行規劃日程會保留。',
     hide_all_failed: '全部刪除失敗。',
     hidden_section: '已從日記移除的行程',
+    view_mode: '行程查看',
+    view_vertical: '直向',
+    view_horizontal: '橫向',
+    view_prev: '上一項',
+    view_next: '下一項',
   },
   es: {
     section_title: 'diario de viaje',
@@ -425,6 +455,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
       '¿Eliminar todos los eventos del diario?\n\nNo se puede deshacer.\nEl planificador no cambia.',
     hide_all_failed: 'No se pudo quitar todo.',
     hidden_section: 'Quitados del diario',
+    view_mode: 'Vista del itinerario',
+    view_vertical: 'Vertical',
+    view_horizontal: 'Horizontal',
+    view_prev: 'Anterior',
+    view_next: 'Siguiente',
   },
   fr: {
     section_title: 'Carnet de voyage',
@@ -486,6 +521,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
       'Supprimer tous les événements du carnet ?\n\nAction irréversible.\nLe planificateur reste inchangé.',
     hide_all_failed: 'Impossible de tout retirer.',
     hidden_section: 'Retirés du carnet',
+    view_mode: 'Affichage',
+    view_vertical: 'Vertical',
+    view_horizontal: 'Horizontal',
+    view_prev: 'Précédent',
+    view_next: 'Suivant',
   },
   de: {
     section_title: 'Reisetagebuch',
@@ -547,6 +587,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
       'Alle Ereignisse aus dem Tagebuch löschen?\n\nDies kann nicht rückgängig gemacht werden.\nDer Planer bleibt erhalten.',
     hide_all_failed: 'Alle entfernen fehlgeschlagen.',
     hidden_section: 'Aus dem Tagebuch entfernt',
+    view_mode: 'Ansicht',
+    view_vertical: 'Senkrecht',
+    view_horizontal: 'Waagerecht',
+    view_prev: 'Zurück',
+    view_next: 'Weiter',
   },
   it: {
     section_title: 'Diario di viaggio',
@@ -608,6 +653,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
       'Eliminare tutti gli eventi dal diario?\n\nNon si può annullare.\nIl planner resta invariato.',
     hide_all_failed: 'Impossibile rimuovere tutto.',
     hidden_section: 'Rimossi dal diario',
+    view_mode: 'Vista',
+    view_vertical: 'Verticale',
+    view_horizontal: 'Orizzontale',
+    view_prev: 'Precedente',
+    view_next: 'Successivo',
   },
   pt: {
     section_title: 'Diário de viagem',
@@ -669,6 +719,11 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
       'Excluir todos os eventos do diário?\n\nNão é possível desfazer.\nO planejador permanece.',
     hide_all_failed: 'Não foi possível remover tudo.',
     hidden_section: 'Removidos do diário',
+    view_mode: 'Visualização',
+    view_vertical: 'Vertical',
+    view_horizontal: 'Horizontal',
+    view_prev: 'Anterior',
+    view_next: 'Próximo',
   }
 };
 
