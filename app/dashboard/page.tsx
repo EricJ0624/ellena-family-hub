@@ -6497,7 +6497,7 @@ export default function FamilyHub() {
       : (frameIsPortrait ? 1.15 : undefined),
     textAlign: 'left',
     whiteSpace: 'nowrap' as const,
-    overflowX: 'hidden',
+    overflowX: (isKidsTheme || isNeoTheme || isHighendTheme) ? 'visible' : 'hidden',
     overflowY: 'visible',
     // ellipsis는 scrollWidth 오탐으로 폰트 축소를 막아 "Fami..." 고착의 주원인
     textOverflow: 'clip',
@@ -6525,8 +6525,6 @@ export default function FamilyHub() {
           WebkitTextFillColor: '#3f2914',
           backgroundClip: 'unset',
           textShadow: '0 1px 0 rgba(255, 236, 210, 0.55)',
-          overflowX: 'visible',
-          overflowY: 'visible',
         }
       : isNeoTheme
         ? {
@@ -6540,8 +6538,6 @@ export default function FamilyHub() {
             textShadow: 'none',
             fontWeight: 800,
             letterSpacing: '0.04em',
-            overflowX: 'visible',
-            overflowY: 'visible',
           }
       : isHighendTheme
         ? {
@@ -6555,8 +6551,6 @@ export default function FamilyHub() {
             textShadow: 'none',
             fontWeight: 600,
             letterSpacing: '0.04em',
-            overflowX: 'visible',
-            overflowY: 'visible',
           }
       : isDefaultDashboardTitle
         ? {
