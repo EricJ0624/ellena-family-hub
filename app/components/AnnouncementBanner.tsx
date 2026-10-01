@@ -81,7 +81,7 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
   return (
     <>
     <div
-      className="w-full shrink-0 overflow-hidden border-b-2 border-amber-200 bg-amber-50 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+      className="announcement-banner w-full shrink-0 overflow-hidden border-b-2 border-amber-200 bg-amber-50 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
     >
         <div className="flex items-center justify-between px-3 pr-6">
           {/* 아이콘 + 라벨 (최소 폭 없이 필요한 만큼만 사용) */}

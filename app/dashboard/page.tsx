@@ -56,9 +56,11 @@ import {
   fitAppTitleFontSizeToWidth,
   fitKidsGlassTitleFontSize,
   fitNeoStampTitleFontSize,
+  fitHighendCapsuleTitleFontSize,
   shrinkFontSizeToElement,
   CUSTOM_TITLE_FONT_MIN_PX,
   NEO_STAMP_TITLE_MIN_PX,
+  HIGHEND_CAPSULE_TITLE_MIN_PX,
   DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
   DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
   customTitleMaxFontSize,
@@ -1851,10 +1853,11 @@ export default function FamilyHub() {
   );
 
   const getTitleFitMaxWidth = useCallback(() => {
-    /** kids: 하트·패딩은 em이라 fitKidsGlassTitleFontSize가 글자 크기와 함께 계산. 관리자 버튼은 h1 폭에서 이미 제외 */
+    /** kids: 간판 좌우 크롬은 fitKidsGlassTitleFontSize가 고정 px로 뺀다. 관리자 버튼은 h1 폭에서 이미 제외 */
     const kidsGlassInsetPx = 0;
     const capMemberTitleWidth = (px: number) => {
-      if (isAdminTitleContext) return px;
+      /* kids 간판은 액자 폭에 묶지 않고, 관리 버튼 왼쪽 행 폭까지 글자를 키운다 */
+      if (isAdminTitleContext || isKidsTheme) return px;
       const frameCap = frameIsPortrait
         ? portraitTitleMaxWidthPx
         : DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.landscape;
@@ -1913,14 +1916,11 @@ export default function FamilyHub() {
   );
   // 세로 커스텀 타이틀 — 좌측 정렬 가용 폭이 넓어져도 상한이 28이면 여전히 작아 보임
   const portraitCustomTitleMaxPx = Math.min(38, Math.max(customTitleMaxPx, 34));
-  const titleFitMaxPx = (() => {
-    const base = frameIsPortrait && !isDefaultDashboardTitle
-      ? portraitCustomTitleMaxPx
-      : customTitleMaxPx;
-    if (!isKidsTheme) return base;
-    /* kids 글래스 타이틀: 박스·하트와 함께 한 단계 더 크게 (관리자 버튼 왼쪽 폭에 fit) */
-    return Math.min(frameIsPortrait ? 44 : 48, base + 10);
-  })();
+  const titleFitMaxPx = frameIsPortrait && !isDefaultDashboardTitle
+    ? portraitCustomTitleMaxPx
+    : customTitleMaxPx;
+  /* 나무판 타이틀은 저장된 글자 상한보다 크게. 행 폭이 좁으면 fit이 줄인다. */
+  const kidsTitleFontMaxPx = frameIsPortrait ? 96 : 120;
 
   /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
   const estimatedCustomTitleFontSize = useMemo(() => {
@@ -1941,11 +1941,7 @@ export default function FamilyHub() {
         isDefaultDashboardTitle
           ? (frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin)
           : CUSTOM_TITLE_FONT_MIN_PX,
-        isDefaultDashboardTitle
-          ? (frameIsPortrait
-            ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
-            : Math.min(customFontSizeCap ?? 68, 68))
-          : titleFitMaxPx,
+        kidsTitleFontMaxPx,
         isDefaultDashboardTitle ? titleFont.fontFamily : fontFamily,
         isDefaultDashboardTitle ? titleFont.fontWeight : fontWeight,
         letterSpacing,
@@ -1966,6 +1962,23 @@ export default function FamilyHub() {
           : titleFitMaxPx,
         isDefaultDashboardTitle ? titleFont.fontFamily : fontFamily,
         800,
+        isDefaultDashboardTitle,
+      );
+    }
+    if (isHighendTheme) {
+      return fitHighendCapsuleTitleFontSize(
+        dashboardTitleText,
+        maxWidth,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin)
+          : CUSTOM_TITLE_FONT_MIN_PX,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait
+            ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
+            : Math.min(customFontSizeCap ?? 68, 68))
+          : titleFitMaxPx,
+        isDefaultDashboardTitle ? titleFont.fontFamily : fontFamily,
+        600,
         isDefaultDashboardTitle,
       );
     }
@@ -2006,6 +2019,8 @@ export default function FamilyHub() {
     getTitleFitMaxWidth,
     isKidsTheme,
     isNeoTheme,
+    isHighendTheme,
+    kidsTitleFontMaxPx,
   ]);
 
   const measureCustomTitleFontSize = useCallback(() => {
@@ -2029,6 +2044,32 @@ export default function FamilyHub() {
           ? titleFont.fontFamily
           : (effectiveTitleStyle?.fontFamily ?? customTitleFontFamily),
         800,
+        isDefaultDashboardTitle,
+      );
+      setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
+      return;
+    }
+
+    if (isHighendTheme) {
+      const maxWidth = getTitleFitMaxWidth();
+      if (frameIsPortrait) {
+        setPortraitTitleMaxWidthPx((prev) => (prev === maxWidth ? prev : maxWidth));
+      }
+      const fitted = fitHighendCapsuleTitleFontSize(
+        dashboardTitleText,
+        maxWidth,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin)
+          : CUSTOM_TITLE_FONT_MIN_PX,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait
+            ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
+            : Math.min(customFontSizeCap ?? 68, 68))
+          : titleFitMaxPx,
+        isDefaultDashboardTitle
+          ? titleFont.fontFamily
+          : (effectiveTitleStyle?.fontFamily ?? customTitleFontFamily),
+        600,
         isDefaultDashboardTitle,
       );
       setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
@@ -2073,11 +2114,7 @@ export default function FamilyHub() {
         isDefaultDashboardTitle
           ? (frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin)
           : CUSTOM_TITLE_FONT_MIN_PX,
-        isDefaultDashboardTitle
-          ? (frameIsPortrait
-            ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
-            : Math.min(customFontSizeCap ?? 68, 68))
-          : titleFitMaxPx,
+        kidsTitleFontMaxPx,
         isDefaultDashboardTitle ? titleFont.fontFamily : fontFamily,
         isDefaultDashboardTitle ? titleFont.fontWeight : fontWeight,
         letterSpacing,
@@ -2132,6 +2169,8 @@ export default function FamilyHub() {
     getTitleFitMaxWidth,
     isKidsTheme,
     isNeoTheme,
+    isHighendTheme,
+    kidsTitleFontMaxPx,
   ]);
 
   useLayoutEffect(() => {
@@ -2162,7 +2201,7 @@ export default function FamilyHub() {
     const el = titleH1Ref.current;
     if (!el) return;
 
-    if (frameIsPortrait && isDefaultDashboardTitle) {
+    if (frameIsPortrait && isDefaultDashboardTitle && !isHighendTheme) {
       const maxPx = Math.min(
         customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
         DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
@@ -2173,18 +2212,25 @@ export default function FamilyHub() {
       return;
     }
 
-    if (!frameIsPortrait && isDefaultDashboardTitle && !isNeoTheme) return;
+    if (!frameIsPortrait && isDefaultDashboardTitle && !isNeoTheme && !isHighendTheme) return;
 
-    // Neo: h1이 아니라 스탬프/텍스트 기준으로 실측 (overflow:hidden 칩 보정)
-    const neoTarget =
-      isNeoTheme
-        ? ((el.querySelector('.dashboard-neo-title-text') as HTMLElement | null)
-          ?? (el.querySelector('.dashboard-neo-title-stamp') as HTMLElement | null)
+    // Neo/High-end: h1이 아니라 칩/텍스트 기준으로 실측 (overflow:hidden 칩 보정)
+    const chipTarget = isNeoTheme
+      ? ((el.querySelector('.dashboard-neo-title-text') as HTMLElement | null)
+        ?? (el.querySelector('.dashboard-neo-title-stamp') as HTMLElement | null)
+        ?? el)
+      : isHighendTheme
+        ? ((el.querySelector('.dashboard-highend-title-text') as HTMLElement | null)
+          ?? (el.querySelector('.dashboard-highend-title-capsule') as HTMLElement | null)
           ?? el)
         : el;
-    const minPx = isNeoTheme ? NEO_STAMP_TITLE_MIN_PX : CUSTOM_TITLE_FONT_MIN_PX;
+    const minPx = isNeoTheme
+      ? NEO_STAMP_TITLE_MIN_PX
+      : isHighendTheme
+        ? HIGHEND_CAPSULE_TITLE_MIN_PX
+        : CUSTOM_TITLE_FONT_MIN_PX;
     const startPx = customTitleFontSizeRef.current ?? estimatedCustomTitleFontSize ?? titleFitMaxPx;
-    const fitted = shrinkFontSizeToElement(neoTarget, startPx, minPx);
+    const fitted = shrinkFontSizeToElement(chipTarget, startPx, minPx);
     setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
   }, [
     frameIsPortrait,
@@ -2194,6 +2240,7 @@ export default function FamilyHub() {
     titleFitMaxPx,
     customFontSizeCap,
     isNeoTheme,
+    isHighendTheme,
   ]);
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
@@ -6470,14 +6517,16 @@ export default function FamilyHub() {
       : BAROQUE_MAT_DASHBOARD_TITLE.fontFamily,
     ...(isKidsTheme
       ? {
-          /* 어두운 셸 대비: 밝은 글자 + 약한 후광 (글래스 띠는 자식 span CSS) */
-          color: '#f8fafc',
+          /* 나무 간판 판면: 어두운 잉크. 간판 이미지는 자식 span CSS */
+          color: '#3f2914',
           backgroundImage: 'none',
           backgroundColor: 'transparent',
           WebkitBackgroundClip: 'unset',
-          WebkitTextFillColor: '#f8fafc',
+          WebkitTextFillColor: '#3f2914',
           backgroundClip: 'unset',
-          textShadow: '0 0 10px rgba(255, 255, 255, 0.28), 0 1px 2px rgba(15, 23, 42, 0.4)',
+          textShadow: '0 1px 0 rgba(255, 236, 210, 0.55)',
+          overflowX: 'visible',
+          overflowY: 'visible',
         }
       : isNeoTheme
         ? {
@@ -7096,18 +7145,12 @@ export default function FamilyHub() {
             >
               {isKidsTheme ? (
                 <span className="dashboard-family-title-glass">
-                  <span className="dashboard-family-title-deco" aria-hidden="true">
-                    ♥
-                  </span>
                   <span className="dashboard-family-title-text">
                     {isDefaultDashboardTitle ? (
                       <AppTitleContent title={dashboardTitleText} />
                     ) : (
                       dashboardTitleText
                     )}
-                  </span>
-                  <span className="dashboard-family-title-deco" aria-hidden="true">
-                    ♥
                   </span>
                 </span>
               ) : isNeoTheme ? (

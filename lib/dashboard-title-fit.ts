@@ -59,14 +59,11 @@ export function customTitleMaxFontSize(
   return baseCap;
 }
 
-/** Kids 글래스 타이틀 — padding/gap/하트가 em이라 글자와 박스가 같이 커지거나 줄어듦 */
-const KIDS_GLASS_PAD_X_EM = 0.72 * 2;
-const KIDS_GLASS_GAP_EM = 0.4 * 2;
-const KIDS_GLASS_HEART_EM = 0.72 * 2;
-const KIDS_GLASS_CHROME_EM = KIDS_GLASS_PAD_X_EM + KIDS_GLASS_GAP_EM + KIDS_GLASS_HEART_EM;
+/** Kids 나무 간판 — 좌우 border-image 46px×2 + 안쪽 padding 8px×2 + 측정 여유 */
+const KIDS_SIGN_CHROME_X_PX = 46 * 2 + 8 * 2 + 6;
 
 /**
- * h1 가용 폭(관리자 버튼 제외) 안에 글자+하트+글래스 패딩이 들어가게 font-size를 고른다.
+ * h1 가용 폭(관리자 버튼 제외) 안에 글자가 간판 판면 안에 들어가게 font-size를 고른다.
  */
 export function fitKidsGlassTitleFontSize(
   text: string,
@@ -80,7 +77,7 @@ export function fitKidsGlassTitleFontSize(
 ): number {
   if (!text || boxWidthPx <= 0) return maxPx;
   for (let size = maxPx; size >= minPx; size -= 1) {
-    const avail = boxWidthPx - KIDS_GLASS_CHROME_EM * size;
+    const avail = boxWidthPx - KIDS_SIGN_CHROME_X_PX;
     if (avail <= 8) continue;
     const width = useAppTitleMeasure
       ? measureAppTitleWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx)
@@ -126,6 +123,46 @@ export function fitNeoStampTitleFontSize(
       - NEO_STAMP_SAFETY_SLACK_PX;
     if (avail <= 8) continue;
     const letterSpacingPx = NEO_STAMP_LETTER_SPACING_EM * size;
+    const width = useAppTitleMeasure
+      ? measureAppTitleWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx)
+      : measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx);
+    if (width <= avail) return size;
+  }
+  return lowPx;
+}
+
+/** High-end glass capsule — padding 0.75em×2 + border 1px×2 + letter-spacing 0.04em */
+const HIGHEND_CAPSULE_PAD_X_EM = 0.75 * 2;
+const HIGHEND_CAPSULE_BORDER_PX = 1 * 2;
+const HIGHEND_CAPSULE_LETTER_SPACING_EM = 0.04;
+/** canvas/DOM 측정·서브픽셀·마지막 글자 letter-spacing 여유 */
+const HIGHEND_CAPSULE_SAFETY_SLACK_PX = 8;
+/** 긴 제목+관리자 버튼에서도 캡슐 안에 들어가게 허용하는 절대 하한 */
+export const HIGHEND_CAPSULE_TITLE_MIN_PX = 12;
+
+/**
+ * Quiet glass 캡슐 안에 타이틀이 들어가게 font-size를 고른다.
+ * (패딩·보더·자간·측정 오차를 차감한 가용 폭 기준)
+ */
+export function fitHighendCapsuleTitleFontSize(
+  text: string,
+  boxWidthPx: number,
+  minPx: number,
+  maxPx: number,
+  fontFamily: string,
+  fontWeight: string | number = 600,
+  useAppTitleMeasure = false,
+): number {
+  if (!text || boxWidthPx <= 0) return maxPx;
+  const lowPx = Math.min(minPx, HIGHEND_CAPSULE_TITLE_MIN_PX);
+  for (let size = maxPx; size >= lowPx; size -= 1) {
+    const avail =
+      boxWidthPx
+      - HIGHEND_CAPSULE_PAD_X_EM * size
+      - HIGHEND_CAPSULE_BORDER_PX
+      - HIGHEND_CAPSULE_SAFETY_SLACK_PX;
+    if (avail <= 8) continue;
+    const letterSpacingPx = HIGHEND_CAPSULE_LETTER_SPACING_EM * size;
     const width = useAppTitleMeasure
       ? measureAppTitleWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx)
       : measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx);
