@@ -1853,8 +1853,24 @@ export default function FamilyHub() {
   );
 
   const getTitleFitMaxWidth = useCallback(() => {
-    /** kids: 간판 좌우 크롬은 fitKidsGlassTitleFontSize가 고정 px로 뺀다. 관리자 버튼은 h1 폭에서 이미 제외 */
+    /** kids: 간판 좌우 크롬은 fitKidsGlassTitleFontSize가 고정 px로 뺀다. h1은 글자에 맞춰 줄므로 행 폭을 쓴다. */
     const kidsGlassInsetPx = 0;
+    if (isKidsTheme) {
+      const row = titleRowRef.current;
+      /* 뷰포트 전체 폭을 쓰면 폰 프레임보다 크게 그린 뒤 다시 줄어든다 */
+      const rowWidth = row && row.clientWidth > 0 ? row.clientWidth : 430;
+      const adminBtn = row?.querySelector('[data-dashboard-admin-btn]') as HTMLElement | null;
+      const notifEl = row?.querySelector('[data-notification-center]') as HTMLElement | null;
+      const hasAdminButton = !!adminBtn || isAdminTitleContext;
+      const btnWidth =
+        (adminBtn
+          ? adminBtn.getBoundingClientRect().width + 12
+          : hasAdminButton
+            ? DASHBOARD_TITLE_ADMIN_RESERVE_PX
+            : 0)
+        + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
+      return Math.max(120, rowWidth - btnWidth - 16);
+    }
     const capMemberTitleWidth = (px: number) => {
       /* kids 간판은 액자 폭에 묶지 않고, 관리 버튼 왼쪽 행 폭까지 글자를 키운다 */
       if (isAdminTitleContext || isKidsTheme) return px;
@@ -2200,6 +2216,8 @@ export default function FamilyHub() {
   useLayoutEffect(() => {
     const el = titleH1Ref.current;
     if (!el) return;
+    /* kids 간판은 테두리가 h1 scrollWidth에 포함된다. 여기서 다시 줄이면 글자가 최소 크기까지 떨어진다. */
+    if (isKidsTheme) return;
 
     if (frameIsPortrait && isDefaultDashboardTitle && !isHighendTheme) {
       const maxPx = Math.min(
@@ -2241,6 +2259,7 @@ export default function FamilyHub() {
     customFontSizeCap,
     isNeoTheme,
     isHighendTheme,
+    isKidsTheme,
   ]);
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
@@ -6491,7 +6510,7 @@ export default function FamilyHub() {
     flex: '1 1 0%',
     minWidth: 0,
     maxWidth: '100%',
-    paddingRight: 12,
+    paddingRight: isKidsTheme ? 0 : 12,
     lineHeight: isKidsTheme
       ? (frameIsPortrait ? 1.2 : 1.25)
       : (frameIsPortrait ? 1.15 : undefined),

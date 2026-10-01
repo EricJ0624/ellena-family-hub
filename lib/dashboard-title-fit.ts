@@ -59,8 +59,12 @@ export function customTitleMaxFontSize(
   return baseCap;
 }
 
-/** Kids 나무 간판 — 좌우 border-image 46px×2 + 안쪽 padding 8px×2 + 측정 여유 */
-const KIDS_SIGN_CHROME_X_PX = 46 * 2 + 8 * 2 + 6;
+/**
+ * Kids 나무 간판 — 글자 가용 폭에서 빼는 좌우 여백.
+ * 테두리 46px는 판자 그림이라 글자 크기에서 빼지 않는다.
+ * 고리에 닿지 않을 만큼만 남긴다.
+ */
+const KIDS_SIGN_CHROME_X_PX = 28 * 2;
 
 /**
  * h1 가용 폭(관리자 버튼 제외) 안에 글자가 간판 판면 안에 들어가게 font-size를 고른다.

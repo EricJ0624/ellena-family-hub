@@ -1330,20 +1330,17 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 
 /*
  * Kids 대시보드 패밀리 타이틀: 나무 간판 PNG (9-slice).
- * 밧줄·고리 코너는 고정하고, 가운데 판만 제목 길이에 맞춰 늘어난다.
- * 좌우 border 46px는 fitKidsGlassTitleFontSize의 크롬 폭과 맞춘다.
+ * 테두리·최소 높이는 판자 크기. 글자는 그 안쪽을 채우고 고리 안쪽 나무까지 쓴다.
  */
 :root[data-ui-theme='kids_friendly'] .dashboard-family-title-glass,
 .dark[data-ui-theme='kids_friendly'] .dashboard-family-title-glass {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100%;
-  width: max-content;
-  text-align: center;
-  min-height: 7.75rem;
+  position: relative;
+  display: flex;
   box-sizing: border-box;
-  padding: 0.1em 8px;
+  width: 100%;
+  max-width: 100%;
+  min-height: 7.75rem;
+  padding: 0;
   border-style: solid;
   border-width: 40px 46px 18px 46px;
   border-color: transparent;
@@ -1351,12 +1348,17 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   border-image-slice: 132 128 52 128 fill;
   border-image-width: 40px 46px 18px 46px;
   border-image-repeat: stretch;
-  line-height: 1.2;
-  vertical-align: middle;
+  line-height: 1;
   overflow: visible;
   white-space: nowrap;
   background: transparent;
   box-shadow: none;
+}
+
+/* 나무 간판과 사진 액자 사이. main-content gap(1.5rem)을 이만큼 줄인다. */
+:root[data-ui-theme='kids_friendly'] .main-content > .app-header,
+.dark[data-ui-theme='kids_friendly'] .main-content > .app-header {
+  margin-top: -1rem;
 }
 
 /* 공지가 보이면 간판 밧줄 상단이 배너 하단에 붙는다. 배너가 없으면 기존 상단 여백 유지. */
@@ -1367,8 +1369,11 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 
 :root[data-ui-theme='kids_friendly'] .dashboard-family-title-text,
 .dark[data-ui-theme='kids_friendly'] .dashboard-family-title-text {
-  min-width: 0;
-  flex: 0 1 auto;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
   overflow: visible;
   color: #3f2914;
   -webkit-text-fill-color: #3f2914;
