@@ -187,8 +187,6 @@ function MemoriesPageContent() {
   const lightboxSizeRef = useRef<{ w: number; h: number } | null>(null);
   /** ?photo= 쿼리로 라이트박스를 이미 열었는지 (앨범 갱신 시 재오픈 방지) */
   const openedPhotoQueryRef = useRef<string | null>(null);
-  /** 큰 사진이 열린 시각. 직후 따라온 탭이 바로 닫지 못하게 한다. */
-  const lightboxOpenedAtRef = useRef(0);
   const headerRef = useRef<HTMLElement>(null);
   const headerRefWidthRef = useRef<number>(0);
   const [headerScale, setHeaderScale] = useState<number>(1);
@@ -405,9 +403,9 @@ function MemoriesPageContent() {
     }
 
     openedPhotoQueryRef.current = photoParam;
-    lightboxOpenedAtRef.current = performance.now();
     setEditingId(null);
     setSelectedIndex(index);
+    router.replace('/memories', { scroll: false });
   }, [searchParams, album, viewMode, groupedByDate, router]);
 
   const handleBack = () => { window.location.href = '/dashboard'; };
@@ -643,18 +641,10 @@ function MemoriesPageContent() {
   };
 
   const openLightbox = (index: number) => {
-    lightboxOpenedAtRef.current = performance.now();
     setEditingId(null);
     setSelectedIndex(index);
   };
-  const closeLightbox = () => {
-    // 페이지가 늦게 뜬 직후 따라온 탭이 방금 연 큰 사진을 바로 닫지 않게 한다.
-    if (performance.now() - lightboxOpenedAtRef.current < 450) return;
-    setSelectedIndex(null);
-    if (searchParams.get('photo')) {
-      router.replace('/memories', { scroll: false });
-    }
-  };
+  const closeLightbox = () => setSelectedIndex(null);
 
   const mainMaxWidth = viewportWidth;
   const isWideAlbum = viewportWidth >= ALBUM_WIDE_MIN_PX;
