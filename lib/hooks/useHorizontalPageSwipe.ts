@@ -170,17 +170,31 @@ export function useHorizontalPageSwipe({
       }
       gestureRef.current = null;
 
-      if (axis === 'x' && Math.abs(dx) > AXIS_LOCK_PX) blockClickRef.current = true;
-      if (axis === 'y' && Math.abs(dy) > AXIS_LOCK_PX) blockClickRef.current = true;
-      if (axis !== 'x') return;
-      if (Math.abs(dx) < thresholdPx) return;
-
-      /* 왼쪽 스와이프(손가락→왼쪽) = 다음 장 */
-      if (dx < 0) {
-        if (canNext) onPage('next');
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
+      const pageTurn = axis === 'x' && adx >= thresholdPx;
+      if (pageTurn) {
+        blockClickRef.current = true;
+        if (dx < 0) {
+          if (canNext) onPage('next');
+        } else if (canPrev) {
+          onPage('prev');
+        }
         return;
       }
-      if (canPrev) onPage('prev');
+
+      // 10px만 움직여도 브라우저가 클릭을 취소한다. 페이지를 넘기지 않은 짧은 탭은 버튼을 직접 누른다.
+      // 세로로 길게 움직인 경우는 스크롤이므로 사진을 열지 않는다.
+      if (axis === 'y' && ady > 24) {
+        blockClickRef.current = true;
+        return;
+      }
+      if (!axis || adx >= thresholdPx) return;
+      const target = e.target;
+      const button = target instanceof Element ? target.closest('button') : null;
+      if (!button) return;
+      button.click();
+      blockClickRef.current = true;
     },
     [canNext, canPrev, enabled, onPage, thresholdPx],
   );

@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import * as exifr from 'exifr';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
+import { hideAlbumQuickView } from '@/app/features/family-album/album-quick-view-store';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB 통일
 const COMPRESSION_OPTIONS = {
@@ -398,6 +399,7 @@ function MemoriesPageContent() {
     // 앨범은 로드됐는데 id가 없으면 쿼리만 정리 (재시도/재오픈 방지)
     if (index < 0) {
       openedPhotoQueryRef.current = photoParam;
+      hideAlbumQuickView();
       router.replace('/memories', { scroll: false });
       return;
     }
@@ -407,6 +409,10 @@ function MemoriesPageContent() {
     setSelectedIndex(index);
     router.replace('/memories', { scroll: false });
   }, [searchParams, album, viewMode, groupedByDate, router]);
+
+  useEffect(() => {
+    if (selectedIndex !== null) hideAlbumQuickView();
+  }, [selectedIndex]);
 
   const handleBack = () => { window.location.href = '/dashboard'; };
 
