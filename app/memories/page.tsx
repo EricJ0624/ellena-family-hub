@@ -68,9 +68,6 @@ function albumPhoneColumnCount(layoutW: number, pinchScale: number, photoCount: 
   return Math.min(4, n);
 }
 
-const ALBUM_PINCH_VIEWPORT =
-  'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, user-scalable=yes';
-
 function formatMemorySectionDate(date: Date, lang: LangCode): string {
   return new Intl.DateTimeFormat(intlLocaleForLang(lang), {
     year: 'numeric',
@@ -194,6 +191,10 @@ function MemoriesPageContent() {
   const headerRefWidthRef = useRef<number>(0);
   const [headerScale, setHeaderScale] = useState<number>(1);
   const [viewportWidth, setViewportWidth] = useState<number>(1200);
+  /** 폰 두 손가락 배율. 1이면 기본 장수, 커질수록 한 줄 장수가 줄어든다. */
+  const [phonePinchScale, setPhonePinchScale] = useState(1);
+  const phonePinchScaleRef = useRef(1);
+  const pageRef = useRef<HTMLDivElement>(null);
   lightboxOpenRef.current = selectedIndex !== null;
   if (selectedIndex === null) lightboxSizeRef.current = null;
   useEffect(() => {
@@ -207,15 +208,14 @@ function MemoriesPageContent() {
         const vv = window.visualViewport;
         const layoutW = window.innerWidth;
         const phonePinch = isPhonePinchAlbum();
-        const pinchScale = vv?.scale ?? 1;
-        // PC 줌은 innerWidth가 변하고, 폰 핀치는 scale만 변한다.
+        // PC 줌은 innerWidth가 변한다. 폰은 페이지를 확대하지 않고 제스처 배율만 쓴다.
         const visualW = Math.round(
           phonePinch ? layoutW : vv ? Math.min(layoutW, vv.width) : layoutW,
         );
         setViewportWidth((prev) => (prev === visualW ? prev : visualW));
         setGridColumns((prev) => {
           const next = phonePinch
-            ? albumPhoneColumnCount(layoutW, pinchScale, n)
+            ? albumPhoneColumnCount(layoutW, phonePinchScaleRef.current, n)
             : albumGridColumnCount(visualW, n);
           return prev === next ? prev : next;
         });
@@ -224,28 +224,51 @@ function MemoriesPageContent() {
     updateColumns();
     window.addEventListener('resize', updateColumns);
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    if (vv) {
-      vv.addEventListener('resize', updateColumns);
-      vv.addEventListener('scroll', updateColumns);
-    }
+    if (vv) vv.addEventListener('resize', updateColumns);
     return () => {
       if (rafId !== undefined) cancelAnimationFrame(rafId);
       window.removeEventListener('resize', updateColumns);
-      if (vv) {
-        vv.removeEventListener('resize', updateColumns);
-        vv.removeEventListener('scroll', updateColumns);
-      }
+      if (vv) vv.removeEventListener('resize', updateColumns);
     };
-  }, [album.length, selectedIndex]);
+  }, [album.length, selectedIndex, phonePinchScale]);
 
-  /** 대시보드의 줌 잠금이 남아 있어도 앨범에서는 핀치를 한 번만 허용. 감시 루프는 두지 않는다. */
+  /** 폰: 페이지는 확대하지 않고, 두 손가락 간격으로만 한 줄 장수를 바꾼다. */
   useEffect(() => {
-    const meta = document.querySelector('meta[name="viewport"]');
-    if (!meta) return;
-    const prev = meta.getAttribute('content');
-    if (prev !== ALBUM_PINCH_VIEWPORT) meta.setAttribute('content', ALBUM_PINCH_VIEWPORT);
+    const el = pageRef.current;
+    if (!el || !isPhonePinchAlbum()) return;
+    let startDist = 0;
+    let startScale = 1;
+    const distance = (touches: TouchList) => {
+      const a = touches[0];
+      const b = touches[1];
+      if (!a || !b) return 0;
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    };
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 2 || lightboxOpenRef.current) return;
+      startDist = distance(e.touches);
+      startScale = phonePinchScaleRef.current;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (e.touches.length !== 2 || startDist <= 0 || lightboxOpenRef.current) return;
+      if (e.cancelable) e.preventDefault();
+      const next = Math.min(5, Math.max(1, startScale * (distance(e.touches) / startDist)));
+      if (Math.abs(next - phonePinchScaleRef.current) < 0.03) return;
+      phonePinchScaleRef.current = next;
+      setPhonePinchScale(next);
+    };
+    const onEnd = () => {
+      startDist = 0;
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onEnd);
     return () => {
-      if (prev != null && prev !== ALBUM_PINCH_VIEWPORT) meta.setAttribute('content', prev);
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
     };
   }, []);
 
@@ -254,7 +277,7 @@ function MemoriesPageContent() {
     const vv = window.visualViewport;
     if (!vv) return;
     const centerScrollOnResize = () => {
-      if (lightboxOpenRef.current) return;
+      if (lightboxOpenRef.current || isPhonePinchAlbum()) return;
       const doc = document.documentElement;
       const pageCenterX = doc.scrollWidth / 2;
       const targetX = pageCenterX - vv.width / 2;
@@ -382,7 +405,10 @@ function MemoriesPageContent() {
     openedPhotoQueryRef.current = photoParam;
     setEditingId(null);
     setSelectedIndex(index);
-    router.replace('/memories', { scroll: false });
+    // 주소 정리는 큰 사진 state가 반영된 뒤에. 바로 지우면 폰에서 첫 탭이 빈 모음으로 끝난다.
+    requestAnimationFrame(() => {
+      router.replace('/memories', { scroll: false });
+    });
   }, [searchParams, album, viewMode, groupedByDate, router]);
 
   const handleBack = () => { window.location.href = '/dashboard'; };
@@ -634,15 +660,16 @@ function MemoriesPageContent() {
     gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
     ...(isWideAlbum ? { ['--album-grid-max' as string]: `${albumGridMaxPx}px` } : {}),
   } as React.CSSProperties;
+  const showFullPhoto = gridColumns <= 2;
 
   return (
-    <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip bg-[var(--surface-base)] pb-20">
+    <div ref={pageRef} className="memories-page min-h-screen w-full max-w-full overflow-x-clip bg-[var(--surface-base)] pb-20">
       <header
         ref={headerRef}
         className="sticky top-0 z-50 mx-auto box-border flex w-full items-center bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] [max-width:var(--memories-header-max-width)] [padding:var(--memories-header-padding)] [gap:var(--memories-header-gap)]"
         style={{
           ['--hs' as any]: headerScale,
-          ['--memories-header-max-width' as any]: `min(${mainMaxWidth}px, 100vw)`,
+          ['--memories-header-max-width' as any]: `min(${mainMaxWidth}px, 100%)`,
           ['--memories-header-padding' as any]: `${12 * headerScale}px ${16 * headerScale}px`,
           ['--memories-header-gap' as any]: `${12 * headerScale}px`,
         }}
@@ -708,7 +735,7 @@ function MemoriesPageContent() {
       </header>
 
       <main
-        className={`mx-auto box-border w-full min-w-0 overflow-x-clip p-4 max-w-[min(${mainMaxWidth}px,100vw)]`}
+        className={`mx-auto box-border w-full min-w-0 overflow-x-clip p-4 max-w-[min(${mainMaxWidth}px,100%)]`}
       >
         {album.length === 0 ? (
           <div
@@ -755,7 +782,7 @@ function MemoriesPageContent() {
                   className="relative cursor-pointer"
                 >
                     <div
-                      className={`relative bg-slate-100 ${gridColumns === 1 ? 'w-full' : 'aspect-[4/3]'}`}
+                      className={`relative bg-slate-100 ${showFullPhoto ? 'w-full' : 'aspect-[4/3]'}`}
                     >
                     <img
                       src={p.data}
@@ -772,7 +799,7 @@ function MemoriesPageContent() {
                         }
                       }}
                       className={`block w-full transition-opacity duration-200 ease-out ${
-                        gridColumns === 1
+                        showFullPhoto
                           ? 'h-auto max-w-full align-top object-contain'
                           : 'h-full object-cover'
                       } ${imageLoadedIds.has(String(p.id)) ? 'opacity-100' : 'opacity-0'}`}
@@ -831,7 +858,7 @@ function MemoriesPageContent() {
                               className="relative cursor-pointer"
                             >
                               <div
-                                className={`relative bg-slate-100 ${gridColumns === 1 ? 'w-full' : 'aspect-[4/3]'}`}
+                                className={`relative bg-slate-100 ${showFullPhoto ? 'w-full' : 'aspect-[4/3]'}`}
                               >
                                 <img
                                   src={p.data}
@@ -847,7 +874,7 @@ function MemoriesPageContent() {
                                     }
                                   }}
                                   className={`block w-full transition-opacity duration-200 ease-out ${
-                                    gridColumns === 1
+                                    showFullPhoto
                                       ? 'h-auto max-w-full align-top object-contain'
                                       : 'h-full object-cover'
                                   } ${imageLoadedIds.has(String(p.id)) ? 'opacity-100' : 'opacity-0'}`}

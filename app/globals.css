@@ -1627,10 +1627,12 @@ select:not(.chalkboard-form-input) {
 .memories-page {
   overflow-x: clip;
   overscroll-behavior-x: none;
-  max-width: 100vw;
+  /* 100vw는 스크롤바까지 포함해 폰에서 사진 좌우가 조금 잘린다 */
+  max-width: 100%;
   position: relative;
   /* PC body가 세로 가운데 정렬이면 긴 앨범이 위로 밀려 헤더가 사진을 가린다 */
   align-self: flex-start;
+  touch-action: pan-y;
 }
 
 @media (min-width: 768px) {

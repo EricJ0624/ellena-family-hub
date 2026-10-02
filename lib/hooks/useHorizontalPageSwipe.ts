@@ -170,8 +170,9 @@ export function useHorizontalPageSwipe({
       }
       gestureRef.current = null;
 
-      if (axis === 'x' && Math.abs(dx) > AXIS_LOCK_PX) blockClickRef.current = true;
-      if (axis === 'y' && Math.abs(dy) > AXIS_LOCK_PX) blockClickRef.current = true;
+      // 페이지를 넘긴 가로 스와이프만 클릭을 막는다. 10px 흔들림으로 첫 탭이 삼켜지지 않게 한다.
+      if (axis === 'x' && Math.abs(dx) >= thresholdPx) blockClickRef.current = true;
+      if (axis === 'y' && Math.abs(dy) > 24) blockClickRef.current = true;
       if (axis !== 'x') return;
       if (Math.abs(dx) < thresholdPx) return;
 
