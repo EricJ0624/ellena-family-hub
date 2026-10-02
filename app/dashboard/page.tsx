@@ -7134,7 +7134,7 @@ export default function FamilyHub() {
 
       {/* Main Content - 본문 폰트 상속 */}
       <div
-        className="main-content [font-family:var(--dashboard-body-font)]"
+        className="dashboard-main main-content [font-family:var(--dashboard-body-font)]"
         style={dashboardMainContentStyle}
       >
 
@@ -7197,7 +7197,13 @@ export default function FamilyHub() {
                 dashboardTitleText
               )}
             </h1>
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div
+              className={[
+                'ml-auto flex shrink-0 items-center gap-2',
+                /* 줄 중앙은 밧줄(40px) 때문에 판자보다 위. (40−18)/2 만큼 내려 판자에 맞춘다 */
+                isKidsTheme ? 'translate-y-[11px]' : '',
+              ].filter(Boolean).join(' ')}
+            >
               <NotificationCenter groupId={currentGroupId} userId={userId} lang={lang} />
               {isGroupLoading ? (
                 <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
