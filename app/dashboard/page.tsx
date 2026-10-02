@@ -114,7 +114,6 @@ import { FamilyLocationRequestModal } from '@/app/features/family-location/compo
 import { FamilyLocationNavMapModal } from '@/app/features/family-location/components/FamilyLocationNavMapModal';
 import { openNavMapApp, isLocationInSouthKorea, type NavMapApp } from '@/lib/nav-map-apps';
 import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
-import { showAlbumQuickView } from '@/app/features/family-album/album-quick-view-store';
 import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
 import { TravelQuickRecordSection } from '@/app/features/travel-planner/components/TravelQuickRecordSection';
 import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
@@ -6830,10 +6829,9 @@ export default function FamilyHub() {
         return (
           <FamilyAlbumSection
             photos={stableAlbum}
-            onPhotoClick={(photo) => {
-              if (photo.data) showAlbumQuickView(photo.data);
-              router.push(`/memories?photo=${encodeURIComponent(String(photo.id))}`);
-            }}
+            onPhotoClick={(photo) =>
+              router.push(`/memories?photo=${encodeURIComponent(String(photo.id))}`)
+            }
             onViewAllClick={() => router.push('/memories')}
             uiTheme={uiTheme}
             translations={{

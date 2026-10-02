@@ -4,7 +4,6 @@ import { GroupProviderWrapper } from "./providers/GroupProviderWrapper";
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { ClientChunkRecovery } from "./components/ClientChunkRecovery";
 import { CalendarEventModalHost } from "./features/family-calendar/components/CalendarEventModalHost";
-import { AlbumQuickViewHost } from "./features/family-album/components/AlbumQuickViewHost";
 
 export const metadata: Metadata = {
   title: "Hearth: Family",
@@ -62,7 +61,6 @@ export default function RootLayout({
         <ThemeProvider>
           <GroupProviderWrapper>{children}</GroupProviderWrapper>
           <CalendarEventModalHost />
-          <AlbumQuickViewHost />
         </ThemeProvider>
       </body>
     </html>
