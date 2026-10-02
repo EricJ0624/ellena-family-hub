@@ -37,18 +37,39 @@ const ALBUM_WIDE_MIN_PX = 640;
 const ALBUM_PC_CARD_MAX_PX = 420;
 const ALBUM_PC_GAP_PX = 8;
 
+/**
+ * PC 사진 모음 한 줄 장수.
+ * 브라우저 줌은 CSS 너비를 줄인다. 최대 줌(약 400px)은 가로 1장.
+ */
 function albumGridColumnCount(visualW: number, photoCount: number): number {
   const n = Math.max(0, photoCount);
-  if (visualW < ALBUM_WIDE_MIN_PX) {
-    // 좁은 화면: 11장 이하는 1열, 그 이상은 뷰포트 열 수
-    const viewportCols =
-      visualW < 200 ? 1 : visualW < 260 ? 2 : visualW < 320 ? 3 : visualW < 380 ? 4 : visualW < 440 ? 5 : visualW < 520 ? 6 : 7;
-    return n <= 11 ? 1 : viewportCols;
-  }
-  const contentW = Math.min(1200, visualW) - 32;
-  const fit = Math.max(1, Math.floor((contentW + ALBUM_PC_GAP_PX) / (380 + ALBUM_PC_GAP_PX)));
-  return Math.min(3, Math.max(1, n), fit);
+  if (n <= 1) return 1;
+  const contentW = Math.max(0, visualW - 32);
+  if (contentW < 480) return 1;
+  const cell = contentW < 1000 ? 300 : 240;
+  const cols = Math.max(2, Math.floor((contentW + ALBUM_PC_GAP_PX) / (cell + ALBUM_PC_GAP_PX)));
+  return Math.min(cols, n, 20);
 }
+
+/** 폰은 레이아웃 너비가 줌과 무관하다. 핀치 배율로 한 줄 장수를 줄인다. */
+function isPhonePinchAlbum(): boolean {
+  if (typeof window === 'undefined') return false;
+  const coarse = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+  return coarse && window.innerWidth < 768;
+}
+
+function albumPhoneColumnCount(layoutW: number, pinchScale: number, photoCount: number): number {
+  const n = Math.max(0, photoCount);
+  if (n <= 1) return 1;
+  const visible = layoutW / Math.min(Math.max(pinchScale, 1), 5);
+  if (visible < 200) return 1;
+  if (visible < 300) return Math.min(2, n);
+  if (visible < 420) return Math.min(3, n);
+  return Math.min(4, n);
+}
+
+const ALBUM_PINCH_VIEWPORT =
+  'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, user-scalable=yes';
 
 function formatMemorySectionDate(date: Date, lang: LangCode): string {
   return new Intl.DateTimeFormat(intlLocaleForLang(lang), {
@@ -184,10 +205,18 @@ function MemoriesPageContent() {
         if (lightboxOpenRef.current) return;
         const n = album.length;
         const vv = window.visualViewport;
-        const visualW = vv ? vv.width : window.innerWidth;
-        setViewportWidth(visualW);
+        const layoutW = window.innerWidth;
+        const phonePinch = isPhonePinchAlbum();
+        const pinchScale = vv?.scale ?? 1;
+        // PC 줌은 innerWidth가 변하고, 폰 핀치는 scale만 변한다.
+        const visualW = Math.round(
+          phonePinch ? layoutW : vv ? Math.min(layoutW, vv.width) : layoutW,
+        );
+        setViewportWidth((prev) => (prev === visualW ? prev : visualW));
         setGridColumns((prev) => {
-          const next = albumGridColumnCount(visualW, n);
+          const next = phonePinch
+            ? albumPhoneColumnCount(layoutW, pinchScale, n)
+            : albumGridColumnCount(visualW, n);
           return prev === next ? prev : next;
         });
       });
@@ -207,7 +236,18 @@ function MemoriesPageContent() {
         vv.removeEventListener('scroll', updateColumns);
       }
     };
-  }, [album.length]);
+  }, [album.length, selectedIndex]);
+
+  /** 대시보드의 줌 잠금이 남아 있어도 앨범에서는 핀치를 한 번만 허용. 감시 루프는 두지 않는다. */
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    const prev = meta.getAttribute('content');
+    if (prev !== ALBUM_PINCH_VIEWPORT) meta.setAttribute('content', ALBUM_PINCH_VIEWPORT);
+    return () => {
+      if (prev != null && prev !== ALBUM_PINCH_VIEWPORT) meta.setAttribute('content', prev);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -583,16 +623,17 @@ function MemoriesPageContent() {
   };
   const closeLightbox = () => setSelectedIndex(null);
 
-  const mainMaxWidth = Math.min(1200, viewportWidth);
+  const mainMaxWidth = viewportWidth;
   const isWideAlbum = viewportWidth >= ALBUM_WIDE_MIN_PX;
   const albumGridMaxPx =
     gridColumns * ALBUM_PC_CARD_MAX_PX + Math.max(0, gridColumns - 1) * ALBUM_PC_GAP_PX;
-  const albumGridClassName = `mx-auto grid w-full min-w-0 gap-2 [grid-template-columns:repeat(${gridColumns},minmax(0,1fr))]${
+  const albumGridClassName = `mx-auto grid w-full min-w-0 gap-2${
     isWideAlbum ? ' max-w-[var(--album-grid-max)]' : ''
   }`;
-  const albumGridStyle = isWideAlbum
-    ? ({ ['--album-grid-max' as string]: `${albumGridMaxPx}px` } as React.CSSProperties)
-    : undefined;
+  const albumGridStyle = {
+    gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+    ...(isWideAlbum ? { ['--album-grid-max' as string]: `${albumGridMaxPx}px` } : {}),
+  } as React.CSSProperties;
 
   return (
     <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip bg-[var(--surface-base)] pb-20">
