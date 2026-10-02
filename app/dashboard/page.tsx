@@ -7476,7 +7476,11 @@ export default function FamilyHub() {
                         layoutH={cfg.layoutH}
                         colSpan={colSpan}
                         rowSpan={rowSpan}
-                        onExpand={isSmallWidget && !isExpanded ? handleExpandWidget : undefined}
+                        onExpand={
+                          isSmallWidget && !isExpanded && cfg.widget_key !== 'album'
+                            ? handleExpandWidget
+                            : undefined
+                        }
                         expandLabel={dt('widgets_magnify_open')}
                       >
                         {renderWidgetSection(cfg.widget_key, rowSpan)}

@@ -194,7 +194,7 @@ export function useHorizontalPageSwipe({
   }, []);
 
   const style: CSSProperties = enabled
-    ? { touchAction: 'none', cursor: 'grab' }
+    ? { touchAction: 'manipulation', cursor: 'grab' }
     : {};
 
   return {

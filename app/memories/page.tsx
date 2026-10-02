@@ -405,10 +405,6 @@ function MemoriesPageContent() {
     openedPhotoQueryRef.current = photoParam;
     setEditingId(null);
     setSelectedIndex(index);
-    // 주소 정리는 큰 사진 state가 반영된 뒤에. 바로 지우면 폰에서 첫 탭이 빈 모음으로 끝난다.
-    requestAnimationFrame(() => {
-      router.replace('/memories', { scroll: false });
-    });
   }, [searchParams, album, viewMode, groupedByDate, router]);
 
   const handleBack = () => { window.location.href = '/dashboard'; };
@@ -647,20 +643,25 @@ function MemoriesPageContent() {
     setEditingId(null);
     setSelectedIndex(index);
   };
-  const closeLightbox = () => setSelectedIndex(null);
+  const closeLightbox = () => {
+    setSelectedIndex(null);
+    if (searchParams.get('photo')) {
+      router.replace('/memories', { scroll: false });
+    }
+  };
 
   const mainMaxWidth = viewportWidth;
   const isWideAlbum = viewportWidth >= ALBUM_WIDE_MIN_PX;
   const albumGridMaxPx =
     gridColumns * ALBUM_PC_CARD_MAX_PX + Math.max(0, gridColumns - 1) * ALBUM_PC_GAP_PX;
-  const albumGridClassName = `mx-auto grid w-full min-w-0 gap-2${
+  const albumGridClassName = `mx-auto grid w-full min-w-0 items-start gap-2${
     isWideAlbum ? ' max-w-[var(--album-grid-max)]' : ''
   }`;
   const albumGridStyle = {
     gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
     ...(isWideAlbum ? { ['--album-grid-max' as string]: `${albumGridMaxPx}px` } : {}),
   } as React.CSSProperties;
-  const showFullPhoto = gridColumns <= 2;
+  const showFullPhoto = gridColumns === 1;
 
   return (
     <div ref={pageRef} className="memories-page min-h-screen w-full max-w-full overflow-x-clip bg-[var(--surface-base)] pb-20">
