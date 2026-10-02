@@ -7141,7 +7141,11 @@ export default function FamilyHub() {
         {/* 타이틀 + 관리자 — 세로/가로 모두 좌측 타이틀 + 우측 admin flex */}
         <div
           ref={titleRowRef}
-          className="relative z-20 box-border min-h-12 w-full min-w-0 max-w-full px-1"
+          className={[
+            'relative z-20 box-border w-full min-w-0 max-w-full px-1',
+            /* Kids 간판(7.75rem)이 줄 높이보다 크면 WebKit에서 액자 위로 넘친다. min-h-12는 48px뿐 */
+            isKidsTheme ? 'min-h-[7.75rem]' : 'min-h-12',
+          ].join(' ')}
         >
           <div
             ref={titleContainerRef}
@@ -7152,8 +7156,9 @@ export default function FamilyHub() {
               style={dashboardTitleStyle}
               className={[
                 frameIsPortrait ? 'leading-[1.15]' : '',
-                /* 글래스 띠가 줄박스 밖으로 나가 액자 위에 그려지지 않게 행 높이에 포함 */
-                !isAdminTitleContext ? 'flex min-w-0 items-center' : '',
+                /* 간판을 행 높이에 포함. Kids는 관리자여도 적용 — absolute 글자만 있으면 WebKit이 자식 min-height를 flex 최소 높이로 안 올림 */
+                (isKidsTheme || !isAdminTitleContext) ? 'flex min-w-0 items-center' : '',
+                isKidsTheme ? 'min-h-[7.75rem]' : '',
               ].filter(Boolean).join(' ') || undefined}
             >
               {isKidsTheme ? (
