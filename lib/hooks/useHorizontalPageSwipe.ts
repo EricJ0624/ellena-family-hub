@@ -70,8 +70,8 @@ export function useHorizontalPageSwipe({
   const gestureRef = useRef<Gesture | null>(null);
   const blockClickRef = useRef(false);
   const unbindRef = useRef<(() => void) | null>(null);
-  const optsRef = useRef({ enabled, verticalCancelRatio });
-  optsRef.current = { enabled, verticalCancelRatio };
+  const optsRef = useRef({ enabled, verticalCancelRatio, thresholdPx });
+  optsRef.current = { enabled, verticalCancelRatio, thresholdPx };
 
   const lockAxis = useCallback((g: Gesture, dx: number, dy: number, fromEl: HTMLElement | null) => {
     if (g.axis) return;
@@ -103,12 +103,10 @@ export function useHorizontalPageSwipe({
       const dx = touch.clientX - g.x;
       const dy = touch.clientY - g.y;
       lockAxis(g, dx, dy, node);
-      if (!g.axis) return;
+      // 가로로 페이지를 넘길 만큼 움직인 뒤에만 기본 동작을 막는다.
+      // 그보다 일찍 막으면 폰 브라우저가 클릭을 취소해 사진 첫 탭이 사라진다.
+      if (g.axis !== 'x' || Math.abs(dx) < optsRef.current.thresholdPx) return;
       if (e.cancelable) e.preventDefault();
-      if (g.axis !== 'y' || !g.scroller) return;
-      const step = touch.clientY - g.lastY;
-      g.lastY = touch.clientY;
-      g.scroller.scrollTop -= step;
     };
 
     node.addEventListener('touchmove', onTouchMove, { passive: false });
@@ -140,7 +138,8 @@ export function useHorizontalPageSwipe({
       const dx = e.clientX - g.x;
       const dy = e.clientY - g.y;
       lockAxis(g, dx, dy, e.currentTarget);
-      if (g.axis !== 'x') return;
+      // 짧은 흔들림에서 캡처하면 클릭이 사진 버튼이 아니라 위젯으로 간다.
+      if (g.axis !== 'x' || Math.abs(dx) < thresholdPx) return;
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {
@@ -170,9 +169,8 @@ export function useHorizontalPageSwipe({
       }
       gestureRef.current = null;
 
-      // 페이지를 넘긴 가로 스와이프만 클릭을 막는다. 10px 흔들림으로 첫 탭이 삼켜지지 않게 한다.
+      // 실제로 페이지를 넘긴 가로 스와이프만 클릭을 막는다.
       if (axis === 'x' && Math.abs(dx) >= thresholdPx) blockClickRef.current = true;
-      if (axis === 'y' && Math.abs(dy) > 24) blockClickRef.current = true;
       if (axis !== 'x') return;
       if (Math.abs(dx) < thresholdPx) return;
 

@@ -3760,8 +3760,6 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   background: none;
   box-shadow: none;
   transform-origin: center center;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
 }
 
 .album-book-spread--next {
@@ -3872,6 +3870,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   border-radius: 22%;
   background: #d4c6ae;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .album-tile > img {
