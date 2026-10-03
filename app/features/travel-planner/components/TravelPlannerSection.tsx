@@ -4,11 +4,14 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { TravelTrip } from '../types';
 import { isTripVisibleInPlanner } from '@/lib/modules/travel-planner/planner-visibility';
+
+/** 이 개수까지는 위젯 높이 성장, 초과 시 목록만 스크롤 */
+const TRAVEL_SCROLL_AFTER = 4;
 
 interface TravelPlannerSectionProps {
   trips: TravelTrip[];
@@ -40,6 +43,56 @@ export function TravelPlannerSection({
 }: TravelPlannerSectionProps) {
   const plannerTrips = trips.filter(isTripVisibleInPlanner);
   const isKidsTheme = uiTheme === 'kids_friendly';
+
+  // 목록 스크롤: TRAVEL_SCROLL_AFTER 개 초과 시 실측 maxHeight 적용
+  const tripListRef = useRef<HTMLUListElement>(null);
+  const [tripListMaxPx, setTripListMaxPx] = useState<number | null>(null);
+  const tripsScrollable = plannerTrips.length > TRAVEL_SCROLL_AFTER;
+
+  const tripListLayoutKey = plannerTrips
+    .map((trip) => `${trip.id}:${trip.title}:${trip.start_date}:${trip.end_date}`)
+    .join('|');
+
+  const measureAndCap = useCallback(() => {
+    const list = tripListRef.current;
+    if (!list) return;
+
+    if (plannerTrips.length <= TRAVEL_SCROLL_AFTER) {
+      setTripListMaxPx((prev) => (prev === null ? prev : null));
+      return;
+    }
+
+    const items = Array.from(list.children).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    if (items.length < TRAVEL_SCROLL_AFTER) return;
+
+    const lastVisible = items[TRAVEL_SCROLL_AFTER - 1];
+    const next = Math.ceil(lastVisible.offsetTop + lastVisible.offsetHeight);
+    if (next <= 0) return;
+    // 2px 미만 변화는 무시 (대시보드 재렌더 가드)
+    setTripListMaxPx((prev) => (prev !== null && Math.abs(prev - next) < 2 ? prev : next));
+  }, [plannerTrips.length]);
+
+  useLayoutEffect(() => {
+    if (plannerTrips.length === 0) {
+      setTripListMaxPx((prev) => (prev === null ? prev : null));
+      return;
+    }
+
+    measureAndCap();
+    const list = tripListRef.current;
+    if (!list) return;
+
+    const ro = new ResizeObserver(() => {
+      measureAndCap();
+    });
+    ro.observe(list);
+    for (const child of Array.from(list.children)) {
+      if (child instanceof HTMLElement) ro.observe(child);
+    }
+    return () => ro.disconnect();
+  }, [plannerTrips.length, tripListLayoutKey, measureAndCap]);
 
   if (isKidsTheme) {
     return (
@@ -76,7 +129,15 @@ export function TravelPlannerSection({
               ) : plannerTrips.length === 0 ? (
                 <p className="travel-kids-widget-empty">{t.empty_state}</p>
               ) : (
-                <ul className="travel-kids-widget-trips">
+                <ul
+                  ref={tripListRef}
+                  className={`travel-kids-widget-trips${tripsScrollable ? ' travel-trip-list--scroll' : ''}`}
+                  style={
+                    tripsScrollable && tripListMaxPx != null
+                      ? { ['--travel-trip-list-max-h' as string]: `${tripListMaxPx}px` }
+                      : undefined
+                  }
+                >
                   {plannerTrips.map((trip) => (
                     <li key={trip.id} className="travel-kids-widget-trip-item">
                       <button
@@ -142,7 +203,15 @@ export function TravelPlannerSection({
             {t.empty_state}
           </div>
         ) : (
-          <ul className="m-0 list-none p-0">
+          <ul
+            ref={tripListRef}
+            className={`travel-trip-list m-0 list-none p-0${tripsScrollable ? ' travel-trip-list--scroll' : ''}`}
+            style={
+              tripsScrollable && tripListMaxPx != null
+                ? { ['--travel-trip-list-max-h' as string]: `${tripListMaxPx}px` }
+                : undefined
+            }
+          >
             {plannerTrips.map((trip) => (
               <li
                 key={trip.id}
