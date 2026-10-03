@@ -265,6 +265,23 @@ function eventsSignature(events: ReadonlyArray<FamilyEvent>): string {
     .join('|');
 }
 
+/**
+ * widgetConfigs 동일 여부 — 캐시→서버 전환 시 내용이 같으면 setWidgetConfigs 스킵.
+ * 렌더링에 영향을 주는 필드(key, 활성화 여부, 순서, 크기, 레이아웃)만 포함.
+ */
+function widgetConfigsSignature(configs: ReadonlyArray<WidgetConfigDraft>): string {
+  if (!configs.length) return '';
+  return configs
+    .map(
+      (c) =>
+        `${c.widget_key}:${c.is_enabled ? 1 : 0}:${c.display_order}:${c.size}` +
+        `:${c.layoutW ?? ''}:${c.layoutH ?? ''}` +
+        `:${c.layoutPortraitW ?? ''}:${c.layoutPortraitH ?? ''}` +
+        `:${c.layoutLandscapeW ?? ''}:${c.layoutLandscapeH ?? ''}`,
+    )
+    .join('|');
+}
+
 // --- [TYPES] 타입 안정성 추가 ---
 type Message = ChatUiMessage;
 type ChatAttachment = UploadedAttachment;
@@ -6412,7 +6429,10 @@ export default function FamilyHub() {
       const hasTravelDiary = configs.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
       const baselineHas = (baseline ?? []).some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
       if (!hasTravelDiary && baselineHas) return false;
-      setWidgetConfigs(configs);
+      // 시그니처 비교: 내용이 같으면 배열 레퍼런스 교체 없이 스킵 → 불필요한 위젯 전체 리렌더 방지
+      setWidgetConfigs((prev) =>
+        widgetConfigsSignature(prev) === widgetConfigsSignature(configs) ? prev : configs,
+      );
       setWidgetConfigsStatus('ready');
       return true;
     };
@@ -6436,7 +6456,9 @@ export default function FamilyHub() {
       if (cancelled) return;
       const fallback = readWidgetConfigCache(currentGroupId);
       if (fallback) {
-        setWidgetConfigs(fallback);
+        setWidgetConfigs((prev) =>
+          widgetConfigsSignature(prev) === widgetConfigsSignature(fallback) ? prev : fallback,
+        );
         setWidgetConfigsStatus('ready');
         return;
       }
@@ -6459,6 +6481,8 @@ export default function FamilyHub() {
         setWidgetConfigs((prev) => {
           const prevHas = prev.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
           if (!hasTravelDiary && prevHas) return prev;
+          // 시그니처 비교: 내용이 같으면 교체 스킵 → visibilitychange 재로드 시 불필요한 리렌더 방지
+          if (widgetConfigsSignature(prev) === widgetConfigsSignature(configs)) return prev;
           return configs;
         });
         setWidgetConfigsStatus('ready');

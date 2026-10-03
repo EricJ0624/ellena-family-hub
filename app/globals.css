@@ -2014,6 +2014,13 @@ select:not(.chalkboard-form-input) {
     overscroll-behavior-y: contain;
     min-width: 0;
     box-sizing: border-box !important; /* 좌우 패딩이 있다면 box-sizing 적용 */
+    /*
+     * 스크롤바 너비 예약: 스크롤바 나타남/사라짐으로 contentWidth가 변하면
+     * ResizeObserver → cellRowH → --widget-scale-box-h 전체 재계산 캐스케이드 발생.
+     * stable로 스크롤바 공간을 항상 예약해 너비 변동을 방지.
+     * (app-container의 scrollbar-gutter는 실제 스크롤 컨테이너인 main-content에 필요)
+     */
+    scrollbar-gutter: stable;
   }
 
   @media (min-width: 768px) {
@@ -2155,10 +2162,11 @@ select:not(.chalkboard-form-input) {
   animation: fadeIn 0.4s ease-out forwards;
   height: 100%;
   /*
-   * 근본 클립: backdrop-filter / 반투명 배경이 border-radius 밖 사각 코너로
-   * 새는 브라우저 이슈를 inset round 로 강제 절단.
+   * clip-path 제거 (base): default / kids 테마는 backdrop-filter 없음.
+   * overflow: hidden + border-radius 로 코너 클리핑이 동일하게 작동.
+   * highend_glass 테마는 아래 전용 override에서 clip-path 재추가.
+   * GPU 합성 레이어 강제 생성 방지 → 스크롤 중 blank 플리커 감소.
    */
-  clip-path: inset(0 round var(--border-radius-xl));
   isolation: isolate;
 }
 
@@ -4322,11 +4330,11 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      /* transform 제거: GPU 합성 레이어 강제 생성 방지.
+         스크롤 중 레이어 재합성 지연으로 위젯이 blank 되는 현상 방지 */
     }
     to {
       opacity: 1;
-      transform: translateY(0);
     }
 }
 
@@ -4397,6 +4405,9 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     flex: 1 1 auto;
     overflow-x: clip;
     overflow-y: auto;
+    /* 위젯 내부 스크롤이 페이지 스크롤로 전파되지 않도록 격리
+       (스크롤 경계 도달 시 페이지 bounce 방지) */
+    overscroll-behavior-y: contain;
   }
 
   /*

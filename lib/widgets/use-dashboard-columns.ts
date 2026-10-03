@@ -1,6 +1,6 @@
 'use client';
 
-import { type RefObject, useLayoutEffect, useState } from 'react';
+import { type RefObject, useLayoutEffect, useRef, useState } from 'react';
 import {
   detectDashboardShell,
   TOUCH_ONLY_DEVICE_MEDIA_QUERY,
@@ -47,6 +47,36 @@ export function useDashboardGridLayout(
   const [contentWidth, setContentWidth] = useState(0);
   const [isLandscapeGrid, setIsLandscapeGrid] = useState(false);
 
+  /**
+   * [Fix 4] widgetConfigs를 ref로 보관 — useLayoutEffect deps에서 제거.
+   * widgetConfigs 배열 레퍼런스가 바뀔 때마다 effect가 재실행되면
+   * ResizeObserver 재등록 + read() 호출이 반복되어 불필요한 레이아웃 재측정이 발생함.
+   * read() 내부에서 최신 값을 ref로 읽으면 deps 없이도 항상 최신 상태를 사용할 수 있음.
+   */
+  const widgetConfigsRef = useRef(widgetConfigs);
+  widgetConfigsRef.current = widgetConfigs;
+
+  /**
+   * [Fix 3] 마운트 직후 window.innerWidth 기반 초기 레이아웃 추정.
+   * useLayoutEffect는 paint 전 동기 실행 → 첫 렌더에서 1열(기본값) → 실제 열로
+   * 전환되는 레이아웃 점프를 제거한다.
+   * widgetConfigs는 아직 없으므로 빈 배열로 추정(ResizeObserver에서 정확히 보정됨).
+   */
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    const w = Math.round(window.innerWidth);
+    if (w <= 0) return;
+    const initShell = detectDashboardShell();
+    const deviceLandscape = window.matchMedia(DEVICE_ORIENTATION_LANDSCAPE_MEDIA_QUERY).matches;
+    const landscapeGrid = usesLandscapeWidgetGridLayout(initShell, previewOrientation, deviceLandscape);
+    const cols = getDashboardColumnCount(w, initShell, previewOrientation, deviceLandscape, []);
+    setShell(initShell);
+    setContentWidth(w);
+    setIsLandscapeGrid(landscapeGrid);
+    setColumnCount(cols > 0 ? cols : 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 1회 실행 — previewOrientation 초기 추정용
+
   useLayoutEffect(() => {
     if (!gridActive) return;
 
@@ -59,12 +89,13 @@ export function useDashboardGridLayout(
         previewOrientation,
         deviceLandscape,
       );
+      // [Fix 4] widgetConfigs는 ref로 참조 — 배열 레퍼런스 변경으로 effect 재실행 방지
       const nextColumns = getDashboardColumnCount(
         w,
         nextShell,
         previewOrientation,
         deviceLandscape,
-        widgetConfigs,
+        widgetConfigsRef.current,
       );
       // 너비 1px 출렁임 → cellRowH → 모든 위젯 --widget-scale-box-h → cqmin 전체 재계산
       setShell((prev) => (prev === nextShell ? prev : nextShell));
@@ -105,7 +136,9 @@ export function useDashboardGridLayout(
       mqLandscape.removeEventListener('change', onMq);
       window.removeEventListener('resize', onMq);
     };
-  }, [gridRef, previewOrientation, gridActive, widgetConfigs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gridRef, previewOrientation, gridActive]);
+  // widgetConfigs는 widgetConfigsRef.current로 읽으므로 deps 불필요 — [Fix 4]
 
   return { columnCount, shell, contentWidth, isLandscapeGrid };
 }
