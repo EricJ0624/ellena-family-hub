@@ -554,6 +554,8 @@ export default function FamilyHub() {
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
   const loadPiggySummaryRef = useRef<() => Promise<void>>(async () => {});
   const piggyAccountRequestsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 마지막으로 piggy 데이터를 로드한 groupId — 그룹 전환 시 로딩 표시 초기화용 */
+  const piggyLoadedGroupIdRef = useRef<string | null>(null);
   const { trips: travelTrips, loading: travelTripsLoading, reload: reloadTravelTrips } = useTravelTrips({
     currentGroupId,
     isAuthenticated,
@@ -1536,7 +1538,11 @@ export default function FamilyHub() {
 
     try {
       setPiggySummaryError(null);
-      setPiggyLoaded(false);
+      // 그룹이 바뀐 첫 로드일 때만 로딩 표시 — 같은 그룹 재조회 시 기존 데이터를 유지해 위젯 공백 방지
+      if (piggyLoadedGroupIdRef.current !== currentGroupId) {
+        setPiggyLoaded(false);
+        piggyLoadedGroupIdRef.current = currentGroupId;
+      }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         setPiggyLoaded(true);
