@@ -25,7 +25,7 @@ import {
   writeStoredGroupId,
 } from '@/lib/group-id-resolve';
 import { applyOpenGroupIfValid } from '@/lib/route-guard-group-required';
-import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
+import { formatUnknownError, isAbortLikeError, isSupabaseLockError } from '@/lib/supabase-error';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -1574,7 +1574,10 @@ export default function FamilyHub() {
         setPendingAccountRequests([]);
       }
     } catch (err: any) {
-      setPiggySummaryError(err.message || 'Piggy Bank 정보를 불러오지 못했습니다.');
+      // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
+      if (!isSupabaseLockError(err)) {
+        setPiggySummaryError(err.message || 'Piggy Bank 정보를 불러오지 못했습니다.');
+      }
       setPiggyLoaded(true);
     }
   }, [isAuthenticated, currentGroupId]);
@@ -1705,7 +1708,9 @@ export default function FamilyHub() {
       if (!response.ok) throw new Error(result.error || dt('piggy_add_failed'));
       await loadPiggySummary();
     } catch (err: any) {
-      setPiggySummaryError(err.message || dt('piggy_add_failed'));
+      if (!isSupabaseLockError(err)) {
+        setPiggySummaryError(err.message || dt('piggy_add_failed'));
+      }
     }
   }, [currentGroupId, loadPiggySummary]);
 
@@ -1724,7 +1729,9 @@ export default function FamilyHub() {
       if (!response.ok) throw new Error(result.error || dt('piggy_request_failed'));
       alert(result.message || dt('piggy_request_delivered'));
     } catch (err: any) {
-      setPiggySummaryError(err.message || dt('piggy_request_failed'));
+      if (!isSupabaseLockError(err)) {
+        setPiggySummaryError(err.message || dt('piggy_request_failed'));
+      }
     }
   }, [currentGroupId]);
 
@@ -1742,7 +1749,9 @@ export default function FamilyHub() {
       if (!response.ok) throw new Error(result.error || dt('piggy_approve_failed'));
       await loadPiggySummary();
     } catch (err: any) {
-      setPiggySummaryError(err.message || dt('piggy_approve_failed'));
+      if (!isSupabaseLockError(err)) {
+        setPiggySummaryError(err.message || dt('piggy_approve_failed'));
+      }
     }
   }, [loadPiggySummary]);
 
@@ -1760,7 +1769,9 @@ export default function FamilyHub() {
       if (!response.ok) throw new Error(result.error || dt('piggy_reject_failed'));
       await loadPiggySummary();
     } catch (err: any) {
-      setPiggySummaryError(err.message || dt('piggy_reject_failed'));
+      if (!isSupabaseLockError(err)) {
+        setPiggySummaryError(err.message || dt('piggy_reject_failed'));
+      }
     }
   }, [loadPiggySummary]);
 
@@ -1778,7 +1789,9 @@ export default function FamilyHub() {
       if (!response.ok) throw new Error(result.error || dt('piggy_delete_failed'));
       await loadPiggySummary();
     } catch (err: any) {
-      setPiggySummaryError(err.message || dt('piggy_delete_failed'));
+      if (!isSupabaseLockError(err)) {
+        setPiggySummaryError(err.message || dt('piggy_delete_failed'));
+      }
     }
   }, [currentGroupId, loadPiggySummary]);
 

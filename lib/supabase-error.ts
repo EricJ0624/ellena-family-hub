@@ -1,4 +1,19 @@
 /**
+ * Supabase 내부 navigator.locks 경쟁 에러 감지.
+ * 여러 탭 또는 동시 auth 요청이 있을 때 발생하는 내부 처리 에러로,
+ * 사용자에게 노출할 필요 없는 일시적 에러다.
+ */
+export function isSupabaseLockError(error: unknown): boolean {
+  if (error == null) return false;
+  const msg = String((error as { message?: string }).message ?? error ?? '').toLowerCase();
+  return (
+    msg.includes('lock was stolen') ||
+    msg.includes('lock_stolen') ||
+    msg.includes('lockmanager')
+  );
+}
+
+/**
  * HMR·이펙트 재실행·fetch abort 등으로 생기는 취소성 오류인지 판별.
  * 권한 판정 결과는 바꾸지 않고, console.error 노이즈만 줄일 때 사용한다.
  */
@@ -24,6 +39,7 @@ export function isAbortLikeError(error: unknown): boolean {
 /** 모바일·동시요청 제한·일시 네트워크에서 흔한 재시도 가능 오류 */
 export function isTransientClientError(error: unknown): boolean {
   if (isAbortLikeError(error)) return true;
+  if (isSupabaseLockError(error)) return true;
   const e = error as { message?: string; code?: string; status?: number };
   const status = typeof e.status === 'number' ? e.status : Number(e.code);
   if (status === 408 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504) {

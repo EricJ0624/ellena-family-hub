@@ -45,6 +45,7 @@ import { GlassSafeModal } from '@/app/components/GlassSafeModal';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
+import { isSupabaseLockError } from '@/lib/supabase-error';
 import { LANG_CODES, LANG_OPTIONS, LANG_LABELS, ANNOUNCEMENT_PRIMARY_LANG_CODES, ANNOUNCEMENT_EXTRA_LANG_CODES, isValidLang, intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 import { getCountryDisplayName } from '@/lib/countries';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
@@ -605,7 +606,7 @@ export default function AdminPage() {
       });
     } catch (err: any) {
       console.error('통계 로드 오류:', err);
-      setError(err.message || at('error_stats'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_stats'));
     } finally {
       setLoadingData(false);
     }
@@ -692,7 +693,7 @@ export default function AdminPage() {
       setUsers(usersWithGroups);
     } catch (err: any) {
       console.error('사용자 목록 로드 오류:', err);
-      setError(err.message || at('error_users'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_users'));
       setUsers([]);
     } finally {
       setLoadingData(false);
@@ -727,7 +728,7 @@ export default function AdminPage() {
       setGroups(result.data || []);
     } catch (err: any) {
       console.error('그룹 목록 로드 오류:', err);
-      setError(err.message || at('error_groups'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_groups'));
       setGroups([]);
     } finally {
       setLoadingData(false);
@@ -817,7 +818,7 @@ export default function AdminPage() {
       }).catch(() => {});
     } catch (err: any) {
       console.error('그룹 정보 로드 오류:', err);
-      setError(err.message || at('error_group_detail'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_group_detail'));
       setSelectedGroup(null);
       setSelectedGroupId(null);
     }
@@ -934,7 +935,7 @@ export default function AdminPage() {
       setSupportTickets(result.data || []);
     } catch (err: any) {
       console.error('문의 로드 오류:', err);
-      setError(err.message || at('error_support'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_support'));
       setSupportTickets([]);
     } finally {
       if (manageLoading) {
@@ -1085,7 +1086,7 @@ export default function AdminPage() {
       setAnnouncements(result.data || []);
     } catch (err: any) {
       console.error('공지사항 로드 오류:', err);
-      setError(err.message || at('error_announcements'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_announcements'));
       setAnnouncements([]);
     } finally {
       setLoadingData(false);
@@ -1122,7 +1123,7 @@ export default function AdminPage() {
       setSupportTickets(result.data || []);
     } catch (err: any) {
       console.error('문의 로드 오류:', err);
-      setError(err.message || at('error_support'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_support'));
       setSupportTickets([]);
     } finally {
       setLoadingData(false);
@@ -1159,7 +1160,7 @@ export default function AdminPage() {
       setAccessRequests(result.data || []);
     } catch (err: any) {
       console.error('접근 요청 로드 오류:', err);
-      setError(err.message || at('error_access_requests'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_access_requests'));
       setAccessRequests([]);
     } finally {
       setLoadingData(false);
@@ -1206,7 +1207,7 @@ export default function AdminPage() {
       setAuditLogPage(result.page ?? 1);
     } catch (err: any) {
       console.error('감사 로그 로드 오류:', err);
-      setError(err.message || at('error_audit_log'));
+      if (!isSupabaseLockError(err)) setError(err.message || at('error_audit_log'));
       setAuditLogs([]);
       setAuditLogTotal(0);
     } finally {

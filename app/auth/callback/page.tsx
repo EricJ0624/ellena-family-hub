@@ -13,6 +13,7 @@ import { resolvePostAuthPath } from '@/lib/app-enrollment-routing';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
 import { takePendingGoogleSignupMeta } from '@/lib/google-oauth-signup';
+import { isSupabaseLockError } from '@/lib/supabase-error';
 import { isValidLang } from '@/lib/language-fonts';
 import {
   getSessionStoredInviteCode,
@@ -201,7 +202,7 @@ export default function AuthCallbackPage() {
         router.push(resolvePostAuthPath(bootstrap, invite));
       } catch (err: any) {
         console.error('Auth callback error:', err);
-        setError(err.message || act('error_message'));
+        if (!isSupabaseLockError(err)) setError(err.message || act('error_message'));
         setTimeout(() => {
           router.push('/');
         }, 3000);

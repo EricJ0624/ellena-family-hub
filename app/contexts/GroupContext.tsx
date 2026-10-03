@@ -13,6 +13,7 @@ import {
   sameGroupId,
   writeStoredGroupId,
 } from '@/lib/group-id-resolve';
+import { isSupabaseLockError } from '@/lib/supabase-error';
 import { normalizeGroupId } from '@/lib/validation';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
@@ -298,7 +299,9 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       }
     } catch (err: any) {
       console.error('그룹 목록 로드 실패:', err);
-      setError(err.message || '그룹 목록을 불러오는데 실패했습니다.');
+      if (!isSupabaseLockError(err)) {
+        setError(err.message || '그룹 목록을 불러오는데 실패했습니다.');
+      }
       setGroups([]);
     } finally {
       setLoading(false);

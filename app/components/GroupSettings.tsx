@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { isSupabaseLockError } from '@/lib/supabase-error';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getGroupSettingsTranslation, type GroupSettingsTranslations } from '@/lib/translations/groupSettings';
 import { getCommonTranslation } from '@/lib/translations/common';
@@ -225,7 +226,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       }, 2000);
     } catch (err: any) {
       console.error('그룹 설정 저장 오류:', err);
-      setError(err.message || gst('save_failed'));
+      if (!isSupabaseLockError(err)) setError(err.message || gst('save_failed'));
     } finally {
       setSaving(false);
     }
@@ -294,7 +295,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       }, 2000);
     } catch (err: any) {
       console.error('초대 코드 갱신 오류:', err);
-      setError(err.message || gst('refresh_failed'));
+      if (!isSupabaseLockError(err)) setError(err.message || gst('refresh_failed'));
     } finally {
       setRefreshing(false);
     }

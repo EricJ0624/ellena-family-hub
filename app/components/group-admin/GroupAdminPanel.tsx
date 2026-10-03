@@ -8,6 +8,7 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { resolveUiTheme } from '@/lib/ui-theme';
+import { isSupabaseLockError } from '@/lib/supabase-error';
 import { 
   Users, 
   Settings, 
@@ -359,7 +360,7 @@ export function GroupAdminPanel({
       })));
     } catch (err: any) {
       console.error('저금통 보관 목록 로드 오류:', err);
-      setError(err.message || atPiggy('error_piggy_archive_list'));
+      if (!isSupabaseLockError(err)) setError(err.message || atPiggy('error_piggy_archive_list'));
       setPiggyArchivesSnapshots([]);
     } finally {
       setPiggyArchivesLoading(false);
@@ -408,7 +409,7 @@ export function GroupAdminPanel({
       loadPiggyArchivesSnapshots(groupId);
     } catch (err: any) {
       console.error('piggy archive delete', err);
-      setError(err.message || atPiggy('error_piggy_archive_delete_msg'));
+      if (!isSupabaseLockError(err)) setError(err.message || atPiggy('error_piggy_archive_delete_msg'));
     }
   }, [piggyArchivesDetailId, loadPiggyArchivesSnapshots]);
 
@@ -536,7 +537,7 @@ export function GroupAdminPanel({
       });
     } catch (err: any) {
       console.error('???�쎌????�≪뮆占????�쎌?�占?', err);
-      setError(err.message || gat('error_stats_load'));
+      if (!isSupabaseLockError(err)) setError(err.message || gat('error_stats_load'));
     } finally {
       setLoadingData(false);
     }
@@ -587,7 +588,7 @@ export function GroupAdminPanel({
       setPhotos(photosData || []);
     } catch (err: any) {
       console.error('???�쎌?�占?筌뤴뫖占??�≪뮆占????�쎌?�占?', err);
-      setError(err.message || gat('error_stats_load'));
+      if (!isSupabaseLockError(err)) setError(err.message || gat('error_stats_load'));
     } finally {
       setLoadingData(false);
     }
@@ -661,7 +662,7 @@ export function GroupAdminPanel({
       setLocations(locationsWithProfiles);
     } catch (err: any) {
       console.error('???�쎌??????�쎌?????�≪뮆占????�쎌?�占?', err);
-      setError(err.message || gat('error_stats_load'));
+      if (!isSupabaseLockError(err)) setError(err.message || gat('error_stats_load'));
     } finally {
       setLoadingData(false);
     }
@@ -699,7 +700,7 @@ export function GroupAdminPanel({
       setAnnouncements(result.data || []);
     } catch (err: any) {
       console.error('??�쎈�?????�쏙?????�≪뮆占????�쎌?�占?', err);
-      setError(err.message || gat('error_stats_load'));
+      if (!isSupabaseLockError(err)) setError(err.message || gat('error_stats_load'));
       setAnnouncements([]);
     } finally {
       setLoadingData(false);
@@ -738,7 +739,7 @@ export function GroupAdminPanel({
       setSupportTickets(result.data || []);
     } catch (err: any) {
       console.error('??�쎈�???�≪뮆占????�쎌?�占?', err);
-      setError(err.message || gat('error_stats_load'));
+      if (!isSupabaseLockError(err)) setError(err.message || gat('error_stats_load'));
       setSupportTickets([]);
     } finally {
       setLoadingData(false);
@@ -776,7 +777,7 @@ export function GroupAdminPanel({
       setMemberSupportTickets(result.data || []);
     } catch (err: any) {
       console.error('member support tickets load', err);
-      setError(err.message || gat('error_member_support_load'));
+      if (!isSupabaseLockError(err)) setError(err.message || gat('error_member_support_load'));
       setMemberSupportTickets([]);
     } finally {
       setLoadingData(false);
@@ -848,7 +849,7 @@ export function GroupAdminPanel({
       setAccessRequests(result.data || []);
     } catch (err: any) {
       console.error('???�쎌??????�쎌?�占??�≪뮆占????�쎌?�占?', err);
-      setError(err.message || gat('error_stats_load'));
+      if (!isSupabaseLockError(err)) setError(err.message || gat('error_stats_load'));
       setAccessRequests([]);
     } finally {
       setLoadingData(false);

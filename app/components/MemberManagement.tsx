@@ -6,6 +6,7 @@ import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle, Shield, S
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
+import { isSupabaseLockError } from '@/lib/supabase-error';
 import {
   getFamilyRoleSelectOptions,
   formatMemberManagementTranslation,
@@ -185,7 +186,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
       setSystemAdminMemberIds(new Set(adminFlags.filter((id): id is string => !!id)));
     } catch (err: any) {
       console.error('멤버 목록 로드 실패:', err);
-      setError(err.message || mmt('load_failed'));
+      if (!isSupabaseLockError(err)) setError(err.message || mmt('load_failed'));
     } finally {
       setLoading(false);
     }

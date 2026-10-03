@@ -205,6 +205,14 @@ if (typeof window !== 'undefined') {
       }
       return; // 에러를 콘솔에 표시하지 않음
     }
+    // Supabase 내부 navigator.locks 경쟁 에러는 콘솔에 표시하지 않음
+    // 여러 탭 또는 동시 auth 요청 시 발생하는 내부 처리 에러
+    if (
+      errorMessage.includes('Lock was stolen') ||
+      errorMessage.includes('lock_stolen')
+    ) {
+      return;
+    }
     // Map ID 관련 에러는 콘솔에 표시하지 않음 (Map ID가 없어도 기본 마커는 작동)
     if (
       errorMessage.includes('Map ID') ||

@@ -15,6 +15,7 @@ import {
   performGameActionApi,
 } from './useGameSessionApi';
 import { useFamilyGameRealtime } from './useFamilyGameRealtime';
+import { isSupabaseLockError } from '@/lib/supabase-error';
 
 interface UseFamilyGameSessionProps {
   groupId: string | null;
@@ -63,8 +64,11 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
         setBundle(null);
       }
     } catch (err) {
-      console.error('Failed to refresh game session:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load session');
+      // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
+      if (!isSupabaseLockError(err)) {
+        console.error('Failed to refresh game session:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load session');
+      }
     } finally {
       setLoading(false);
     }
@@ -90,8 +94,11 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
         setBundle(joined);
         return joined;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to join lobby';
-        setError(message);
+        // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
+        if (!isSupabaseLockError(err)) {
+          const message = err instanceof Error ? err.message : 'Failed to join lobby';
+          setError(message);
+        }
         throw err;
       } finally {
         setActionLoading(false);
@@ -113,8 +120,11 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
         setBundle(updated);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Leave failed';
-      setError(message);
+      // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
+      if (!isSupabaseLockError(err)) {
+        const message = err instanceof Error ? err.message : 'Leave failed';
+        setError(message);
+      }
       throw err;
     } finally {
       setActionLoading(false);
@@ -131,10 +141,13 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
         setBundle(updated);
         return updated;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Action failed';
-        setError(message);
-        if (message === 'FORBIDDEN' || message === 'HOST_ONLY') {
-          await refresh();
+        // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
+        if (!isSupabaseLockError(err)) {
+          const message = err instanceof Error ? err.message : 'Action failed';
+          setError(message);
+          if (message === 'FORBIDDEN' || message === 'HOST_ONLY') {
+            await refresh();
+          }
         }
         throw err;
       } finally {
@@ -165,8 +178,11 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
       await refresh();
       return updated;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Cancel failed';
-      setError(message);
+      // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
+      if (!isSupabaseLockError(err)) {
+        const message = err instanceof Error ? err.message : 'Cancel failed';
+        setError(message);
+      }
       throw err;
     } finally {
       setActionLoading(false);

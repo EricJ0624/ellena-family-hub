@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getPiggyTranslation } from '@/lib/translations/piggy';
+import { isSupabaseLockError } from '@/lib/supabase-error';
 import {
   deleteAttachment,
   listAttachments,
@@ -305,7 +306,7 @@ function PiggyBankPageContent() {
     setLoading(true);
     setError(null);
     Promise.all([fetchSummary(), fetchRequests(), fetchMembers(), fetchTransactions()])
-      .catch((err) => setError(err.message || pt('load_error')))
+      .catch((err) => { if (!isSupabaseLockError(err)) setError(err.message || pt('load_error')); })
       .finally(() => setLoading(false));
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
 
@@ -425,7 +426,7 @@ function PiggyBankPageContent() {
       if (!response.ok) throw new Error(result.error || pt('request_failed'));
       alert(result.message || pt('request_sent'));
     } catch (err: any) {
-      setError(err.message || pt('request_failed'));
+      if (!isSupabaseLockError(err)) setError(err.message || pt('request_failed'));
     }
   };
 
@@ -442,7 +443,7 @@ function PiggyBankPageContent() {
       setSelectedChildIdForAdmin('');
       await Promise.all([fetchSummary(), fetchMembers(), fetchTransactions()]);
     } catch (err: any) {
-      setError(err.message || pt('delete_failed'));
+      if (!isSupabaseLockError(err)) setError(err.message || pt('delete_failed'));
     }
   };
 
@@ -606,7 +607,7 @@ function PiggyBankPageContent() {
                     try {
                       await handleAddPiggyForChild(p.user_id);
                     } catch (err: any) {
-                      setError(err.message || pt('add_piggy_failed_short'));
+                      if (!isSupabaseLockError(err)) setError(err.message || pt('add_piggy_failed_short'));
                     }
                   }}
                   className="rounded-[10px] border border-slate-200 bg-slate-50 p-3 text-left font-semibold"
@@ -716,7 +717,7 @@ function PiggyBankPageContent() {
                 try {
                   await handleAddPiggyForChild(selectedChildIdForAdmin);
                 } catch (err: any) {
-                  setError(err.message || pt('add_piggy_failed_short'));
+                  if (!isSupabaseLockError(err)) setError(err.message || pt('add_piggy_failed_short'));
                 }
               }}
               className="cursor-pointer rounded-[10px] border-none bg-green-500 px-5 py-3 font-semibold text-white"
@@ -1103,7 +1104,7 @@ function PiggyBankPageContent() {
                     setAllowanceAmount('');
                     setAllowanceMemo('');
                   } catch (err: any) {
-                    setError(err.message || pt('allowance_grant_failed'));
+                    if (!isSupabaseLockError(err)) setError(err.message || pt('allowance_grant_failed'));
                   } finally {
                     setAllowanceSubmitting(false);
                   }
@@ -1152,7 +1153,7 @@ function PiggyBankPageContent() {
                     setDepositAmount('');
                     setDepositMemo('');
                   } catch (err: any) {
-                    setError(err.message || pt('parent_deposit_failed'));
+                    if (!isSupabaseLockError(err)) setError(err.message || pt('parent_deposit_failed'));
                   } finally {
                     setDepositSubmitting(false);
                   }
@@ -1192,7 +1193,7 @@ function PiggyBankPageContent() {
                             try {
                               await handleAction('/api/piggy-bank/open-approve', { requestId: req.id });
                             } catch (err: any) {
-                              setError(err.message || pt('approve_failed'));
+                              if (!isSupabaseLockError(err)) setError(err.message || pt('approve_failed'));
                             }
                           }}
                           className="flex-1 rounded-[10px] border-none bg-green-600 p-2.5 font-bold text-white"
@@ -1204,7 +1205,7 @@ function PiggyBankPageContent() {
                             try {
                               await handleAction('/api/piggy-bank/open-reject', { requestId: req.id });
                             } catch (err: any) {
-                              setError(err.message || pt('reject_failed'));
+                              if (!isSupabaseLockError(err)) setError(err.message || pt('reject_failed'));
                             }
                           }}
                           className="flex-1 rounded-[10px] border-none bg-gray-400 p-2.5 font-bold text-white"
@@ -1259,7 +1260,7 @@ function PiggyBankPageContent() {
                     setSpendCategory('');
                     setSpendMemo('');
                   } catch (err: any) {
-                    setError(err.message || pt('spend_failed'));
+                    if (!isSupabaseLockError(err)) setError(err.message || pt('spend_failed'));
                   } finally {
                     setSpendSubmitting(false);
                   }
@@ -1300,7 +1301,7 @@ function PiggyBankPageContent() {
                     setSaveAmount('');
                     setSaveMemo('');
                   } catch (err: any) {
-                    setError(err.message || pt('save_failed'));
+                    if (!isSupabaseLockError(err)) setError(err.message || pt('save_failed'));
                   } finally {
                     setSaveSubmitting(false);
                   }
@@ -1353,7 +1354,7 @@ function PiggyBankPageContent() {
                     setOpenAmount('');
                     setOpenReason('');
                   } catch (err: any) {
-                    setError(err.message || pt('open_request_failed'));
+                    if (!isSupabaseLockError(err)) setError(err.message || pt('open_request_failed'));
                   } finally {
                     setOpenRequestSubmitting(false);
                   }
