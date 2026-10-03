@@ -188,6 +188,32 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
         </button>
       </div>
 
+      {mode === 'hidden' && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
+          <span className="text-xs font-semibold text-amber-700">{t.items_to_find}</span>
+          {puzzle.hiddenItems.map((item) => {
+            const found = foundIds.has(item.id);
+            return (
+              <span
+                key={item.id}
+                className={`relative inline-flex h-9 w-9 select-none items-center justify-center rounded-full border-2 text-xl transition-all ${
+                  found
+                    ? 'border-emerald-400 bg-emerald-50 opacity-50'
+                    : 'border-amber-200 bg-white'
+                }`}
+              >
+                {item.emoji}
+                {found && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] leading-none text-white">
+                    ✓
+                  </span>
+                )}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {wrongFlash && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{t.wrong_tap}</p>
       )}
@@ -221,6 +247,9 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
             title={scene.title}
             side="left"
             readOnly
+            regions={puzzle.diffRegions}
+            foundIds={foundIds}
+            hintFlashId={hintFlashId}
           />
           <DiffPanel
             label={t.right_image}
@@ -309,21 +338,25 @@ function DiffPanel({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl} alt={title} className="h-full w-full object-cover" draggable={false} />
             {regions?.map((region) => {
-              if (!foundIds?.has(region.id) && hintFlashId === region.id) {
-                return (
-                  <span
-                    key={region.id}
-                    className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full ring-4 ring-amber-400"
-                    style={{
-                      left: `${region.x * 100}%`,
-                      top: `${region.y * 100}%`,
-                      width: `${region.r * 200}%`,
-                      height: `${region.r * 200}%`,
-                    }}
-                  />
-                );
-              }
-              return null;
+              const isFnd = foundIds?.has(region.id);
+              const isFlash = !isFnd && hintFlashId === region.id;
+              if (!isFnd && !isFlash) return null;
+              return (
+                <span
+                  key={region.id}
+                  className={`pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full ${
+                    isFnd
+                      ? 'bg-emerald-400/30 ring-4 ring-emerald-500'
+                      : 'animate-pulse ring-4 ring-amber-400'
+                  }`}
+                  style={{
+                    left: `${region.x * 100}%`,
+                    top: `${region.y * 100}%`,
+                    width: `${region.r * 200}%`,
+                    height: `${region.r * 200}%`,
+                  }}
+                />
+              );
             })}
           </>
         )}

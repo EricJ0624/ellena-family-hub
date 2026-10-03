@@ -8,6 +8,7 @@ export type PictureFindTranslations = {
   back: string;
   mode_title: string;
   mode_hidden: string;
+  items_to_find: string;
   mode_hidden_desc: string;
   mode_spot_diff: string;
   mode_spot_diff_desc: string;
@@ -84,6 +85,7 @@ const ko: PictureFindTranslations = {
   back: '뒤로',
   mode_title: '어떤 게임을 할까요?',
   mode_hidden: '숨은그림찾기',
+  items_to_find: '찾아야 할 것:',
   mode_hidden_desc: '그림 속에 숨은 물건을 찾아보세요.',
   mode_spot_diff: '틀린그림찾기',
   mode_spot_diff_desc: '두 그림에서 다른 부분을 찾아보세요.',
@@ -160,6 +162,7 @@ const en: PictureFindTranslations = {
   back: 'Back',
   mode_title: 'Choose a game',
   mode_hidden: 'Hidden objects',
+  items_to_find: 'Find:',
   mode_hidden_desc: 'Find hidden items in the scene.',
   mode_spot_diff: 'Spot the difference',
   mode_spot_diff_desc: 'Find differences between two pictures.',
