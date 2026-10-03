@@ -63,6 +63,8 @@ import {
   FileDown,
   FileText,
 } from 'lucide-react';
+import { PlaceAutocompleteInput } from '@/app/modules/travel-planner/PlaceAutocompleteInput';
+import type { PlaceSelectResult } from '@/app/modules/travel-planner/PlaceAutocompleteInput';
 import {
   deleteAttachment,
   listAttachments,
@@ -168,7 +170,6 @@ export function TravelPlannerContent() {
   const [accLatitude, setAccLatitude] = useState('');
   const [accLongitude, setAccLongitude] = useState('');
   const [accPlaceId, setAccPlaceId] = useState<string | null>(null);
-  const [accDirectInputMode, setAccDirectInputMode] = useState(false);
   const [showDiningForm, setShowDiningForm] = useState(false);
   /** 일정 추가 시 구분 선택 (숙소/먹거리/관광지/교통/기타) → 해당 폼 열기 */
   const [showScheduleAddTypePicker, setShowScheduleAddTypePicker] = useState(false);
@@ -185,7 +186,6 @@ export function TravelPlannerContent() {
   const [diningLatitude, setDiningLatitude] = useState('');
   const [diningLongitude, setDiningLongitude] = useState('');
   const [diningPlaceId, setDiningPlaceId] = useState<string | null>(null);
-  const [diningDirectInputMode, setDiningDirectInputMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [itineraryAddress, setItineraryAddress] = useState('');
   const [itineraryLatitude, setItineraryLatitude] = useState('');
@@ -215,7 +215,6 @@ export function TravelPlannerContent() {
   const [attractionLongitude, setAttractionLongitude] = useState('');
   const [attractionPlaceName, setAttractionPlaceName] = useState('');
   const [attractionPlaceId, setAttractionPlaceId] = useState<string | null>(null);
-  const [attractionDirectInputMode, setAttractionDirectInputMode] = useState(false);
   const [transportType, setTransportType] = useState<'air' | 'train' | 'car' | 'bike'>('air');
   const [transportDayDate, setTransportDayDate] = useState('');
   const [transportEndDayDate, setTransportEndDayDate] = useState('');
@@ -225,7 +224,6 @@ export function TravelPlannerContent() {
   const [transportArrival, setTransportArrival] = useState('');
   const [transportDeparturePlaceId, setTransportDeparturePlaceId] = useState<string | null>(null);
   const [transportArrivalPlaceId, setTransportArrivalPlaceId] = useState<string | null>(null);
-  const [transportDirectInputMode, setTransportDirectInputMode] = useState(false);
   const [transportDistanceKm, setTransportDistanceKm] = useState('');
   const [transportMemo, setTransportMemo] = useState('');
 
@@ -269,182 +267,18 @@ export function TravelPlannerContent() {
   const travelMapPolylinesRef = useRef<google.maps.Polyline[]>([]);
   const travelMapScriptLoadedRef = useRef(false);
   /** 숙소·먹거리·관광지: Places Autocomplete는 이름 입력란에 연결 */
-  const accNameInputRef = useRef<HTMLInputElement>(null);
-  const diningNameInputRef = useRef<HTMLInputElement>(null);
-  const attractionNameInputRef = useRef<HTMLInputElement>(null);
+
   const itineraryAddressInputRef = useRef<HTMLInputElement>(null);
-  const transportDepartureInputRef = useRef<HTMLInputElement>(null);
-  const transportArrivalInputRef = useRef<HTMLInputElement>(null);
   const placesServiceContainerRef = useRef<HTMLDivElement>(null);
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
-  const accSessionTokenRef = useRef<unknown>(null);
-  const diningSessionTokenRef = useRef<unknown>(null);
+
   const itinerarySessionTokenRef = useRef<unknown>(null);
-  const attractionSessionTokenRef = useRef<unknown>(null);
-  const transportSessionTokenRef = useRef<unknown>(null);
   const [placesApiReady, setPlacesApiReady] = useState(false);
-  /** 선택지 A: 이름 blur 시 미선택 입력 정리 (place_changed보다 늦게 실행) */
-  const accNameBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const diningNameBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const attractionNameBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accommodationFormRef = useRef<HTMLFormElement>(null);
   const diningFormRef = useRef<HTMLFormElement>(null);
   const attractionFormRef = useRef<HTMLFormElement>(null);
   const transportFormRef = useRef<HTMLFormElement>(null);
 
-  const BLUR_CONFIRM_MS = 220;
-
-  const clearAccGooglePlaceFields = useCallback(() => {
-    setAccPlaceId(null);
-    setAccPlaceName('');
-    setAccAddress('');
-    setAccLatitude('');
-    setAccLongitude('');
-  }, []);
-
-  const clearDiningGooglePlaceFields = useCallback(() => {
-    setDiningPlaceId(null);
-    setDiningPlaceName('');
-    setDiningAddress('');
-    setDiningLatitude('');
-    setDiningLongitude('');
-  }, []);
-
-  const clearAttractionGooglePlaceFields = useCallback(() => {
-    setAttractionPlaceId(null);
-    setAttractionPlaceName('');
-    setAttractionAddress('');
-    setAttractionLatitude('');
-    setAttractionLongitude('');
-  }, []);
-
-  const cancelAccNameBlurConfirm = useCallback(() => {
-    if (accNameBlurTimerRef.current) {
-      clearTimeout(accNameBlurTimerRef.current);
-      accNameBlurTimerRef.current = null;
-    }
-  }, []);
-
-  const cancelDiningNameBlurConfirm = useCallback(() => {
-    if (diningNameBlurTimerRef.current) {
-      clearTimeout(diningNameBlurTimerRef.current);
-      diningNameBlurTimerRef.current = null;
-    }
-  }, []);
-
-  const cancelAttractionNameBlurConfirm = useCallback(() => {
-    if (attractionNameBlurTimerRef.current) {
-      clearTimeout(attractionNameBlurTimerRef.current);
-      attractionNameBlurTimerRef.current = null;
-    }
-  }, []);
-
-  /** 타이머 실행 시점의 최신 스냅샷 (place_changed 직후 ref가 갱신됨) */
-  const accBlurSnapRef = useRef({
-    direct: false,
-    pid: null as string | null,
-    pname: '',
-    name: '',
-  });
-  const diningBlurSnapRef = useRef({
-    direct: false,
-    pid: null as string | null,
-    pname: '',
-    name: '',
-  });
-  const attractionBlurSnapRef = useRef({
-    direct: false,
-    pid: null as string | null,
-    pname: '',
-    name: '',
-  });
-  accBlurSnapRef.current = {
-    direct: accDirectInputMode,
-    pid: accPlaceId,
-    pname: accPlaceName,
-    name: accName,
-  };
-  diningBlurSnapRef.current = {
-    direct: diningDirectInputMode,
-    pid: diningPlaceId,
-    pname: diningPlaceName,
-    name: diningName,
-  };
-  attractionBlurSnapRef.current = {
-    direct: attractionDirectInputMode,
-    pid: attractionPlaceId,
-    pname: attractionPlaceName,
-    name: attractionName,
-  };
-
-  const scheduleAccNameBlurConfirm = useCallback(() => {
-    cancelAccNameBlurConfirm();
-    accNameBlurTimerRef.current = setTimeout(() => {
-      accNameBlurTimerRef.current = null;
-      const { direct, pid, pname, name } = accBlurSnapRef.current;
-      if (direct || pid === '__existing__') return;
-      const n = name.trim();
-      if (!pid) {
-        if (n) {
-          clearAccGooglePlaceFields();
-          setAccName('');
-        }
-        return;
-      }
-      if (pname.trim() && n !== pname.trim()) {
-        clearAccGooglePlaceFields();
-        setAccName('');
-      }
-    }, BLUR_CONFIRM_MS);
-  }, [cancelAccNameBlurConfirm, clearAccGooglePlaceFields]);
-
-  const scheduleDiningNameBlurConfirm = useCallback(() => {
-    cancelDiningNameBlurConfirm();
-    diningNameBlurTimerRef.current = setTimeout(() => {
-      diningNameBlurTimerRef.current = null;
-      const { direct, pid, pname, name } = diningBlurSnapRef.current;
-      if (direct || pid === '__existing__') return;
-      const n = name.trim();
-      if (!pid) {
-        if (n) {
-          clearDiningGooglePlaceFields();
-          setDiningName('');
-        }
-        return;
-      }
-      if (pname.trim() && n !== pname.trim()) {
-        clearDiningGooglePlaceFields();
-        setDiningName('');
-      }
-    }, BLUR_CONFIRM_MS);
-  }, [cancelDiningNameBlurConfirm, clearDiningGooglePlaceFields]);
-
-  const scheduleAttractionNameBlurConfirm = useCallback(() => {
-    cancelAttractionNameBlurConfirm();
-    attractionNameBlurTimerRef.current = setTimeout(() => {
-      attractionNameBlurTimerRef.current = null;
-      const { direct, pid, pname, name } = attractionBlurSnapRef.current;
-      if (direct || pid === '__existing__') return;
-      const n = name.trim();
-      if (!pid) {
-        if (n) {
-          clearAttractionGooglePlaceFields();
-          setAttractionName('');
-        }
-        return;
-      }
-      if (pname.trim() && n !== pname.trim()) {
-        clearAttractionGooglePlaceFields();
-        setAttractionName('');
-      }
-    }, BLUR_CONFIRM_MS);
-  }, [cancelAttractionNameBlurConfirm, clearAttractionGooglePlaceFields]);
-
-  useEffect(() => () => {
-    cancelAccNameBlurConfirm();
-    cancelDiningNameBlurConfirm();
-    cancelAttractionNameBlurConfirm();
-  }, [cancelAccNameBlurConfirm, cancelAttractionNameBlurConfirm, cancelDiningNameBlurConfirm]);
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -922,11 +756,11 @@ export function TravelPlannerContent() {
     if (!apiKey) return;
     const needPlacesApi =
       showTravelMap ||
-      (showAccommodationForm && !accDirectInputMode) ||
-      (showDiningForm && !diningDirectInputMode) ||
+      showAccommodationForm ||
+      showDiningForm ||
       showItineraryForm ||
-      (showAttractionForm && !attractionDirectInputMode) ||
-      (showTransportForm && !transportDirectInputMode);
+      showAttractionForm ||
+      showTransportForm;
     if (!needPlacesApi) return;
     if (getGoogleMapsNs()?.places?.Autocomplete) {
       setPlacesApiReady(true);
@@ -963,10 +797,6 @@ export function TravelPlannerContent() {
     showItineraryForm,
     showAttractionForm,
     showTransportForm,
-    accDirectInputMode,
-    diningDirectInputMode,
-    attractionDirectInputMode,
-    transportDirectInputMode,
   ]);
 
   // 여행 플래너 지도: 사용할 때만 초기화/표시. 숙소·먹거리·일정(관광지) 위치 + 현장 경로
@@ -1186,9 +1016,6 @@ export function TravelPlannerContent() {
     if (initialTok) opts.sessionToken = initialTok;
     const autocomplete = new g.places.Autocomplete(el, opts);
     const listener = autocomplete.addListener('place_changed', () => {
-      cancelAccNameBlurConfirm();
-      cancelDiningNameBlurConfirm();
-      cancelAttractionNameBlurConfirm();
       const place = autocomplete.getPlace();
       const placeId = place.place_id;
       if (!placeId) return;
@@ -1242,39 +1069,9 @@ export function TravelPlannerContent() {
       listener?.remove?.();
       if (AutocompleteSessionToken) params.sessionTokenRef.current = new AutocompleteSessionToken();
     };
-  }, [placesApiReady, fetchPlaceCache, savePlaceCache, cancelAccNameBlurConfirm, cancelDiningNameBlurConfirm, cancelAttractionNameBlurConfirm]);
+  }, [placesApiReady, fetchPlaceCache, savePlaceCache]);
 
-  // Places Autocomplete: 숙소 폼 (layout: 모달 DOM·ref 반영 직후 연결)
-  useLayoutEffect(() => attachPlacesAutocomplete({
-    enabled: showAccommodationForm && !!selectedTrip && !accDirectInputMode,
-    inputRef: accNameInputRef,
-    sessionTokenRef: accSessionTokenRef,
-    onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
-      setAccPlaceId(placeId);
-      setAccName(placeName);
-      setAccAddress(address);
-      setAccLatitude(latitude != null ? String(latitude) : '');
-      setAccLongitude(longitude != null ? String(longitude) : '');
-      setAccPlaceName(placeName);
-    },
-  }), [showAccommodationForm, selectedTrip?.id, accDirectInputMode, attachPlacesAutocomplete]);
-
-  // Places Autocomplete: 먹거리 폼
-  useLayoutEffect(() => attachPlacesAutocomplete({
-    enabled: showDiningForm && !!selectedTrip && !diningDirectInputMode,
-    inputRef: diningNameInputRef,
-    sessionTokenRef: diningSessionTokenRef,
-    onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
-      setDiningPlaceId(placeId);
-      setDiningName(placeName);
-      setDiningAddress(address);
-      setDiningLatitude(latitude != null ? String(latitude) : '');
-      setDiningLongitude(longitude != null ? String(longitude) : '');
-      setDiningPlaceName(placeName);
-    },
-  }), [showDiningForm, selectedTrip?.id, diningDirectInputMode, attachPlacesAutocomplete]);
-
-  // Places Autocomplete: 일정 폼
+  // Places Autocomplete: 일정 폼 주소칸 (기존 widget 방식 유지)
   useEffect(() => attachPlacesAutocomplete({
     enabled: showItineraryForm,
     inputRef: itineraryAddressInputRef,
@@ -1286,48 +1083,6 @@ export function TravelPlannerContent() {
       setItineraryPlaceName(placeName);
     },
   }), [showItineraryForm, attachPlacesAutocomplete]);
-
-  // Places Autocomplete: 관광지 폼 (UI 유지, 핵심 로직만 동일 적용)
-  useLayoutEffect(() => attachPlacesAutocomplete({
-    enabled: showAttractionForm && !!selectedTrip && !attractionDirectInputMode,
-    inputRef: attractionNameInputRef,
-    sessionTokenRef: attractionSessionTokenRef,
-    onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
-      setAttractionPlaceId(placeId);
-      setAttractionName(placeName);
-      setAttractionAddress(address);
-      setAttractionLatitude(latitude != null ? String(latitude) : '');
-      setAttractionLongitude(longitude != null ? String(longitude) : '');
-      setAttractionPlaceName(placeName);
-    },
-  }), [showAttractionForm, selectedTrip?.id, attractionDirectInputMode, attachPlacesAutocomplete]);
-
-  // Places Autocomplete: 교통 출발/도착
-  useEffect(() => {
-    if (!showTransportForm || transportDirectInputMode) return () => {};
-    const cleanupDeparture = attachPlacesAutocomplete({
-      enabled: true,
-      inputRef: transportDepartureInputRef,
-      sessionTokenRef: transportSessionTokenRef,
-      onSelect: ({ placeId, address }) => {
-        setTransportDeparturePlaceId(placeId);
-        setTransportDeparture(address);
-      },
-    });
-    const cleanupArrival = attachPlacesAutocomplete({
-      enabled: true,
-      inputRef: transportArrivalInputRef,
-      sessionTokenRef: transportSessionTokenRef,
-      onSelect: ({ placeId, address }) => {
-        setTransportArrivalPlaceId(placeId);
-        setTransportArrival(address);
-      },
-    });
-    return () => {
-      cleanupDeparture();
-      cleanupArrival();
-    };
-  }, [showTransportForm, transportDirectInputMode, attachPlacesAutocomplete]);
 
   /** 그룹 멤버 표시명 맵 로드 (memberships + profiles) */
   useEffect(() => {
@@ -2086,18 +1841,9 @@ export function TravelPlannerContent() {
       setAccLongitude(item.longitude != null ? String(item.longitude) : '');
       {
         const pid = item.place_id?.trim() || null;
-        if (pid) {
-          setAccPlaceId(pid);
-          setAccPlaceName(item.name);
-        } else if (item.address?.trim()) {
-          setAccPlaceId('__existing__');
-          setAccPlaceName('');
-        } else {
-          setAccPlaceId(null);
-          setAccPlaceName('');
-        }
+        setAccPlaceId(pid);
+        setAccPlaceName(pid ? item.name : '');
       }
-      setAccDirectInputMode(false);
     } else {
       setEditingAccommodation(null);
       setAccName('');
@@ -2111,7 +1857,6 @@ export function TravelPlannerContent() {
       setAccLongitude('');
       setAccPlaceName('');
       setAccPlaceId(null);
-      setAccDirectInputMode(false);
     }
     setAccommodationFormFromSchedule(false);
     setShowAccommodationForm(true);
@@ -2122,16 +1867,6 @@ export function TravelPlannerContent() {
     if (!currentGroupId || !selectedTrip || !accName.trim() || !accCheckIn || !accCheckOut) {
       alert(tt('alert_acc_required'));
       return;
-    }
-    if (!accDirectInputMode && accName.trim()) {
-      if (!accPlaceId) {
-        alert(tt('alert_place_select_accommodation'));
-        return;
-      }
-      if (accPlaceId !== '__existing__' && (!accPlaceName.trim() || accName.trim() !== accPlaceName.trim())) {
-        alert(tt('alert_place_select_accommodation'));
-        return;
-      }
     }
     if (new Date(accCheckOut) < new Date(accCheckIn)) {
       alert(tt('alert_checkout_after_checkin'));
@@ -2152,7 +1887,7 @@ export function TravelPlannerContent() {
           check_out_time: accCheckOutTime.trim() || undefined,
           address: accAddress.trim() || undefined,
           memo: accMemo.trim() || undefined,
-          place_id: accDirectInputMode ? undefined : (accPlaceId ?? undefined),
+          place_id: accPlaceId ?? undefined,
           latitude: accLatitude.trim() ? Number(accLatitude) : undefined,
           longitude: accLongitude.trim() ? Number(accLongitude) : undefined,
           show_in_itinerary: showInItinerary,
@@ -2176,16 +1911,6 @@ export function TravelPlannerContent() {
       alert(tt('alert_acc_required'));
       return;
     }
-    if (!accDirectInputMode && accName.trim()) {
-      if (!accPlaceId) {
-        alert(tt('alert_place_select_accommodation'));
-        return;
-      }
-      if (accPlaceId !== '__existing__' && (!accPlaceName.trim() || accName.trim() !== accPlaceName.trim())) {
-        alert(tt('alert_place_select_accommodation'));
-        return;
-      }
-    }
     if (new Date(accCheckOut) < new Date(accCheckIn)) {
       alert(tt('alert_checkout_after_checkin'));
       return;
@@ -2204,7 +1929,7 @@ export function TravelPlannerContent() {
           check_out_time: accCheckOutTime.trim() || null,
           address: accAddress.trim() || null,
           memo: accMemo.trim() || null,
-          place_id: accDirectInputMode ? null : accPlaceId,
+          place_id: accPlaceId,
           latitude: accLatitude.trim() ? Number(accLatitude) : null,
           longitude: accLongitude.trim() ? Number(accLongitude) : null,
         }),
@@ -2253,18 +1978,9 @@ export function TravelPlannerContent() {
       setDiningLongitude(item.longitude != null ? String(item.longitude) : '');
       {
         const pid = item.place_id?.trim() || null;
-        if (pid) {
-          setDiningPlaceId(pid);
-          setDiningPlaceName(item.name);
-        } else if (item.address?.trim()) {
-          setDiningPlaceId('__existing__');
-          setDiningPlaceName('');
-        } else {
-          setDiningPlaceId(null);
-          setDiningPlaceName('');
-        }
+        setDiningPlaceId(pid);
+        setDiningPlaceName(pid ? item.name : '');
       }
-      setDiningDirectInputMode(false);
     } else {
       setEditingDining(null);
       setDiningName('');
@@ -2278,7 +1994,6 @@ export function TravelPlannerContent() {
       setDiningLongitude('');
       setDiningPlaceName('');
       setDiningPlaceId(null);
-      setDiningDirectInputMode(false);
     }
     setDiningFormFromSchedule(false);
     setShowDiningForm(true);
@@ -2289,16 +2004,6 @@ export function TravelPlannerContent() {
     if (!currentGroupId || !selectedTrip || !diningName.trim() || !diningDayDate) {
       alert(tt('alert_dining_required'));
       return;
-    }
-    if (!diningDirectInputMode && diningName.trim()) {
-      if (!diningPlaceId) {
-        alert(tt('alert_place_select_dining'));
-        return;
-      }
-      if (diningPlaceId !== '__existing__' && (!diningPlaceName.trim() || diningName.trim() !== diningPlaceName.trim())) {
-        alert(tt('alert_place_select_dining'));
-        return;
-      }
     }
     try {
       setSubmitting(true);
@@ -2318,7 +2023,7 @@ export function TravelPlannerContent() {
           category: diningCategory.trim() || undefined,
           memo: diningMemo.trim() || undefined,
           address: diningAddress.trim() || undefined,
-          place_id: diningDirectInputMode ? undefined : (diningPlaceId ?? undefined),
+          place_id: diningPlaceId ?? undefined,
           latitude: diningLatitude.trim() ? Number(diningLatitude) : undefined,
           longitude: diningLongitude.trim() ? Number(diningLongitude) : undefined,
           show_in_itinerary: showInItinerary,
@@ -2342,16 +2047,6 @@ export function TravelPlannerContent() {
       alert(tt('alert_dining_required'));
       return;
     }
-    if (!diningDirectInputMode && diningName.trim()) {
-      if (!diningPlaceId) {
-        alert(tt('alert_place_select_dining'));
-        return;
-      }
-      if (diningPlaceId !== '__existing__' && (!diningPlaceName.trim() || diningName.trim() !== diningPlaceName.trim())) {
-        alert(tt('alert_place_select_dining'));
-        return;
-      }
-    }
     try {
       setSubmitting(true);
       const headers = await getAuthHeaders();
@@ -2369,7 +2064,7 @@ export function TravelPlannerContent() {
           category: diningCategory.trim() || null,
           memo: diningMemo.trim() || null,
           address: diningAddress.trim() || null,
-          place_id: diningDirectInputMode ? null : diningPlaceId,
+          place_id: diningPlaceId,
           latitude: diningLatitude.trim() ? Number(diningLatitude) : null,
           longitude: diningLongitude.trim() ? Number(diningLongitude) : null,
         }),
@@ -2418,18 +2113,9 @@ export function TravelPlannerContent() {
       setAttractionLongitude(item.longitude != null ? String(item.longitude) : '');
       {
         const pid = item.place_id?.trim() || null;
-        if (pid) {
-          setAttractionPlaceId(pid);
-          setAttractionPlaceName(item.name);
-        } else if (item.address?.trim()) {
-          setAttractionPlaceId('__existing__');
-          setAttractionPlaceName('');
-        } else {
-          setAttractionPlaceId(null);
-          setAttractionPlaceName('');
-        }
+        setAttractionPlaceId(pid);
+        setAttractionPlaceName(pid ? item.name : '');
       }
-      setAttractionDirectInputMode(false);
     } else {
       setEditingAttraction(null);
       setAttractionName('');
@@ -2443,7 +2129,6 @@ export function TravelPlannerContent() {
       setAttractionLongitude('');
       setAttractionPlaceName('');
       setAttractionPlaceId(null);
-      setAttractionDirectInputMode(false);
     }
     setShowAttractionForm(true);
   };
@@ -2453,16 +2138,6 @@ export function TravelPlannerContent() {
     if (!currentGroupId || !selectedTrip || !attractionName.trim() || !attractionDayDate) {
       alert(tt('alert_attraction_name_date_required'));
       return;
-    }
-    if (!attractionDirectInputMode && attractionName.trim()) {
-      if (!attractionPlaceId) {
-        alert(tt('alert_place_select_attraction'));
-        return;
-      }
-      if (attractionPlaceId !== '__existing__' && (!attractionPlaceName.trim() || attractionName.trim() !== attractionPlaceName.trim())) {
-        alert(tt('alert_place_select_attraction'));
-        return;
-      }
     }
     try {
       setSubmitting(true);
@@ -2481,7 +2156,7 @@ export function TravelPlannerContent() {
           start_time: attractionStartTime.trim() || undefined,
           end_time: attractionEndTime.trim() || undefined,
           address: attractionAddress.trim() || undefined,
-          place_id: attractionDirectInputMode ? undefined : (attractionPlaceId ?? undefined),
+          place_id: attractionPlaceId ?? undefined,
           description: attractionDescription.trim() || undefined,
           latitude: attractionLatitude.trim() ? Number(attractionLatitude) : undefined,
           longitude: attractionLongitude.trim() ? Number(attractionLongitude) : undefined,
@@ -2506,16 +2181,6 @@ export function TravelPlannerContent() {
       alert(tt('alert_attraction_name_date_required'));
       return;
     }
-    if (!attractionDirectInputMode && attractionName.trim()) {
-      if (!attractionPlaceId) {
-        alert(tt('alert_place_select_attraction'));
-        return;
-      }
-      if (attractionPlaceId !== '__existing__' && (!attractionPlaceName.trim() || attractionName.trim() !== attractionPlaceName.trim())) {
-        alert(tt('alert_place_select_attraction'));
-        return;
-      }
-    }
     try {
       setSubmitting(true);
       const headers = await getAuthHeaders();
@@ -2532,7 +2197,7 @@ export function TravelPlannerContent() {
           start_time: attractionStartTime.trim() || null,
           end_time: attractionEndTime.trim() || null,
           address: attractionAddress.trim() || null,
-          place_id: attractionDirectInputMode ? null : attractionPlaceId,
+          place_id: attractionPlaceId,
           description: attractionDescription.trim() || null,
           latitude: attractionLatitude.trim() ? Number(attractionLatitude) : null,
           longitude: attractionLongitude.trim() ? Number(attractionLongitude) : null,
@@ -2578,13 +2243,10 @@ export function TravelPlannerContent() {
       setTransportEndTime(item.end_time ?? '');
       setTransportDeparture(item.departure ?? '');
       setTransportArrival(item.arrival ?? '');
-      setTransportDeparturePlaceId(item.departure_place_id ?? (item.departure ? '__existing__' : null));
-      setTransportArrivalPlaceId(item.arrival_place_id ?? (item.arrival ? '__existing__' : null));
+      setTransportDeparturePlaceId(item.departure_place_id ?? null);
+      setTransportArrivalPlaceId(item.arrival_place_id ?? null);
       setTransportDistanceKm(item.distance_km != null ? String(item.distance_km) : '');
       setTransportMemo(item.memo ?? '');
-      setTransportDirectInputMode(
-        (!!item.departure && !item.departure_place_id) || (!!item.arrival && !item.arrival_place_id)
-      );
     } else {
       setEditingTransport(null);
       setTransportType(type);
@@ -2598,7 +2260,6 @@ export function TravelPlannerContent() {
       setTransportArrivalPlaceId(null);
       setTransportDistanceKm('');
       setTransportMemo('');
-      setTransportDirectInputMode(false);
     }
     setShowTransportForm(true);
   };
@@ -2608,16 +2269,6 @@ export function TravelPlannerContent() {
     if (!currentGroupId || !selectedTrip || !transportDayDate) {
       alert(tt('alert_date_required'));
       return;
-    }
-    if (!transportDirectInputMode) {
-      if (transportDeparture.trim() && !transportDeparturePlaceId) {
-        alert(tt('alert_departure_select_required'));
-        return;
-      }
-      if (transportArrival.trim() && !transportArrivalPlaceId) {
-        alert(tt('alert_arrival_select_required'));
-        return;
-      }
     }
     try {
       setSubmitting(true);
@@ -2637,8 +2288,8 @@ export function TravelPlannerContent() {
           end_time: transportEndTime.trim() || undefined,
           departure: transportDeparture.trim() || undefined,
           arrival: transportArrival.trim() || undefined,
-          departure_place_id: transportDirectInputMode ? null : transportDeparturePlaceId,
-          arrival_place_id: transportDirectInputMode ? null : transportArrivalPlaceId,
+          departure_place_id: transportDeparturePlaceId ?? undefined,
+          arrival_place_id: transportArrivalPlaceId ?? undefined,
           distance_km: transportDistanceKm.trim() ? Number(transportDistanceKm) : undefined,
           memo: transportMemo.trim() || undefined,
           show_in_itinerary: showInItinerary,
@@ -2662,16 +2313,6 @@ export function TravelPlannerContent() {
       alert(tt('alert_date_required'));
       return;
     }
-    if (!transportDirectInputMode) {
-      if (transportDeparture.trim() && !transportDeparturePlaceId) {
-        alert(tt('alert_departure_select_required'));
-        return;
-      }
-      if (transportArrival.trim() && !transportArrivalPlaceId) {
-        alert(tt('alert_arrival_select_required'));
-        return;
-      }
-    }
     try {
       setSubmitting(true);
       const headers = await getAuthHeaders();
@@ -2689,8 +2330,8 @@ export function TravelPlannerContent() {
           end_time: transportEndTime.trim() || null,
           departure: transportDeparture.trim() || null,
           arrival: transportArrival.trim() || null,
-          departure_place_id: transportDirectInputMode ? null : transportDeparturePlaceId,
-          arrival_place_id: transportDirectInputMode ? null : transportArrivalPlaceId,
+          departure_place_id: transportDeparturePlaceId,
+          arrival_place_id: transportArrivalPlaceId,
           distance_km: transportDistanceKm.trim() ? Number(transportDistanceKm) : null,
           memo: transportMemo.trim() || null,
         }),
@@ -4605,7 +4246,6 @@ export function TravelPlannerContent() {
       {showItineraryForm && selectedTrip && (
         <div
           className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
-          onClick={() => !submitting && setShowItineraryForm(false)}
         >
           <div
             className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
@@ -4869,7 +4509,6 @@ export function TravelPlannerContent() {
       {showAccommodationForm && selectedTrip && (
         <div
           className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
-          onClick={() => !submitting && setShowAccommodationForm(false)}
         >
           <div
             className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
@@ -4883,40 +4522,35 @@ export function TravelPlannerContent() {
             </div>
             <form ref={accommodationFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAccommodation) handleUpdateAccommodation(e); }} className="min-w-0 overflow-hidden">
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_acc_name')}</label>
-              <input
-                ref={accNameInputRef}
+              <PlaceAutocompleteInput
                 value={accName}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!accDirectInputMode && accPlaceId !== '__existing__') {
-                    if (accPlaceId && accPlaceName && v.trim() !== accPlaceName.trim()) {
-                      clearAccGooglePlaceFields();
-                    }
-                    if (!v.trim()) clearAccGooglePlaceFields();
-                  }
-                  setAccName(v);
+                onChange={(v) => setAccName(v)}
+                onSelect={(result: PlaceSelectResult) => {
+                  setAccName(result.name);
+                  setAccAddress(result.address ?? '');
+                  setAccLatitude(result.latitude != null ? String(result.latitude) : '');
+                  setAccLongitude(result.longitude != null ? String(result.longitude) : '');
+                  setAccPlaceName(result.name);
+                  setAccPlaceId(result.placeId);
                 }}
-                onFocus={cancelAccNameBlurConfirm}
-                onBlur={scheduleAccNameBlurConfirm}
-                required
+                onClear={() => {
+                  setAccPlaceId(null);
+                  setAccPlaceName('');
+                  setAccAddress('');
+                  setAccLatitude('');
+                  setAccLongitude('');
+                }}
+                selectedPlaceId={accPlaceId}
+                placesApiReady={placesApiReady}
+                getGoogleMapsNs={getGoogleMapsNs}
+                placesServiceRef={placesServiceRef}
+                placesServiceContainerRef={placesServiceContainerRef}
+                getAuthHeaders={getAuthHeaders}
                 placeholder={tt('placeholder_acc_name')}
-                className="mb-2 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                labelReportWrong={tt('ui_report_wrong_place')}
+                labelSearchWithGoogle={tt('ui_search_with_google')}
+                className="mb-3"
               />
-              <label className="mb-3 flex items-center gap-1.5 text-xs text-slate-500">
-                <input
-                  type="checkbox"
-                  checked={accDirectInputMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setAccDirectInputMode(checked);
-                    if (checked) {
-                      setAccPlaceId(null);
-                      setAccPlaceName('');
-                    }
-                  }}
-                />
-                {tt('ui_direct_input_mode')}
-              </label>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_checkin')}</label>
               <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
                 <input
@@ -4958,18 +4592,9 @@ export function TravelPlannerContent() {
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_address')}</label>
               <input
                 value={accAddress}
-                readOnly={!accDirectInputMode}
-                onChange={(e) => {
-                  if (accDirectInputMode) setAccAddress(e.target.value);
-                }}
-                placeholder={
-                  accDirectInputMode
-                    ? tt('placeholder_search_address')
-                    : tt('ui_place_fill_hint')
-                }
-                className={`mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
-                  accDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                }`}
+                onChange={(e) => setAccAddress(e.target.value)}
+                placeholder={tt('placeholder_search_address')}
+                className="mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
               {accPlaceName && (
                 <div className="mb-3">
@@ -4987,14 +4612,9 @@ export function TravelPlannerContent() {
                     type="number"
                     step="any"
                     value={accLatitude}
-                    readOnly={!accDirectInputMode}
-                    onChange={(e) => {
-                      if (accDirectInputMode) setAccLatitude(e.target.value);
-                    }}
+                    onChange={(e) => setAccLatitude(e.target.value)}
                     placeholder={tt('placeholder_lat')}
-                    className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
-                      accDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                    }`}
+                    className="min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   />
                 </div>
                 <div>
@@ -5003,14 +4623,9 @@ export function TravelPlannerContent() {
                     type="number"
                     step="any"
                     value={accLongitude}
-                    readOnly={!accDirectInputMode}
-                    onChange={(e) => {
-                      if (accDirectInputMode) setAccLongitude(e.target.value);
-                    }}
+                    onChange={(e) => setAccLongitude(e.target.value)}
                     placeholder={tt('placeholder_lng')}
-                    className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
-                      accDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                    }`}
+                    className="min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   />
                 </div>
                 </div>
@@ -5063,7 +4678,6 @@ export function TravelPlannerContent() {
       {showDiningForm && selectedTrip && (
         <div
           className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
-          onClick={() => !submitting && setShowDiningForm(false)}
         >
           <div
             className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
@@ -5077,40 +4691,35 @@ export function TravelPlannerContent() {
             </div>
             <form ref={diningFormRef} onSubmit={(e) => { e.preventDefault(); if (editingDining) handleUpdateDining(e); }} className="min-w-0 overflow-hidden">
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_name')}</label>
-              <input
-                ref={diningNameInputRef}
+              <PlaceAutocompleteInput
                 value={diningName}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!diningDirectInputMode && diningPlaceId !== '__existing__') {
-                    if (diningPlaceId && diningPlaceName && v.trim() !== diningPlaceName.trim()) {
-                      clearDiningGooglePlaceFields();
-                    }
-                    if (!v.trim()) clearDiningGooglePlaceFields();
-                  }
-                  setDiningName(v);
+                onChange={(v) => setDiningName(v)}
+                onSelect={(result: PlaceSelectResult) => {
+                  setDiningName(result.name);
+                  setDiningAddress(result.address ?? '');
+                  setDiningLatitude(result.latitude != null ? String(result.latitude) : '');
+                  setDiningLongitude(result.longitude != null ? String(result.longitude) : '');
+                  setDiningPlaceName(result.name);
+                  setDiningPlaceId(result.placeId);
                 }}
-                onFocus={cancelDiningNameBlurConfirm}
-                onBlur={scheduleDiningNameBlurConfirm}
-                required
+                onClear={() => {
+                  setDiningPlaceId(null);
+                  setDiningPlaceName('');
+                  setDiningAddress('');
+                  setDiningLatitude('');
+                  setDiningLongitude('');
+                }}
+                selectedPlaceId={diningPlaceId}
+                placesApiReady={placesApiReady}
+                getGoogleMapsNs={getGoogleMapsNs}
+                placesServiceRef={placesServiceRef}
+                placesServiceContainerRef={placesServiceContainerRef}
+                getAuthHeaders={getAuthHeaders}
                 placeholder={tt('placeholder_dining_name')}
-                className="mb-2 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                labelReportWrong={tt('ui_report_wrong_place')}
+                labelSearchWithGoogle={tt('ui_search_with_google')}
+                className="mb-3"
               />
-              <label className="mb-3 flex items-center gap-1.5 text-xs text-slate-500">
-                <input
-                  type="checkbox"
-                  checked={diningDirectInputMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setDiningDirectInputMode(checked);
-                    if (checked) {
-                      setDiningPlaceId(null);
-                      setDiningPlaceName('');
-                    }
-                  }}
-                />
-                {tt('ui_direct_input_mode')}
-              </label>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
               <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
                 <input
@@ -5150,18 +4759,9 @@ export function TravelPlannerContent() {
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_address')}</label>
               <input
                 value={diningAddress}
-                readOnly={!diningDirectInputMode}
-                onChange={(e) => {
-                  if (diningDirectInputMode) setDiningAddress(e.target.value);
-                }}
-                placeholder={
-                  diningDirectInputMode
-                    ? tt('placeholder_search_address')
-                    : tt('ui_place_fill_hint')
-                }
-                className={`mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
-                  diningDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                }`}
+                onChange={(e) => setDiningAddress(e.target.value)}
+                placeholder={tt('placeholder_search_address')}
+                className="mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
               {diningPlaceName && (
                 <div className="mb-3">
@@ -5179,14 +4779,9 @@ export function TravelPlannerContent() {
                     type="number"
                     step="any"
                     value={diningLatitude}
-                    readOnly={!diningDirectInputMode}
-                    onChange={(e) => {
-                      if (diningDirectInputMode) setDiningLatitude(e.target.value);
-                    }}
+                    onChange={(e) => setDiningLatitude(e.target.value)}
                     placeholder={tt('placeholder_lat')}
-                    className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
-                      diningDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                    }`}
+                    className="min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   />
                 </div>
                 <div>
@@ -5195,14 +4790,9 @@ export function TravelPlannerContent() {
                     type="number"
                     step="any"
                     value={diningLongitude}
-                    readOnly={!diningDirectInputMode}
-                    onChange={(e) => {
-                      if (diningDirectInputMode) setDiningLongitude(e.target.value);
-                    }}
+                    onChange={(e) => setDiningLongitude(e.target.value)}
                     placeholder={tt('placeholder_lng')}
-                    className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
-                      diningDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                    }`}
+                    className="min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   />
                 </div>
                 </div>
@@ -5255,7 +4845,6 @@ export function TravelPlannerContent() {
       {showAttractionForm && selectedTrip && (
         <div
           className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 px-4"
-          onClick={() => !submitting && setShowAttractionForm(false)}
         >
           <div
             className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
@@ -5273,43 +4862,35 @@ export function TravelPlannerContent() {
             </div>
             <form ref={attractionFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAttraction) handleUpdateAttraction(e); }} className="min-w-0 overflow-hidden">
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_name')}</label>
-              <input
-                type="text"
-                ref={attractionNameInputRef}
+              <PlaceAutocompleteInput
                 value={attractionName}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!attractionDirectInputMode && attractionPlaceId !== '__existing__') {
-                    if (attractionPlaceId && attractionPlaceName && v.trim() !== attractionPlaceName.trim()) {
-                      clearAttractionGooglePlaceFields();
-                    }
-                    if (!v.trim()) clearAttractionGooglePlaceFields();
-                  }
-                  setAttractionName(v);
+                onChange={(v) => setAttractionName(v)}
+                onSelect={(result: PlaceSelectResult) => {
+                  setAttractionName(result.name);
+                  setAttractionAddress(result.address ?? '');
+                  setAttractionLatitude(result.latitude != null ? String(result.latitude) : '');
+                  setAttractionLongitude(result.longitude != null ? String(result.longitude) : '');
+                  setAttractionPlaceName(result.name);
+                  setAttractionPlaceId(result.placeId);
                 }}
-                onFocus={cancelAttractionNameBlurConfirm}
-                onBlur={scheduleAttractionNameBlurConfirm}
-                disabled={submitting}
+                onClear={() => {
+                  setAttractionPlaceId(null);
+                  setAttractionPlaceName('');
+                  setAttractionAddress('');
+                  setAttractionLatitude('');
+                  setAttractionLongitude('');
+                }}
+                selectedPlaceId={attractionPlaceId}
+                placesApiReady={placesApiReady}
+                getGoogleMapsNs={getGoogleMapsNs}
+                placesServiceRef={placesServiceRef}
+                placesServiceContainerRef={placesServiceContainerRef}
+                getAuthHeaders={getAuthHeaders}
                 placeholder={tt('placeholder_attraction_name')}
-                className="mb-2 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
-                required
+                labelReportWrong={tt('ui_report_wrong_place')}
+                labelSearchWithGoogle={tt('ui_search_with_google')}
+                className="mb-3"
               />
-              <label className="mb-3 flex items-center gap-1.5 text-xs text-slate-500">
-                <input
-                  type="checkbox"
-                  checked={attractionDirectInputMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setAttractionDirectInputMode(checked);
-                    if (checked) {
-                      setAttractionPlaceId(null);
-                      setAttractionPlaceName('');
-                    }
-                  }}
-                  disabled={submitting}
-                />
-                {tt('ui_direct_input_mode')}
-              </label>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
               <input
                 type="date"
@@ -5354,17 +4935,10 @@ export function TravelPlannerContent() {
               <input
                 type="text"
                 value={attractionAddress}
-                readOnly={!attractionDirectInputMode}
-                onChange={(e) => {
-                  if (attractionDirectInputMode) setAttractionAddress(e.target.value);
-                }}
+                onChange={(e) => setAttractionAddress(e.target.value)}
                 disabled={submitting}
-                placeholder={
-                  attractionDirectInputMode ? tt('placeholder_address') : tt('ui_place_fill_hint')
-                }
-                className={`mb-1 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm ${
-                  attractionDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                }`}
+                placeholder={tt('placeholder_address')}
+                className="mb-1 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
               />
               {attractionPlaceName && (
                 <div className="mb-3">
@@ -5382,14 +4956,9 @@ export function TravelPlannerContent() {
                       type="number"
                       step="any"
                       value={attractionLatitude}
-                      readOnly={!attractionDirectInputMode}
-                      onChange={(e) => {
-                        if (attractionDirectInputMode) setAttractionLatitude(e.target.value);
-                      }}
+                      onChange={(e) => setAttractionLatitude(e.target.value)}
                       placeholder={tt('placeholder_lat')}
-                      className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
-                        attractionDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                      }`}
+                      className="min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                     />
                   </div>
                   <div>
@@ -5398,14 +4967,9 @@ export function TravelPlannerContent() {
                       type="number"
                       step="any"
                       value={attractionLongitude}
-                      readOnly={!attractionDirectInputMode}
-                      onChange={(e) => {
-                        if (attractionDirectInputMode) setAttractionLongitude(e.target.value);
-                      }}
+                      onChange={(e) => setAttractionLongitude(e.target.value)}
                       placeholder={tt('placeholder_lng')}
-                      className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
-                        attractionDirectInputMode ? 'bg-white' : 'bg-slate-50'
-                      }`}
+                      className="min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                     />
                   </div>
                 </div>
@@ -5446,7 +5010,6 @@ export function TravelPlannerContent() {
       {showTransportForm && selectedTrip && (
         <div
           className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 px-4"
-          onClick={() => !submitting && setShowTransportForm(false)}
         >
           <div
             className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
@@ -5516,47 +5079,45 @@ export function TravelPlannerContent() {
                 </div>
               </div>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_departure')}</label>
-              <input
-                type="text"
-                ref={transportDepartureInputRef}
+              <PlaceAutocompleteInput
                 value={transportDeparture}
-                onChange={(e) => {
-                  setTransportDeparture(e.target.value);
-                  if (!transportDirectInputMode) setTransportDeparturePlaceId(null);
+                onChange={(v) => { setTransportDeparture(v); setTransportDeparturePlaceId(null); }}
+                onSelect={(result: PlaceSelectResult) => {
+                  setTransportDeparture(result.name);
+                  setTransportDeparturePlaceId(result.placeId);
                 }}
-                disabled={submitting}
+                onClear={() => setTransportDeparturePlaceId(null)}
+                selectedPlaceId={transportDeparturePlaceId}
+                placesApiReady={placesApiReady}
+                getGoogleMapsNs={getGoogleMapsNs}
+                placesServiceRef={placesServiceRef}
+                placesServiceContainerRef={placesServiceContainerRef}
+                getAuthHeaders={getAuthHeaders}
                 placeholder={tt('placeholder_departure')}
-                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                labelReportWrong={tt('ui_report_wrong_place')}
+                labelSearchWithGoogle={tt('ui_search_with_google')}
+                className="mb-3"
               />
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_arrival')}</label>
-              <input
-                type="text"
-                ref={transportArrivalInputRef}
+              <PlaceAutocompleteInput
                 value={transportArrival}
-                onChange={(e) => {
-                  setTransportArrival(e.target.value);
-                  if (!transportDirectInputMode) setTransportArrivalPlaceId(null);
+                onChange={(v) => { setTransportArrival(v); setTransportArrivalPlaceId(null); }}
+                onSelect={(result: PlaceSelectResult) => {
+                  setTransportArrival(result.name);
+                  setTransportArrivalPlaceId(result.placeId);
                 }}
-                disabled={submitting}
+                onClear={() => setTransportArrivalPlaceId(null)}
+                selectedPlaceId={transportArrivalPlaceId}
+                placesApiReady={placesApiReady}
+                getGoogleMapsNs={getGoogleMapsNs}
+                placesServiceRef={placesServiceRef}
+                placesServiceContainerRef={placesServiceContainerRef}
+                getAuthHeaders={getAuthHeaders}
                 placeholder={tt('placeholder_arrival')}
-                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                labelReportWrong={tt('ui_report_wrong_place')}
+                labelSearchWithGoogle={tt('ui_search_with_google')}
+                className="mb-3"
               />
-              <label className="mb-3 flex items-center gap-1.5 text-xs text-slate-500">
-                <input
-                  type="checkbox"
-                  checked={transportDirectInputMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setTransportDirectInputMode(checked);
-                    if (checked) {
-                      setTransportDeparturePlaceId(null);
-                      setTransportArrivalPlaceId(null);
-                    }
-                  }}
-                  disabled={submitting}
-                />
-                {tt('ui_direct_input_mode')}
-              </label>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_distance_km')}</label>
               <input
                 type="number"

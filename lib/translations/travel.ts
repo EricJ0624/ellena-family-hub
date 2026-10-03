@@ -205,6 +205,8 @@ export type TravelTranslations = {
   ui_direct_input_mode: string;
   ui_place_fill_hint: string;
   ui_coord_input_advanced: string;
+  ui_report_wrong_place: string;
+  ui_search_with_google: string;
   /** 지도 아래 좌표 라벨 (다이어리·플래너 공용) */
   ui_coords_under_map: string;
   ui_map_places_under_map: string;
@@ -490,6 +492,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: '직접 입력 모드 (Google 자동완성 호출 안 함)',
     ui_place_fill_hint: '이름에서 장소를 선택하면 주소·좌표가 채워집니다',
     ui_coord_input_advanced: '좌표 입력 (고급)',
+    ui_report_wrong_place: '정보가 틀려요',
+    ui_search_with_google: 'Google에서 더 찾기',
     ui_coords_under_map: '좌표',
     ui_map_places_under_map: '지도에 표시된 위치',
     ui_section_dining: '먹거리',
@@ -771,6 +775,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Direct input mode (disable Google autocomplete)',
     ui_place_fill_hint: 'Selecting a place name fills address and coordinates',
     ui_coord_input_advanced: 'Coordinate input (advanced)',
+    ui_report_wrong_place: 'Report wrong info',
+    ui_search_with_google: 'Search more on Google',
     ui_coords_under_map: 'Coordinates',
     ui_map_places_under_map: 'Places on the map',
     ui_section_dining: 'Dining',
@@ -1052,6 +1058,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: '直接入力モード（Google 自動補完を使わない）',
     ui_place_fill_hint: '名前から場所を選ぶと住所・座標が入力されます',
     ui_coord_input_advanced: '座標入力（詳細）',
+    ui_report_wrong_place: '情報が間違っています',
+    ui_search_with_google: 'Googleでもっと探す',
     ui_coords_under_map: '座標',
     ui_map_places_under_map: '地図に表示される場所',
     ui_section_dining: '飲食',
@@ -1333,6 +1341,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: '直接输入模式（不使用 Google 自动完成）',
     ui_place_fill_hint: '从名称中选择地点将填充地址和坐标',
     ui_coord_input_advanced: '坐标输入（高级）',
+    ui_report_wrong_place: '信息有误',
+    ui_search_with_google: '在 Google 上搜索更多',
     ui_coords_under_map: '坐标',
     ui_map_places_under_map: '地图上显示的位置',
     ui_section_dining: '餐饮',
@@ -1614,6 +1624,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: '直接輸入模式（不使用 Google 自動完成）',
     ui_place_fill_hint: '從名稱中選擇地點將填入地址和座標',
     ui_coord_input_advanced: '座標輸入（進階）',
+    ui_report_wrong_place: '資訊有誤',
+    ui_search_with_google: '在 Google 上搜尋更多',
     ui_coords_under_map: '座標',
     ui_map_places_under_map: '地圖上顯示的位置',
     ui_section_dining: '餐飲',
@@ -1894,6 +1906,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Modo de entrada directa (sin autocompletado de Google)',
     ui_place_fill_hint: 'Al seleccionar un lugar se rellenan dirección y coordenadas',
     ui_coord_input_advanced: 'Entrada de coordenadas (avanzado)',
+    ui_report_wrong_place: 'Información incorrecta',
+    ui_search_with_google: 'Buscar más en Google',
     ui_coords_under_map: 'Coordenadas',
     ui_map_places_under_map: 'Lugares en el mapa',
     ui_section_dining: 'Comida',
@@ -2174,6 +2188,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Mode de saisie directe (sans saisie automatique Google)',
     ui_place_fill_hint: 'La sélection d\'un lieu remplit l\'adresse et les coordonnées',
     ui_coord_input_advanced: 'Saisie des coordonnées (avancé)',
+    ui_report_wrong_place: 'Information incorrecte',
+    ui_search_with_google: 'Rechercher plus sur Google',
     ui_coords_under_map: 'Coordonnées',
     ui_map_places_under_map: 'Lieux sur la carte',
     ui_section_dining: 'Restauration',
@@ -2454,6 +2470,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Direkteingabemodus (Google-Autovervollständigung aus)',
     ui_place_fill_hint: 'Bei Ortsauswahl werden Adresse und Koordinaten ausgefüllt',
     ui_coord_input_advanced: 'Koordinateneingabe (erweitert)',
+    ui_report_wrong_place: 'Falsche Information melden',
+    ui_search_with_google: 'Mehr auf Google suchen',
     ui_coords_under_map: 'Koordinaten',
     ui_map_places_under_map: 'Orte auf der Karte',
     ui_section_dining: 'Essen',
@@ -2734,6 +2752,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Modalità inserimento diretto (senza completamento Google)',
     ui_place_fill_hint: 'Selezionando un luogo si compilano indirizzo e coordinate',
     ui_coord_input_advanced: 'Inserimento coordinate (avanzato)',
+    ui_report_wrong_place: 'Informazione errata',
+    ui_search_with_google: 'Cerca di più su Google',
     ui_coords_under_map: 'Coordinate',
     ui_map_places_under_map: 'Luoghi sulla mappa',
     ui_section_dining: 'Ristorazione',
@@ -3014,6 +3034,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     ui_direct_input_mode: 'Modo de entrada direta (desativar autocompletar do Google)',
     ui_place_fill_hint: 'Selecionar um local preenche endereço e coordenadas',
     ui_coord_input_advanced: 'Entrada de coordenadas (avançado)',
+    ui_report_wrong_place: 'Informação incorreta',
+    ui_search_with_google: 'Pesquisar mais no Google',
     ui_coords_under_map: 'Coordenadas',
     ui_map_places_under_map: 'Locais no mapa',
     ui_section_dining: 'Refeições',

@@ -2,18 +2,52 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
 
-/** GET: place_id로 캐시 조회. 있으면 { place_id, name, latitude, longitude, formatted_address } 반환 */
+/**
+ * GET: 캐시 조회
+ * - ?placeId=xxx  → place_id 기준 단건 조회 (기존)
+ * - ?q=xxx        → name 기준 부분 검색 (최대 8건). 결과: { results: [...] }
+ * - ?placeId=xxx&refresh=1 → place_id 단건 조회 (강제 갱신용, 동일 응답이지만 Google 재호출 신호)
+ */
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
 
-    const placeId = request.nextUrl.searchParams.get('placeId');
-    if (!placeId || !placeId.trim()) {
-      return NextResponse.json({ error: 'placeId가 필요합니다.' }, { status: 400 });
+    const supabase = getSupabaseServerClient();
+    const { searchParams } = request.nextUrl;
+    const placeId = searchParams.get('placeId');
+    const q = searchParams.get('q');
+
+    // ── 이름 검색 모드 ──────────────────────────────────────────
+    if (q && q.trim()) {
+      const keyword = q.trim();
+      const { data, error } = await supabase
+        .from('place_cache')
+        .select('place_id, name, latitude, longitude, formatted_address')
+        .ilike('name', `%${keyword}%`)
+        .limit(8);
+
+      if (error) {
+        console.warn('place_cache name search:', error);
+        return NextResponse.json({ error: '캐시 조회 실패' }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        results: (data ?? []).map((row) => ({
+          place_id: row.place_id,
+          name: row.name ?? '',
+          latitude: row.latitude ?? undefined,
+          longitude: row.longitude ?? undefined,
+          formatted_address: row.formatted_address ?? '',
+        })),
+      });
     }
 
-    const supabase = getSupabaseServerClient();
+    // ── place_id 단건 조회 모드 (기존) ──────────────────────────
+    if (!placeId || !placeId.trim()) {
+      return NextResponse.json({ error: 'placeId 또는 q가 필요합니다.' }, { status: 400 });
+    }
+
     const { data, error } = await supabase
       .from('place_cache')
       .select('place_id, name, latitude, longitude, formatted_address')
