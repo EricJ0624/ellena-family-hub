@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
@@ -54,6 +54,13 @@ export default function LoginPage() {
   const [keepLoggedIn, setKeepLoggedIn] = useState(true); // 로그인 상태 유지 (기본 체크)
   /** 로그인 유지 세션 복원 중 — 폼만 보이면 “멈춘 것”처럼 느껴짐 */
   const [restoringSession, setRestoringSession] = useState(false);
+  /**
+   * 세션 존재 여부 확인 완료 - 세션 없음 확정 후에만 true.
+   * true가 되기 전에는 로그인 폼 대신 로딩 화면을 표시해
+   * 로그인 유지 재접속 시 로그인 폼이 순간 보이지 않게 함.
+   * 세션이 있어 리다이렉트 중인 경우는 계속 false (로딩 화면 유지).
+   */
+  const [sessionCheckDone, setSessionCheckDone] = useState(false);
   const loginTitleRef = useRef<HTMLHeadingElement>(null);
   /** 가입 처리 중 이중 submit 방지 */
   const signupSubmitLockRef = useRef(false);
@@ -169,7 +176,8 @@ export default function LoginPage() {
       cancelAnimationFrame(rafId);
       ro?.disconnect();
     };
-  }, [lang, isMounted]);
+  // sessionCheckDone: 폼이 늦게 렌더될 때 loginTitleRef가 없으면 h1 측정 누락 → sessionCheckDone 변경 시 재실행
+  }, [lang, isMounted, sessionCheckDone]);
 
   // 이미 로그인되어 있으면 자동 리다이렉트 (로그인 유지 재진입)
   useEffect(() => {
@@ -191,7 +199,10 @@ export default function LoginPage() {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        if (!session?.access_token || !session.user) return;
+        if (!session?.access_token || !session.user) {
+          if (!cancelled) setSessionCheckDone(true); // 세션 없음 확정 → 로그인 폼 표시
+          return;
+        }
 
         if (!cancelled) setRestoringSession(true);
 
@@ -226,7 +237,7 @@ export default function LoginPage() {
         const { user, error } = await userPromise;
         if (cancelled) return;
         if (error || !user) {
-          setRestoringSession(false);
+          if (!cancelled) { setRestoringSession(false); setSessionCheckDone(true); } // 유저 무효 → 로그인 폼
           return;
         }
 
@@ -236,7 +247,7 @@ export default function LoginPage() {
         if (cancelled) return;
         routeFromBootstrap(bootstrap, invite);
       } catch {
-        if (!cancelled) setRestoringSession(false);
+        if (!cancelled) { setRestoringSession(false); setSessionCheckDone(true); } // 오류 → 로그인 폼
       }
     };
 
@@ -891,6 +902,22 @@ export default function LoginPage() {
     ...inputStyle,
     letterSpacing: '2px',
   };
+
+  // 로그인 유지 재접속: 세션 확인 전에는 로그인 폼 대신 로딩 화면 표시
+  // - sessionCheckDone: 세션 없음 확정 시에만 true (폼 표시 신호)
+  // - restoringSession: 세션 있어 리다이렉트 중 (로딩 화면 유지)
+  if (!isMounted || !sessionCheckDone) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)]">
+        <div className="rounded-2xl bg-white px-6 py-5 text-center shadow-lg">
+          <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+          <p className="text-sm font-semibold text-slate-700">
+            {lang === 'ko' ? '잠시만요\u2026' : 'Loading\u2026'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
