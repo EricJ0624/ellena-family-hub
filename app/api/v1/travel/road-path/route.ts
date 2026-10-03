@@ -55,17 +55,17 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_APP_URL ||
       'http://localhost:3000/';
 
-    const path = await computeWalkingRoutePath(points, key, { referer });
-    if (path.length < 2) {
+    const result = await computeWalkingRoutePath(points, key, { referer });
+    if (result.path.length < 2) {
       return NextResponse.json({
         success: true,
-        data: { path: [], fromRoads: false },
+        data: { path: [], fromRoads: false, distanceM: null },
       });
     }
 
     return NextResponse.json({
       success: true,
-      data: { path, fromRoads: true },
+      data: { path: result.path, fromRoads: true, distanceM: result.distanceM },
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '서버 오류';

@@ -105,8 +105,8 @@ export async function buildRoadSnappedPath(
   }
 
   const viaRoutes = await computeWalkingRoutePath(normalized, key, { referer });
-  if (viaRoutes.length >= 2) {
-    return { path: viaRoutes, fromRoads: true };
+  if (viaRoutes.path.length >= 2) {
+    return { path: viaRoutes.path, fromRoads: true };
   }
 
   return { path: normalized, fromRoads: false };

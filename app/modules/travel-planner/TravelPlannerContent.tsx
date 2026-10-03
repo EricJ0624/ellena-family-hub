@@ -916,7 +916,7 @@ export function TravelPlannerContent() {
             if (!pathResult.roadSnapped && path.length >= 2) {
               const road = await resolveRoadPath(path, currentGroupId);
               if (!isCurrent()) return;
-              if (road.length >= 2) path = road;
+              if (road.path.length >= 2) path = road.path;
             }
 
             if (path.length >= 2) {

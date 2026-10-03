@@ -46,12 +46,19 @@ export type ComputeRouteOptions = {
   travelMode?: 'WALK' | 'DRIVE';
 };
 
+/** Path + road distance from a single route computation. */
+export type RouteResult = {
+  path: FieldTrackLatLng[];
+  /** Road distance in metres (null when not provided by the API). */
+  distanceM: number | null;
+};
+
 /** OpenStreetMap OSRM — no Google key needed */
 async function computeOsrmPath(
   points: FieldTrackLatLng[],
   profile: 'foot' | 'driving' = 'foot',
-): Promise<FieldTrackLatLng[]> {
-  if (points.length < 2) return [];
+): Promise<RouteResult> {
+  if (points.length < 2) return { path: [], distanceM: null };
   // OSRM public demo: keep request small
   const limited =
     points.length <= 25
@@ -69,14 +76,15 @@ async function computeOsrmPath(
     `https://router.project-osrm.org/route/v1/${profile}/${coords}` +
     `?overview=full&geometries=geojson`;
   const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-  if (!res.ok) return [];
+  if (!res.ok) return { path: [], distanceM: null };
   const json = (await res.json().catch(() => ({}))) as {
     code?: string;
-    routes?: Array<{ geometry?: { coordinates?: number[][] } }>;
+    routes?: Array<{ distance?: number; geometry?: { coordinates?: number[][] } }>;
   };
-  if (json.code !== 'Ok') return [];
-  const ring = json.routes?.[0]?.geometry?.coordinates;
-  if (!Array.isArray(ring) || ring.length < 2) return [];
+  if (json.code !== 'Ok') return { path: [], distanceM: null };
+  const route = json.routes?.[0];
+  const ring = route?.geometry?.coordinates;
+  if (!Array.isArray(ring) || ring.length < 2) return { path: [], distanceM: null };
   const out: FieldTrackLatLng[] = [];
   for (const pair of ring) {
     const lng = Number(pair?.[0]);
@@ -84,15 +92,19 @@ async function computeOsrmPath(
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
     out.push({ lat, lng });
   }
-  return out.length >= 2 ? out : [];
+  const distanceM =
+    typeof route?.distance === 'number' && Number.isFinite(route.distance)
+      ? route.distance
+      : null;
+  return out.length >= 2 ? { path: out, distanceM } : { path: [], distanceM: null };
 }
 
 async function computeGoogleRoutesPath(
   points: FieldTrackLatLng[],
   apiKey: string,
   opts?: ComputeRouteOptions,
-): Promise<FieldTrackLatLng[]> {
-  if (!apiKey || points.length < 2) return [];
+): Promise<RouteResult> {
+  if (!apiKey || points.length < 2) return { path: [], distanceM: null };
 
   const origin = points[0]!;
   const destination = points[points.length - 1]!;
@@ -119,7 +131,7 @@ async function computeGoogleRoutesPath(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Goog-Api-Key': apiKey,
-    'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+    'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.distanceMeters',
   };
   const referer = (opts?.referer || '').trim();
   if (referer) headers.Referer = referer;
@@ -136,39 +148,45 @@ async function computeGoogleRoutesPath(
     if (travelMode === 'WALK') {
       return computeGoogleRoutesPath(points, apiKey, { ...opts, travelMode: 'DRIVE' });
     }
-    return [];
+    return { path: [], distanceM: null };
   }
 
   const json = (await res.json().catch(() => ({}))) as {
-    routes?: Array<{ polyline?: { encodedPolyline?: string } }>;
+    routes?: Array<{ distanceMeters?: number; polyline?: { encodedPolyline?: string } }>;
   };
-  const encoded = json.routes?.[0]?.polyline?.encodedPolyline;
+  const route = json.routes?.[0];
+  const encoded = route?.polyline?.encodedPolyline;
   if (!encoded) {
     if (travelMode === 'WALK') {
       return computeGoogleRoutesPath(points, apiKey, { ...opts, travelMode: 'DRIVE' });
     }
-    return [];
+    return { path: [], distanceM: null };
   }
   const decoded = decodeGooglePolyline(encoded);
-  return decoded.length >= 2 ? decoded : [];
+  const distanceM =
+    typeof route?.distanceMeters === 'number' && Number.isFinite(route.distanceMeters)
+      ? route.distanceMeters
+      : null;
+  return decoded.length >= 2 ? { path: decoded, distanceM } : { path: [], distanceM: null };
 }
 
 /**
  * Prefer Google Routes; if key blocks Routes/Roads, fall back to OSRM (roads).
+ * Returns path + distanceM (road distance in metres, null when unavailable).
  */
 export async function computeWalkingRoutePath(
   points: FieldTrackLatLng[],
   apiKey: string,
   opts?: ComputeRouteOptions,
-): Promise<FieldTrackLatLng[]> {
-  if (points.length < 2) return [];
+): Promise<RouteResult> {
+  if (points.length < 2) return { path: [], distanceM: null };
 
   if (apiKey) {
-    const googlePath = await computeGoogleRoutesPath(points, apiKey, opts);
-    if (googlePath.length >= 2) return googlePath;
+    const googleResult = await computeGoogleRoutesPath(points, apiKey, opts);
+    if (googleResult.path.length >= 2) return googleResult;
   }
 
   const foot = await computeOsrmPath(points, 'foot');
-  if (foot.length >= 2) return foot;
+  if (foot.path.length >= 2) return foot;
   return computeOsrmPath(points, 'driving');
 }

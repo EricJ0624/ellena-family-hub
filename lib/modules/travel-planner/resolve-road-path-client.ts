@@ -5,16 +5,22 @@
 import type { FieldTrackLatLng } from '@/lib/modules/travel-planner/field-track-path';
 import { supabase } from '@/lib/supabase';
 
-/** Follow roads between GPS crumbs. Returns [] on failure. */
+export type RoadPathClientResult = {
+  path: FieldTrackLatLng[];
+  /** Road distance in metres from the routing API (null when unavailable). */
+  distanceM: number | null;
+};
+
+/** Follow roads between GPS crumbs. Returns path + distanceM on success. */
 export async function resolveRoadPath(
   points: FieldTrackLatLng[],
   groupId: string,
-): Promise<FieldTrackLatLng[]> {
-  if (points.length < 2 || !groupId) return [];
+): Promise<RoadPathClientResult> {
+  if (points.length < 2 || !groupId) return { path: [], distanceM: null };
   try {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    if (!token) return [];
+    if (!token) return { path: [], distanceM: null };
 
     const res = await fetch('/api/v1/travel/road-path', {
       method: 'POST',
@@ -25,7 +31,7 @@ export async function resolveRoadPath(
       body: JSON.stringify({ groupId, points }),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) return [];
+    if (!res.ok) return { path: [], distanceM: null };
     const path = Array.isArray(json?.data?.path) ? json.data.path : [];
     const out: FieldTrackLatLng[] = [];
     for (const p of path) {
@@ -34,8 +40,11 @@ export async function resolveRoadPath(
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
       out.push({ lat, lng });
     }
-    return out.length >= 2 ? out : [];
+    const rawDist = json?.data?.distanceM;
+    const distanceM =
+      typeof rawDist === 'number' && Number.isFinite(rawDist) ? rawDist : null;
+    return out.length >= 2 ? { path: out, distanceM } : { path: [], distanceM: null };
   } catch {
-    return [];
+    return { path: [], distanceM: null };
   }
 }

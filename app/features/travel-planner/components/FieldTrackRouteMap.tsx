@@ -186,9 +186,39 @@ async function persistClientRoadPath(
   }
 }
 
+/** Haversine sum of consecutive path points (metres). Used for pre-snapped paths. */
+function calcPathDistanceM(pts: FieldTrackLatLng[]): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!;
+    const b = pts[i]!;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    total += 2 * R * Math.asin(Math.sqrt(h));
+  }
+  return total;
+}
+
+/** Format metres → "X.X km" or "X.X mi" */
+function formatDistance(metres: number, useKm: boolean): string {
+  if (useKm) {
+    const km = metres / 1000;
+    return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+  }
+  const mi = metres / 1609.344;
+  return mi < 10 ? `${mi.toFixed(1)} mi` : `${Math.round(mi)} mi`;
+}
+
 export function FieldTrackRouteMap({ groupId, trackId, className }: Props) {
   const titleId = useId();
   const [path, setPath] = useState<FieldTrackLatLng[]>([]);
+  const [distanceM, setDistanceM] = useState<number | null>(null);
+  const [useKm, setUseKm] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -217,17 +247,24 @@ export function FieldTrackRouteMap({ groupId, trackId, className }: Props) {
         }
 
         let display = result.path;
+        let resolvedDistanceM: number | null = null;
+
         if (!result.roadSnapped && result.path.length >= 2) {
           const road = await resolveRoadPath(result.path, groupId);
           if (cancelled) return;
-          if (road.length >= 2) {
-            display = road;
-            void persistClientRoadPath(trackId, groupId, road);
+          if (road.path.length >= 2) {
+            display = road.path;
+            resolvedDistanceM = road.distanceM;
+            void persistClientRoadPath(trackId, groupId, road.path);
           }
+        } else if (result.roadSnapped) {
+          // Path was already road-snapped in DB — derive distance from the polyline
+          resolvedDistanceM = calcPathDistanceM(display);
         }
 
         setError(null);
         setPath(display);
+        setDistanceM(resolvedDistanceM);
       } catch (e) {
         if ((e as { name?: string })?.name === 'AbortError') return;
         if (!cancelled) setError('fail');
@@ -255,6 +292,8 @@ export function FieldTrackRouteMap({ groupId, trackId, className }: Props) {
     };
   }, [expanded, close]);
 
+  const distanceLabel = distanceM !== null ? formatDistance(distanceM, useKm) : null;
+
   const shellClass =
     className ??
     'relative min-h-24 flex-1 overflow-hidden rounded-md border border-slate-200 bg-slate-100';
@@ -279,9 +318,33 @@ export function FieldTrackRouteMap({ groupId, trackId, className }: Props) {
           </div>
         ) : null}
         {path.length > 0 && !error ? (
-          <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
-            크게 보기
-          </span>
+          <div className="pointer-events-none absolute bottom-1.5 left-1.5 right-1.5 flex items-end justify-between gap-1">
+            {distanceLabel ? (
+              <span
+                className="pointer-events-auto rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUseKm((v) => !v);
+                }}
+                title="클릭해서 단위 전환 (km / mi)"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation();
+                    setUseKm((v) => !v);
+                  }
+                }}
+              >
+                {distanceLabel}
+              </span>
+            ) : (
+              <span />
+            )}
+            <span className="rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+              크게 보기
+            </span>
+          </div>
         ) : null}
       </button>
 
@@ -298,9 +361,21 @@ export function FieldTrackRouteMap({ groupId, trackId, className }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
-              <h2 id={titleId} className="m-0 text-sm font-semibold text-slate-800">
-                경로 지도
-              </h2>
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 id={titleId} className="m-0 text-sm font-semibold text-slate-800">
+                  경로 지도
+                </h2>
+                {distanceLabel ? (
+                  <button
+                    type="button"
+                    onClick={() => setUseKm((v) => !v)}
+                    title="클릭해서 단위 전환 (km / mi)"
+                    className="cursor-pointer rounded-full border-0 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    {distanceLabel}
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onClick={close}
