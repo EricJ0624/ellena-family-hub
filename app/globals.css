@@ -1718,7 +1718,7 @@ select:not(.chalkboard-form-input) {
 @layer components {
   /* App Container - Flexbox 기반 메인 레이아웃 */
 .app-container {
-    @apply flex h-dvh w-full flex-col overflow-y-auto overflow-x-hidden bg-app-shell-inner;
+    @apply flex h-svh w-full flex-col overflow-y-auto overflow-x-hidden bg-app-shell-inner;
     /* 스크롤바 on/off로 그리드 너비가 출렁이면 모든 위젯 cqmin이 재계산됨 */
     scrollbar-gutter: stable;
     background-color: var(--app-shell-canvas);
@@ -2040,7 +2040,7 @@ select:not(.chalkboard-form-input) {
   padding-bottom: var(--spacing-lg);
   overflow: hidden; /* 타이틀이 넘치지 않도록 */
   box-sizing: border-box;
-  /* 모바일 flex 컨테이너(h-dvh)에서 축소 금지: 사진 액자가 잘리지 않도록 */
+  /* 모바일 flex 컨테이너(h-svh)에서 축소 금지: 사진 액자가 잘리지 않도록 */
   flex-shrink: 0;
   /* 위젯 그리드(sections-container)보다 위에 렌더링 보장 */
   position: relative;
