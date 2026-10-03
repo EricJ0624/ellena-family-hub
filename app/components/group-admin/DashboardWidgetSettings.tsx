@@ -17,7 +17,6 @@ import type { GroupAdminTranslations } from '@/lib/translations/groupAdmin';
 import {
   type DashboardWidgetKey,
   type WidgetConfigDraft,
-  type WidgetSize,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, saveWidgetConfigs } from '@/lib/widgets/widget-configs';
 import {
@@ -38,8 +37,6 @@ interface DashboardWidgetSettingsProps {
   groupId: string | null;
   isOwner: boolean;
 }
-
-const SIZE_OPTIONS: WidgetSize[] = ['S', 'M', 'L', 'XL'];
 
 export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSettingsProps) {
   const { lang } = useLanguage();
@@ -74,24 +71,6 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       travel_diary: tdy('section_title'),
       travel_quick_record: tt('quick_record_title'),
     }),
-    [lang]
-  );
-
-  const sizeOptionLabel = useCallback(
-    (size: WidgetSize): string => {
-      switch (size) {
-        case 'S':
-          return gat('widgets_size_S');
-        case 'M':
-          return gat('widgets_size_M');
-        case 'L':
-          return gat('widgets_size_L');
-        case 'XL':
-          return gat('widgets_size_XL');
-        default:
-          return size;
-      }
-    },
     [lang]
   );
 
@@ -134,43 +113,6 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     setDrafts((prev) =>
       prev.map((c) => (c.widget_key === key ? { ...c, is_enabled: !c.is_enabled } : c))
     );
-  };
-
-  const move = (key: DashboardWidgetKey, dir: 'up' | 'down') => {
-    setDrafts((prev) => {
-      const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
-      const idx = sorted.findIndex((x) => x.widget_key === key);
-      if (idx < 0) return prev;
-      const n = dir === 'up' ? idx - 1 : idx + 1;
-      if (n < 0 || n >= sorted.length) return prev;
-      const t = sorted[idx];
-      sorted[idx] = sorted[n];
-      sorted[n] = t;
-      return sorted.map((c, i) => ({ ...c, display_order: (i + 1) * 10 }));
-    });
-  };
-
-  const applySizePreset = (key: DashboardWidgetKey, size: WidgetSize) => {
-    setDrafts((prev) => {
-      const updated = prev.map((c) =>
-        c.widget_key === key ? applyPresetToWidget(c, size) : c,
-      );
-      const packedP = packOrientationLayouts(updated, 'portrait');
-      const packedL = packOrientationLayouts(updated, 'landscape');
-      return updated.map((d) => {
-        const pCoords = packedP.get(d.widget_key);
-        const lCoords = packedL.get(d.widget_key);
-        return {
-          ...d,
-          layoutPortraitX: pCoords?.x ?? d.layoutPortraitX,
-          layoutPortraitY: pCoords?.y ?? d.layoutPortraitY,
-          layoutLandscapeX: lCoords?.x ?? d.layoutLandscapeX,
-          layoutLandscapeY: lCoords?.y ?? d.layoutLandscapeY,
-          layoutX: pCoords?.x ?? d.layoutX,
-          layoutY: pCoords?.y ?? d.layoutY,
-        };
-      });
-    });
   };
 
   const setNumericSpan = (key: DashboardWidgetKey, field: 'colSpan' | 'rowSpan', raw: string) => {
@@ -267,9 +209,8 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     }
     try {
       setSaving(true);
-      const packed = packDraftsOrientationCoordinates(drafts);
-      await saveGroupWidgetLayoutDefaults(groupId, packed);
-      setLayoutDefaults(packed);
+      await saveGroupWidgetLayoutDefaults(groupId, drafts);
+      setLayoutDefaults(packDraftsOrientationCoordinates([...drafts]));
       alert(gat('widgets_save_as_default_ok'));
     } catch (e: unknown) {
       const msg =
@@ -285,7 +226,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     } finally {
       setSaving(false);
     }
-  }, [groupId, drafts, lang]);
+  }, [groupId, drafts]);
 
   if (!groupId) {
     return <p className="text-sm text-slate-500">{gat('widgets_no_group')}</p>;
