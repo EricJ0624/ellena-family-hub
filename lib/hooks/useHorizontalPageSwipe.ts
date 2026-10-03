@@ -189,7 +189,9 @@ export function useHorizontalPageSwipe({
         blockClickRef.current = true;
         return;
       }
-      if (!axis || adx >= thresholdPx) return;
+      // touchAction:'none' 환경에서 모바일 브라우저는 pointerup 후 네이티브 click을 발생시키지
+      // 않을 수 있다. axis=null(깨끗한 탭)도 포함해 항상 button.click()을 직접 호출한다.
+      if (adx >= thresholdPx) return;
       const target = e.target;
       const button = target instanceof Element ? target.closest('button') : null;
       if (!button) return;
