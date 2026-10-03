@@ -1900,9 +1900,9 @@ export function GroupAdminPanel({
                           )}
                         </div>
                       </div>
-                      {request.status === 'pending' && (
+                      {request.status === 'pending' && currentUserId && (
                         <div className="mt-4 flex flex-wrap gap-2">
-                          {currentUserId && request.requested_by === currentUserId ? (
+                          {request.requested_by === currentUserId ? (
                             <button
                               type="button"
                               onClick={async () => {
@@ -1961,18 +1961,20 @@ export function GroupAdminPanel({
                                       alert(gat('alert_auth'));
                                       return;
                                     }
-                                    const response = await fetch('/api/group-admin/dashboard-access-requests', {
+                                    // 임베디드 모드(시스템 관리자)는 admin API 사용, standalone(그룹 관리자)은 group-admin API 사용
+                                    const approveEndpoint = isEmbedded
+                                      ? '/api/admin/dashboard-access-requests'
+                                      : '/api/group-admin/dashboard-access-requests';
+                                    const approveBody = isEmbedded
+                                      ? JSON.stringify({ id: request.id, action: 'approve', expires_hours: 24 })
+                                      : JSON.stringify({ id: request.id, group_id: effectiveGroupId, action: 'approve', expires_hours: 24 });
+                                    const response = await fetch(approveEndpoint, {
                                       method: 'POST',
                                       headers: {
                                         Authorization: `Bearer ${session.access_token}`,
                                         'Content-Type': 'application/json',
                                       },
-                                      body: JSON.stringify({
-                                        id: request.id,
-                                        group_id: effectiveGroupId,
-                                        action: 'approve',
-                                        expires_hours: 24,
-                                      }),
+                                      body: approveBody,
                                     });
                                     const result = await response.json();
                                     if (!response.ok) {
@@ -2006,18 +2008,20 @@ export function GroupAdminPanel({
                                       alert(gat('alert_auth'));
                                       return;
                                     }
-                                    const response = await fetch('/api/group-admin/dashboard-access-requests', {
+                                    // 임베디드 모드(시스템 관리자)는 admin API 사용, standalone(그룹 관리자)은 group-admin API 사용
+                                    const rejectEndpoint = isEmbedded
+                                      ? '/api/admin/dashboard-access-requests'
+                                      : '/api/group-admin/dashboard-access-requests';
+                                    const rejectBody = isEmbedded
+                                      ? JSON.stringify({ id: request.id, action: 'reject', rejection_reason: reason })
+                                      : JSON.stringify({ id: request.id, group_id: effectiveGroupId, action: 'reject', rejection_reason: reason });
+                                    const response = await fetch(rejectEndpoint, {
                                       method: 'POST',
                                       headers: {
                                         Authorization: `Bearer ${session.access_token}`,
                                         'Content-Type': 'application/json',
                                       },
-                                      body: JSON.stringify({
-                                        id: request.id,
-                                        group_id: effectiveGroupId,
-                                        action: 'reject',
-                                        rejection_reason: reason,
-                                      }),
+                                      body: rejectBody,
                                     });
                                     const result = await response.json();
                                     if (!response.ok) {
