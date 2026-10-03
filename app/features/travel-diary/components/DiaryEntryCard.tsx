@@ -846,11 +846,17 @@ export function DiaryEntryCard({
       )}
       <div
         className={[
-          'mt-0.5 text-xs font-semibold tabular-nums tracking-wide',
+          'mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs font-semibold tabular-nums tracking-wide',
           diaryDateClass(themeOpts),
         ].join(' ')}
       >
-        {slot.day_date}
+        <span>{slot.day_date}</span>
+        {slot.start_time ? (
+          <span>
+            {slot.start_time.substring(0, 5)}
+            {slot.end_time ? ` ~ ${slot.end_time.substring(0, 5)}` : ''}
+          </span>
+        ) : null}
       </div>
 
       {attachments.length > 0 ? (

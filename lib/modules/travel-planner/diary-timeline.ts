@@ -8,6 +8,7 @@ export type DiaryTimelineSlot = {
   day_date: string;
   title: string;
   start_time?: string | null;
+  end_time?: string | null;
   source_kind: UnifiedItineraryItem['kind'] | null;
   source_id: string | null;
   address?: string | null;
@@ -79,6 +80,7 @@ export function buildDiaryTimelineSlots(
         day_date: u.day_date,
         title: u.title,
         start_time: u.start_time ?? null,
+        end_time: u.end_time ?? null,
         source_kind: u.kind,
         source_id: u.id,
         address: u.address ?? null,
@@ -139,6 +141,7 @@ export function buildHiddenDiarySlots(
       day_date: u?.day_date ?? e.day_date,
       title: (u?.title ?? e.note?.trim()) || '—',
       start_time: u?.start_time ?? null,
+      end_time: u?.end_time ?? null,
       source_kind: (u?.kind ?? e.source_kind) as DiaryTimelineSlot['source_kind'],
       source_id: u?.id ?? e.source_id,
       address: u?.address ?? null,
