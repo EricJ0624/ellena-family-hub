@@ -47,6 +47,16 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
   const boardRef = useRef<HTMLDivElement>(null);
   const completedRef = useRef(false);
 
+  // Refs for the latest values so finishGame can read them without being in deps
+  // (prevents timer effect from restarting on every found item / remainingMs tick)
+  const remainingMsRef = useRef(PICTURE_FIND_DURATION_MS);
+  const hintsUsedRef = useRef(0);
+  const foundIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => { remainingMsRef.current = remainingMs; }, [remainingMs]);
+  useEffect(() => { hintsUsedRef.current = hintsUsed; }, [hintsUsed]);
+  useEffect(() => { foundIdsRef.current = foundIds; }, [foundIds]);
+
   const targets = mode === 'hidden' ? puzzle.hiddenItems : puzzle.diffRegions;
   const total = puzzle.itemCount;
 
@@ -54,6 +64,9 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
     setFoundIds(new Set());
     setHintsUsed(0);
     setRemainingMs(PICTURE_FIND_DURATION_MS);
+    remainingMsRef.current = PICTURE_FIND_DURATION_MS;
+    hintsUsedRef.current = 0;
+    foundIdsRef.current = new Set();
     setHintFlashId(null);
     setWrongFlash(false);
     setFinished(false);
@@ -79,21 +92,22 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
     };
   }, [mode, scene, puzzle.diffRegions]);
 
+  // finishGame is stable (no state in deps) — reads latest values via refs
   const finishGame = useCallback(
     (timedOut: boolean, foundOverride?: Set<string>) => {
       if (completedRef.current) return;
       completedRef.current = true;
       setFinished(true);
-      const foundSet = foundOverride ?? foundIds;
+      const foundSet = foundOverride ?? foundIdsRef.current;
       onComplete({
         foundCount: foundSet.size,
         total,
-        remainingMs,
-        hintsUsed,
+        remainingMs: remainingMsRef.current,
+        hintsUsed: hintsUsedRef.current,
         timedOut,
       });
     },
-    [foundIds, hintsUsed, onComplete, remainingMs, total],
+    [onComplete, total],
   );
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { PictureFindDiffMode, PictureFindScene } from '@/lib/picture-find/types';
 import { createPictureFindSceneFromUpload } from '@/lib/picture-find/upload-scene';
 import type { PictureFindTranslations } from '@/lib/translations/picture-find';
@@ -28,15 +28,27 @@ export function PictureFindUploadPanel({ groupId, t, onCreated, onCancel }: Pict
   const variantRef = useRef<HTMLInputElement>(null);
   const pickTarget = useRef<'original' | 'variant'>('original');
 
+  // 컴포넌트 언마운트 시 preview blob URL 정리
+  const originalPreviewRef = useRef<string | null>(null);
+  const variantPreviewRef = useRef<string | null>(null);
+  useEffect(() => {
+    return () => {
+      if (originalPreviewRef.current) URL.revokeObjectURL(originalPreviewRef.current);
+      if (variantPreviewRef.current) URL.revokeObjectURL(variantPreviewRef.current);
+    };
+  }, []);
+
   const assignFile = (file: File | null, target: 'original' | 'variant') => {
     if (!file) return;
     const url = URL.createObjectURL(file);
     if (target === 'original') {
-      if (originalPreview) URL.revokeObjectURL(originalPreview);
+      if (originalPreviewRef.current) URL.revokeObjectURL(originalPreviewRef.current);
+      originalPreviewRef.current = url;
       setOriginalFile(file);
       setOriginalPreview(url);
     } else {
-      if (variantPreview) URL.revokeObjectURL(variantPreview);
+      if (variantPreviewRef.current) URL.revokeObjectURL(variantPreviewRef.current);
+      variantPreviewRef.current = url;
       setVariantFile(file);
       setVariantPreview(url);
     }

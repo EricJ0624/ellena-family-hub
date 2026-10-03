@@ -65,8 +65,12 @@ function loadImageForCanvas(src: string): Promise<HTMLImageElement> {
     const url = await resolveCanvasSourceUrl(src);
     return new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('IMAGE_LOAD_FAILED'));
+      const cleanup = () => {
+        // blob: URL은 사용 후 해제해 메모리 누수 방지
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+      };
+      img.onload = () => { cleanup(); resolve(img); };
+      img.onerror = () => { cleanup(); reject(new Error('IMAGE_LOAD_FAILED')); };
       img.src = url;
     });
   })();
