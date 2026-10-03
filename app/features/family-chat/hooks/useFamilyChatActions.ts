@@ -281,7 +281,7 @@ export function useFamilyChatActions({
         'ellena_family_shared_key_2024';
       const { data: raw, error } = await supabase
         .from(DB_TABLES.FAMILY_MESSAGES)
-        .select('*')
+        .select('id, sender_id, message_text, created_at, group_id') // app_id 미사용 — 불필요 컬럼 제거
         .eq('group_id', currentGroupId)
         .lt('created_at', first.created_at)
         .order('created_at', { ascending: false })

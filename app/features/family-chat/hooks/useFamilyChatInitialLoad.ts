@@ -21,7 +21,7 @@ interface UseFamilyChatInitialLoadParams {
 async function fetchChatRows(supabase: any, groupId: string) {
   return supabase
     .from(DB_TABLES.FAMILY_MESSAGES)
-    .select('*')
+    .select('id, sender_id, message_text, created_at, group_id') // app_id 미사용 — 불필요 컬럼 제거
     .eq('group_id', groupId)
     .order('created_at', { ascending: false })
     .limit(CHAT_PAGE_SIZE);

@@ -3,6 +3,15 @@
  * - 임무 CRUD 작업
  * - Realtime 구독
  * - 암호화/복호화 처리
+ *
+ * [변경 이력]
+ * 1. toggleTask !currentGroupId 분기: return → throw new Error(...) (호출부 .catch() 낙관적 UI 롤백 보장)
+ * 2. toggleTask Supabase error: console.error만 하던 경로 → throw error (동일 이유)
+ * 3. deleteTask !currentGroupId 분기: return → throw new Error(...) (동일 이유)
+ *    - isNumericId 조기 return은 의도된 동작 유지 (낙관적 UI용 임시 로컬 ID는 DB에 없음)
+ * 4. loadTasks useEffect: cancelled 플래그 추가 (그룹 전환 시 구 비동기 완료 콜백이 새 상태 덮어쓰는 레이스 컨디션 방지)
+ * 5. loadTasks onTasksChange 호출: tasksRt.onTasksChange.current() ref 경유로 변경
+ *    → useEffect deps에서 onTasksChange, assigneeDisplayFromUserIdRef 제거 (매 렌더 재실행 방지)
  */
 
 import { useEffect, type MutableRefObject } from 'react';
@@ -132,15 +141,16 @@ export function useFamilyTasks({
     const isNumericId = typeof taskId === 'number' || /^\d+$/.test(taskIdStr);
 
     if (isNumericId) {
+      // 의도된 동작: 낙관적 UI용 임시 로컬 ID는 DB에 없으므로 Supabase 업데이트 건너뜀
       if (process.env.NODE_ENV === 'development') {
         console.log('로컬 데이터 업데이트 (Supabase 업데이트 건너뜀):', taskIdStr);
       }
       return;
     }
 
+    // [수정 1] return → throw: 호출부 .catch()에서 낙관적 UI 롤백 가능하도록
     if (!currentGroupId) {
-      console.error('TOGGLE_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-      return;
+      throw new Error('TOGGLE_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
     }
 
     const updateData: any = {};
@@ -152,11 +162,13 @@ export function useFamilyTasks({
       .eq('id', taskId)
       .eq('group_id', currentGroupId);
 
+    // [수정 2] throw 누락: 오류를 무시하면 호출부에서 낙관적 UI 롤백 불가
     if (error) {
       console.error('할일 업데이트 오류:', error);
       if (process.env.NODE_ENV === 'development') {
         console.error('에러 상세:', JSON.stringify(error, null, 2));
       }
+      throw error;
     } else if (done) {
       void emitNotificationClient({
         groupId: currentGroupId,
@@ -219,12 +231,13 @@ export function useFamilyTasks({
     const isNumericId = typeof taskId === 'number' || /^\d+$/.test(taskIdStr);
 
     if (isNumericId) {
+      // 의도된 동작: 낙관적 UI용 임시 로컬 ID는 DB에 없으므로 Supabase 삭제 건너뜀
       return;
     }
 
+    // [수정 3] return → throw: 호출부 .catch()에서 낙관적 UI 롤백 가능하도록
     if (!currentGroupId) {
-      console.error('DELETE_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-      return;
+      throw new Error('DELETE_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
     }
 
     const { error, data } = await supabase
@@ -266,16 +279,20 @@ export function useFamilyTasks({
   // 초기 데이터 로드
   useEffect(() => {
     if (!currentGroupId || !userId) return;
+    // [수정 4] cancelled 플래그: 그룹 전환/언마운트 시 구 비동기 완료 콜백이 새 상태를 덮어쓰는 레이스 컨디션 방지
+    let cancelled = false;
 
     const loadTasks = async () => {
       const session = await waitForSupabaseSession(supabase);
-      if (!session?.access_token) return;
+      if (cancelled || !session?.access_token) return;
 
       const { data: tasksData, error: tasksError } = await supabase
         .from('family_tasks')
-        .select('*')
+        .select('id, title, is_completed, assigned_to, created_by, created_at, group_id') // app_id 미사용 — 불필요 컬럼 제거
         .eq('group_id', currentGroupId)
         .order('created_at', { ascending: false });
+
+      if (cancelled) return;
 
       if (!tasksError && tasksData) {
         const formattedTasks: FamilyTask[] = tasksData.map((task: any) => {
@@ -338,12 +355,16 @@ export function useFamilyTasks({
 
         const nextSig = formattedTasks.map((t) => `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}`).join('|');
         const prevSig = tasksRt.tasks.current.map((t) => `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}`).join('|');
-        if (nextSig !== prevSig) onTasksChange(formattedTasks);
+        // [수정 5] tasksRt.onTasksChange.current() ref 경유 → deps에서 onTasksChange 제거 가능
+        if (nextSig !== prevSig) tasksRt.onTasksChange.current(formattedTasks);
       }
     };
 
     loadTasks();
-  }, [currentGroupId, userId, onTasksChange, assigneeDisplayFromUserIdRef]);
+    // [수정 4] 언마운트 / currentGroupId 변경 시 진행 중인 loadTasks 비동기 콜백 차단
+    return () => { cancelled = true; };
+  // [수정 5] onTasksChange, assigneeDisplayFromUserIdRef 는 tasksRt ref로 항상 최신값 참조 → deps 불필요
+  }, [currentGroupId, userId]);
 
   // Realtime 구독 — 그룹당 채널 1개 재사용 (돋보기 리마운트의 CLOSED 레이스 방지)
   useEffect(() => {

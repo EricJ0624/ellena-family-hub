@@ -278,7 +278,6 @@ export function useFamilyChatRealtime({
         }
         if (status === 'SUBSCRIBED') {
           familyChatDebug('Realtime 메시지 subscription 연결됨');
-          subscriptionsRef.current.messages = messagesSubscription;
           const activeChannels = supabase.getChannels();
           const messageChannels = activeChannels.filter((ch: any) => ch.topic.includes(DB_TABLES.FAMILY_MESSAGES));
           familyChatDebug('활성 채널 수', activeChannels.length, `${DB_TABLES.FAMILY_MESSAGES} 채널 수`, messageChannels.length);
@@ -289,6 +288,8 @@ export function useFamilyChatRealtime({
           console.warn('[FamilyChat] Realtime 메시지 subscription 비정상:', status);
         }
       });
+    // subscribe() 직후 콜백 밖으로 이동: CHANNEL_ERROR/TIMED_OUT 시에도 cleanup에서 removeChannel 보장
+    subscriptionsRef.current.messages = messagesSubscription;
 
     familyChatDebug('첨부 파일 subscription 설정');
     if (subscriptionsRef.current.attachments) {
@@ -318,11 +319,12 @@ export function useFamilyChatRealtime({
         }
         if (status === 'SUBSCRIBED') {
           familyChatDebug('Realtime 첨부 subscription 연결됨');
-          subscriptionsRef.current.attachments = attachmentsSubscription;
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           console.warn('[FamilyChat] Realtime 첨부 subscription 비정상:', status);
         }
       });
+    // subscribe() 직후 콜백 밖으로 이동: CHANNEL_ERROR/TIMED_OUT 시에도 cleanup에서 removeChannel 보장
+    subscriptionsRef.current.attachments = attachmentsSubscription;
   }, [
     supabase,
     currentGroupId,

@@ -3,6 +3,30 @@
  * - 일정 CRUD 작업
  * - Realtime 구독
  * - 암호화/복호화 처리
+ *
+ * [변경 이력]
+ * 1. addEvent 검증 실패 경로 return → throw
+ *    이유: 호출부가 `.catch()` 로 오류를 처리하는데, return 시 catch가 실행되지 않아
+ *          낙관적 UI 업데이트가 롤백되지 않는 버그 수정.
+ *
+ * 2. deleteEvent !currentGroupId 분기 return → throw
+ *    이유: 호출부가 try/catch 로 롤백을 처리하는데, return 시 catch가 실행되지 않아
+ *          UI에서 삭제된 것처럼 보이지만 DB는 변경되지 않는 버그 수정.
+ *          isNumericId 분기는 "Supabase에 아직 저장되지 않은 임시 로컬 데이터" 삭제로 의도된 동작이므로 유지.
+ *
+ * 3. loadEvents cancelled 플래그 추가
+ *    이유: 컴포넌트 언마운트 또는 currentGroupId 변경 시 이전 비동기 로드가 완료되어
+ *          onEventsChange 를 호출하면 구 그룹 데이터가 새 그룹 상태를 덮어쓰는 레이스 컨디션 방지.
+ *
+ * 4. `if (formattedEvents.length > 0)` 가드 제거
+ *    이유: DB 조회 결과가 0건일 때 onEventsChange([]) 가 호출되지 않아
+ *          전체 일정 삭제 후 재접속해도 stale 데이터가 남는 버그 수정.
+ *          시그니처 비교(nextSig !== prevSig)가 빈 배열 간 중복 호출을 이미 방지한다.
+ *
+ * 5. loadEvents effect deps 에서 onEventsChange 제거
+ *    이유: onEventsChange 가 호출 측에서 memoize 되지 않으면 매 렌더마다 effect 가 재실행되어
+ *          DB 쿼리가 불필요하게 반복됨. calendarRt.onEventsChange.current 는 항상 최신값을
+ *          가리키는 모듈 레벨 ref 이므로 deps 에서 제거해도 최신 콜백이 보장됨.
  */
 
 import { useEffect } from 'react';
@@ -66,14 +90,13 @@ export function useFamilyCalendar({
     end_date?: string;
     repeat_type?: 'none' | 'monthly' | 'yearly';
   }) => {
+    // [수정 1] return → throw: 호출부 .catch()가 낙관적 UI를 롤백할 수 있도록
     if (!payload || !payload.title) {
-      console.error('ADD_EVENT: 잘못된 payload:', payload);
-      return;
+      throw new Error('ADD_EVENT: 잘못된 payload');
     }
 
     if (!currentGroupId) {
-      console.error('ADD_EVENT: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-      return;
+      throw new Error('ADD_EVENT: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
     }
 
     const encryptedTitle = CryptoService.encrypt(payload.title, getCurrentKey());
@@ -130,14 +153,16 @@ export function useFamilyCalendar({
       payloadType: typeof eventId,
     });
 
+    // [의도된 동작] 숫자 ID = Supabase에 아직 저장되지 않은 임시 로컬 데이터.
+    // DB 삭제 없이 UI에서만 제거하는 것이 올바른 동작이므로 return 유지.
     if (isNumericId) {
       console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', eventIdStr);
       return;
     }
 
+    // [수정 2] return → throw: 호출부 catch 블록이 낙관적 UI를 롤백할 수 있도록
     if (!currentGroupId) {
-      console.error('DELETE_EVENT: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-      return;
+      throw new Error('DELETE_EVENT: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
     }
 
     console.log('Supabase 삭제 시도:', { eventId: eventIdStr, userId });
@@ -270,15 +295,21 @@ export function useFamilyCalendar({
   useEffect(() => {
     if (!currentGroupId || !userId) return;
 
+    // [수정 3] cancelled 플래그: 컴포넌트 언마운트 또는 currentGroupId 변경 시
+    //          진행 중인 비동기 로드가 완료되어도 stale 콜백 호출을 방지
+    let cancelled = false;
+
     const loadEvents = async () => {
       const session = await waitForSupabaseSession(supabase);
-      if (!session?.access_token) return;
+      if (cancelled || !session?.access_token) return;
 
       const { data: eventsData, error: eventsError } = await supabase
         .from('family_events')
-        .select('*')
+        .select('id, title, description, event_date, end_date, location, created_by, created_at, group_id, repeat_type') // app_id 미사용 — 불필요 컬럼 제거
         .eq('group_id', currentGroupId)
         .order('event_date', { ascending: true });
+
+      if (cancelled) return;
 
       if (!eventsError && eventsData) {
         const formattedEvents: FamilyEvent[] = eventsData.map((event: any) => {
@@ -353,16 +384,25 @@ export function useFamilyCalendar({
           };
         });
 
-        if (formattedEvents.length > 0) {
-          const nextSig = eventsContentSignature(formattedEvents);
-          const prevSig = eventsContentSignature(calendarRt.events.current);
-          if (nextSig !== prevSig) onEventsChange(formattedEvents);
+        // [수정 4] `length > 0` 가드 제거: DB가 0건을 반환할 때도 onEventsChange([]) 호출 필요
+        //          (전체 삭제 후 재접속 시 stale 데이터 잔류 버그 수정)
+        //          시그니처 비교가 빈 배열 간 중복 호출을 이미 차단한다.
+        // [수정 5] onEventsChange → calendarRt.onEventsChange.current 사용
+        //          (deps 배열에서 onEventsChange 제거하기 위한 ref 경유)
+        const nextSig = eventsContentSignature(formattedEvents);
+        const prevSig = eventsContentSignature(calendarRt.events.current);
+        if (nextSig !== prevSig) {
+          calendarRt.onEventsChange.current(formattedEvents);
         }
       }
     };
 
     loadEvents();
-  }, [currentGroupId, userId, onEventsChange]);
+    // [수정 3] cancelled 플래그 설정으로 언마운트/그룹 전환 시 비동기 완료 후 콜백 차단
+    return () => { cancelled = true; };
+  // [수정 5] onEventsChange deps 제거: calendarRt.onEventsChange.current 이 항상 최신값을 가리키므로
+  //          deps 불필요. onEventsChange 가 memo 안 된 경우 매 렌더마다 재실행되던 문제 해결.
+  }, [currentGroupId, userId]);
 
   // Realtime 구독 — 그룹당 채널 1개 재사용 (돋보기 리마운트의 CLOSED 레이스 방지)
   useEffect(() => {

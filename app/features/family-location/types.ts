@@ -49,7 +49,7 @@ export type LocationData = {
 export type LocationRequest = {
   id: string;
   requester_id: string;
-  target_user_id: string;
+  target_id: string; // DB 컬럼명: target_id (target_user_id → target_id 수정)
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
   updated_at: string;

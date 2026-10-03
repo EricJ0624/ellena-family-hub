@@ -739,6 +739,8 @@ export default function FamilyHub() {
   const updateMapMarkersDebounceRef = useRef<NodeJS.Timeout | null>(null); // 지도 마커 업데이트 디바운스
   const sessionWaitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null); // 세션 준비 후 위치 로드용
   const locationLoadStartedRef = useRef(false); // 세션 대기 중 중복 run 방지
+  /** 포그라운드 복귀/네트워크 복구/bfcache 복원 시 syncDataAfterReconnect 타이머 — 언마운트 후 setState 방지 */
+  const focusSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
@@ -981,55 +983,49 @@ export default function FamilyHub() {
 
         // ✅ 재로그인 시 localStorage가 비어있으면 Supabase 사진만 사용
         // localStorage가 있으면 병합, 없으면 Supabase 사진만 사용
+
+        // [성능] setState 업데이터 밖에서 localStorage 읽기·복호화 선계산 (AES decrypt는 동기 무거운 작업)
+        const storageKeyInner = getStorageKey(userId, groupIdForThisLoad);
+        const savedInner = localStorage.getItem(storageKeyInner);
+        let localStoragePhotosForMerge: Photo[] = [];
+        if (savedInner) {
+          try {
+            const decrypted = CryptoService.decrypt(savedInner, key);
+            if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
+              localStoragePhotosForMerge = decrypted.album;
+            }
+          } catch (e) {
+            // 복호화 실패는 무시
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('localStorage 사진 복호화 실패:', e);
+            }
+          }
+        }
+
+        const supabasePhotoIdsPrecomputed = new Set(supabasePhotos.map(p => String(p.id)));
+        const localStorageOnlyPhotosPrecomputed = localStoragePhotosForMerge.filter(p => {
+          const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
+          if (supabaseId && supabasePhotoIdsPrecomputed.has(supabaseId)) {
+            return false; // Supabase에 이미 있으면 제외
+          }
+          return p.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'));
+        });
+        const mergedAlbumPrecomputed = [...supabasePhotos, ...localStorageOnlyPhotosPrecomputed];
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ loadData: 사진 병합 완료', {
+            supabasePhotos: supabasePhotos.length,
+            localStorageOnlyPhotos: localStorageOnlyPhotosPrecomputed.length,
+            mergedAlbum: mergedAlbumPrecomputed.length,
+            hasLocalStorage: !!savedInner,
+          });
+        }
+
         setState(prev => {
           if (groupIdForThisLoad !== dashboardCurrentGroupIdRef.current) return prev;
-
-          // localStorage에서 직접 사진 데이터 확인 (state 업데이트 지연 문제 해결)
-          const storageKeyInner = getStorageKey(userId, groupIdForThisLoad);
-          const savedInner = localStorage.getItem(storageKeyInner);
-          let localStoragePhotos: Photo[] = [];
-          
-          if (savedInner) {
-            try {
-              const decrypted = CryptoService.decrypt(savedInner, key);
-              if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
-                localStoragePhotos = decrypted.album;
-              }
-            } catch (e) {
-              // 복호화 실패는 무시
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('localStorage 사진 복호화 실패:', e);
-              }
-            }
-          }
-          
-          const supabasePhotoIds = new Set(supabasePhotos.map(p => String(p.id)));
-          
-          // localStorage에만 있는 사진 (안정 URL만 병합 → blob/data 제외로 Hydration 에러 방지)
-          const localStorageOnlyPhotos = localStoragePhotos.filter(p => {
-            const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
-            if (supabaseId && supabasePhotoIds.has(supabaseId)) {
-              return false; // Supabase에 이미 있으면 제외
-            }
-            return p.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'));
-          });
-
-          // Supabase 사진 우선, localStorage 전용 사진 추가
-          const mergedAlbum = [...supabasePhotos, ...localStorageOnlyPhotos];
-
-          if (process.env.NODE_ENV === 'development') {
-            console.log('✅ loadData: 사진 병합 완료', {
-              supabasePhotos: supabasePhotos.length,
-              localStorageOnlyPhotos: localStorageOnlyPhotos.length,
-              mergedAlbum: mergedAlbum.length,
-              hasLocalStorage: !!savedInner,
-              prevAlbumLength: prev.album?.length || 0
-            });
-          }
-          
           return {
             ...prev,
-            album: mergedAlbum,
+            album: mergedAlbumPrecomputed,
           };
         });
       } else {
@@ -1041,28 +1037,29 @@ export default function FamilyHub() {
           });
         }
         if (isLoadStale()) return;
+        // [성능] setState 업데이터 밖에서 localStorage 읽기·복호화 선계산
+        const sk = getStorageKey(userId, groupIdForThisLoad);
+        const raw = localStorage.getItem(sk);
+        let localStoragePhotosZero: Photo[] = [];
+        if (raw) {
+          try {
+            const decrypted = CryptoService.decrypt(raw, key);
+            if (decrypted && typeof decrypted === 'object' && decrypted !== null && 'album' in decrypted) {
+              const al = (decrypted as { album?: unknown }).album;
+              if (Array.isArray(al)) localStoragePhotosZero = al as Photo[];
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        const stableOnlyPrecomputed = localStoragePhotosZero.filter(
+          (p) =>
+            p?.data &&
+            (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))
+        );
         setState((prev) => {
           if (groupIdForThisLoad !== dashboardCurrentGroupIdRef.current) return prev;
-          const sk = getStorageKey(userId, groupIdForThisLoad);
-          const raw = localStorage.getItem(sk);
-          let localStoragePhotos: Photo[] = [];
-          if (raw) {
-            try {
-              const decrypted = CryptoService.decrypt(raw, key);
-              if (decrypted && typeof decrypted === 'object' && decrypted !== null && 'album' in decrypted) {
-                const al = (decrypted as { album?: unknown }).album;
-                if (Array.isArray(al)) localStoragePhotos = al as Photo[];
-              }
-            } catch {
-              /* ignore */
-            }
-          }
-          const stableOnly = localStoragePhotos.filter(
-            (p) =>
-              p?.data &&
-              (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))
-          );
-          return { ...prev, album: stableOnly };
+          return { ...prev, album: stableOnlyPrecomputed };
         });
       }
     } catch (supabaseError: any) {
@@ -1592,9 +1589,11 @@ export default function FamilyHub() {
     };
 
     const channels: ReturnType<typeof supabase.channel>[] = [];
+    // 채널명에 세션 suffix 추가 — 리마운트 시 고정명 채널 충돌 방지 (chat·location 채널과 동일 패턴)
+    const subId = realtimeSubscriptionIdRef.current;
 
     const chAccountRequests = supabase
-      .channel(`dashboard_piggy_account_requests:${gid}`)
+      .channel(`dashboard_piggy_account_requests:${gid}:${subId}`)
       .on(
         'postgres_changes',
         {
@@ -1616,7 +1615,7 @@ export default function FamilyHub() {
     channels.push(chAccountRequests);
 
     const chAccounts = supabase
-      .channel(`dashboard_piggy_bank_accounts:${gid}`)
+      .channel(`dashboard_piggy_bank_accounts:${gid}:${subId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'piggy_bank_accounts', filter: `group_id=eq.${gid}` },
@@ -1626,7 +1625,7 @@ export default function FamilyHub() {
     channels.push(chAccounts);
 
     const chWallets = supabase
-      .channel(`dashboard_piggy_wallets:${gid}`)
+      .channel(`dashboard_piggy_wallets:${gid}:${subId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'piggy_wallets', filter: `group_id=eq.${gid}` },
@@ -1636,7 +1635,7 @@ export default function FamilyHub() {
     channels.push(chWallets);
 
     const chOpenReq = supabase
-      .channel(`dashboard_piggy_open_requests:${gid}`)
+      .channel(`dashboard_piggy_open_requests:${gid}:${subId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'piggy_open_requests', filter: `group_id=eq.${gid}` },
@@ -1646,7 +1645,7 @@ export default function FamilyHub() {
     channels.push(chOpenReq);
 
     const chWalletTx = supabase
-      .channel(`dashboard_piggy_wallet_transactions:${gid}`)
+      .channel(`dashboard_piggy_wallet_transactions:${gid}:${subId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'piggy_wallet_transactions', filter: `group_id=eq.${gid}` },
@@ -1656,7 +1655,7 @@ export default function FamilyHub() {
     channels.push(chWalletTx);
 
     const chBankTx = supabase
-      .channel(`dashboard_piggy_bank_transactions:${gid}`)
+      .channel(`dashboard_piggy_bank_transactions:${gid}:${subId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'piggy_bank_transactions', filter: `group_id=eq.${gid}` },
@@ -3368,9 +3367,10 @@ export default function FamilyHub() {
           if (err) console.error('❌ Realtime 위치 subscription 오류:', err);
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 위치 subscription 연결 성공');
-            subscriptionsRef.current.locations = locationsSubscription;
           }
         });
+      // 채널 생성 직후 ref에 저장 — subscribe 성공 여부와 무관하게 cleanup에서 removeChannel 가능
+      subscriptionsRef.current.locations = locationsSubscription;
     };
 
     // 7. 위치 요청 구독 설정
@@ -3500,11 +3500,17 @@ export default function FamilyHub() {
                 stopLocationTracking();
               }
             }
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await loadFamilyLocations();
+            // accepted: GPS 저장 직후 즉시 로드로 첫 반영 완료 → 1s wait+재로드 생략
+            // cancelled/rejected: 백엔드 처리 확인을 위해 1s wait 후 최종 반영
+            if (updatedRequest?.status !== 'accepted') {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              await loadFamilyLocations();
+            }
             if (updatedRequest?.status === 'accepted' && updatedRequest.requester_id === userId) {
-              [1000, 2500, 4500].forEach((delay) => {
-                setTimeout(() => loadFamilyLocations(), delay);
+              // 요청자 측: 상대방 위치가 아직 저장 안 됐을 수 있어 stagger retry (3→2회로 축소)
+              [1500, 3000].forEach((delay) => {
+                const tid = setTimeout(() => loadFamilyLocations(), delay);
+                realtimeStaggerTimeoutsRef.current.push(tid);
               });
             }
           }
@@ -3514,9 +3520,10 @@ export default function FamilyHub() {
           if (err) console.error('❌ Realtime 위치 요청 subscription 오류:', err);
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 위치 요청 subscription 연결 성공');
-            subscriptionsRef.current.locationRequests = locationRequestsSubscription;
           }
         });
+      // 채널 생성 직후 ref에 저장 — subscribe 성공 여부와 무관하게 cleanup에서 removeChannel 가능
+      subscriptionsRef.current.locationRequests = locationRequestsSubscription;
     };
 
     // ========== 통합 구독 설정 함수 ==========
@@ -3711,18 +3718,21 @@ export default function FamilyHub() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('📱 앱이 포그라운드로 복귀');
-        setTimeout(() => syncDataAfterReconnect('포그라운드 복귀'), 400);
+        if (focusSyncTimeoutRef.current) clearTimeout(focusSyncTimeoutRef.current);
+        focusSyncTimeoutRef.current = setTimeout(() => syncDataAfterReconnect('포그라운드 복귀'), 400);
       }
     };
 
     const handleOnline = () => {
       console.log('🌐 네트워크 연결 복구');
-      setTimeout(() => syncDataAfterReconnect('네트워크 복구'), 400);
+      if (focusSyncTimeoutRef.current) clearTimeout(focusSyncTimeoutRef.current);
+      focusSyncTimeoutRef.current = setTimeout(() => syncDataAfterReconnect('네트워크 복구'), 400);
     };
 
     const handlePageShow = (e: PageTransitionEvent) => {
       if (e.persisted) {
-        setTimeout(() => syncDataAfterReconnect('bfcache 복원'), 400);
+        if (focusSyncTimeoutRef.current) clearTimeout(focusSyncTimeoutRef.current);
+        focusSyncTimeoutRef.current = setTimeout(() => syncDataAfterReconnect('bfcache 복원'), 400);
       }
     };
     
@@ -3749,6 +3759,10 @@ export default function FamilyHub() {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('pageshow', handlePageShow);
+      }
+      if (focusSyncTimeoutRef.current) {
+        clearTimeout(focusSyncTimeoutRef.current);
+        focusSyncTimeoutRef.current = null;
       }
       // subscriptionsRef를 통해 모든 구독 정리 (기능별 분리 관리)
       if (subscriptionsRef.current.messages) {
@@ -3782,11 +3796,17 @@ export default function FamilyHub() {
     };
   }, [isAuthenticated, userId, currentGroupId]); // ⭐ 필수 의존성만 포함 (masterKey, userName, familyId 제거로 불필요한 재구독 방지)
 
+  // 일정/채팅 작성자 ID 시그니처 — 작성자 조합이 실제로 바뀔 때만 profiles 쿼리 실행
+  // state.events/messages 배열 참조가 새로 생겨도 ID 조합이 같으면 effect 미실행
+  const eventAuthorIdsKey = useMemo(() => {
+    const eventIds = (state.events || []).map(e => e.created_by).filter(Boolean) as string[];
+    const msgIds = (state.messages || []).map(m => m.sender_id).filter(Boolean) as string[];
+    return [...new Set([...eventIds, ...msgIds])].sort().join(',');
+  }, [state.events, state.messages]);
+
   // 일정/채팅 작성자 별명 로드 (표시용)
   useEffect(() => {
-    const eventAuthorIds = (state.events || []).map(e => e.created_by).filter(Boolean) as string[];
-    const messageSenderIds = (state.messages || []).map(m => m.sender_id).filter(Boolean) as string[];
-    const authorIds = [...new Set([...eventAuthorIds, ...messageSenderIds])];
+    const authorIds = eventAuthorIdsKey ? eventAuthorIdsKey.split(',') : [];
     if (authorIds.length === 0) {
       setEventAuthorNames({});
       return;
@@ -3805,7 +3825,7 @@ export default function FamilyHub() {
         return map;
       });
     })();
-  }, [state.events, state.messages]);
+  }, [eventAuthorIdsKey]);
 
   // 현재 그룹 멤버의 가족 표시( family_role ) 로드 — 앱 전반 표시용
   useEffect(() => {
@@ -3863,7 +3883,8 @@ export default function FamilyHub() {
     return () => {
       cancelled = true;
     };
-  }, [currentGroupId, userName]);
+  // userName deps 제거: 닉네임 변경 시 그룹 멤버 목록 재쿼리 불필요 (profiles 테이블에서 직접 로드)
+  }, [currentGroupId]);
 
   // 시스템 관리자 권한 확인 (bootstrap seed 후 REST RPC로 검증)
   useEffect(() => {
@@ -3964,9 +3985,12 @@ export default function FamilyHub() {
     };
     
     // 다음 이벤트 루프에서 실행하여 현재 렌더링 사이클과 분리
-    setTimeout(() => {
+    const modalLoadTimeoutId = setTimeout(() => {
       loadUsers();
     }, 100); // 약간의 지연을 두어 모달이 완전히 렌더링된 후 로드
+    return () => {
+      clearTimeout(modalLoadTimeoutId);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showLocationRequestModal, isAuthenticated, userId, currentGroupId]); // currentGroupId: 그룹 멤버만 로드
 
@@ -4764,7 +4788,7 @@ export default function FamilyHub() {
       // maybeSingle() + limit(1): 동일 user_id에 행이 2개 이상 있어도 406 방지 (최신 1건만 사용)
       const { data, error } = await supabase
         .from('user_locations')
-        .select('*')
+        .select('user_id, latitude, longitude, address, last_updated') // created_at, app_id 미사용 — 불필요 컬럼 제거
         .eq('user_id', userId)
         .order('last_updated', { ascending: false })
         .limit(1)
@@ -4883,7 +4907,7 @@ export default function FamilyHub() {
       // ✅ CRITICAL FIX: 본인 위치 + RLS로 승인된 관계 위치 모두 조회
       const { data, error } = await supabase
         .from('user_locations')
-        .select('*')
+        .select('user_id, latitude, longitude, address, last_updated, group_id') // created_at, app_id 미사용 — 불필요 컬럼 제거
         .order('last_updated', { ascending: false });
 
       console.log('📍 [loadFamilyLocations] user_locations 조회 결과 - data:', data?.length, 'rows, error:', error);
@@ -6188,14 +6212,12 @@ export default function FamilyHub() {
         }
       }
 
-      // 5. 사용자 목록 새로고침 (현재 그룹 멤버만)
+      // 5. 사용자 목록 새로고침 + 6. Piggy Bank 요약 동시 갱신 (상호 의존 없음 → Promise.all 병렬화)
       if (currentGroupId) {
-        await loadAllUsers(0, { groupId: currentGroupId });
-      }
-
-      // 6. Piggy Bank 요약 정보 새로고침 (별명 변경 반영)
-      if (currentGroupId) {
-        await loadPiggySummary();
+        await Promise.all([
+          loadAllUsers(0, { groupId: currentGroupId }),
+          loadPiggySummary(),
+        ]);
       }
 
       alert(dt('nickname_updated'));

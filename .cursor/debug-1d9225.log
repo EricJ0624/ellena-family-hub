@@ -1,0 +1,22 @@
+{"sessionId":"1d9225","hypothesisId":"L","location":"TravelDiaryPageContent.tsx:listReady","message":"list ready","data":{"listMs":6035,"entryCount":8,"itineraryCount":8},"timestamp":1790776346119}
+{"sessionId":"1d9225","hypothesisId":"A","location":"TravelDiaryPageContent.tsx:loadAll","message":"diary load","data":{"firstPaint":false,"entryCount":8,"photoBatch":1,"photoRows":33,"ms":10271},"timestamp":1790776350355}
+{"sessionId":"1d9225","hypothesisId":"L","location":"TravelDiaryPageContent.tsx:listReady","message":"list ready","data":{"listMs":5546,"entryCount":8,"itineraryCount":8},"timestamp":1790776382851}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"09763d15-bef1-46bf-96b6-7ad6e7bcd30e"},"timestamp":1790776382871}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"eb949a89-5d96-430b-ac19-dc668edca168"},"timestamp":1790776382872}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"67b0cc10-5400-4db3-a15e-f181ee41b789"},"timestamp":1790776382873}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"09763d15-bef1-46bf-96b6-7ad6e7bcd30e"},"timestamp":1790776382874}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"eb949a89-5d96-430b-ac19-dc668edca168"},"timestamp":1790776382874}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"67b0cc10-5400-4db3-a15e-f181ee41b789"},"timestamp":1790776382875}
+{"sessionId":"1d9225","hypothesisId":"A","location":"TravelDiaryPageContent.tsx:loadAll","message":"diary load","data":{"firstPaint":true,"entryCount":8,"photoBatch":1,"photoRows":33,"ms":9571},"timestamp":1790776386876}
+{"sessionId":"1d9225","hypothesisId":"L","location":"TravelDiaryPageContent.tsx:listReady","message":"list ready","data":{"listMs":11024,"entryCount":8,"itineraryCount":8},"timestamp":1790776388330}
+{"sessionId":"1d9225","hypothesisId":"A","location":"TravelDiaryPageContent.tsx:loadAll","message":"diary load","data":{"firstPaint":true,"entryCount":8,"photoBatch":1,"photoRows":33,"ms":13222},"timestamp":1790776390528}
+{"sessionId":"1d9225","hypothesisId":"L","location":"TravelDiaryPageContent.tsx:listReady","message":"list ready","data":{"listMs":7331,"entryCount":8,"itineraryCount":8},"timestamp":1790776414596}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"09763d15-bef1-46bf-96b6-7ad6e7bcd30e"},"timestamp":1790776414611}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"eb949a89-5d96-430b-ac19-dc668edca168"},"timestamp":1790776414611}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"67b0cc10-5400-4db3-a15e-f181ee41b789"},"timestamp":1790776414612}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"09763d15-bef1-46bf-96b6-7ad6e7bcd30e"},"timestamp":1790776414612}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"67b0cc10-5400-4db3-a15e-f181ee41b789"},"timestamp":1790776414613}
+{"sessionId":"1d9225","hypothesisId":"M","location":"FieldTrackRouteMap.tsx:mount","message":"route map mount","data":{"trackId":"eb949a89-5d96-430b-ac19-dc668edca168"},"timestamp":1790776414613}
+{"sessionId":"1d9225","hypothesisId":"A","location":"TravelDiaryPageContent.tsx:loadAll","message":"diary load","data":{"firstPaint":true,"entryCount":8,"photoBatch":1,"photoRows":33,"ms":9895},"timestamp":1790776417160}
+{"sessionId":"1d9225","hypothesisId":"L","location":"TravelDiaryPageContent.tsx:listReady","message":"list ready","data":{"listMs":11773,"entryCount":8,"itineraryCount":8},"timestamp":1790776419038}
+{"sessionId":"1d9225","hypothesisId":"A","location":"TravelDiaryPageContent.tsx:loadAll","message":"diary load","data":{"firstPaint":true,"entryCount":8,"photoBatch":1,"photoRows":33,"ms":13972},"timestamp":1790776421237}

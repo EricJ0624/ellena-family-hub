@@ -45,10 +45,10 @@ export function useFamilyLocation({
         // 승인된 위치 요청 가져오기
         const { data: acceptedRequests, error: reqError } = await supabase
           .from('location_requests')
-          .select('*')
+          .select('id, requester_id, target_id, status, group_id') // app_id 등 미사용 컬럼 제거
           .eq('group_id', currentGroupId)
           .eq('status', 'accepted')
-          .or(`requester_id.eq.${userId},target_user_id.eq.${userId}`);
+          .or(`requester_id.eq.${userId},target_id.eq.${userId}`); // target_user_id → target_id (DB 컬럼명 불일치 수정)
 
         if (reqError) {
           console.error('위치 요청 로드 오류:', reqError);
@@ -64,9 +64,9 @@ export function useFamilyLocation({
         const sharedUserIds = new Set<string>();
         acceptedRequests.forEach((req) => {
           if (req.requester_id === userId) {
-            sharedUserIds.add(req.target_user_id);
+            sharedUserIds.add(req.target_id); // target_user_id → target_id (DB 컬럼명 불일치 수정)
           }
-          if (req.target_user_id === userId) {
+          if (req.target_id === userId) { // target_user_id → target_id (DB 컬럼명 불일치 수정)
             sharedUserIds.add(req.requester_id);
           }
         });
@@ -79,7 +79,7 @@ export function useFamilyLocation({
         // 위치 데이터 가져오기
         const { data: locationsData, error: locError } = await supabase
           .from('user_locations')
-          .select('*')
+          .select('user_id, latitude, longitude, address, last_updated, group_id') // created_at, app_id 미사용 — 불필요 컬럼 제거
           .eq('group_id', currentGroupId)
           .in('user_id', Array.from(sharedUserIds));
 
@@ -99,7 +99,7 @@ export function useFamilyLocation({
           address: loc.address || '',
           latitude: loc.latitude,
           longitude: loc.longitude,
-          updatedAt: loc.last_updated || loc.updated_at,
+          updatedAt: loc.last_updated, // user_locations 에는 updated_at 없음 — last_updated만 사용
           familyRole: familyRoleByUserId[loc.user_id] || null,
         }));
 
@@ -120,9 +120,9 @@ export function useFamilyLocation({
       try {
         const { data: requestsData, error } = await supabase
           .from('location_requests')
-          .select('*')
+          .select('id, requester_id, target_id, status, group_id, created_at, updated_at') // app_id 등 미사용 컬럼 제거
           .eq('group_id', currentGroupId)
-          .or(`requester_id.eq.${userId},target_user_id.eq.${userId}`);
+          .or(`requester_id.eq.${userId},target_id.eq.${userId}`); // target_user_id → target_id (DB 컬럼명 불일치 수정)
 
         if (error) {
           console.error('위치 요청 로드 오류:', error);
@@ -137,7 +137,7 @@ export function useFamilyLocation({
         const formattedRequests: LocationRequest[] = requestsData.map((req) => ({
           id: req.id,
           requester_id: req.requester_id,
-          target_user_id: req.target_user_id,
+          target_id: req.target_id, // target_user_id → target_id (DB 컬럼명 불일치 수정)
           status: req.status,
           created_at: req.created_at,
           updated_at: req.updated_at,
@@ -254,12 +254,12 @@ export function useFamilyLocation({
           if (newReq.group_id !== currentGroupId) return;
 
           // 자신과 관련된 요청만
-          if (newReq.requester_id !== userId && newReq.target_user_id !== userId) return;
+          if (newReq.requester_id !== userId && newReq.target_id !== userId) return; // target_user_id → target_id
 
           const formattedReq: LocationRequest = {
             id: newReq.id,
             requester_id: newReq.requester_id,
-            target_user_id: newReq.target_user_id,
+            target_id: newReq.target_id, // target_user_id → target_id (DB 컬럼명 불일치 수정)
             status: newReq.status,
             created_at: newReq.created_at,
             updated_at: newReq.updated_at,
