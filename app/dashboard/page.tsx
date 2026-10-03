@@ -3863,44 +3863,44 @@ export default function FamilyHub() {
     })();
   }, [eventAuthorIdsKey]);
 
-  // 현재 그룹 멤버의 가족 표시( family_role ) 로드 — 앱 전반 표시용
+  // 가족 표시(family_role) + 임무 담당자(familyTaskMembers) 통합 로드
+  // - memberships를 한 번만 쿼리해 두 state에 공유 (중복 제거)
+  // - groups(owner) + memberships(members+role) → Promise.all 병렬 실행
+  // - 이후 profiles 쿼리만 추가 1회 → 총 2 RTT (기존 3 RTT 직렬 → 단축)
   useEffect(() => {
     if (!currentGroupId) {
       setFamilyRoleByUserId({});
-      return;
-    }
-    (async () => {
-      const { data } = await supabase
-        .from('memberships')
-        .select('user_id, family_role')
-        .eq('group_id', currentGroupId);
-      const map: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null> = {};
-      (data || []).forEach((m: { user_id: string; family_role?: string | null }) => {
-        map[m.user_id] = (m.family_role as 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other') ?? null;
-      });
-      setFamilyRoleByUserId(map);
-    })();
-  }, [currentGroupId]);
-
-  // 가족 임무 담당자 선택용: 그룹 멤버(소유자·멤버십, 본인 포함) + 프로필 닉네임
-  useEffect(() => {
-    if (!currentGroupId) {
       setFamilyTaskMembers([]);
       return;
     }
     let cancelled = false;
     (async () => {
-      const { data: groupRow } = await supabase.from('groups').select('owner_id').eq('id', currentGroupId).maybeSingle();
-      const { data: memRows } = await supabase.from('memberships').select('user_id').eq('group_id', currentGroupId);
+      // 1단계: groups(owner) + memberships(members+role) 병렬 조회
+      const [groupResult, memResult] = await Promise.all([
+        supabase.from('groups').select('owner_id').eq('id', currentGroupId).maybeSingle(),
+        supabase.from('memberships').select('user_id, family_role').eq('group_id', currentGroupId),
+      ]);
+      if (cancelled) return;
+
+      // familyRoleByUserId 즉시 반영 (profiles 대기 불필요)
+      const roleMap: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null> = {};
+      (memResult.data || []).forEach((m: { user_id: string; family_role?: string | null }) => {
+        roleMap[m.user_id] = (m.family_role as 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other') ?? null;
+      });
+      setFamilyRoleByUserId(roleMap);
+
+      // 2단계: 멤버 ID 수집 → profiles 조회
       const ids = new Set<string>();
-      if (groupRow?.owner_id) ids.add(groupRow.owner_id as string);
-      (memRows || []).forEach((r: { user_id: string }) => ids.add(r.user_id));
+      if (groupResult.data?.owner_id) ids.add(groupResult.data.owner_id as string);
+      (memResult.data || []).forEach((r: { user_id: string }) => ids.add(r.user_id));
       const idList = Array.from(ids);
       if (idList.length === 0) {
         if (!cancelled) setFamilyTaskMembers([]);
         return;
       }
       const { data: profiles } = await supabase.from('profiles').select('id, nickname, email').in('id', idList);
+      if (cancelled) return;
+
       const byId: Record<string, { nickname: string | null; email: string | null }> = {};
       (profiles || []).forEach((p: { id: string; nickname?: string | null; email?: string | null }) => {
         byId[p.id] = { nickname: p.nickname ?? null, email: p.email ?? null };
@@ -3914,12 +3914,11 @@ export default function FamilyHub() {
         return { userId: memberUserId, nickname };
       });
       members.sort((a, b) => a.nickname.localeCompare(b.nickname, undefined, { sensitivity: 'base' }));
-      if (!cancelled) setFamilyTaskMembers(members);
+      setFamilyTaskMembers(members);
     })();
     return () => {
       cancelled = true;
     };
-  // userName deps 제거: 닉네임 변경 시 그룹 멤버 목록 재쿼리 불필요 (profiles 테이블에서 직접 로드)
   }, [currentGroupId]);
 
   // 시스템 관리자 권한 확인 (bootstrap seed 후 REST RPC로 검증)
@@ -6414,7 +6413,9 @@ export default function FamilyHub() {
   }, [currentGroupId, userId, isSystemAdmin, groupUserRole, groupIsOwner]);
 
   useEffect(() => {
-    loadMemberSupportTickets();
+    // FAB 배지용 비핵심 데이터 — 500ms 지연 후 시작해 초기 로드 경쟁 완화
+    const tid = setTimeout(() => { loadMemberSupportTickets(); }, 500);
+    return () => clearTimeout(tid);
   }, [loadMemberSupportTickets]);
 
   const hasUnreadAdminReply = useMemo(() => {
