@@ -82,8 +82,33 @@ function photoAlt(photo: Photo): string {
 
 function AlbumTile({ photo, onOpen }: { photo: Photo; onOpen: () => void }) {
   const alt = photoAlt(photo);
+  const tapStartRef = useRef<{ x: number; y: number } | null>(null);
+
   return (
-    <button type="button" onClick={onOpen} className="album-tile">
+    <button
+      type="button"
+      onClick={onOpen}
+      onPointerDown={(e) => {
+        tapStartRef.current = { x: e.clientX, y: e.clientY };
+      }}
+      onPointerUp={(e) => {
+        if (!tapStartRef.current) return;
+        const dx = Math.abs(e.clientX - tapStartRef.current.x);
+        const dy = Math.abs(e.clientY - tapStartRef.current.y);
+        tapStartRef.current = null;
+        // 15px 이내 움직임 = 탭으로 판정.
+        // touch-action:none 부모에서 button.click() 경로가 iOS에서 불안정하므로
+        // stopPropagation으로 부모 finish를 우회하고 onOpen()을 직접 호출.
+        // preventDefault로 네이티브 click 이중 실행을 방지한다.
+        if (dx <= 15 && dy <= 15) {
+          e.stopPropagation();
+          e.preventDefault();
+          onOpen();
+        }
+        // dx/dy > 15 이면 스와이프 제스처 → 부모 section의 finish가 처리
+      }}
+      className="album-tile"
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photo.data}
