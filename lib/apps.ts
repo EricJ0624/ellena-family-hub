@@ -26,6 +26,14 @@ export const APP_ID_LABELS: Record<AppId, string> = {
   hearth_camper: 'Camper',
 };
 
+/** 로그인 유지 후 대시보드 진입 전 대기 화면 명칭 (언어와 무관, 배포 앱 기준) */
+export const APP_BRAND_NAMES: Record<AppId, string> = {
+  hearth_family: 'Hearth Family',
+  hearth_couple: 'Hearth Couple',
+  hearth_biker: 'Hearth Biker',
+  hearth_camper: 'Hearth Camper',
+};
+
 export function getAppIdLabel(appId: string | null | undefined): string {
   if (appId && isAppId(appId)) return APP_ID_LABELS[appId];
   return appId || '-';
@@ -59,3 +67,7 @@ export const CURRENT_APP_ID: AppId = (() => {
   const fromEnv = serverFirst || APP_IDS.FAMILY;
   return isAppId(fromEnv) ? fromEnv : APP_IDS.FAMILY;
 })();
+
+export function getAppBrandName(appId: AppId = CURRENT_APP_ID): string {
+  return APP_BRAND_NAMES[appId];
+}

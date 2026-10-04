@@ -9,6 +9,7 @@ import { getFontStyle, intlLocaleForLang, LANG_OPTIONS, type LangCode } from '@/
 import { getCountryOptions, isValidCountryCode } from '@/lib/countries';
 import { getLoginTranslation, type LoginTranslations } from '@/lib/translations/login';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { getAppBrandName } from '@/lib/apps';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
 import { cn } from '@/lib/ui/cn';
 import { fetchAuthBootstrapWithCache, getCachedAuthBootstrap, loginViaServerApi, setCachedAuthBootstrap } from '@/lib/auth-bootstrap';
@@ -30,6 +31,31 @@ import {
 } from '@/lib/family-auth-routing';
 
 type Mode = 'login' | 'signup' | 'forgot';
+
+/** 로그인 유지 재접속 시 대시보드로 넘어가기 전 대기 화면 */
+function SessionRestoreSplash() {
+  const appName = getAppBrandName();
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)]"
+      role="status"
+      aria-live="polite"
+      aria-label={appName}
+    >
+      <img
+        src="/branding/hearth-splash-icon.png?v=2"
+        alt=""
+        width={216}
+        height={202}
+        className="h-48 w-auto select-none object-contain"
+        aria-hidden
+      />
+      <p className="m-0 mt-3 text-center text-[1.75rem] font-bold tracking-tight text-slate-800">
+        {appName}
+      </p>
+    </div>
+  );
+}
 
 const LAST_EMAIL_KEY = 'SFH_LAST_EMAIL';
 
@@ -907,16 +933,7 @@ export default function LoginPage() {
   // - sessionCheckDone: 세션 없음 확정 시에만 true (폼 표시 신호)
   // - restoringSession: 세션 있어 리다이렉트 중 (로딩 화면 유지)
   if (!isMounted || !sessionCheckDone) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)]">
-        <div className="rounded-2xl bg-white px-6 py-5 text-center shadow-lg">
-          <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
-          <p className="text-sm font-semibold text-slate-700">
-            {lang === 'ko' ? '잠시만요\u2026' : 'Loading\u2026'}
-          </p>
-        </div>
-      </div>
-    );
+    return <SessionRestoreSplash />;
   }
 
   return (
@@ -924,16 +941,7 @@ export default function LoginPage() {
       className="relative flex min-h-dvh flex-col items-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
       style={{ fontFamily: getFontStyle(displayLang, 'body').fontFamily }}
     >
-      {restoringSession ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/25 backdrop-blur-[2px]">
-          <div className="rounded-2xl bg-white px-6 py-5 text-center shadow-lg">
-            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
-            <p className="text-sm font-semibold text-slate-700">
-              {displayLang === 'ko' ? '로그인 상태 확인 중…' : 'Restoring session…'}
-            </p>
-          </div>
-        </div>
-      ) : null}
+      {restoringSession ? <SessionRestoreSplash /> : null}
       {/* 배경 장식 요소 */}
       <div className="absolute -right-[20%] -top-1/2 z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]" />
       <div className="absolute -bottom-[30%] -left-[15%] z-0 h-[400px] w-[400px] rounded-full bg-[linear-gradient(135deg,rgba(118,75,162,0.1)_0%,rgba(102,126,234,0.1)_100%)]" />
