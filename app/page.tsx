@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { supabase, PERSIST_SESSION_FLAG_KEY } from '@/lib/supabase';
@@ -42,13 +43,14 @@ function SessionRestoreSplash() {
       aria-live="polite"
       aria-label={appName}
     >
-      <img
-        src="/branding/hearth-splash-icon.png?v=2"
+      <Image
+        src="/branding/hearth-splash-icon.png"
         alt=""
         width={216}
         height={202}
         className="h-48 w-auto select-none object-contain"
         aria-hidden
+        priority
       />
       <p className="m-0 mt-3 text-center text-[1.75rem] font-bold tracking-tight text-slate-800">
         {appName}
@@ -78,8 +80,6 @@ export default function LoginPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true); // 로그인 상태 유지 (기본 체크)
-  /** 로그인 유지 세션 복원 중 — 폼만 보이면 “멈춘 것”처럼 느껴짐 */
-  const [restoringSession, setRestoringSession] = useState(false);
   /**
    * 세션 존재 여부 확인 완료 - 세션 없음 확정 후에만 true.
    * true가 되기 전에는 로그인 폼 대신 로딩 화면을 표시해
@@ -230,8 +230,6 @@ export default function LoginPage() {
           return;
         }
 
-        if (!cancelled) setRestoringSession(true);
-
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
         const invite = resolveInviteFromUrlOrSession(params);
 
@@ -263,7 +261,7 @@ export default function LoginPage() {
         const { user, error } = await userPromise;
         if (cancelled) return;
         if (error || !user) {
-          if (!cancelled) { setRestoringSession(false); setSessionCheckDone(true); } // 유저 무효 → 로그인 폼
+          if (!cancelled) setSessionCheckDone(true); // 유저 무효 → 로그인 폼
           return;
         }
 
@@ -273,7 +271,7 @@ export default function LoginPage() {
         if (cancelled) return;
         routeFromBootstrap(bootstrap, invite);
       } catch {
-        if (!cancelled) { setRestoringSession(false); setSessionCheckDone(true); } // 오류 → 로그인 폼
+        if (!cancelled) setSessionCheckDone(true); // 오류 → 로그인 폼
       }
     };
 
@@ -929,9 +927,8 @@ export default function LoginPage() {
     letterSpacing: '2px',
   };
 
-  // 로그인 유지 재접속: 세션 확인 전에는 로그인 폼 대신 로딩 화면 표시
-  // - sessionCheckDone: 세션 없음 확정 시에만 true (폼 표시 신호)
-  // - restoringSession: 세션 있어 리다이렉트 중 (로딩 화면 유지)
+  // 로그인 유지 재접속: 세션 확인 전에는 로그인 폼 대신 대기 화면
+  // sessionCheckDone은 세션 없음·무효가 확정된 뒤에만 true
   if (!isMounted || !sessionCheckDone) {
     return <SessionRestoreSplash />;
   }
@@ -941,7 +938,6 @@ export default function LoginPage() {
       className="relative flex min-h-dvh flex-col items-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
       style={{ fontFamily: getFontStyle(displayLang, 'body').fontFamily }}
     >
-      {restoringSession ? <SessionRestoreSplash /> : null}
       {/* 배경 장식 요소 */}
       <div className="absolute -right-[20%] -top-1/2 z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]" />
       <div className="absolute -bottom-[30%] -left-[15%] z-0 h-[400px] w-[400px] rounded-full bg-[linear-gradient(135deg,rgba(118,75,162,0.1)_0%,rgba(102,126,234,0.1)_100%)]" />
