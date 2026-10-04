@@ -11,6 +11,14 @@ import {
   polaroidMatFontSizeForName,
   polaroidMatFontSizeForYear,
 } from '@/lib/polaroid-mat-layout';
+import {
+  PARCHMENT_MAT_LAYOUT,
+  parchmentMatFontSizeForName,
+} from '@/lib/parchment-mat-layout';
+import {
+  VINTAGE_MAT_LAYOUT,
+  vintageMatFontSizeForName,
+} from '@/lib/vintage-mat-layout';
 
 // 프레임 스타일 타입 정의
 export type FrameStyle =
@@ -105,11 +113,11 @@ export const SOFT_GLASS_FRAME_OVERLAY_CLASS =
   `${frameSvgOverlayClass} object-fill`;
 
 /**
- * soft_glass 사진 — 아주 약한 “유리 뒤” 느낌만 (img에 직접 filter)
+ * soft_glass 사진 — blur 없이 아주 약한 투명만 (img opacity)
  * wrapper blur/transform 조합 금지. 모서리 둥글림은 PNG 개구부 알파 담당
  */
 export const SOFT_GLASS_PHOTO_IMAGE_CLASS =
-  'scale-[1.06] blur-[0.5px] brightness-[0.98]';
+  'scale-[1.06] opacity-[0.98]';
 
 export const SOFT_GLASS_LANDSCAPE_SRC =
   '/photo-frames/soft-glass-landscape.png';
@@ -119,6 +127,12 @@ const BAROQUE_FRAME_VIEWBOX = { width: 970, height: 803 } as const;
 
 /** polaroid-paper-landscape.png viewBox — lib/polaroid-mat-layout.ts 와 동기화 */
 const POLAROID_FRAME_VIEWBOX = POLAROID_MAT_LAYOUT.viewBox;
+
+/** parchment-frame-landscape.png viewBox — lib/parchment-mat-layout.ts 와 동기화 */
+const PARCHMENT_FRAME_VIEWBOX = PARCHMENT_MAT_LAYOUT.viewBox;
+
+/** vintage-frame-landscape.png viewBox — lib/vintage-mat-layout.ts 와 동기화 */
+const VINTAGE_FRAME_VIEWBOX = VINTAGE_MAT_LAYOUT.viewBox;
 
 /**
  * PNG에 "FAMILY - GATHERING," 가 박혀 있으므로 이름 끝의 " Family" 접미사 제거.
@@ -131,6 +145,12 @@ export function formatBaroqueMatName(displayName: string): string {
     base = base.replace(/\s+family\s*$/i, '').trim();
   }
   return (base || displayName.trim()).toUpperCase();
+}
+
+/** 빈티지 FAMILY LEGACY 명판 — Family 접미사 제거 후 대문자 (명판과 동일) */
+export function formatVintageMatName(displayName: string): string {
+  const base = formatPolaroidMatName(displayName);
+  return base.toUpperCase();
 }
 
 /** 폴라로이드 하단 Lee 자리 — 스크립트용, Family 접미사만 제거 */
@@ -323,6 +343,69 @@ export function PolaroidMatCaptionOverlay({ displayName }: { displayName: string
         dominantBaseline="alphabetic"
       >
         {` ${name}`}
+      </text>
+    </svg>
+  );
+}
+
+/** 양피지 오른쪽 아래 빈칸 — 가족 이름만 흘림체로 오버레이 */
+export function ParchmentMatCaptionOverlay({ displayName }: { displayName: string }) {
+  const name = formatPolaroidMatName(displayName);
+  if (!name) return null;
+  const { x, y, rotate, typography } = PARCHMENT_MAT_LAYOUT;
+  const fontSize = parchmentMatFontSizeForName(name.length);
+
+  return (
+    <svg
+      viewBox={`0 0 ${PARCHMENT_FRAME_VIEWBOX.width} ${PARCHMENT_FRAME_VIEWBOX.height}`}
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-0 z-[30] h-full w-full overflow-visible"
+      aria-hidden
+    >
+      <text
+        x={x}
+        y={y}
+        fill={typography.fill}
+        fontSize={fontSize}
+        fontFamily={typography.fontFamily}
+        fontWeight={typography.fontWeight}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        transform={`rotate(${rotate} ${x} ${y})`}
+      >
+        {name}
+      </text>
+    </svg>
+  );
+}
+
+/** 빈티지 명판 — FAMILY LEGACY 는 유지하고 왼쪽 빈칸에만 가족 이름 */
+export function VintageMatCaptionOverlay({ displayName }: { displayName: string }) {
+  const name = formatVintageMatName(displayName);
+  if (!name) return null;
+  const { x, y, scaleY, typography } = VINTAGE_MAT_LAYOUT;
+  const fontSize = vintageMatFontSizeForName(name.length);
+
+  return (
+    <svg
+      viewBox={`0 0 ${VINTAGE_FRAME_VIEWBOX.width} ${VINTAGE_FRAME_VIEWBOX.height}`}
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-0 z-[30] h-full w-full overflow-visible bg-transparent"
+      aria-hidden
+    >
+      <text
+        x={x}
+        y={y}
+        fill={typography.fill}
+        fontSize={fontSize}
+        fontFamily={typography.fontFamily}
+        fontWeight={typography.fontWeight}
+        letterSpacing={typography.letterSpacing}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        transform={`translate(${x} ${y}) scale(1 ${scaleY}) translate(${-x} ${-y})`}
+      >
+        {name}
       </text>
     </svg>
   );

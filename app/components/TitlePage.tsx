@@ -20,8 +20,11 @@ import {
   SOFT_GLASS_PHOTO_IMAGE_CLASS,
   BaroqueMatCaptionOverlay,
   PolaroidMatCaptionOverlay,
+  ParchmentMatCaptionOverlay,
+  VintageMatCaptionOverlay,
   formatBaroqueMatName,
   formatPolaroidMatName,
+  formatVintageMatName,
   type FrameStyle,
 } from './PhotoFrames';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -365,6 +368,18 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     return name || null;
   }, [frameStyle, groupCaptionName]);
 
+  const parchmentMatDisplayName = useMemo(() => {
+    if (frameStyle !== 'parchment') return null;
+    const name = formatPolaroidMatName(groupCaptionName ?? '');
+    return name || null;
+  }, [frameStyle, groupCaptionName]);
+
+  const vintageMatDisplayName = useMemo(() => {
+    if (frameStyle !== 'vintage') return null;
+    const name = formatVintageMatName(groupCaptionName ?? '');
+    return name || null;
+  }, [frameStyle, groupCaptionName]);
+
   const slideEnterOffset = -slideDir * SLIDE_OFFSET_PX;
   const slideExitOffset = slideDir * SLIDE_OFFSET_PX;
   const slideDurationSec = hintPhase ? HINT_SLIDE_DURATION_SEC : SLIDE_DURATION_SEC;
@@ -433,7 +448,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             frameInsetClass[frameStyle],
           )}
         >
-          {/* soft_glass: PNG 개구부 알파 = 둥근 모서리 / 사진 = 약한 유리 뒤 filter */}
+          {/* soft_glass: PNG 개구부 알파 = 둥근 모서리 / 사진 = 아주 약한 투명 */}
           <div
             className={cn(
               'relative h-full w-full overflow-hidden',
@@ -524,6 +539,14 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
         {polaroidMatDisplayName ? (
           <PolaroidMatCaptionOverlay displayName={groupCaptionName ?? ''} />
+        ) : null}
+
+        {parchmentMatDisplayName ? (
+          <ParchmentMatCaptionOverlay displayName={groupCaptionName ?? ''} />
+        ) : null}
+
+        {vintageMatDisplayName ? (
+          <VintageMatCaptionOverlay displayName={groupCaptionName ?? ''} />
         ) : null}
 
         {hintPhase ? (
