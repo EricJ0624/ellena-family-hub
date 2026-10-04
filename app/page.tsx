@@ -1021,7 +1021,11 @@ export default function LoginPage() {
         {/* 베타 모집 배너: 한도 1~100이고 가입 가능할 때만 표시 */}
         {mode === 'signup' && signupAllowed && signupMaxUsers !== null && signupMaxUsers <= 100 && (
           <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3">
-            <p className="mb-1 text-[13px] font-bold text-purple-800">{t('beta_banner_title')}</p>
+            <p className="mb-1 text-[13px] font-bold text-purple-800">
+              {formatLoginTranslation(displayLang, 'beta_banner_title', {
+                appName: getAppBrandName(),
+              })}
+            </p>
             {betaTesterCount != null && signupMaxUsers != null && (
               <p className="mb-1 text-[15px] font-bold text-purple-900">
                 {formatLoginTranslation(displayLang, 'beta_banner_count', {

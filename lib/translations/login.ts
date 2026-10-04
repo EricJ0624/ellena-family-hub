@@ -42,7 +42,7 @@ type LoginTranslations = {
   btn_google_continue: string;
   btn_loading_google: string;
   error_google_failed: string;
-  /** 베타 모집 배너 제목 (가입 탭 상단, 한도 ≤100일 때만 노출) */
+  /** 베타 모집 배너 제목. ${appName}은 현재 앱 표시명 */
   beta_banner_title: string;
   /** 베타 모집 배너 본문 */
   beta_banner_body: string;
@@ -96,7 +96,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: 'Google로 계속하기',
     btn_loading_google: 'Google 연결 중',
     error_google_failed: 'Google 로그인에 실패했습니다. 다시 시도해 주세요.',
-    beta_banner_title: 'Hearth Family의 베타 테스터 100명을 모집합니다!',
+    beta_banner_title: '${appName}의 베타 테스터 100명을 모집합니다!',
     beta_banner_body:
       '정식 출시 전까지 무료로 이용하실 수 있고, 출시 후에는 정식 요금 기준 평생 50% 할인 쿠폰을 드립니다.',
     beta_banner_count: '현재 베타 테스터 ${count} / ${max}명',
@@ -146,7 +146,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: 'Continue with Google',
     btn_loading_google: 'Connecting Google...',
     error_google_failed: 'Google sign-in failed. Please try again.',
-    beta_banner_title: 'Hearth Family is looking for 100 beta testers!',
+    beta_banner_title: '${appName} is looking for 100 beta testers!',
     beta_banner_body:
       'Use it free until the official launch. After launch, enjoy a lifetime 50% discount on the official pricing.',
     beta_banner_count: 'Beta testers so far: ${count} / ${max}',
@@ -196,7 +196,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: 'Googleで続行',
     btn_loading_google: 'Googleに接続中...',
     error_google_failed: 'Googleログインに失敗しました。もう一度お試しください。',
-    beta_banner_title: 'Hearth Family ベータテスター100名を募集します！',
+    beta_banner_title: '${appName} ベータテスター100名を募集します！',
     beta_banner_body:
       '正式リリースまで無料でご利用いただけます。リリース後は正式料金の永久50%割引クーポンを提供します。',
     beta_banner_count: '現在のベータテスター ${count} / ${max}名',
@@ -246,7 +246,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: '使用 Google 继续',
     btn_loading_google: '正在连接 Google...',
     error_google_failed: 'Google 登录失败，请重试。',
-    beta_banner_title: 'Hearth Family 诚招100名公测用户！',
+    beta_banner_title: '${appName} 诚招100名公测用户！',
     beta_banner_body:
       '正式上线前免费使用，上线后享受正式定价永久5折优惠券。',
     beta_banner_count: '当前公测用户 ${count} / ${max} 人',
@@ -296,7 +296,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: '使用 Google 繼續',
     btn_loading_google: '正在連接 Google...',
     error_google_failed: 'Google 登入失敗，請再試一次。',
-    beta_banner_title: 'Hearth Family 誠招100名公測用戶！',
+    beta_banner_title: '${appName} 誠招100名公測用戶！',
     beta_banner_body:
       '正式上線前免費使用，上線後享受正式定價終身5折優惠券。',
     beta_banner_count: '目前公測用戶 ${count} / ${max} 人',
@@ -346,7 +346,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: 'Continuar con Google',
     btn_loading_google: 'Conectando con Google...',
     error_google_failed: 'Error al iniciar sesión con Google. Inténtalo de nuevo.',
-    beta_banner_title: '¡Hearth Family busca 100 beta testers!',
+    beta_banner_title: '¡${appName} busca 100 beta testers!',
     beta_banner_body:
       'Úsalo gratis hasta el lanzamiento oficial. Tras el lanzamiento, obtén un cupón de descuento permanente del 50% sobre el precio oficial.',
     beta_banner_count: 'Beta testers actuales: ${count} / ${max}',
@@ -396,7 +396,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: 'Continuer avec Google',
     btn_loading_google: 'Connexion à Google...',
     error_google_failed: 'Échec de la connexion Google. Réessayez.',
-    beta_banner_title: 'Hearth Family recherche 100 bêta-testeurs !',
+    beta_banner_title: '${appName} recherche 100 bêta-testeurs !',
     beta_banner_body:
       "Utilisez-le gratuitement jusqu'au lancement officiel. Après le lancement, bénéficiez d'un coupon de réduction permanente de 50 % sur le tarif officiel.",
     beta_banner_count: 'Bêta-testeurs actuels : ${count} / ${max}',
@@ -446,7 +446,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: 'Mit Google fortfahren',
     btn_loading_google: 'Google wird verbunden...',
     error_google_failed: 'Google-Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
-    beta_banner_title: 'Hearth Family sucht 100 Beta-Tester!',
+    beta_banner_title: '${appName} sucht 100 Beta-Tester!',
     beta_banner_body:
       'Nutze es kostenlos bis zum offiziellen Launch. Nach dem Launch erhältst du einen lebenslangen 50%-Rabattgutschein auf den offiziellen Preis.',
     beta_banner_count: 'Aktuelle Beta-Tester: ${count} / ${max}',
@@ -496,7 +496,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: 'Continua con Google',
     btn_loading_google: 'Connessione a Google...',
     error_google_failed: 'Accesso con Google non riuscito. Riprova.',
-    beta_banner_title: 'Hearth Family cerca 100 beta tester!',
+    beta_banner_title: '${appName} cerca 100 beta tester!',
     beta_banner_body:
       'Usalo gratuitamente fino al lancio ufficiale. Dopo il lancio, ricevi un coupon di sconto permanente del 50% sul prezzo ufficiale.',
     beta_banner_count: 'Beta tester attuali: ${count} / ${max}',
@@ -546,7 +546,7 @@ const login: Record<LangCode, LoginTranslations> = {
     btn_google_continue: 'Continuar com o Google',
     btn_loading_google: 'Conectando ao Google...',
     error_google_failed: 'Falha ao entrar com o Google. Tente novamente.',
-    beta_banner_title: 'Hearth Family procura 100 beta testers!',
+    beta_banner_title: '${appName} procura 100 beta testers!',
     beta_banner_body:
       'Use gratuitamente até o lançamento oficial. Após o lançamento, ganhe um cupom de desconto permanente de 50% sobre o preço oficial.',
     beta_banner_count: 'Beta testers atuais: ${count} / ${max}',
