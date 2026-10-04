@@ -131,6 +131,10 @@ import {
   type WidgetConfigDraft,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, readWidgetConfigCache } from '@/lib/widgets/widget-configs';
+import {
+  readDashboardContentSnapshot,
+  writeDashboardContentSnapshot,
+} from '@/lib/dashboard-content-snapshot';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import {
   resolveWidgetGridPlacement,
@@ -754,6 +758,10 @@ export default function FamilyHub() {
   const googleMapsScriptLoadedRef = useRef<boolean>(false); // Google Maps 스크립트 로드 상태 추적
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
+  /** 일정·할 일 스냅샷을 이미 깐 그룹. 서버 갱신 뒤에 옛 스냅샷으로 되돌리지 않는다. */
+  const contentGroupRef = useRef<string | null>(null);
+  const tasksSnapSigRef = useRef('');
+  const eventsSnapSigRef = useRef('');
   const acceptedUserIdsRef = useRef<Set<string>>(new Set()); // 승인된 위치공유 상대 ID (첫 사라짐 방지용, 취소 시에만 제거)
   const updateMapMarkersDebounceRef = useRef<NodeJS.Timeout | null>(null); // 지도 마커 업데이트 디바운스
   const sessionWaitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null); // 세션 준비 후 위치 로드용
@@ -1117,22 +1125,28 @@ export default function FamilyHub() {
         return {};
       });
       
-      // 1. 모든 상태 초기화 (이전 그룹의 데이터 제거)
+      // 1. 이전 그룹 데이터는 제거하되, 새 그룹의 마지막 일정·할 일은 서버 전에 유지
+      const authKey = getAuthKey(userId);
+      const key = masterKey || sessionStorage.getItem(authKey) ||
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+      const contentSnap = readDashboardContentSnapshot(userId, currentGroupId, key);
+      const nextTodos = contentSnap?.todos ?? [];
+      const nextEvents = contentSnap?.events ?? [];
+      contentGroupRef.current = currentGroupId;
+      tasksSnapSigRef.current = `${currentGroupId}:${tasksSignature(nextTodos)}`;
+      eventsSnapSigRef.current = `${currentGroupId}:${eventsSignature(nextEvents)}`;
       setState({
         familyName: INITIAL_STATE.familyName,
         location: INITIAL_STATE.location,
         familyLocations: [],
-        todos: [],
-        events: [],
+        todos: nextTodos,
+        events: nextEvents,
         album: [], // 🔒 가장 중요: 이전 그룹의 사진 완전 제거
         messages: [],
         titleStyle: INITIAL_STATE.titleStyle,
       });
       
       // 2. 새 그룹 데이터 로드
-      const authKey = getAuthKey(userId);
-      const key = masterKey || sessionStorage.getItem(authKey) ||
-        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
       
       lastLoadedGroupIdRef.current = currentGroupId;
       
@@ -3179,9 +3193,33 @@ export default function FamilyHub() {
   // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
   const getCurrentKey = useCallback(() => {
     const authKey = getAuthKey(userId);
-    return masterKey || sessionStorage.getItem(authKey) || 
+    return masterKey || sessionStorage.getItem(authKey) ||
       process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
   }, [userId, masterKey]);
+
+  // 페인트 전에 같은 그룹 일정·할 일을 깐다. 그룹이 바뀌기 전에는 서버가 채운 값을 스냅샷으로 덮지 않는다.
+  useLayoutEffect(() => {
+    if (!userId || !currentGroupId) {
+      if (!currentGroupId) contentGroupRef.current = null;
+      return;
+    }
+    if (contentGroupRef.current === currentGroupId) return;
+    const snap = readDashboardContentSnapshot(userId, currentGroupId, getCurrentKey());
+    const nextTodos = snap?.todos ?? [];
+    const nextEvents = snap?.events ?? [];
+    contentGroupRef.current = currentGroupId;
+    tasksSnapSigRef.current = `${currentGroupId}:${tasksSignature(nextTodos)}`;
+    eventsSnapSigRef.current = `${currentGroupId}:${eventsSignature(nextEvents)}`;
+    setState((prev) => {
+      if (
+        tasksSignature(prev.todos) === tasksSignature(nextTodos) &&
+        eventsSignature(prev.events) === eventsSignature(nextEvents)
+      ) {
+        return prev;
+      }
+      return { ...prev, todos: nextTodos, events: nextEvents };
+    });
+  }, [userId, currentGroupId, getCurrentKey]);
 
   // 5. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
@@ -6274,14 +6312,24 @@ export default function FamilyHub() {
       if (tasksSignature(prev.todos) === tasksSignature(tasks)) return prev;
       return { ...prev, todos: tasks };
     });
-  }, []);
+    if (!userId || !currentGroupId) return;
+    const sig = `${currentGroupId}:${tasksSignature(tasks)}`;
+    if (tasksSnapSigRef.current === sig) return;
+    tasksSnapSigRef.current = sig;
+    writeDashboardContentSnapshot(userId, currentGroupId, getCurrentKey(), { todos: tasks });
+  }, [userId, currentGroupId, getCurrentKey]);
 
   const handleEventsChange = useCallback((events: AppState['events']) => {
     setState((prev) => {
       if (eventsSignature(prev.events) === eventsSignature(events)) return prev;
       return { ...prev, events };
     });
-  }, []);
+    if (!userId || !currentGroupId) return;
+    const sig = `${currentGroupId}:${eventsSignature(events)}`;
+    if (eventsSnapSigRef.current === sig) return;
+    eventsSnapSigRef.current = sig;
+    writeDashboardContentSnapshot(userId, currentGroupId, getCurrentKey(), { events });
+  }, [userId, currentGroupId, getCurrentKey]);
 
   const {
     loadChatAttachments,

@@ -45,6 +45,40 @@ type AlbumContextType = {
 
 const AlbumContext = createContext<AlbumContextType | undefined>(undefined);
 
+function albumSignature(photos: readonly Photo[]): string {
+  if (!photos.length) return '';
+  return photos
+    .map((p) => `${p.id}:${p.data}:${p.focus_y ?? ''}:${p.description ?? ''}`)
+    .join('|');
+}
+
+function sameAlbum(a: readonly Photo[], b: readonly Photo[]): boolean {
+  return albumSignature(a) === albumSignature(b);
+}
+
+/** 세션 없이 같은 그룹의 안정 URL만 읽는다. 조회 실패 복구와 선표시가 같은 필터를 쓴다. */
+function readStableLocalAlbum(userId: string, groupId: string): Photo[] {
+  try {
+    const key =
+      sessionStorage.getItem(getAuthKey(userId)) ||
+      process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+      'ellena_family_shared_key_2024';
+    const saved = localStorage.getItem(getStorageKey(userId, groupId));
+    if (!saved) return [];
+    const decrypted = CryptoService.decrypt(saved, key) as { album?: Photo[] } | null;
+    if (!decrypted?.album || !Array.isArray(decrypted.album)) return [];
+    return decrypted.album.filter(
+      (p) =>
+        !!p?.data &&
+        (p.data.startsWith('http://') ||
+          p.data.startsWith('https://') ||
+          p.data.startsWith('/api/photo/proxy')),
+    );
+  } catch {
+    return [];
+  }
+}
+
 function persistAlbumOnly(
   userId: string,
   groupId: string | null,
@@ -89,6 +123,8 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
   const realtimeResyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** loadAlbum 비동기 완료 시점에 그룹이 바뀌었으면 setAlbum 하지 않음 */
   const albumCurrentGroupIdRef = useRef<string | null>(null);
+  /** 화면에 올려 둔 앨범의 그룹. 같은 그룹 재조회는 캐시로 덮지 않는다. */
+  const shownAlbumGroupRef = useRef<string | null>(null);
   albumCurrentGroupIdRef.current = currentGroupId;
 
   useEffect(() => {
@@ -110,12 +146,24 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
   const loadAlbum = useCallback(async () => {
     if (!userId || !currentGroupId) {
       clearViewedAlbumPhotoUrls();
+      shownAlbumGroupRef.current = null;
       setAlbum([]);
       return;
     }
 
     const groupIdForThisLoad = currentGroupId;
     const isStale = () => groupIdForThisLoad !== albumCurrentGroupIdRef.current;
+
+    // 세션·서버보다 먼저 같은 그룹 URL을 그린다. 다른 그룹이면 그 캐시 또는 빈 목록으로 바로 갈아탄다.
+    const cached = readStableLocalAlbum(userId, groupIdForThisLoad);
+    const groupChanged = shownAlbumGroupRef.current !== groupIdForThisLoad;
+    if (groupChanged) {
+      shownAlbumGroupRef.current = groupIdForThisLoad;
+      clearViewedAlbumPhotoUrls();
+      setAlbum((prev) => (sameAlbum(prev, cached) ? prev : cached));
+    } else if (cached.length > 0) {
+      setAlbum((prev) => (prev.length > 0 ? prev : cached));
+    }
 
     const session = await waitForSupabaseSession(supabase);
     if (!session?.access_token || isStale()) {
@@ -125,20 +173,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // 그룹 전환 시 이전 그룹 앨범 즉시 제거 (blob/잘못된 데이터 노출·Hydration 에러 방지)
-    clearViewedAlbumPhotoUrls();
-    setAlbum([]);
-    const key =
-      sessionStorage.getItem(getAuthKey(userId)) ||
-      process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
-      'ellena_family_shared_key_2024';
-    const storageKey = getStorageKey(userId, groupIdForThisLoad);
-    const saved = localStorage.getItem(storageKey);
-    let localAlbum: Photo[] = [];
-    if (saved) {
-      const decrypted = CryptoService.decrypt(saved, key) as { album?: Photo[] } | null;
-      if (decrypted?.album && Array.isArray(decrypted.album)) localAlbum = decrypted.album;
-    }
+    const localAlbum = cached;
 
     // 가입 직후·그룹 전환 직후 멤버십/세션 타이밍으로 첫 조회가 실패할 수 있어 짧게 재시도
     let photos: Record<string, unknown>[] | null = null;
@@ -168,14 +203,9 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     if (isStale()) return;
 
     if (error) {
-      const stableLocal = localAlbum.filter(
-        (p) =>
-          p.data &&
-          (p.data.startsWith('http://') ||
-            p.data.startsWith('https://') ||
-            p.data.startsWith('/api/photo/proxy'))
-      );
-      if (!isStale()) setAlbum(stableLocal);
+      if (!isStale()) {
+        setAlbum((prev) => (sameAlbum(prev, localAlbum) ? prev : localAlbum));
+      }
       return;
     }
 
@@ -209,7 +239,16 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       );
     });
     const merged = [...supabasePhotos, ...localOnly];
-    if (!isStale()) setAlbum(merged);
+    if (!isStale()) {
+      setAlbum((prev) => (sameAlbum(prev, merged) ? prev : merged));
+      if (!sameAlbum(localAlbum, merged)) {
+        const key =
+          sessionStorage.getItem(getAuthKey(userId)) ||
+          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+          'ellena_family_shared_key_2024';
+        persistAlbumOnly(userId, groupIdForThisLoad, key, merged);
+      }
+    }
   }, [userId, currentGroupId]);
 
   useEffect(() => {
