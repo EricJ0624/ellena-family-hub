@@ -1063,7 +1063,8 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 
 .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget.travel-diary-widget--book .diary-book-page--left,
 .content-section.travel-diary-widget.travel-diary-widget--book .diary-book-page--left {
-  top: 11%;
+  /* 아래 여백 4%를 제목과 첫 일정 사이로 옮김. 목록 높이 80%는 유지 → 하단은 9%에서 5% */
+  top: 15%;
   /* ‹ 버튼·프레임만 피하고 종이 왼쪽 가장자리로 */
   left: 7.5%;
   width: 40.5%;
@@ -1076,11 +1077,12 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 
 .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget.travel-diary-widget--book .diary-book-page--right,
 .content-section.travel-diary-widget.travel-diary-widget--book .diary-book-page--right {
-  top: 9%;
+  /* 왼쪽 첫 일정과 같은 높이. 왼쪽 페이지 top 15%와 맞춤 */
+  top: 15%;
   left: 52%;
   width: 40%;
   height: 80%;
-  padding: 0.15rem 0.25rem 0.2rem 0.2rem;
+  padding: 0.08rem 0.25rem 0.2rem 0.2rem;
   box-sizing: border-box;
   align-items: stretch;
   text-align: left !important;
@@ -2837,7 +2839,7 @@ html[data-ui-theme='default'] body {
   height: auto;
   /* absolute 자식(title·+ADD) — PNG 이모지·버튼과 겹치지 않게 (8b32daa 기준, cqw/--cb-h) */
   min-height: calc(var(--cb-h) * 0.4);
-  margin-bottom: 3cqw;
+  margin-bottom: 1.5cqw;
   z-index: 1;
   min-width: 0;
   pointer-events: none;
@@ -2897,7 +2899,7 @@ html[data-ui-theme='default'] body {
   justify-content: flex-start;
   overflow-x: clip;
   overflow-y: visible;
-  padding-top: 1.5cqw;
+  padding-top: 0.6cqw;
   padding-bottom: 3cqw;
 }
 
@@ -3698,7 +3700,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
 
 .album-book-title {
   position: absolute;
-  top: 5.2%;
+  top: 6.4%;
   left: 16%;
   right: 16%;
   z-index: 6;
@@ -6851,6 +6853,47 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
 
 .chat-widget-section--kids .chat-attach-menu {
   z-index: 30;
+}
+
+/*
+ * 모든 테마의 위젯 머리 제목 크기 통일.
+ * 화면 너비(vw) 기준이라 칸 크기(cqmin)와 무관하게 같은 px.
+ * Kids 가족 임무(.chalkboard-title)는 칠판 그림이라 제외.
+ * 다이어리 목록의 여행 이름(.travel-kids-widget-trip-title)은 위젯 제목이 아니라 제외.
+ * @layer 밖 !important 로 칸별 4.5/5.25/5.5/6cqmin, Kids 게임·앨범·여행 제목을 덮음.
+ */
+.widget-chrome .section-title,
+.widget-chrome h3.section-title,
+.widget-scale-root .section-title,
+.widget-scale-root h3.section-title,
+.widget-chrome .travel-kids-widget-title,
+.widget-scale-root .travel-kids-widget-title,
+.widget-chrome .album-book-title,
+.widget-scale-root .album-book-title {
+  font-size: clamp(0.88rem, 0.8rem + 0.4vw, 1.1rem) !important;
+}
+
+/*
+ * 앨범 제목은 Caveat/Gaegu. 한글 글자 높이 72 vs 다른 위젯 Pretendard 900의 81.
+ * 1.13배로 보이는 높이를 맞춤.
+ */
+.widget-chrome .album-book-title,
+.widget-scale-root .album-book-title {
+  font-size: calc(1.13 * clamp(0.88rem, 0.8rem + 0.4vw, 1.1rem)) !important;
+  line-height: 1.15 !important;
+}
+
+/*
+ * 지도 제목은 제목판(높이 20.5%) overflow와 앞 프레임(z-index 5)에 잘려 작아 보임.
+ * 글자 크기는 다른 위젯과 같고, 글자 전체가 프레임 위에 보이게 함.
+ */
+:root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-title,
+.dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-title,
+html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-title {
+  font-size: clamp(0.88rem, 0.8rem + 0.4vw, 1.1rem) !important;
+  line-height: 1.15 !important;
+  z-index: 6;
+  overflow: visible;
 }
 
 /* Travel itinerary document — preview uses iframe (srcDoc); print via iframe.contentWindow.print() */

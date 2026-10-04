@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { memo, startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
@@ -77,33 +77,48 @@ function isTempTaskId(id: number | string): boolean {
   return typeof id === 'number' || /^\d+$/.test(String(id));
 }
 
-/** optimistic·Realtime·insert가 겹치면 id·동일 제목 중복 행 제거 */
+/**
+ * 같은 id만 제거. 제목이 같은 임무 두 개는 유지한다.
+ * 서버 행이 있으면 그 제목의 임시 행은 서버 행 수만큼만 짝을 지어 뺀다.
+ */
 function dedupeFamilyTasks(tasks: FamilyTask[]): FamilyTask[] {
   const seenIds = new Set<string>();
-  const textToIndex = new Map<string, number>();
-  const out: FamilyTask[] = [];
-
+  const unique: FamilyTask[] = [];
   for (const task of tasks) {
     const id = String(task.id);
     if (seenIds.has(id)) continue;
     seenIds.add(id);
-
-    const textKey = task.text.trim();
-    if (textKey && textToIndex.has(textKey)) {
-      const idx = textToIndex.get(textKey)!;
-      const prev = out[idx];
-      if (isTempTaskId(prev.id) && !isTempTaskId(task.id)) {
-        out[idx] = task;
-      }
-      continue;
-    }
-
-    const idx = out.length;
-    out.push(task);
-    if (textKey) textToIndex.set(textKey, idx);
+    unique.push(task);
   }
 
-  return out;
+  const realCountByText = new Map<string, number>();
+  for (const task of unique) {
+    if (isTempTaskId(task.id)) continue;
+    const textKey = task.text.trim();
+    if (!textKey) continue;
+    realCountByText.set(textKey, (realCountByText.get(textKey) ?? 0) + 1);
+  }
+  if (realCountByText.size === 0) return unique;
+
+  const pairedTemps = new Map<string, number>();
+  return unique.filter((task) => {
+    if (!isTempTaskId(task.id)) return true;
+    const textKey = task.text.trim();
+    const reals = realCountByText.get(textKey) ?? 0;
+    const used = pairedTemps.get(textKey) ?? 0;
+    if (used < reals) {
+      pairedTemps.set(textKey, used + 1);
+      return false;
+    }
+    return true;
+  });
+}
+
+let lastTempTaskId = 0;
+function nextTempTaskId(): number {
+  const now = Date.now();
+  lastTempTaskId = now > lastTempTaskId ? now : lastTempTaskId + 1;
+  return lastTempTaskId;
 }
 
 export const FamilyTasksSection = memo(function FamilyTasksSection({
@@ -167,7 +182,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     if (changed) onTasksChange(next);
   }, [taskMembers, familyRoleByUserId, lang, onTasksChange]);
 
-  const { addTask, toggleTask, deleteTask, claimTask } = useFamilyTasks({
+  const { addTask, toggleTask, deleteTask, claimTask, applyTasksChange } = useFamilyTasks({
     currentGroupId,
     userId,
     getCurrentKey,
@@ -177,23 +192,29 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     assigneeDisplayFromUserIdRef,
   });
 
+  const commitTasks = (next: FamilyTask[]) => {
+    tasksRef.current = next;
+    applyTasksChange(next);
+  };
+
   const handleToggleTask = (taskId: number | string) => {
-    const task = tasks.find((x) => x.id === taskId);
+    const latest = tasksRef.current;
+    const task = latest.find((x) => x.id === taskId);
     if (!task) return;
 
-    onTasksChange(tasks.map((x) => (x.id === taskId ? { ...x, done: !x.done } : x)));
+    commitTasks(latest.map((x) => (x.id === taskId ? { ...x, done: !x.done } : x)));
 
     toggleTask(taskId, !task.done);
   };
 
   const handleClaimTask = (taskId: number | string) => {
-    const task = tasks.find((x) => x.id === taskId);
+    const latest = tasksRef.current;
+    const task = latest.find((x) => x.id === taskId);
     if (!task || task.done || task.assigned_to_user_id) return;
 
     const display = formatAssigneeDisplay(userId);
-    const previous = tasks;
-    onTasksChange(
-      tasks.map((x) =>
+    commitTasks(
+      latest.map((x) =>
         x.id === taskId ? { ...x, assigned_to_user_id: userId, assignee: display } : x,
       ),
     );
@@ -202,7 +223,8 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       try {
         await claimTask(taskId);
       } catch (error) {
-        onTasksChange(previous);
+        const rolled = tasksRef.current.map((x) => (x.id === taskId ? task : x));
+        commitTasks(rolled);
         alert(error instanceof Error ? error.message : '임무를 맡는 데 실패했습니다.');
       }
     })();
@@ -211,18 +233,17 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   const handleDeleteTask = (taskId: number | string) => {
     if (!confirm(t.delete_confirm)) return;
 
-    const previousTasks = tasks;
-    startTransition(() => {
-      onTasksChange(tasks.filter((x) => x.id !== taskId));
-    });
+    const removed = tasksRef.current.find((x) => x.id === taskId);
+    commitTasks(tasksRef.current.filter((x) => x.id !== taskId));
 
     void (async () => {
       try {
         await deleteTask(taskId);
       } catch {
-        startTransition(() => {
-          onTasksChange(previousTasks);
-        });
+        const latest = tasksRef.current;
+        if (removed && !latest.some((x) => x.id === taskId)) {
+          commitTasks([removed, ...latest]);
+        }
         alert('삭제에 실패했습니다.');
       }
     })();
@@ -254,7 +275,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     const assignedToUserId = selectedUserId.length > 0 ? selectedUserId : null;
     const assigneeStr = assignedToUserId ? formatAssigneeDisplay(assignedToUserId) : '누구나';
 
-    const tempId = Date.now();
+    const tempId = nextTempTaskId();
     const optimisticTask: FamilyTask = {
       id: tempId,
       text: sanitizedText,
@@ -264,14 +285,11 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       created_by: userId,
     };
 
-    const previousTasks = tasks;
     if (todoTextRef.current) todoTextRef.current.value = '';
     if (todoWhoRef.current) todoWhoRef.current.value = '';
     setTodoError(null);
     setIsTodoModalOpen(false);
-    startTransition(() => {
-      onTasksChange([optimisticTask, ...tasks]);
-    });
+    commitTasks([optimisticTask, ...tasksRef.current]);
 
     try {
       const inserted = await addTask({
@@ -281,18 +299,21 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
         assignedToUserId,
       });
 
-      onTasksChange([
+      const latest = tasksRef.current.filter(
+        (row) => row.id !== tempId && String(row.id) !== String(inserted.id),
+      );
+      commitTasks([
         {
           ...optimisticTask,
           id: inserted.id,
           created_by: inserted.created_by ?? userId,
           done: inserted.is_completed ?? false,
         },
-        ...previousTasks.filter((row) => row.id !== tempId && row.id !== inserted.id),
+        ...latest,
       ]);
     } catch (error) {
       console.error('임무 추가 실패:', error);
-      onTasksChange(previousTasks);
+      commitTasks(tasksRef.current.filter((row) => row.id !== tempId));
       alert('임무 저장에 실패했습니다. 다시 시도해 주세요.');
     }
   };

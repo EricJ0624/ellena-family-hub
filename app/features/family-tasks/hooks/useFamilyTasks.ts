@@ -376,8 +376,11 @@ export function useFamilyTasks({
         'postgres_changes',
         { event: '*', schema: 'public', table: 'family_tasks', filter: `group_id=eq.${gid}` },
         (payload: any) => {
+        const publish = (next: FamilyTask[]) => {
+          tasksRt.tasks.current = next;
+          tasksRt.onTasksChange.current(next);
+        };
         const latestTasks = tasksRt.tasks.current;
-        const onTasksChange = tasksRt.onTasksChange.current;
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
 
         if (ev === 'DELETE') {
@@ -386,7 +389,7 @@ export function useFamilyTasks({
           if (!deletedId) return;
           const deletedIdStr = String(deletedId).trim();
 
-          onTasksChange(
+          publish(
             latestTasks.filter((t) => {
               const tIdStr = String(t.id).trim();
               const tSupabaseId = t.supabaseId ? String(t.supabaseId).trim() : null;
@@ -436,7 +439,7 @@ export function useFamilyTasks({
             decryptedAssignee = updatedTask.assigned_to;
           }
 
-          onTasksChange(
+          publish(
             latestTasks.map((t) =>
               t.id === updatedTask.id
                 ? {
@@ -544,7 +547,7 @@ export function useFamilyTasks({
           });
 
           if (recentDuplicate) {
-            onTasksChange(
+            publish(
               latestTasks.map((t) =>
                 t.id === recentDuplicate.id
                   ? {
@@ -560,16 +563,9 @@ export function useFamilyTasks({
             );
             return;
           }
-
-          const duplicateByContent = latestTasks?.find(
-            (t) => t.text === decryptedText && String(t.id) !== String(newTask.id)
-          );
-          if (duplicateByContent) {
-            return;
-          }
         }
 
-        onTasksChange([
+        publish([
           {
             id: newTask.id,
             text: decryptedText,
@@ -586,10 +582,16 @@ export function useFamilyTasks({
     return release;
   }, [currentGroupId]);
 
+  const applyTasksChange = (next: FamilyTask[]) => {
+    tasksRt.tasks.current = next;
+    onTasksChange(next);
+  };
+
   return {
     addTask,
     toggleTask,
     deleteTask,
     claimTask,
+    applyTasksChange,
   };
 }
