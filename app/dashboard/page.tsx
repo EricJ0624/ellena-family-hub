@@ -117,6 +117,7 @@ import { FamilyAlbumSection } from '@/app/features/family-album/components/Famil
 import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
 import { TravelQuickRecordSection } from '@/app/features/travel-planner/components/TravelQuickRecordSection';
 import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
+import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
 import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
 import { TravelDiaryDashboardSection } from '@/app/features/travel-diary/components/TravelDiaryDashboardSection';
 import { DiaryCompletionInviteModal } from '@/app/features/travel-diary/components/DiaryCompletionInviteModal';
@@ -3936,28 +3937,42 @@ export default function FamilyHub() {
         if (!cancelled) setFamilyTaskMembers([]);
         return;
       }
-      const { data: profiles } = await supabase.from('profiles').select('id, nickname, email').in('id', idList);
-      if (cancelled) return;
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, nickname, display_name, email')
+        .in('id', idList);
+      if (cancelled || profilesError || !profiles) return;
 
-      const byId: Record<string, { nickname: string | null; email: string | null }> = {};
-      (profiles || []).forEach((p: { id: string; nickname?: string | null; email?: string | null }) => {
-        byId[p.id] = { nickname: p.nickname ?? null, email: p.email ?? null };
+      const byId: Record<string, { nickname: string | null; displayName: string | null; email: string | null }> = {};
+      (profiles || []).forEach((p: { id: string; nickname?: string | null; display_name?: string | null; email?: string | null }) => {
+        byId[p.id] = {
+          nickname: p.nickname ?? null,
+          displayName: p.display_name ?? null,
+          email: p.email ?? null,
+        };
       });
-      const members: FamilyTaskMemberOption[] = idList.map((memberUserId) => {
-        const p = byId[memberUserId];
-        const nickname =
-          (p?.nickname && String(p.nickname).trim()) ||
-          (p?.email && String(p.email).trim()) ||
-          memberUserId.slice(0, 8);
-        return { userId: memberUserId, nickname };
+      setFamilyTaskMembers((prev) => {
+        const prevById = new Map(prev.map((member) => [member.userId, member.nickname]));
+        const members: FamilyTaskMemberOption[] = idList.map((memberUserId) => {
+          const p = byId[memberUserId];
+          const previous = prevById.get(memberUserId) ?? '';
+          const nickname =
+            (p?.nickname && String(p.nickname).trim()) ||
+            (p?.displayName && String(p.displayName).trim()) ||
+            (p?.email && String(p.email).trim()) ||
+            (previous && !isOpaqueIdLabel(previous, memberUserId) ? previous : '');
+          return { userId: memberUserId, nickname };
+        });
+        members.sort((a, b) => a.nickname.localeCompare(b.nickname, undefined, { sensitivity: 'base' }));
+        const nextSig = members.map((member) => `${member.userId}:${member.nickname}`).join('|');
+        const prevSig = prev.map((member) => `${member.userId}:${member.nickname}`).join('|');
+        return nextSig === prevSig ? prev : members;
       });
-      members.sort((a, b) => a.nickname.localeCompare(b.nickname, undefined, { sensitivity: 'base' }));
-      setFamilyTaskMembers(members);
     })();
     return () => {
       cancelled = true;
     };
-  }, [currentGroupId]);
+  }, [currentGroupId, userId]);
 
   // 시스템 관리자 권한 확인 (bootstrap seed 후 REST RPC로 검증)
   useEffect(() => {

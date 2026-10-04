@@ -51,7 +51,30 @@ export function getLadderPathColor(laneIndex: number): string {
 
 export type LadderPoint = { x: number; y: number };
 
-/** 위→아래 경로 좌표 (결과 하이라이트용) */
+function ladderRungKey(row: number, leftLane: number): string {
+  return `${row}:${leftLane}`;
+}
+
+/** 한 층에서는 가로줄을 한 번만 타고, 다음 층은 항상 아래다. */
+function advanceLadderLane(
+  lane: number,
+  row: number,
+  rungAt: ReadonlyMap<string, LadderRung>,
+): number {
+  if (rungAt.has(ladderRungKey(row, lane))) return lane + 1;
+  if (rungAt.has(ladderRungKey(row, lane - 1))) return lane - 1;
+  return lane;
+}
+
+function indexLadderRungs(rungs: LadderRung[]): Map<string, LadderRung> {
+  const rungAt = new Map<string, LadderRung>();
+  for (const rung of rungs) {
+    rungAt.set(ladderRungKey(rung.row, rung.leftLane), rung);
+  }
+  return rungAt;
+}
+
+/** 위→아래 경로 좌표. y는 감소하지 않는다. */
 export function traceLadderPathPoints(
   startLane: number,
   rungs: LadderRung[],
@@ -63,26 +86,25 @@ export function traceLadderPathPoints(
 ): LadderPoint[] {
   let lane = startLane;
   const points: LadderPoint[] = [{ x: laneToX(lane), y: topY }];
+  const rungAt = indexLadderRungs(rungs);
 
-  const rungAt = new Map<string, LadderRung>();
-  for (const rung of rungs) {
-    rungAt.set(`${rung.row}:${rung.leftLane}`, rung);
-  }
+  const pushDown = (x: number, y: number) => {
+    const last = points[points.length - 1];
+    if (last && y < last.y) return;
+    points.push({ x, y });
+  };
 
   for (let row = 0; row < totalRows; row += 1) {
     const y = rowToY(row);
-    points.push({ x: laneToX(lane), y });
-
-    if (rungAt.has(`${row}:${lane}`)) {
-      lane += 1;
-      points.push({ x: laneToX(lane), y });
-    } else if (rungAt.has(`${row}:${lane - 1}`)) {
-      lane -= 1;
-      points.push({ x: laneToX(lane), y });
+    pushDown(laneToX(lane), y);
+    const nextLane = advanceLadderLane(lane, row, rungAt);
+    if (nextLane !== lane) {
+      lane = nextLane;
+      pushDown(laneToX(lane), y);
     }
   }
 
-  points.push({ x: laneToX(lane), y: bottomY });
+  pushDown(laneToX(lane), bottomY);
   return points;
 }
 
@@ -93,67 +115,11 @@ export function pointsToSvgPath(points: LadderPoint[]): string {
 
 export function traceLadderPath(startLane: number, rungs: LadderRung[], totalRows: number): number {
   let lane = startLane;
-  const byRow = new Map<number, LadderRung[]>();
-  for (const rung of rungs) {
-    const list = byRow.get(rung.row) ?? [];
-    list.push(rung);
-    byRow.set(rung.row, list);
-  }
-
+  const rungAt = indexLadderRungs(rungs);
   for (let row = 0; row < totalRows; row += 1) {
-    const rowRungs = byRow.get(row) ?? [];
-    for (const rung of rowRungs) {
-      if (rung.leftLane === lane) {
-        lane += 1;
-      } else if (rung.leftLane === lane - 1) {
-        lane -= 1;
-      }
-    }
+    lane = advanceLadderLane(lane, row, rungAt);
   }
   return lane;
-}
-
-/** 사용자가 그린 가로줄 + 나머지 랜덤 채움 (사다리타기 밀도) */
-export function generateDenseLadderRungs(
-  laneCount: number,
-  userRungs: LadderRung[],
-  totalRows: number,
-): LadderRung[] {
-  const occupied = new Set(userRungs.map((r) => `${r.leftLane}:${r.row}`));
-  const result = [...userRungs];
-
-  for (let row = 0; row < totalRows; row += 1) {
-    for (let leftLane = 0; leftLane < laneCount - 1; leftLane += 1) {
-      const key = `${leftLane}:${row}`;
-      if (occupied.has(key)) continue;
-      if (Math.random() < 0.62) {
-        result.push({ leftLane, row });
-        occupied.add(key);
-      }
-    }
-  }
-
-  for (let row = 0; row < totalRows; row += 1) {
-    const hasRungInRow = result.some((r) => r.row === row);
-    if (hasRungInRow || laneCount <= 1) continue;
-    const leftLane = Math.floor(Math.random() * (laneCount - 1));
-    const key = `${leftLane}:${row}`;
-    if (!occupied.has(key)) {
-      result.push({ leftLane, row });
-      occupied.add(key);
-    }
-  }
-
-  return result;
-}
-
-/** @deprecated generateDenseLadderRungs 사용 */
-export function fillRandomRungs(
-  laneCount: number,
-  existing: LadderRung[],
-  totalRows: number,
-): LadderRung[] {
-  return generateDenseLadderRungs(laneCount, existing, totalRows);
 }
 
 export type RPSChoice = 'rock' | 'paper' | 'scissors';

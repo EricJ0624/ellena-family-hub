@@ -131,6 +131,7 @@ export function FamilyGamesSection({
     cancelSession,
     lobbyJoin,
     leaveLobby,
+    loading: sessionLoading,
     actionLoading,
     isHost,
     isParticipant,
@@ -161,6 +162,13 @@ export function FamilyGamesSection({
   useEffect(() => {
     if (!hasLiveSession) setTabHint(null);
   }, [hasLiveSession]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('focus') !== 'games') return;
+    document.querySelector('[data-widget-key="games"]')?.scrollIntoView({ block: 'nearest' });
+  }, []);
 
   useEffect(() => {
     if (!bundle) {
@@ -264,6 +272,7 @@ export function FamilyGamesSection({
           onRemoveSlot={handleRemoveSlot}
           onStart={handleStartLobby}
           onCancel={isHost ? handleCancelSession : undefined}
+          sessionResolving={sessionLoading && !lobbyBundle}
           translations={lobbyTranslations}
           formatText={formatText}
         />

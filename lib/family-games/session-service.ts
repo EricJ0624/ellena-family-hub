@@ -553,6 +553,7 @@ async function handleLadderAction(
     let participantIds = [...config.participantIds];
     let destinations = [...config.destinations];
     let userRungs = config.userRungs ?? [];
+    let baseRungs = config.baseRungs ?? [];
 
     if (action.participantIds) {
       participantIds = action.participantIds;
@@ -581,9 +582,16 @@ async function handleLadderAction(
       userRungs = userRungs.filter(
         (r) => r.leftLane <= maxLeftLane && r.drawnBy !== removedId,
       );
+      baseRungs = baseRungs.filter((r) => r.leftLane <= maxLeftLane);
     }
 
-    const newConfig: LadderSessionConfig = { ...config, participantIds, destinations, userRungs };
+    const newConfig: LadderSessionConfig = {
+      ...config,
+      participantIds,
+      destinations,
+      userRungs,
+      baseRungs,
+    };
     await updateSession(supabase, session.id, {
       config: newConfig,
       updated_at: now,
@@ -684,10 +692,16 @@ async function handleLadderAction(
       if (hostValue) return hostValue;
       return `Result ${i + 1}`;
     });
+    const baseRungs = generateDenseLadderRungsSeeded(
+      visualLaneCount,
+      [],
+      LADDER_ROW_COUNT,
+      session.id,
+    );
     await updateSession(supabase, session.id, {
       status: 'active',
       phase: 'draw',
-      config: { ...config, startLanes, destinations, userRungs: [] },
+      config: { ...config, startLanes, destinations, userRungs: [], baseRungs },
       updated_at: now,
     });
     await supabase
@@ -710,7 +724,10 @@ async function handleLadderAction(
     }
 
     const userRungs = config.userRungs ?? [];
-    const exists = userRungs.some((r) => r.leftLane === leftLane && r.row === row);
+    const baseRungs = config.baseRungs ?? [];
+    const exists =
+      userRungs.some((r) => r.leftLane === leftLane && r.row === row) ||
+      baseRungs.some((r) => r.leftLane === leftLane && r.row === row);
     if (exists) throw new Error('RUNG_TAKEN');
 
     const newRung: LadderRung = { leftLane, row, drawnBy: userId };
@@ -736,12 +753,16 @@ async function handleLadderAction(
     if (!isHost || session.status !== 'active' || session.phase !== 'draw') throw new Error('FORBIDDEN');
     const laneCount = getLadderVisualLaneCount(config.participantIds.length);
     const userRungs = config.userRungs ?? [];
-    const finalRungs = generateDenseLadderRungsSeeded(
-      laneCount,
-      userRungs,
-      LADDER_ROW_COUNT,
-      session.id,
-    );
+    const baseRungs = config.baseRungs ?? [];
+    const finalRungs =
+      baseRungs.length > 0
+        ? [...baseRungs, ...userRungs]
+        : generateDenseLadderRungsSeeded(
+            laneCount,
+            userRungs,
+            LADDER_ROW_COUNT,
+            session.id,
+          );
     await updateSession(supabase, session.id, {
       status: 'revealing',
       phase: 'result',

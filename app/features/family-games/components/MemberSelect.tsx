@@ -15,6 +15,15 @@ interface MemberSelectProps {
   id?: string;
 }
 
+export function isOpaqueIdLabel(label: string, userId: string): boolean {
+  const value = label.trim();
+  const id = userId.trim();
+  if (!value || !id) return true;
+  if (value === id) return true;
+  const compact = id.replace(/-/g, '');
+  return value === compact || value === id.slice(0, 8) || value === compact.slice(0, 8);
+}
+
 export function getMemberNickname(
   members: FamilyTaskMemberOption[],
   userId: string,
@@ -23,8 +32,9 @@ export function getMemberNickname(
 ): string {
   if (!userId) return '';
   const found = members.find((m) => m.userId === userId);
-  if (!found) return userId;
+  if (!found) return '';
   if (currentUserId && found.userId === currentUserId && youLabel) return youLabel;
+  if (isOpaqueIdLabel(found.nickname, userId)) return '';
   return found.nickname;
 }
 

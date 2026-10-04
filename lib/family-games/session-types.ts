@@ -40,6 +40,8 @@ export type LadderSessionConfig = {
   /** 2명 모드: userId → 출발 세로줄 인덱스(0=A, 1=B, 2=C) */
   startLanes?: Record<string, number>;
   maxSlots?: number;
+  /** 고르기 전부터 보이는 기본 가로줄 */
+  baseRungs?: LadderRung[];
   userRungs?: LadderRung[];
   finalRungs?: LadderRung[];
   revealStartedAt?: string;
@@ -132,6 +134,7 @@ export function asLadderConfig(config: FamilyGameSessionConfig): LadderSessionCo
       c.startLanes && typeof c.startLanes === 'object'
         ? (c.startLanes as Record<string, number>)
         : undefined,
+    baseRungs: Array.isArray(c.baseRungs) ? c.baseRungs : undefined,
     userRungs: c.userRungs,
     finalRungs: c.finalRungs,
     revealStartedAt: c.revealStartedAt,

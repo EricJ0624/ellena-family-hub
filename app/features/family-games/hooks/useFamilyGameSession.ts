@@ -16,6 +16,7 @@ import {
 } from './useGameSessionApi';
 import { useFamilyGameRealtime } from './useFamilyGameRealtime';
 import { isSupabaseLockError } from '@/lib/supabase-error';
+import { supabase } from '@/lib/supabase';
 
 interface UseFamilyGameSessionProps {
   groupId: string | null;
@@ -25,7 +26,8 @@ interface UseFamilyGameSessionProps {
 export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionProps) {
   const [bundle, setBundle] = useState<FamilyGameSessionBundle | null>(null);
   const bundleRef = useRef<FamilyGameSessionBundle | null>(null);
-  const [loading, setLoading] = useState(false);
+  const refreshGenRef = useRef(0);
+  const [loading, setLoading] = useState(Boolean(groupId));
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,13 +37,19 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
 
   const refresh = useCallback(async () => {
     if (!groupId) {
+      refreshGenRef.current += 1;
       setBundle(null);
+      setLoading(false);
       return;
     }
+    const gen = ++refreshGenRef.current;
+    const isCurrent = () => gen === refreshGenRef.current;
+    let authPending = false;
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
       const data = await fetchActiveGameSession(groupId);
+      if (!isCurrent()) return;
       if (data) {
         setBundle(data);
         return;
@@ -55,28 +63,60 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
 
       try {
         const latest = await fetchGameSession(prev.session.id);
+        if (!isCurrent()) return;
         if (!latest || latest.session.status === 'cancelled') {
           setBundle(null);
         } else {
           setBundle(latest);
         }
       } catch {
+        if (!isCurrent()) return;
         setBundle(null);
       }
     } catch (err) {
+      if (!isCurrent()) return;
+      const message = err instanceof Error ? err.message : 'Failed to load session';
+      if (message === 'NOT_AUTHENTICATED') {
+        authPending = true;
+        return;
+      }
       // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
       if (!isSupabaseLockError(err)) {
         console.error('Failed to refresh game session:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load session');
+        setError(message);
       }
     } finally {
-      setLoading(false);
+      if (isCurrent() && !authPending) setLoading(false);
     }
   }, [groupId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!groupId) return undefined;
+    const run = () => {
+      void refresh();
+    };
+    run();
+    const { data: authSubscription } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        run();
+      }
+    });
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') run();
+    };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) run();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', run);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      authSubscription.subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', run);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [groupId, refresh]);
 
   useFamilyGameRealtime({
     groupId,

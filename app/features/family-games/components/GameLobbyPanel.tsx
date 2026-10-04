@@ -48,6 +48,7 @@ export interface GameLobbyPanelProps {
   onRemoveSlot: () => Promise<void>;
   onStart: () => Promise<void>;
   onCancel?: () => Promise<void>;
+  sessionResolving?: boolean;
   translations: GameLobbyTranslations;
   formatText: (template: string, vars: Record<string, string>) => string;
 }
@@ -66,6 +67,7 @@ export function GameLobbyPanel({
   onRemoveSlot,
   onStart,
   onCancel,
+  sessionResolving = false,
   translations: t,
   formatText,
 }: GameLobbyPanelProps) {
@@ -132,7 +134,7 @@ export function GameLobbyPanel({
             </span>
           </p>
         </div>
-        {!isParticipant ? (
+        {sessionResolving && !bundle ? null : !isParticipant ? (
           <button
             type="button"
             onClick={() => onJoin().catch(console.error)}

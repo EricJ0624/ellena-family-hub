@@ -95,10 +95,65 @@ const LABEL_BOTTOM_Y = 105;
 /** Vertical rails start/end (inside label padding) */
 const SVG_TOP = 18;
 const SVG_BOTTOM = 96;
-const VERTICAL_STROKE_MS = 650;
-const HORIZONTAL_RUNG_MS = 35;
 const HOST_DESTINATIONS_SAVE_DEBOUNCE_MS = 400;
+const PATH_DESCEND_MS = 1600;
+const USER_RUNG_REVEAL_MS = 450;
 const LEGACY_RESULT_DESTINATION_RE = /^Result \d+$/;
+
+function DescendingLadderPath({
+  d,
+  color,
+  animate,
+}: {
+  d: string;
+  color: string;
+  animate: boolean;
+}) {
+  const ref = useRef<SVGPathElement>(null);
+  const [dash, setDash] = useState<{ len: number; offset: number; run: boolean } | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !animate) {
+      setDash(null);
+      return undefined;
+    }
+    const len = el.getTotalLength();
+    setDash({ len, offset: len, run: false });
+    let frame2 = 0;
+    const frame1 = window.requestAnimationFrame(() => {
+      frame2 = window.requestAnimationFrame(() => {
+        setDash({ len, offset: 0, run: true });
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(frame1);
+      window.cancelAnimationFrame(frame2);
+    };
+  }, [animate, d]);
+
+  return (
+    <path
+      ref={ref}
+      d={d}
+      fill="none"
+      stroke={color}
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity={animate && !dash ? 0 : 0.85}
+      style={
+        dash
+          ? {
+              strokeDasharray: dash.len,
+              strokeDashoffset: dash.offset,
+              transition: dash.run ? `stroke-dashoffset ${PATH_DESCEND_MS}ms linear` : 'none',
+            }
+          : undefined
+      }
+    />
+  );
+}
 
 /** Server/legacy placeholder labels → empty so the input placeholder shows instead */
 function normalizeDestinationDisplay(
@@ -140,10 +195,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
       : ['', ''],
   );
   const [displayRungs, setDisplayRungs] = useState<LadderRung[]>([]);
-  const [isRevealing, setIsRevealing] = useState(false);
   const [showPaths, setShowPaths] = useState(false);
-  const [verticalRevealDone, setVerticalRevealDone] = useState(true);
-  const [verticalDrawActive, setVerticalDrawActive] = useState(true);
   const [celebrationDismissedKey, setCelebrationDismissedKey] = useState<string | null>(null);
 
   const configDestinationsKey = mpConfig?.destinations.join('|') ?? '';
@@ -152,6 +204,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
   const hostDestinationsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ladderRevealAnimRef = useRef<{ key: string; done: boolean }>({ key: '', done: false });
   const userRungs = mpConfig?.userRungs ?? [];
+  const baseRungs = mpConfig?.baseRungs ?? [];
   const finalRungs = mpConfig?.finalRungs ?? [];
   const mpPhase =
     mpSession?.status === 'active' && mpSession?.phase === 'draw'
@@ -205,76 +258,55 @@ export function LadderGameTab(props: LadderGameTabProps) {
     [],
   );
 
+  const baseRungKey = baseRungs.map((r) => `${r.leftLane}:${r.row}`).join(',');
+  const userRungKey = userRungs.map((r) => `${r.leftLane}:${r.row}:${r.drawnBy ?? ''}`).join(',');
+  const ladderRungsRef = useRef({ baseRungs, userRungs, finalRungs });
+  ladderRungsRef.current = { baseRungs, userRungs, finalRungs };
+
   useEffect(() => {
     if (!isMultiplayer || mpPhase !== 'result' || finalRungs.length === 0) return;
 
     const animKey = `${mpSession?.id ?? ''}:${mpConfig?.revealStartedAt ?? ''}`;
+    const { baseRungs: baseSource, userRungs: selected, finalRungs: finals } = ladderRungsRef.current;
+    const base = baseSource.length > 0 ? baseSource : finals.filter((r) => !r.drawnBy);
+    const withSelected = baseSource.length > 0 ? [...base, ...selected] : finals;
 
     const showFinalState = () => {
-      setVerticalRevealDone(true);
-      setVerticalDrawActive(true);
-      setDisplayRungs(finalRungs);
+      setDisplayRungs(finals);
       setShowPaths(true);
-      setIsRevealing(false);
     };
 
-    if (mpSession?.status === 'completed') {
+    const alreadyDone =
+      mpSession?.status === 'completed' ||
+      (ladderRevealAnimRef.current.key === animKey && ladderRevealAnimRef.current.done);
+
+    if (alreadyDone) {
       ladderRevealAnimRef.current = { key: animKey, done: true };
       showFinalState();
       return;
     }
 
-    if (ladderRevealAnimRef.current.key === animKey) {
-      if (ladderRevealAnimRef.current.done) {
-        showFinalState();
-      }
-      return;
-    }
-
     ladderRevealAnimRef.current = { key: animKey, done: false };
-
-    const userDrawn = userRungs;
-    const autoRungs = finalRungs.filter((r) => !r.drawnBy);
-    setIsRevealing(true);
     setShowPaths(false);
-    setDisplayRungs([]);
-    setVerticalRevealDone(false);
-    setVerticalDrawActive(false);
+    setDisplayRungs(base);
 
-    let rungTimer: number | undefined;
-    const raf = window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => setVerticalDrawActive(true));
-    });
-    const verticalDuration =
-      VERTICAL_STROKE_MS + Math.max(0, getLadderVisualLaneCount(participantIds.length) - 1) * 40;
-
-    const verticalTimer = window.setTimeout(() => {
-      setVerticalRevealDone(true);
-      setDisplayRungs([...userDrawn]);
-      let index = 0;
-      rungTimer = window.setInterval(() => {
-        if (index >= autoRungs.length) {
-          window.clearInterval(rungTimer!);
-          setIsRevealing(false);
-          window.setTimeout(() => {
-            setShowPaths(true);
-            ladderRevealAnimRef.current = { key: animKey, done: true };
-          }, 200);
-          if (props.mode === 'multiplayer' && props.isHost && mpSession?.status === 'revealing') {
-            props.onAction({ type: 'host_complete_ladder' }).catch(console.error);
-          }
-          return;
-        }
-        const next = autoRungs[index];
-        setDisplayRungs((prev) => [...prev, next]);
-        index += 1;
-      }, HORIZONTAL_RUNG_MS);
-    }, verticalDuration);
+    const addSelectedTimer = window.setTimeout(() => {
+      setDisplayRungs(withSelected);
+    }, USER_RUNG_REVEAL_MS);
+    const pathTimer = window.setTimeout(() => {
+      setShowPaths(true);
+    }, USER_RUNG_REVEAL_MS + 280);
+    const doneTimer = window.setTimeout(() => {
+      ladderRevealAnimRef.current = { key: animKey, done: true };
+      if (props.mode === 'multiplayer' && props.isHost && mpSession?.status === 'revealing') {
+        props.onAction({ type: 'host_complete_ladder' }).catch(console.error);
+      }
+    }, USER_RUNG_REVEAL_MS + 280 + PATH_DESCEND_MS);
 
     return () => {
-      window.cancelAnimationFrame(raf);
-      window.clearTimeout(verticalTimer);
-      if (rungTimer !== undefined) window.clearInterval(rungTimer);
+      window.clearTimeout(addSelectedTimer);
+      window.clearTimeout(pathTimer);
+      window.clearTimeout(doneTimer);
     };
   }, [
     isMultiplayer,
@@ -283,7 +315,8 @@ export function LadderGameTab(props: LadderGameTabProps) {
     mpSession?.status,
     mpConfig?.revealStartedAt,
     finalRungs.length,
-    participantIds.length,
+    baseRungKey,
+    userRungKey,
   ]);
 
   const laneCount = getLadderVisualLaneCount(participantIds.length);
@@ -347,15 +380,27 @@ export function LadderGameTab(props: LadderGameTabProps) {
     });
   }, [mpPhase, participantIds, destinations, finalRungs, members, userId, t.ladder_you, startLanes]);
 
-  const svgWidth = SVG_W;
-  const laneX = (lane: number) => (lane / Math.max(1, laneCount - 1)) * svgWidth;
-  const rowY = (row: number) =>
-    SVG_TOP + (row / Math.max(1, LADDER_ROW_COUNT - 1)) * (SVG_BOTTOM - SVG_TOP);
-  const verticalRailLength = SVG_BOTTOM - SVG_TOP;
   const topLabelFontSize = laneCount > 5 ? 3.2 : 3.8;
   const bottomLabelFontSize = laneCount > 5 ? 2.8 : 3.2;
-  const topLabelMaxLen = laneCount > 5 ? 5 : 8;
-  const bottomLabelMaxLen = laneCount > 5 ? 6 : 10;
+  const railPad = 8;
+  const laneX = (lane: number) => {
+    if (laneCount <= 1) return SVG_W / 2;
+    return railPad + (lane / (laneCount - 1)) * (SVG_W - railPad * 2);
+  };
+  const labelAnchor = (lane: number): 'start' | 'middle' | 'end' => {
+    if (laneCount <= 1) return 'middle';
+    if (lane === 0) return 'start';
+    if (lane === laneCount - 1) return 'end';
+    return 'middle';
+  };
+  const labelX = (lane: number) => {
+    if (laneCount <= 1) return SVG_W / 2;
+    if (lane === 0) return 1.2;
+    if (lane === laneCount - 1) return SVG_W - 1.2;
+    return laneX(lane);
+  };
+  const rowY = (row: number) =>
+    SVG_TOP + (row / Math.max(1, LADDER_ROW_COUNT - 1)) * (SVG_BOTTOM - SVG_TOP);
 
   const updateParticipant = (index: number, value: string) => {
     if (mode !== 'multiplayer' || !props.isHost || mpPhase !== 'draw') return;
@@ -480,7 +525,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
   };
 
   const handleRungClick = (leftLane: number, row: number) => {
-    if (mode !== 'multiplayer' || mpPhase !== 'draw' || userHasDrawn || isRevealing) return;
+    if (mode !== 'multiplayer' || mpPhase !== 'draw' || userHasDrawn) return;
     if (!participantIds.includes(userId)) return;
     props.onAction({ type: 'draw_rung', leftLane, row }).catch(console.error);
   };
@@ -619,7 +664,8 @@ export function LadderGameTab(props: LadderGameTabProps) {
     options: {
       interactive: boolean;
       showResultPaths: boolean;
-      animateVerticalReveal?: boolean;
+      animatePaths?: boolean;
+      occupiedRungs?: LadderRung[];
     },
   ) => (
     <div
@@ -637,34 +683,31 @@ export function LadderGameTab(props: LadderGameTabProps) {
         {topLaneLabels.map((label, lane) => (
           <text
             key={`top-${lane}`}
-            x={laneX(lane)}
+            x={labelX(lane)}
             y={LABEL_TOP_Y}
-            textAnchor="middle"
+            textAnchor={labelAnchor(lane)}
             dominantBaseline="middle"
             className="fill-slate-800 font-semibold"
             style={{ fontSize: topLabelFontSize }}
           >
-            {label.slice(0, topLabelMaxLen)}
+            {label}
           </text>
         ))}
         {destinations.map((label, lane) => (
           <text
             key={`bottom-${lane}`}
-            x={laneX(lane)}
+            x={labelX(lane)}
             y={LABEL_BOTTOM_Y}
-            textAnchor="middle"
+            textAnchor={labelAnchor(lane)}
             dominantBaseline="middle"
             className="fill-slate-700"
             style={{ fontSize: bottomLabelFontSize }}
           >
-            {label.slice(0, bottomLabelMaxLen)}
+            {label}
           </text>
         ))}
         {Array.from({ length: laneCount }).map((_, lane) => {
           const x = laneX(lane);
-          const animatingVertical = Boolean(options.animateVerticalReveal && !verticalRevealDone);
-          const dashOffset =
-            animatingVertical && !verticalDrawActive ? verticalRailLength : 0;
           return (
             <line
               key={`v-${lane}`}
@@ -675,21 +718,10 @@ export function LadderGameTab(props: LadderGameTabProps) {
               stroke="#475569"
               strokeWidth={0.85}
               strokeLinecap="round"
-              strokeDasharray={verticalRailLength}
-              strokeDashoffset={dashOffset}
-              style={
-                animatingVertical && verticalDrawActive
-                  ? {
-                      transition: `stroke-dashoffset ${VERTICAL_STROKE_MS}ms ease-out`,
-                      transitionDelay: `${lane * 40}ms`,
-                    }
-                  : undefined
-              }
             />
           );
         })}
-        {(options.animateVerticalReveal ? verticalRevealDone : true) &&
-          rungs.map((rung, idx) => {
+        {rungs.map((rung, idx) => {
             const x1 = laneX(rung.leftLane);
             const x2 = laneX(rung.leftLane + 1);
             const y = rowY(rung.row);
@@ -706,8 +738,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
               />
             );
           })}
-        {(options.animateVerticalReveal ? verticalRevealDone : true) &&
-          options.showResultPaths &&
+        {options.showResultPaths &&
           participantIds.map((participantId) => {
             const startLane = getUserStartLane(participantId, participantIds, startLanes);
             const pathPoints = traceLadderPathPoints(
@@ -721,23 +752,19 @@ export function LadderGameTab(props: LadderGameTabProps) {
             );
             const color = getLadderPathColor(startLane);
             return (
-              <path
+              <DescendingLadderPath
                 key={`path-${participantId}`}
                 d={pointsToSvgPath(pathPoints)}
-                fill="none"
-                stroke={color}
-                strokeWidth={1.6}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity={0.85}
+                color={color}
+                animate={Boolean(options.animatePaths)}
               />
             );
           })}
-        {(options.animateVerticalReveal ? verticalRevealDone : true) &&
-          options.interactive &&
+        {options.interactive &&
           Array.from({ length: LADDER_ROW_COUNT }).map((_, row) =>
             Array.from({ length: laneCount - 1 }).map((_, leftLane) => {
-              const taken = rungs.some((r) => r.leftLane === leftLane && r.row === row);
+              const occupied = options.occupiedRungs ?? rungs;
+              const taken = occupied.some((r) => r.leftLane === leftLane && r.row === row);
               if (taken) return null;
               const cx = (laneX(leftLane) + laneX(leftLane + 1)) / 2;
               const cy = rowY(row);
@@ -825,7 +852,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
         {renderLadderSvg(rungsToShow, {
           interactive: false,
           showResultPaths: showPaths,
-          animateVerticalReveal: isLiveReveal,
+          animatePaths: isLiveReveal && showPaths,
         })}
         {showPaths && (
           <ul className="m-0 list-none p-0">
@@ -885,9 +912,10 @@ export function LadderGameTab(props: LadderGameTabProps) {
 
       {renderLaneControls()}
 
-      {renderLadderSvg(userRungs, {
+      {renderLadderSvg(baseRungs.length > 0 ? baseRungs : userRungs, {
         interactive: participantIds.includes(userId),
         showResultPaths: false,
+        occupiedRungs: [...baseRungs, ...userRungs],
       })}
 
       {userHasDrawn && (
@@ -906,7 +934,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
           <button
             type="button"
             onClick={startLadder}
-            disabled={props.actionLoading || isRevealing}
+            disabled={props.actionLoading}
             className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
             style={{ fontSize: '4.5cqmin' }}
           >
