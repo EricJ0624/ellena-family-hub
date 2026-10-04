@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
-
-/** 카운트 및 베타 자격에서 제외할 테스트 이메일 */
-const BETA_EXCLUDED_EMAILS = ['soungtak@gmail.com', 'soungtak@icloud.com'];
+import { isBetaExcludedEmail } from '@/lib/beta-testers';
 
 /** 최근 N일 접속 기준 (일) */
 const RECENT_ACTIVITY_DAYS = 30;
@@ -163,10 +161,11 @@ export async function GET(request: NextRequest) {
     const usersWithDetails = allUsers.map((authUser) => {
       const profile = profilesData?.find((p) => p.id === authUser.id);
       const groupCount = groupIdsByUser.get(authUser.id)?.size ?? 0;
-      // Supabase auth.users 컬럼명은 banned_until (banned_at 아님)
+      // listUsers는 null인 banned_until·deleted_at 키를 빼서 undefined로 온다.
+      // !== null 이면 undefined도 탈퇴로 잡혀 베타 자격이 전부 빠진다.
       const isBanned = authUser.banned_until != null;
-      const isDeleted = authUser.deleted_at !== null;
-      const isExcluded = BETA_EXCLUDED_EMAILS.includes(authUser.email ?? '');
+      const isDeleted = authUser.deleted_at != null;
+      const isExcluded = isBetaExcludedEmail(authUser.email);
 
       // 베타 자격 판정: 이메일 인증 완료 + 그룹 소속 + 비제외 + 활성
       const emailConfirmedAt: string | null = authUser.email_confirmed_at ?? null;

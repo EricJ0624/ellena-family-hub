@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle, intlLocaleForLang, LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
 import { getCountryOptions, isValidCountryCode } from '@/lib/countries';
-import { getLoginTranslation, type LoginTranslations } from '@/lib/translations/login';
+import { formatLoginTranslation, getLoginTranslation, type LoginTranslations } from '@/lib/translations/login';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getAppBrandName } from '@/lib/apps';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
@@ -97,6 +97,8 @@ export default function LoginPage() {
   const [signupBlockReason, setSignupBlockReason] = useState<SignupBlockReason>('ok');
   /** 가입 한도(null=무제한). 100 이하일 때 베타 배너 표시 */
   const [signupMaxUsers, setSignupMaxUsers] = useState<number | null>(null);
+  /** 이 앱 베타 자격 인원. 페이지를 열 때 한 번만 조회한다. */
+  const [betaTesterCount, setBetaTesterCount] = useState<number | null>(null);
   const countryOptions = getCountryOptions(intlLocaleForLang(displayLang));
 
   const handleSignupLangChange = (code: LangCode) => {
@@ -155,6 +157,15 @@ export default function LoginPage() {
         // 한도값은 항상 저장 (베타 배너 표시 여부 판정)
         if (!cancelled && result && typeof result.signupMaxUsers === 'number') {
           setSignupMaxUsers(result.signupMaxUsers);
+        }
+        if (
+          !cancelled &&
+          result &&
+          typeof result.betaTesterCount === 'number' &&
+          Number.isInteger(result.betaTesterCount) &&
+          result.betaTesterCount >= 0
+        ) {
+          setBetaTesterCount(result.betaTesterCount);
         }
         if (cancelled || !result || result.allowed !== false) return;
         setSignupAllowed(false);
@@ -1011,6 +1022,14 @@ export default function LoginPage() {
         {mode === 'signup' && signupAllowed && signupMaxUsers !== null && signupMaxUsers <= 100 && (
           <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3">
             <p className="mb-1 text-[13px] font-bold text-purple-800">{t('beta_banner_title')}</p>
+            {betaTesterCount != null && signupMaxUsers != null && (
+              <p className="mb-1 text-[15px] font-bold text-purple-900">
+                {formatLoginTranslation(displayLang, 'beta_banner_count', {
+                  count: betaTesterCount,
+                  max: signupMaxUsers,
+                })}
+              </p>
+            )}
             <p className="text-[13px] leading-5 text-purple-700">{t('beta_banner_body')}</p>
           </div>
         )}
