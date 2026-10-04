@@ -25,6 +25,11 @@ import {
   playForegroundAlertFeedback,
   unlockAlertAudio,
 } from '@/lib/notifications/alert-feedback';
+import {
+  focusWidgetFromLocation,
+  notificationOpenUrl,
+  scrollDashboardWidgetIntoView,
+} from '@/lib/notifications/dashboard-focus';
 
 interface NotificationCenterProps {
   groupId: string | null;
@@ -232,9 +237,26 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
       setUnreadCount((c) => Math.max(0, c - 1));
     }
     setOpen(false);
-    if (item.url) {
-      window.location.assign(item.url);
+    const target = notificationOpenUrl(item.url || '/dashboard', item.widget_key);
+    let next: URL;
+    try {
+      next = new URL(target, window.location.origin);
+    } catch {
+      window.location.assign(target);
+      return;
     }
+    if (next.origin !== window.location.origin) {
+      window.location.assign(next.href);
+      return;
+    }
+    const samePlace =
+      next.pathname === window.location.pathname && next.search === window.location.search;
+    if (samePlace) {
+      const focus = focusWidgetFromLocation(next.search);
+      if (focus) scrollDashboardWidgetIntoView(focus);
+      return;
+    }
+    window.location.assign(`${next.pathname}${next.search}${next.hash}`);
   };
 
   const approveJoinRequest = async (item: NotificationRow, e: MouseEvent) => {

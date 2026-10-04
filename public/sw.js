@@ -58,33 +58,52 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// 알림 클릭 처리
+function notificationTargetUrl(raw) {
+  try {
+    return new URL(raw || '/dashboard', self.location.origin).href;
+  } catch (e) {
+    return new URL('/dashboard', self.location.origin).href;
+  }
+}
+
+// 알림 클릭 처리. 이미 열린 창은 포커스만 하지 않고 알림 주소로 이동한다.
 self.addEventListener('notificationclick', (event) => {
   console.log('[sw.js] 알림 클릭:', event);
-  
+
   event.notification.close();
-  
-  // 앱 열기 또는 특정 페이지로 이동
-  const urlToOpen = event.notification.data?.url || '/dashboard';
-  
-  event.waitUntil(
-    clients.matchAll({
+
+  const targetUrl = notificationTargetUrl(event.notification.data?.url);
+
+  event.waitUntil((async () => {
+    const clientList = await clients.matchAll({
       type: 'window',
-      includeUncontrolled: true
-    }).then((clientList) => {
-      // 이미 열려있는 창이 있으면 포커스
-      for (let i = 0; i < clientList.length; i++) {
-        const client = clientList[i];
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
+      includeUncontrolled: true,
+    });
+    const existing = clientList.find((client) => {
+      try {
+        return new URL(client.url).origin === self.location.origin;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    if (existing) {
+      if (existing.url !== targetUrl && typeof existing.navigate === 'function') {
+        try {
+          await existing.navigate(targetUrl);
+          return existing.focus();
+        } catch (e) {
+          console.warn('[sw.js] 알림 주소로 이동 실패, 페이지에 전달:', e);
         }
       }
-      // 새 창 열기
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
+      existing.postMessage({ type: 'NOTIFICATION_OPEN', url: targetUrl });
+      return existing.focus();
+    }
+
+    if (clients.openWindow) {
+      return clients.openWindow(targetUrl);
+    }
+  })());
 });
 
 // 백그라운드 위치 추적

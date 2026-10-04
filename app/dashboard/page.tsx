@@ -133,6 +133,10 @@ import {
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, readWidgetConfigCache } from '@/lib/widgets/widget-configs';
 import {
+  focusWidgetFromLocation,
+  scrollDashboardWidgetIntoView,
+} from '@/lib/notifications/dashboard-focus';
+import {
   readDashboardContentSnapshot,
   writeDashboardContentSnapshot,
 } from '@/lib/dashboard-content-snapshot';
@@ -6726,6 +6730,46 @@ export default function FamilyHub() {
         }),
     [widgetConfigs],
   );
+
+  useEffect(() => {
+    const focus = focusWidgetFromLocation(window.location.search);
+    if (!focus || orderedWidgets.length === 0) return undefined;
+    let cancelled = false;
+    const tryScroll = () => {
+      if (!cancelled) scrollDashboardWidgetIntoView(focus);
+    };
+    const first = window.setTimeout(tryScroll, 0);
+    const second = window.setTimeout(tryScroll, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(first);
+      window.clearTimeout(second);
+    };
+  }, [orderedWidgets]);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; url?: string } | null;
+      if (!data || data.type !== 'NOTIFICATION_OPEN' || typeof data.url !== 'string') return;
+      let next: URL;
+      try {
+        next = new URL(data.url, window.location.origin);
+      } catch {
+        return;
+      }
+      if (next.origin !== window.location.origin) return;
+      const samePlace =
+        next.pathname === window.location.pathname && next.search === window.location.search;
+      if (!samePlace) {
+        window.location.assign(`${next.pathname}${next.search}${next.hash}`);
+        return;
+      }
+      const focus = focusWidgetFromLocation(next.search);
+      if (focus) scrollDashboardWidgetIntoView(focus);
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, []);
 
   // 개발 모드 전용: 위젯 그리드 배치 충돌 감지 (명시적 gridColumnStart/gridRowStart 기준)
   useEffect(() => {

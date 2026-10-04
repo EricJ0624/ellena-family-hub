@@ -164,13 +164,6 @@ export function FamilyGamesSection({
   }, [hasLiveSession]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('focus') !== 'games') return;
-    document.querySelector('[data-widget-key="games"]')?.scrollIntoView({ block: 'nearest' });
-  }, []);
-
-  useEffect(() => {
     if (!bundle) {
       setModalOpen(false);
       return;
