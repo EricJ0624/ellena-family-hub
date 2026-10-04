@@ -400,7 +400,7 @@ function AlbumPreview() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="album-book-art"
-              src="/family-album/spread-frame.png?v=2"
+              src="/family-album/spread-frame.webp?v=3"
               alt=""
               draggable={false}
             />

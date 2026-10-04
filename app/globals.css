@@ -288,7 +288,7 @@ button.travel-kids-add-trip-submit {
 }
 
 .content-section.travel-kids-widget {
-  --travel-kids-banner: url('/travel-planner/widget-banner.png?v=67');
+  --travel-kids-banner: url('/travel-planner/widget-banner.webp?v=68');
   position: relative;
   isolation: isolate;
   display: flex;
@@ -817,7 +817,7 @@ ul.travel-trip-list--scroll {
 html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 html[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget {
   /* shorthand로 핑크 gradient !important 잔상까지 제거 */
-  --travel-diary-kids-bg: url('/travel-diary/widget-bg.png?v=8');
+  --travel-diary-kids-bg: url('/travel-diary/widget-bg.webp?v=9');
   background: #ffffff !important;
 }
 
@@ -1249,8 +1249,8 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   --chalkboard-inset-right: 7%;
   --chalkboard-inset-bottom: 7.5%;
   --chalkboard-inset-left: 8%;
-  --chalkboard-newtask-image: url('/family-tasks/chalkboard-newtask.png');
-  /* public/family-tasks/chalkboard-newtask.png (467×558) — 텍스트 없음, HTML i18n 오버레이 */
+  --chalkboard-newtask-image: url('/family-tasks/chalkboard-newtask.webp');
+  /* public/family-tasks/chalkboard-newtask.webp (467×558, 무손실) — 텍스트 없음, HTML i18n 오버레이 */
   --chalkboard-newtask-aspect: 467 / 558;
 }
 
@@ -1505,8 +1505,13 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 }
 
 :root[data-ui-theme='kids_friendly'] {
-  /* 셸 바탕만 highend_glass와 동일. 위젯 패널은 키즈용 불투명 카드 유지 */
+  /* Family / Couple / Biker / Camper 공통. app_id 분기 없이 data-ui-theme 만 사용.
+     셸 바탕만 highend_glass와 동일. 위젯 패널은 키즈용 불투명 카드 유지.
+     예전 ::before(screen) 오브는 여기 일반 그라데이션으로 합쳐 위젯과 따로 합성하지 않는다. */
   --app-shell-inner-bg:
+    radial-gradient(circle at 12% 10%, rgba(34, 211, 238, 0.42) 0%, transparent 40%),
+    radial-gradient(circle at 88% 16%, rgba(244, 114, 182, 0.38) 0%, transparent 38%),
+    radial-gradient(circle at 70% 90%, rgba(251, 146, 60, 0.34) 0%, transparent 42%),
     radial-gradient(ellipse 90% 70% at 8% 12%, rgba(34, 211, 238, 0.55) 0%, transparent 58%),
     radial-gradient(ellipse 80% 60% at 92% 8%, rgba(244, 114, 182, 0.5) 0%, transparent 55%),
     radial-gradient(ellipse 70% 55% at 78% 88%, rgba(251, 146, 60, 0.42) 0%, transparent 52%),
@@ -1535,7 +1540,9 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 }
 
 .dark[data-ui-theme='kids_friendly'] {
-  --app-shell-inner-bg: linear-gradient(135deg, #1c1917 0%, #292524 42%, #0c4a6e 100%);
+  --app-shell-inner-bg:
+    radial-gradient(circle at 14% 12%, rgba(180, 83, 9, 0.45) 0%, transparent 55%),
+    linear-gradient(135deg, #1c1917 0%, #292524 42%, #0c4a6e 100%);
   --app-shell-outer-bg: radial-gradient(circle at 14% 12%, #b45309 0%, #0f172a 55%);
   --app-shell-canvas: #1c1917;
   --glass-bg: rgba(30, 41, 59, 0.94); /* slate-800 */
@@ -1772,7 +1779,8 @@ select:not(.chalkboard-form-input) {
   }
 
   /*
-   * High-end + Kids: orb 배경이 스크롤해도 위젯 뒤로 남도록 고정 + ambient 레이어.
+   * High-end: orb 배경이 스크롤해도 위젯 뒤로 남도록 고정 + ::before ambient.
+   * Kids 오브는 --app-shell-inner-bg 한 장. screen 합성 레이어는 쓰지 않는다.
    * Neo Brutal(default)은 아래 전용 스트라이프 규칙을 사용.
    * background-attachment:fixed 는 iOS/Android 크롬에서 하단이 하얗게 남는 버그가 있어
    * 마우스 포인터(데스크톱)에서만 켠다.
@@ -1811,22 +1819,8 @@ select:not(.chalkboard-form-input) {
     mix-blend-mode: normal;
   }
 
-  :root[data-ui-theme='kids_friendly'] .app-container::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background-image: var(--app-shell-outer-bg);
-    background-repeat: no-repeat;
-    background-size: cover;
-    opacity: 0.55;
-    mix-blend-mode: screen;
-  }
-
   :root[data-ui-theme='highend_glass'] .app-container > *,
-  .dark[data-ui-theme='highend_glass'] .app-container > *,
-  :root[data-ui-theme='kids_friendly'] .app-container > * {
+  .dark[data-ui-theme='highend_glass'] .app-container > * {
     position: relative;
     z-index: 1;
   }
@@ -2226,6 +2220,20 @@ select:not(.chalkboard-form-input) {
 :root[data-ui-theme='highend_glass'] .content-section,
 .dark[data-ui-theme='highend_glass'] .content-section {
   border-color: transparent;
+}
+
+/* Family: 등장은 바로 불투명. blur(0) 유리 레이어도 만들지 않는다. 카드 색·그림은 그대로. */
+:root[data-ui-theme='kids_friendly'] .content-section,
+.dark[data-ui-theme='kids_friendly'] .content-section,
+:root[data-ui-theme='kids_friendly'] .glass-panel,
+:root[data-ui-theme='kids_friendly'] .glass-panel-soft,
+:root[data-ui-theme='kids_friendly'] .glass-panel-strong,
+.dark[data-ui-theme='kids_friendly'] .glass-panel,
+.dark[data-ui-theme='kids_friendly'] .glass-panel-soft,
+.dark[data-ui-theme='kids_friendly'] .glass-panel-strong {
+  animation: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 :root[data-ui-theme='kids_friendly'] .glass-panel,
@@ -6622,8 +6630,27 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
  * Kids Family Chat — 표현만. 전송·첨부·크기 규칙은 위 공통 블록 유지.
  * backdrop-filter 는 쓰지 않음 (반투명+inset shadow 로 글래스/뉴모픽).
  */
+.widget-chrome[data-widget-key='chat']:has(.chat-widget-section--kids),
+.widget-chrome[data-widget-key='chat']:has(.chat-widget-section--kids) > .widget-scale-root {
+  overflow: hidden;
+  border-radius: var(--border-radius-xl);
+  background: linear-gradient(
+    135deg,
+    #c4b0e8 0%,
+    #d3c0ea 34%,
+    #e6d2e4 54%,
+    #f3d6c6 78%,
+    #f0c4a4 100%
+  );
+  box-shadow: none;
+}
+
 .chat-widget-section.chat-widget-section--kids {
   position: relative;
+  /* isolate·바깥 그림자는 둥근 모서리에 흰 반투명 선을 남긴다 */
+  isolation: auto;
+  border: 0;
+  box-shadow: none;
   /* 초안: 왼쪽 대각선 반은 라벤더, 오른쪽 아래는 피치 */
   background: linear-gradient(
     135deg,
@@ -6633,10 +6660,6 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
     #f3d6c6 78%,
     #f0c4a4 100%
   );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 0 28px rgba(255, 214, 170, 0.38),
-    var(--glass-medium-shadow);
 }
 
 .chat-widget-section--kids .chat-section-header {

@@ -339,7 +339,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
             {isKidsTheme && rocketTick > 0 ? (
               <img
                 key={rocketTick}
-                src="/family-calendar/emojis/rocket.png"
+                src="/family-calendar/emojis/rocket.webp"
                 alt=""
                 aria-hidden
                 className="calendar-kids-rocket pointer-events-none absolute left-1/2 z-[6] w-[16cqmin] bg-transparent"

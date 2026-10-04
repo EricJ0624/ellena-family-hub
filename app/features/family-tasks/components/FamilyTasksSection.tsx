@@ -645,10 +645,10 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
         <defs>
           <filter
             id="chalkboard-chalk-texture"
-            x="-50%"
-            y="-50%"
-            width="200%"
-            height="200%"
+            x="-20%"
+            y="-30%"
+            width="140%"
+            height="160%"
             colorInterpolationFilters="sRGB"
           >
             <feTurbulence
