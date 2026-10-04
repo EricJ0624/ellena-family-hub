@@ -28,6 +28,16 @@ const PHOTOS_PER_PAGE = 9;
 const PHOTOS_PER_SPREAD = PHOTOS_PER_PAGE * 2;
 const ALBUM_GAP_PX = 6;
 const ALBUM_THUMB_MIN_PX = 28;
+/** 네오 브루탈: 한 줄 8장, 보이는 세로는 4장. */
+const NEO_ALBUM_COLS = 8;
+const NEO_ALBUM_ROWS = 4;
+
+function computeNeoThumbSize(width: number, height: number): number {
+  if (width <= 0 || height <= 0) return ALBUM_THUMB_MIN_PX;
+  const byW = (width - ALBUM_GAP_PX * (NEO_ALBUM_COLS - 1)) / NEO_ALBUM_COLS;
+  const byH = (height - ALBUM_GAP_PX * (NEO_ALBUM_ROWS - 1)) / NEO_ALBUM_ROWS;
+  return Math.max(ALBUM_THUMB_MIN_PX, Math.floor(Math.min(byW, byH)));
+}
 
 function getAlbumGridLayout(count: number): { cols: number; rows: number } {
   if (count <= 10) return { cols: 5, rows: 2 };
@@ -151,32 +161,38 @@ function FamilyAlbumClassicSection({
   onPhotoClick,
   onViewAllClick,
   translations: t,
-}: Omit<FamilyAlbumSectionProps, 'uiTheme'>) {
+  neoFixedGrid = false,
+}: Omit<FamilyAlbumSectionProps, 'uiTheme'> & { neoFixedGrid?: boolean }) {
   const { cols, rows } = getAlbumGridLayout(photos.length);
   const measureRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const [thumbPx, setThumbPx] = useState(ALBUM_THUMB_MIN_PX);
 
   useEffect(() => {
-    const el = measureRef.current;
-    if (!el || photos.length === 0) return;
+    if (photos.length === 0) return;
 
     let rafId = 0;
     const update = () => {
+      const el = neoFixedGrid ? gridRef.current : measureRef.current;
+      if (!el) return;
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
-        const next = computeThumbSize(el.clientWidth, el.clientHeight, cols, rows);
+        const next = neoFixedGrid
+          ? computeNeoThumbSize(el.clientWidth, el.clientHeight)
+          : computeThumbSize(el.clientWidth, el.clientHeight, cols, rows);
         setThumbPx((prev) => (prev === next ? prev : next));
       });
     };
 
     update();
     const ro = new ResizeObserver(update);
-    ro.observe(el);
+    if (measureRef.current) ro.observe(measureRef.current);
+    if (gridRef.current) ro.observe(gridRef.current);
     return () => {
       cancelAnimationFrame(rafId);
       ro.disconnect();
     };
-  }, [cols, rows, photos.length]);
+  }, [cols, rows, photos.length, neoFixedGrid]);
 
   return (
     <section className="content-section">
@@ -198,7 +214,18 @@ function FamilyAlbumClassicSection({
             {t.empty_state}
           </p>
         ) : (
-          <div className="album-photo-grid" style={{ gap: ALBUM_GAP_PX }}>
+          <div
+            ref={neoFixedGrid ? gridRef : undefined}
+            className={`album-photo-grid${neoFixedGrid ? ' album-photo-grid--scroll' : ''}`}
+            style={
+              neoFixedGrid
+                ? {
+                    gap: ALBUM_GAP_PX,
+                    ['--album-thumb' as string]: `${thumbPx}px`,
+                  }
+                : { gap: ALBUM_GAP_PX }
+            }
+          >
             {photos.map((photo) => (
               <div
                 key={photo.id}
@@ -209,6 +236,7 @@ function FamilyAlbumClassicSection({
                 className="album-photo-cell cursor-pointer transition-[filter] duration-200 ease-in-out hover:brightness-105"
                 style={{
                   width: thumbPx,
+                  height: thumbPx,
                   flex: `0 0 ${thumbPx}px`,
                 }}
               >
@@ -384,6 +412,7 @@ export function FamilyAlbumSection({
       onPhotoClick={onPhotoClick}
       onViewAllClick={onViewAllClick}
       translations={translations}
+      neoFixedGrid={uiTheme === 'default'}
     />
   );
 }

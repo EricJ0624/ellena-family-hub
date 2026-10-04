@@ -6896,5 +6896,50 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .
   overflow: visible;
 }
 
+/*
+ * 네오 브루탈: 가족 여행 플래너만 layout 높이 6이라 다른 M 위젯(8)보다 낮다.
+ * 카드 높이만 8/6으로 맞춘다. Kids·글래스 레이아웃은 그대로.
+ */
+:root[data-ui-theme='default'] .dashboard-widget-grid > *:has(> .widget-chrome[data-widget-key='travel']:not(:has(.travel-kids-widget))),
+.dark[data-ui-theme='default'] .dashboard-widget-grid > *:has(> .widget-chrome[data-widget-key='travel']:not(:has(.travel-kids-widget))) {
+  min-height: calc(var(--widget-min-h, 0px) * 8 / 6) !important;
+}
+
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel']:not(:has(.travel-kids-widget)) > .widget-scale-root,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel']:not(:has(.travel-kids-widget)) > .widget-scale-root {
+  height: calc(var(--widget-scale-box-h, var(--widget-min-h, 0px)) * 8 / 6);
+  min-height: calc(var(--widget-min-h, 0px) * 8 / 6);
+}
+
+:root[data-ui-theme='default'] .album-photo-grid--scroll,
+.dark[data-ui-theme='default'] .album-photo-grid--scroll {
+  display: grid;
+  grid-template-columns: repeat(8, var(--album-thumb, 28px));
+  grid-auto-rows: var(--album-thumb, 28px);
+  justify-content: center;
+  align-content: start;
+  align-items: start;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.35) transparent;
+}
+
+:root[data-ui-theme='default'] .album-photo-grid--scroll .album-photo-cell,
+.dark[data-ui-theme='default'] .album-photo-grid--scroll .album-photo-cell {
+  width: var(--album-thumb, 28px);
+  height: var(--album-thumb, 28px);
+  min-width: var(--album-thumb, 28px);
+  min-height: var(--album-thumb, 28px);
+}
+
+:root[data-ui-theme='default'] .album-photo-grid--scroll .album-photo-frame,
+.dark[data-ui-theme='default'] .album-photo-grid--scroll .album-photo-frame {
+  height: 100%;
+  padding-bottom: 0;
+}
+
 /* Travel itinerary document — preview uses iframe (srcDoc); print via iframe.contentWindow.print() */
 

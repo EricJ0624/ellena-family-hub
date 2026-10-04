@@ -483,34 +483,17 @@ export function TravelDiaryDashboardSection({
       ))}
     </ul>
   ) : (
-    <ul className="m-0 list-none space-y-2 p-0">
+    <ul className="m-0 list-none p-0">
       {list.map((trip) => (
-        <li key={trip.id} className="rounded-xl bg-transparent px-0 py-1.5">
-          <div className="break-words font-semibold text-slate-800">{trip.title}</div>
-          <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
-            <span aria-hidden>📅</span>
-            <span>
-              {trip.start_date} ~ {trip.end_date}
-            </span>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {trip.diary_enabled ? (
-              <button
-                type="button"
-                onClick={() => onOpenTrip(trip.id)}
-                className="cursor-pointer rounded-full border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
-              >
-                {t.open_diary}
-              </button>
-            ) : canUserOptInDiaryForTrip(trip) ? (
-              <button
-                type="button"
-                onClick={() => void onStartTrip(trip.id)}
-                className="cursor-pointer rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-100"
-              >
-                {t.start_trip_diary}
-              </button>
-            ) : null}
+        <li
+          key={trip.id}
+          onClick={() => onOpenTrip(trip.id)}
+          className="glass-panel-soft glass-panel-interactive cursor-pointer rounded-lg text-[#1e293b] transition-colors hover:bg-white/50"
+          style={{ marginBottom: '1.5cqmin', padding: '2.5cqmin 3cqmin', fontSize: '5cqmin' }}
+        >
+          <div className="font-semibold">{trip.title}</div>
+          <div className="text-[#64748b]" style={{ marginTop: '0.5cqmin', fontSize: '4cqmin' }}>
+            {trip.start_date} ~ {trip.end_date}
           </div>
         </li>
       ))}

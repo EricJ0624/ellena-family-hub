@@ -43,6 +43,7 @@ import { motion } from 'framer-motion';
 import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
 import { GlassSafeModal } from '@/app/components/GlassSafeModal';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { sameGroupId } from '@/lib/group-id-resolve';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
 import { isSupabaseLockError } from '@/lib/supabase-error';
@@ -257,7 +258,7 @@ function getStoredAdminLang(): LangCode {
 
 export default function AdminPage() {
   const router = useRouter();
-  const { setCurrentGroupId } = useGroup();
+  const { setCurrentGroupId, groups: memberGroups } = useGroup();
   const [adminLang, setAdminLangState] = useState<LangCode>('ko');
   useLanguage(); // ensure provider is present; admin UI uses adminLang (9 locales)
   useEffect(() => {
@@ -1367,6 +1368,11 @@ export default function AdminPage() {
     }
     return sections;
   }, [filteredGroups, adminLang]);
+
+  const isMemberOfListedGroup = useCallback(
+    (groupId: string) => memberGroups.some((group) => sameGroupId(group.id, groupId)),
+    [memberGroups],
+  );
 
   const filteredManageableGroups = useMemo(() => {
     return manageableGroups.filter((group) => {
@@ -2523,13 +2529,14 @@ export default function AdminPage() {
                           >
                             {at('set_quota')}
                           </button>
-                        {/* 시스템 관리자: 전 앱 그룹 관리 가능 */}
+                        {isMemberOfListedGroup(group.id) ? (
                         <button
                             className="flex-1 cursor-pointer rounded-lg border-none bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                             onClick={() => handleSelectGroupForAdmin(group.id)}
                           >
 {at('manage_btn')}
                             </button>
+                        ) : null}
                         <button
                           className={`cursor-pointer rounded-lg border-none px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                             suspendedGroupIds.has(group.id)
@@ -2549,7 +2556,7 @@ export default function AdminPage() {
                         </button>
                         <button
                           className={`cursor-pointer rounded-lg border-none bg-red-100 px-4 py-2 text-sm font-semibold text-red-800 transition-colors hover:bg-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70 ${
-                            manageableGroups.some(mg => mg.id === group.id) ? 'flex-1' : 'w-full'
+                            isMemberOfListedGroup(group.id) ? 'flex-1' : 'w-full'
                           }`}
                           onClick={async () => {
                             const msg = at('confirm_delete_group').replace(/\$\{groupName\}/g, adminGroupLabel(group));
