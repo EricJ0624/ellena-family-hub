@@ -7213,13 +7213,19 @@ export default function FamilyHub() {
 
       {/* Nickname Modal */}
       {isNicknameModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsNicknameModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">
+        <div
+          className="modal-overlay fixed inset-0 z-[1100] grid place-items-center overflow-hidden px-4 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]"
+          onClick={() => setIsNicknameModalOpen(false)}
+        >
+          <div
+            className="modal-content flex max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1.5rem)] min-h-0 w-full flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="modal-title shrink-0">
               <span className="modal-icon">✏️</span>
               {dt('nickname_modal_title')}
             </h3>
-            <div className="modal-form">
+            <div className="modal-form min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
               <div className="form-field">
                 <label className="form-label">{dt('nickname_label')}</label>
                 <input 
@@ -7273,7 +7279,7 @@ export default function FamilyHub() {
                 active={isNicknameModalOpen}
               />
             </div>
-            <div className="modal-actions">
+            <div className="modal-actions shrink-0">
               <button 
                 onClick={() => setIsNicknameModalOpen(false)} 
                 className="btn-secondary"

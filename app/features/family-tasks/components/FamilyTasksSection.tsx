@@ -8,6 +8,7 @@
 
 import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TopLayerDialog } from '@/app/components/TopLayerDialog';
+import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 import {
@@ -154,12 +155,26 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
       const member = taskMembers.find((m) => m.userId === uid);
-      const nick = member?.nickname ?? uid.slice(0, 8);
+      const rawNick = member?.nickname?.trim() ?? '';
+      const nick = rawNick && !isOpaqueIdLabel(rawNick, uid) ? rawNick : '';
       const role = familyRoleByUserId[uid] ?? null;
+      if (!nick && !role) return '';
       if (!role) return nick;
+      if (!nick) return `${getFamilyRoleEmoji(role)} ${getFamilyRoleLabel(lang, role)}`;
       return `${getFamilyRoleEmoji(role)} ${nick} - ${getFamilyRoleLabel(lang, role)}`;
     },
     [taskMembers, familyRoleByUserId, lang, getFamilyRoleEmoji, getFamilyRoleLabel]
+  );
+
+  const assigneeText = useCallback(
+    (task: FamilyTask) => {
+      if (!task.assigned_to_user_id) return task.assignee || '';
+      const resolved = formatAssigneeDisplay(task.assigned_to_user_id);
+      if (resolved && !isOpaqueIdLabel(resolved, task.assigned_to_user_id)) return resolved;
+      if (task.assignee && !isOpaqueIdLabel(task.assignee, task.assigned_to_user_id)) return task.assignee;
+      return '';
+    },
+    [formatAssigneeDisplay]
   );
 
   const assigneeDisplayFromUserIdRef = useRef(formatAssigneeDisplay);
@@ -174,13 +189,21 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     let changed = false;
     const next = cur.map((task) => {
       if (!task.assigned_to_user_id) return task;
-      const nextAssignee = resolve(task.assigned_to_user_id);
-      if (nextAssignee === task.assignee) return task;
-      changed = true;
-      return { ...task, assignee: nextAssignee };
+      const resolved = resolve(task.assigned_to_user_id);
+      const resolvedOk = Boolean(resolved) && !isOpaqueIdLabel(resolved, task.assigned_to_user_id);
+      if (resolvedOk) {
+        if (resolved === task.assignee) return task;
+        changed = true;
+        return { ...task, assignee: resolved };
+      }
+      if (task.assignee && isOpaqueIdLabel(task.assignee, task.assigned_to_user_id)) {
+        changed = true;
+        return { ...task, assignee: '' };
+      }
+      return task;
     });
     if (changed) onTasksChange(next);
-  }, [taskMembers, familyRoleByUserId, lang, onTasksChange]);
+  }, [tasks, taskMembers, familyRoleByUserId, lang, onTasksChange]);
 
   const { addTask, toggleTask, deleteTask, claimTask, applyTasksChange } = useFamilyTasks({
     currentGroupId,
@@ -567,7 +590,9 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
           >
             {visibleTasks.length > 0 ? (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                {visibleTasks.map((task) => (
+                {visibleTasks.map((task) => {
+                  const assigneeLabel = assigneeText(task);
+                  return (
                   <li
                     key={task.id}
                     className="flex items-center gap-2 rounded-xl border border-glass-medium bg-glass-soft px-3 py-2 shadow-glass-soft backdrop-blur-glass-soft"
@@ -596,9 +621,9 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                         >
                           {task.text}
                         </span>
-                        {task.assignee ? (
+                        {assigneeLabel ? (
                           <span className="mt-0.5 block text-xs text-slate-500">
-                            {task.assignee === '누구나' ? t.anyone : task.assignee}
+                            {assigneeLabel === '누구나' ? t.anyone : assigneeLabel}
                           </span>
                         ) : null}
                       </span>
@@ -625,7 +650,8 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                       </button>
                     )}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             ) : (
               <p className="m-0 text-center text-slate-500" style={{ padding: '8cqmin 4cqmin', fontSize: '5cqmin' }}>
@@ -709,7 +735,9 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                     : undefined
                 }
               >
-                {visibleTasks.map((task) => (
+                {visibleTasks.map((task) => {
+                  const assigneeLabel = assigneeText(task);
+                  return (
                   <div key={task.id} className="todo-item">
                     <div onClick={() => handleToggleTask(task.id)} className="todo-content">
                       <div className={`todo-checkbox ${task.done ? 'todo-checkbox-checked' : ''}`}>
@@ -721,11 +749,11 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                       </div>
                       <div className="todo-text-wrapper">
                         <span className={`todo-text ${task.done ? 'todo-text-done' : ''}`}>{task.text}</span>
-                        {task.assignee && (
+                        {assigneeLabel ? (
                           <span className="todo-assignee">
-                            {task.assignee === '누구나' ? t.anyone : task.assignee}
+                            {assigneeLabel === '누구나' ? t.anyone : assigneeLabel}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                     {!task.done && !task.assigned_to_user_id && !isTempTaskId(task.id) ? (
@@ -745,7 +773,8 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                       </button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p
