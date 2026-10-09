@@ -7,7 +7,7 @@ import { KIDS_ADD_DECOS } from '../kids-add-decorations';
 
 const KidsAddDecorations = memo(function KidsAddDecorations() {
   return (
-    <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
       {KIDS_ADD_DECOS.map((item) => (
         <img
           key={item.src}
@@ -194,7 +194,7 @@ function CalendarEventForm({
     setDatePickerOpen((prev) => (prev === which ? null : which));
   };
 
-  const fieldCls = `flex items-center gap-0.5 ${isKidsTheme ? 'rounded-2xl bg-white/85 px-2 py-1.5 shadow-sm' : 'rounded-lg border border-slate-200 px-2 py-1.5'}`;
+  const fieldCls = `flex items-center gap-0.5 ${isKidsTheme ? 'rounded-2xl bg-white px-2 py-1.5 shadow-sm' : 'rounded-lg border border-slate-200 px-2 py-1.5'}`;
   const btnCls = `flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors focus-visible:outline-none ${isKidsTheme ? 'text-violet-600 hover:bg-violet-100' : 'text-slate-500 hover:bg-slate-100 border border-slate-200'}`;
   const labelCls = `mb-1 text-xs font-bold ${isKidsTheme ? 'text-violet-600' : 'text-slate-500'}`;
   const { year: pY, month: pM } = pickerView;
@@ -205,8 +205,8 @@ function CalendarEventForm({
 
   return (
       <div
-        className={`relative w-[min(92vw,480px)] rounded-[28px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]${
-          isKidsTheme ? ' overflow-hidden' : ''
+        className={`relative w-[min(92vw,480px)] rounded-[28px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] ${
+          isKidsTheme ? 'overflow-hidden px-11 pb-16 pt-16' : 'p-6'
         }`}
         style={
           isKidsTheme
@@ -218,6 +218,7 @@ function CalendarEventForm({
         }
       >
         {isKidsTheme ? <KidsAddDecorations /> : null}
+        <div className={isKidsTheme ? 'relative z-10' : undefined}>
         {isKidsTheme && (
           <p className="mb-0 mt-0 text-center text-xs font-bold uppercase tracking-widest text-violet-400">
             FAMILY CALENDAR
@@ -405,7 +406,7 @@ function CalendarEventForm({
             onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
             placeholder={t.event_title_placeholder}
             className={`w-full box-border p-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 ${
-              isKidsTheme ? 'rounded-2xl border-none bg-white/80 shadow-sm' : 'rounded-lg border border-slate-200'
+              isKidsTheme ? 'rounded-2xl border-none bg-white shadow-sm' : 'rounded-lg border border-slate-200'
             }`}
           />
         </div>
@@ -420,7 +421,7 @@ function CalendarEventForm({
             placeholder={t.event_desc_placeholder}
             rows={3}
             className={`w-full box-border resize-y p-3 text-[15px] font-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 ${
-              isKidsTheme ? 'rounded-2xl border-none bg-white/80 shadow-sm' : 'rounded-lg border border-slate-200'
+              isKidsTheme ? 'rounded-2xl border-none bg-white shadow-sm' : 'rounded-lg border border-slate-200'
             }`}
           />
         </div>
@@ -468,7 +469,7 @@ function CalendarEventForm({
             onClick={onClose}
             className={`cursor-pointer font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${
               isKidsTheme
-                ? 'rounded-2xl border-none bg-white/80 px-7 py-3 text-[15px] text-slate-500 shadow-sm hover:bg-white'
+                ? 'rounded-2xl border-none bg-white px-7 py-3 text-[15px] text-slate-500 shadow-sm hover:bg-white'
                 : 'rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[15px] text-slate-500 hover:bg-slate-50'
             }`}
           >
@@ -493,6 +494,7 @@ function CalendarEventForm({
           >
             {editingEvent ? t.event_update_btn : t.event_submit_btn}
           </button>
+        </div>
         </div>
       </div>
   );
