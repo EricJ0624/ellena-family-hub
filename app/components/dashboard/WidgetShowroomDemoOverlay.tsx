@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import {
+  ShowroomPreviewFit,
   WIDGET_PREVIEW_MAP,
   WidgetPreviewSurfaceProvider,
 } from '@/app/components/group-admin/WidgetPreviewComponents';
+import { TasksShowroomDemo } from '@/app/components/dashboard/TasksShowroomDemo';
 import {
   getWidgetShowroomHowtoSteps,
   getWidgetShowroomTranslation,
+  TASKS_SHOWROOM_STEP_MS,
 } from '@/lib/translations/widgetShowroom';
 import type { LangCode } from '@/lib/language-fonts';
 import type { DashboardWidgetKey } from '@/lib/widgets/types';
@@ -24,22 +27,40 @@ type Props = {
 };
 
 /**
- * 쇼룸 「미리보기」— 이용법 3단계 + 위젯 카드 연출 (실기능 없음)
+ * 쇼룸 「미리보기」— 이용법 단계 + 위젯 카드 연출 (실기능 없음).
+ * tasks 는 7단계, 그 외 위젯은 기존 3단계.
  */
-export function WidgetShowroomDemoOverlay({ lang, widgetKey, widgetLabel, onClose }: Props) {
+export function WidgetShowroomDemoOverlay({
+  lang,
+  widgetKey,
+  widgetLabel,
+  onClose,
+}: Props) {
   const Preview = WIDGET_PREVIEW_MAP[widgetKey];
   const steps = useMemo(
     () => getWidgetShowroomHowtoSteps(lang, widgetKey),
     [lang, widgetKey],
   );
   const [step, setStep] = useState(0);
+  const isTasks = widgetKey === 'tasks';
 
   useEffect(() => {
-    setStep(0);
-    const id = window.setInterval(() => {
-      setStep((s) => (s + 1) % steps.length);
-    }, STEP_MS);
-    return () => window.clearInterval(id);
+    if (steps.length === 0) return;
+    let current = 0;
+    let timer = 0;
+    const durations =
+      widgetKey === 'tasks' && steps.length === TASKS_SHOWROOM_STEP_MS.length
+        ? TASKS_SHOWROOM_STEP_MS
+        : steps.map(() => STEP_MS);
+    const tick = () => {
+      timer = window.setTimeout(() => {
+        current = (current + 1) % steps.length;
+        setStep(current);
+        tick();
+      }, durations[current] ?? STEP_MS);
+    };
+    tick();
+    return () => window.clearTimeout(timer);
   }, [widgetKey, steps]);
 
   const t = (key: 'demo_close' | 'demo_playing' | 'preview') =>
@@ -56,7 +77,7 @@ export function WidgetShowroomDemoOverlay({ lang, widgetKey, widgetLabel, onClos
         initial={{ opacity: 0, y: 20, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 12, scale: 0.98 }}
-        className="flex max-h-[min(92vh,40rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/30 bg-white shadow-2xl"
+        className="flex min-h-0 max-h-[min(92vh,40rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/30 bg-white shadow-2xl"
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <div className="min-w-0">
@@ -77,29 +98,38 @@ export function WidgetShowroomDemoOverlay({ lang, widgetKey, widgetLabel, onClos
 
         <div className="relative min-h-0 flex-1 overflow-hidden bg-slate-50 p-3">
           <WidgetPreviewSurfaceProvider surface="showroom">
-            <motion.div
-              key={`${widgetKey}-${step}`}
-              initial={{ opacity: 0.65, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.35 }}
-              className="pointer-events-none h-full min-h-[14rem] select-none [&_.content-section]:shadow-none"
-            >
-              {Preview ? <Preview /> : null}
-            </motion.div>
+            <div className="pointer-events-none h-full min-h-0 select-none [&_.content-section]:shadow-none">
+              <ShowroomPreviewFit>
+                {isTasks ? (
+                  <TasksShowroomDemo lang={lang} step={step} />
+                ) : (
+                  <motion.div
+                    key={`${widgetKey}-${step}`}
+                    initial={{ opacity: 0.65, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.35 }}
+                    className="min-h-[14rem]"
+                  >
+                    {Preview ? <Preview /> : null}
+                  </motion.div>
+                )}
+              </ShowroomPreviewFit>
+            </div>
           </WidgetPreviewSurfaceProvider>
 
-          {/* 단계별 포인터 하이라이트 */}
-          <motion.div
-            key={`pulse-${step}`}
-            className="pointer-events-none absolute inset-x-6 top-[18%] h-10 rounded-xl border-2 border-indigo-400/80 bg-indigo-400/10"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{
-              opacity: [0, 1, 1, 0.35],
-              y: [0, 0, 72 * step, 72 * step],
-              scale: [0.98, 1.02, 1, 1],
-            }}
-            transition={{ duration: 1.8, ease: 'easeInOut' }}
-          />
+          {isTasks ? null : (
+            <motion.div
+              key={`pulse-${step}`}
+              className="pointer-events-none absolute inset-x-6 top-[18%] h-10 rounded-xl border-2 border-indigo-400/80 bg-indigo-400/10"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{
+                opacity: [0, 1, 1, 0.35],
+                y: [0, 0, 72 * step, 72 * step],
+                scale: [0.98, 1.02, 1, 1],
+              }}
+              transition={{ duration: 1.8, ease: 'easeInOut' }}
+            />
+          )}
         </div>
 
         <div className="shrink-0 border-t border-slate-100 px-4 py-3">

@@ -7,7 +7,7 @@
  */
 
 import { Camera, MapPin, Mic, Navigation, Paperclip, Plus, Send } from 'lucide-react';
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useLayoutEffect, useMemo, useRef } from 'react';
 import { KidsChatDecorations } from '@/app/features/family-chat/components/FamilyChatSection';
 import { AlbumPageDoodles } from '@/app/features/family-album/components/FamilyAlbumSection';
 import type { DashboardWidgetKey } from '@/lib/widgets/types';
@@ -73,6 +73,45 @@ function useWidgetPreviewCopy() {
       familyRole: (role: 'mom' | 'dad' | 'daughter') => getFamilyRoleLabel(lang, role),
     }),
     [lang, dateLocale],
+  );
+}
+
+/** 쇼룸 미리보기 칸에 맞춘다. 배율은 칸 크기를 잰 뒤 DOM에만 넣는다. */
+export function ShowroomPreviewFit({ children }: { children: React.ReactNode }) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    const content = contentRef.current;
+    if (!frame || !content) return;
+
+    const measure = () => {
+      const availW = frame.clientWidth;
+      const availH = frame.clientHeight;
+      const naturalW = content.scrollWidth;
+      const naturalH = content.scrollHeight;
+      if (availW < 1 || availH < 1 || naturalW < 1 || naturalH < 1) return;
+      const next = Math.min(1, availW / naturalW, availH / naturalH);
+      const prev = Number(content.dataset.fitScale ?? '1');
+      if (Math.abs(prev - next) < 0.02) return;
+      content.dataset.fitScale = String(next);
+      content.style.transform = `scale(${next})`;
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(frame);
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={frameRef} className="flex h-full w-full items-center justify-center overflow-hidden">
+      <div ref={contentRef} className="w-full">
+        {children}
+      </div>
+    </div>
   );
 }
 

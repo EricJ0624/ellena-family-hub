@@ -15,6 +15,7 @@ export type WidgetShowroomTranslations = {
   demo_playing: string;
   selected_count: string;
   start_dashboard: string;
+  start_locked: string;
   min_one: string;
   saving: string;
   tip_title: string;
@@ -36,6 +37,10 @@ export type WidgetShowroomTranslations = {
   howto_tasks_1: string;
   howto_tasks_2: string;
   howto_tasks_3: string;
+  howto_tasks_4: string;
+  howto_tasks_5: string;
+  howto_tasks_6: string;
+  howto_tasks_7: string;
   howto_calendar_1: string;
   howto_calendar_2: string;
   howto_calendar_3: string;
@@ -77,6 +82,7 @@ const ko: WidgetShowroomTranslations = {
   demo_playing: '이렇게 사용해요',
   selected_count: '선택 {n}개',
   start_dashboard: '대시보드 시작',
+  start_locked: '마지막 위젯까지 넘긴 뒤에 시작할 수 있어요.',
   min_one: '위젯을 하나 이상 선택해 주세요.',
   saving: '저장 중…',
   tip_title: '나중에 바꾸고 싶다면',
@@ -95,9 +101,13 @@ const ko: WidgetShowroomTranslations = {
   blurb_album: '가족 사진을 모아 추억을 나눠요.',
   blurb_location: '서로의 위치를 안전하게 확인해요.',
   blurb_games: '가족과 가벼운 게임으로 즐겨요.',
-  howto_tasks_1: '할 일을 적고 담당 가족을 정해요.',
-  howto_tasks_2: '끝나면 체크해서 함께 확인해요.',
-  howto_tasks_3: '칠판처럼 한눈에 남는 가족 임무판이에요.',
+  howto_tasks_1: '칠판에서 가족 할 일을 확인해요.',
+  howto_tasks_2: '추가를 눌러 할 일 내용을 적어요.',
+  howto_tasks_3: '누가 할지 정하고 등록해요.',
+  howto_tasks_4: '새 할 일이 칠판 맨 위에 올라와요.',
+  howto_tasks_5: '내가 할게요를 누르면 담당이 정해져요.',
+  howto_tasks_6: '끝나면 체크하고 취소선이 그어져요.',
+  howto_tasks_7: '삭제할지 물어본 뒤, 취소하면 할 일은 남아요.',
   howto_calendar_1: '날짜를 눌러 일정을 추가해요.',
   howto_calendar_2: '스티커로 특별한 날을 표시해요.',
   howto_calendar_3: '가족과 같은 달력을 공유해요.',
@@ -139,6 +149,7 @@ const en: WidgetShowroomTranslations = {
   demo_playing: 'How it works',
   selected_count: '{n} selected',
   start_dashboard: 'Start dashboard',
+  start_locked: 'Go to the last widget to start.',
   min_one: 'Please select at least one widget.',
   saving: 'Saving…',
   tip_title: 'Want to change later?',
@@ -157,9 +168,13 @@ const en: WidgetShowroomTranslations = {
   blurb_album: 'Collect and share family photos.',
   blurb_location: 'Check each other’s location safely.',
   blurb_games: 'Play light games together.',
-  howto_tasks_1: 'Add a task and assign a family member.',
-  howto_tasks_2: 'Check it off when it’s done.',
-  howto_tasks_3: 'A shared chalkboard for family chores.',
+  howto_tasks_1: 'Review family tasks on the board.',
+  howto_tasks_2: 'Tap Add and write the task.',
+  howto_tasks_3: 'Choose who will do it, then save.',
+  howto_tasks_4: 'The new task appears at the top of the board.',
+  howto_tasks_5: 'Tap I’ll do it to claim the task.',
+  howto_tasks_6: 'Check it off and a line goes through the words.',
+  howto_tasks_7: 'Delete asks first. Cancel keeps the task.',
   howto_calendar_1: 'Tap a date to add an event.',
   howto_calendar_2: 'Mark special days with stickers.',
   howto_calendar_3: 'Share one calendar with the family.',
@@ -206,15 +221,27 @@ const BLURB_KEY: Record<DashboardWidgetKey, keyof WidgetShowroomTranslations> = 
   games: 'blurb_games',
 };
 
+const TASKS_HOWTO_KEYS = [
+  'howto_tasks_1',
+  'howto_tasks_2',
+  'howto_tasks_3',
+  'howto_tasks_4',
+  'howto_tasks_5',
+  'howto_tasks_6',
+  'howto_tasks_7',
+] as const satisfies readonly (keyof WidgetShowroomTranslations)[];
+
+/** 영상 기준 할 일 쇼룸: 칠판 → 입력 → 담당 → 등록 → 맡기 → 체크 → 삭제 확인 */
+export const TASKS_SHOWROOM_STEP_MS = [2500, 3400, 2500, 2500, 1700, 2500, 2500] as const;
+
 const HOWTO_KEYS: Record<
-  DashboardWidgetKey,
+  Exclude<DashboardWidgetKey, 'tasks'>,
   [
     keyof WidgetShowroomTranslations,
     keyof WidgetShowroomTranslations,
     keyof WidgetShowroomTranslations,
   ]
 > = {
-  tasks: ['howto_tasks_1', 'howto_tasks_2', 'howto_tasks_3'],
   calendar: ['howto_calendar_1', 'howto_calendar_2', 'howto_calendar_3'],
   chat: ['howto_chat_1', 'howto_chat_2', 'howto_chat_3'],
   piggy: ['howto_piggy_1', 'howto_piggy_2', 'howto_piggy_3'],
@@ -241,10 +268,10 @@ export function getWidgetShowroomBlurb(lang: LangCode, key: DashboardWidgetKey):
   return getWidgetShowroomTranslation(lang, BLURB_KEY[key]);
 }
 
-export function getWidgetShowroomHowtoSteps(
-  lang: LangCode,
-  key: DashboardWidgetKey,
-): [string, string, string] {
+export function getWidgetShowroomHowtoSteps(lang: LangCode, key: DashboardWidgetKey): string[] {
+  if (key === 'tasks') {
+    return TASKS_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
+  }
   const [a, b, c] = HOWTO_KEYS[key];
   return [
     getWidgetShowroomTranslation(lang, a),

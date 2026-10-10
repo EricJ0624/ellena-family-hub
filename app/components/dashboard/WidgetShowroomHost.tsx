@@ -7,6 +7,7 @@ import { Check, Play, Sparkles } from 'lucide-react';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import {
+  ShowroomPreviewFit,
   WIDGET_PREVIEW_MAP,
   WidgetPreviewSurfaceProvider,
 } from '@/app/components/group-admin/WidgetPreviewComponents';
@@ -147,12 +148,11 @@ export default function WidgetShowroomHost({
     setDemoOpen(true);
   };
 
+  const onLastWidget = orderedKeys.length > 0 && index === orderedKeys.length - 1;
+  const canStart = onLastWidget && selected.size > 0;
+
   const handleStart = async () => {
-    if (!currentGroupId) return;
-    if (selected.size === 0) {
-      setError(t('min_one'));
-      return;
-    }
+    if (!currentGroupId || !canStart) return;
     try {
       setSaving(true);
       setError(null);
@@ -213,7 +213,7 @@ export default function WidgetShowroomHost({
 
   return (
     <WidgetPreviewSurfaceProvider surface="showroom">
-      <div className="fixed inset-0 z-[120] flex flex-col bg-gradient-to-b from-sky-50 via-white to-violet-50">
+      <div className="fixed inset-0 z-[120] flex flex-col overflow-hidden bg-gradient-to-b from-sky-50 via-white to-violet-50">
         <header className="shrink-0 px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))] text-center">
           <div className="mx-auto flex max-w-lg items-center justify-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" aria-hidden />
@@ -227,7 +227,7 @@ export default function WidgetShowroomHost({
           </p>
         </header>
 
-        <div className="relative mx-auto flex w-full max-w-lg flex-1 flex-col px-3 pb-3">
+        <div className="relative mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {/* 카드 껍질 고정 — 위젯 전환 시 drag 세션이 끊기지 않음 */}
           <div
             className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-white/90 shadow-lg ${
@@ -235,7 +235,7 @@ export default function WidgetShowroomHost({
             }`}
           >
             <motion.div
-              className="flex min-h-0 flex-1 cursor-grab touch-none flex-col active:cursor-grabbing"
+              className="flex min-h-0 flex-1 cursor-grab touch-pan-y flex-col active:cursor-grabbing"
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.2}
@@ -260,9 +260,9 @@ export default function WidgetShowroomHost({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -40 * slideDir }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="pointer-events-none h-full min-h-[12rem] select-none [&_.content-section]:shadow-none"
+                    className="pointer-events-none h-full min-h-0 select-none overflow-hidden [&_.content-section]:shadow-none"
                   >
-                    {Preview ? <Preview /> : null}
+                    <ShowroomPreviewFit>{Preview ? <Preview /> : null}</ShowroomPreviewFit>
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -292,7 +292,7 @@ export default function WidgetShowroomHost({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-col items-center gap-1">
+          <div className="mt-3 flex shrink-0 flex-col items-center gap-1">
             <div className="flex flex-wrap justify-center gap-1.5">
               {orderedKeys.map((key, i) => (
                 <button
@@ -321,13 +321,17 @@ export default function WidgetShowroomHost({
 
           {error ? (
             <p className="mt-2 text-center text-xs font-medium text-red-600">{error}</p>
+          ) : !canStart ? (
+            <p className="mt-2 text-center text-xs font-medium text-slate-500">
+              {onLastWidget ? t('min_one') : t('start_locked')}
+            </p>
           ) : null}
 
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || !canStart}
             onClick={() => void handleStart()}
-            className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 disabled:opacity-60"
+            className="mt-3 w-full shrink-0 rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? t('saving') : t('start_dashboard')}
           </button>
@@ -336,7 +340,7 @@ export default function WidgetShowroomHost({
       <AnimatePresence>
         {demoOpen && currentKey ? (
           <WidgetShowroomDemoOverlay
-            key={currentKey}
+            key={`${currentKey}-${lang}`}
             lang={lang}
             widgetKey={currentKey}
             widgetLabel={widgetLabels[currentKey]}
