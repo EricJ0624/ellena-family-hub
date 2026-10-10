@@ -53,13 +53,23 @@ function DeleteConfirmFlash({ lang }: { lang: LangCode }) {
   );
 }
 
+type RowFocus = 'check' | 'assignee' | 'claim' | 'delete' | null;
+
 type Row = {
   text: string;
   assignee: string;
   claim: boolean;
   done: boolean;
-  focus: 'check' | 'assignee' | 'claim' | 'delete' | null;
+  focus: RowFocus;
 };
+
+function focusForStep(step: number): RowFocus {
+  if (step === 3) return 'claim';
+  if (step === 4) return 'assignee';
+  if (step === 5) return 'check';
+  if (step === 6) return 'delete';
+  return null;
+}
 
 /**
  * 할 일 쇼룸 미리보기. 실저장·담당·삭제는 하지 않고, 칠판 UI만 단계별로 보여 준다.
@@ -86,8 +96,7 @@ export function TasksShowroomDemo({ lang, step }: { lang: LangCode; step: number
             assignee: claimed ? mom : anyone,
             claim: !claimed,
             done,
-            focus:
-              step === 3 ? 'claim' : step === 4 ? 'assignee' : step === 5 ? 'check' : step === 6 ? 'delete' : null,
+            focus: focusForStep(step),
           },
         ]
       : []),
