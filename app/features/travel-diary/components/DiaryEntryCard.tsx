@@ -848,11 +848,11 @@ export function DiaryEntryCard({
             onChange={(e) => setTitleDraft(e.target.value)}
             maxLength={200}
             aria-label={labels.slot_title_label}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-800"
+            className="mt-1 w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-1.5 text-lg font-semibold text-slate-800"
           />
         </label>
       ) : (
-        <div className={['text-sm font-semibold tracking-tight', diaryTitleClass(themeOpts)].join(' ')}>
+        <div className={['text-lg font-semibold tracking-tight', diaryTitleClass(themeOpts)].join(' ')}>
           {slot.title}
         </div>
       )}

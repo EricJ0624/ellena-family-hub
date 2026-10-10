@@ -1,4 +1,4 @@
-export const COLLAGE_SLOT_COUNT = 8;
+export const COLLAGE_SLOT_COUNT = 9;
 
 export type DiaryCollageStyle = 'film' | 'postal';
 export type CollageSlotIds = (string | null)[];
@@ -17,7 +17,7 @@ export function parseCollageStyle(raw: unknown): DiaryCollageStyle {
   return raw === 'postal' ? 'postal' : 'film';
 }
 
-/** null = not customized yet (show first photos). Otherwise always length 8. */
+/** null = not customized yet (show first photos). Otherwise always length 9. */
 export function parseCollageAttachmentIds(raw: unknown): CollageSlotIds | null {
   if (raw == null) return null;
   if (!Array.isArray(raw)) return null;
