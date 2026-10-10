@@ -6746,7 +6746,13 @@ export default function FamilyHub() {
   );
 
   const chatRoomPinLatestRef = useRef(false);
+  const chatWidgetPinLatestRef = useRef(false);
   chatRoomOpenRef.current = chatRoomOpen;
+  const pinChatBoxToLatest = useCallback(() => {
+    const box = chatBoxRef.current;
+    if (!box) return;
+    box.scrollTop = box.scrollHeight;
+  }, []);
   const pinChatRoomToLatest = useCallback(() => {
     const box = chatBoxRef.current;
     if (box) box.scrollTop = box.scrollHeight;
@@ -6801,7 +6807,30 @@ export default function FamilyHub() {
     return () => window.cancelAnimationFrame(raf);
   }, [chatRoomOpen, chatRoomFrame, pinChatRoomToLatest]);
 
+  useLayoutEffect(() => {
+    if (chatRoomOpen || !chatWidgetPinLatestRef.current) return;
+    pinChatBoxToLatest();
+  }, [chatRoomOpen, pinChatBoxToLatest]);
+
+  useEffect(() => {
+    if (chatRoomOpen || !chatWidgetPinLatestRef.current) return undefined;
+    let frames = 0;
+    let raf = 0;
+    const tick = () => {
+      pinChatBoxToLatest();
+      frames += 1;
+      if (frames < 4) {
+        raf = window.requestAnimationFrame(tick);
+        return;
+      }
+      chatWidgetPinLatestRef.current = false;
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [chatRoomOpen, pinChatBoxToLatest]);
+
   const closeChatRoom = useCallback(() => {
+    chatWidgetPinLatestRef.current = true;
     setChatRoomOpen(false);
     setChatRoomFrame(null);
   }, []);
