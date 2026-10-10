@@ -111,21 +111,13 @@ import { useFamilyChatInitialLoad } from '@/app/features/family-chat/hooks/useFa
 import { useFamilyChatRealtime } from '@/app/features/family-chat/hooks/useFamilyChatRealtime';
 import { useFamilyChatScroll } from '@/app/features/family-chat/hooks/useFamilyChatScroll';
 import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
-import { FamilyLocationRequestModal } from '@/app/features/family-location/components/FamilyLocationRequestModal';
-import { FamilyLocationNavMapModal } from '@/app/features/family-location/components/FamilyLocationNavMapModal';
 import { openNavMapApp, isLocationInSouthKorea, type NavMapApp } from '@/lib/nav-map-apps';
 import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
-import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
-import { TravelQuickRecordSection } from '@/app/features/travel-planner/components/TravelQuickRecordSection';
-import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
 import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
 import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
-import { TravelDiaryDashboardSection } from '@/app/features/travel-diary/components/TravelDiaryDashboardSection';
-import { DiaryCompletionInviteModal } from '@/app/features/travel-diary/components/DiaryCompletionInviteModal';
 import { useDiaryInvite } from '@/app/features/travel-diary/hooks/useDiaryInvite';
 import { getTravelDiaryTranslation, getDiaryModalText } from '@/lib/translations/travel-diary';
 import { shouldShowTravelDiaryDashboardWidget } from '@/lib/widgets/travel-diary-widget';
-import { PiggyBankSection } from '@/app/features/piggy-bank/components/PiggyBankSection';
 import type { AccountRequest, PiggyMemberOrAccount, PiggySummary } from '@/app/features/piggy-bank/types';
 import { usePiggyDisplay } from '@/app/features/piggy-bank/hooks/usePiggyDisplay';
 import {
@@ -157,9 +149,51 @@ import {
 } from '@/lib/widgets/preview-orientation';
 import { WIDGET_CONFIGS_UPDATED_EVENT, dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
-import { WidgetMagnifyModal } from '@/app/components/dashboard/WidgetMagnifyModal';
-import WidgetShowroomHost from '@/app/components/dashboard/WidgetShowroomHost';
 import { groupNeedsWidgetShowroom } from '@/lib/widgets/widget-showroom';
+import dynamicImport from 'next/dynamic';
+
+// --- 조건부·모달·기능 위젯 — 동적 로드로 초기 번들에서 분리 ---
+// ssr: false — 이 위젯들은 서버에서 렌더 불필요(클라이언트 전용 상태 기반)
+const FamilyLocationRequestModal = dynamicImport(
+  () => import('@/app/features/family-location/components/FamilyLocationRequestModal').then(m => ({ default: m.FamilyLocationRequestModal })),
+  { ssr: false }
+);
+const FamilyLocationNavMapModal = dynamicImport(
+  () => import('@/app/features/family-location/components/FamilyLocationNavMapModal').then(m => ({ default: m.FamilyLocationNavMapModal })),
+  { ssr: false }
+);
+const TravelPlannerSection = dynamicImport(
+  () => import('@/app/features/travel-planner/components/TravelPlannerSection').then(m => ({ default: m.TravelPlannerSection })),
+  { ssr: false }
+);
+const TravelQuickRecordSection = dynamicImport(
+  () => import('@/app/features/travel-planner/components/TravelQuickRecordSection').then(m => ({ default: m.TravelQuickRecordSection })),
+  { ssr: false }
+);
+const FamilyGamesSection = dynamicImport(
+  () => import('@/app/features/family-games/components/FamilyGamesSection').then(m => ({ default: m.FamilyGamesSection })),
+  { ssr: false }
+);
+const TravelDiaryDashboardSection = dynamicImport(
+  () => import('@/app/features/travel-diary/components/TravelDiaryDashboardSection').then(m => ({ default: m.TravelDiaryDashboardSection })),
+  { ssr: false }
+);
+const DiaryCompletionInviteModal = dynamicImport(
+  () => import('@/app/features/travel-diary/components/DiaryCompletionInviteModal').then(m => ({ default: m.DiaryCompletionInviteModal })),
+  { ssr: false }
+);
+const PiggyBankSection = dynamicImport(
+  () => import('@/app/features/piggy-bank/components/PiggyBankSection').then(m => ({ default: m.PiggyBankSection })),
+  { ssr: false }
+);
+const WidgetMagnifyModal = dynamicImport(
+  () => import('@/app/components/dashboard/WidgetMagnifyModal').then(m => ({ default: m.WidgetMagnifyModal })),
+  { ssr: false }
+);
+const WidgetShowroomHost = dynamicImport(
+  () => import('@/app/components/dashboard/WidgetShowroomHost'),
+  { ssr: false }
+);
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };

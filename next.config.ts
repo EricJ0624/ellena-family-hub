@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   serverExternalPackages: ['@sparticuz/chromium-min', 'puppeteer-core'],
+
+  // lucide-react / framer-motion 트리쉐이킹 최적화 — 사용하는 아이콘·기능만 번들에 포함
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+  },
   // Ensure bundled Korean fonts are available inside the itinerary-pdf serverless function
   outputFileTracingIncludes: {
     '/api/v1/travel/trips/[tripId]/itinerary-pdf': [

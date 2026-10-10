@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Palette, X } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import FrameGestureHintOverlay, { type FrameGestureHintPhase } from './FrameGestureHintOverlay';
 import Image from 'next/image';
 import {
@@ -601,248 +601,11 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
   );
 };
 
-// 디자인 에디터 컴포넌트
-interface DesignEditorProps {
-  titleStyle: TitleStyle;
-  onStyleChange: (style: TitleStyle) => void;
-  onClose: () => void;
-}
+// 디자인 에디터 컴포넌트는 제거됨 (현재 editable={false} 고정으로 미사용)
 
-const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, onClose }) => {
-  const { lang } = useLanguage();
-  const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
-  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
-  const [localStyle, setLocalStyle] = useState<TitleStyle>(titleStyle);
+// TitlePage 메인 컴포넌트
   
-  // 인기 있는 웹 폰트 목록 (메모이제이션) — 라벨은 tp('font_*')로 표시
-  const fontOptionKeys: Record<string, keyof import('@/lib/translations/titlePage').TitlePageTranslations> = {
-    'Inter': 'font_inter',
-    'Roboto': 'font_roboto',
-    'Poppins': 'font_poppins',
-    'Montserrat': 'font_montserrat',
-    'Playfair Display': 'font_playfair_display',
-    'Merriweather': 'font_merriweather',
-    'Lora': 'font_lora',
-    'Dancing Script': 'font_dancing_script',
-    'Pacifico': 'font_pacifico',
-    'Arial': 'font_arial',
-    'Georgia': 'font_georgia',
-    'Times New Roman': 'font_times_new_roman',
-  };
-  const fontFamilies = useMemo(() => [
-    { value: 'Inter', category: 'Sans-serif' },
-    { value: 'Roboto', category: 'Sans-serif' },
-    { value: 'Poppins', category: 'Sans-serif' },
-    { value: 'Montserrat', category: 'Sans-serif' },
-    { value: 'Playfair Display', category: 'Serif' },
-    { value: 'Merriweather', category: 'Serif' },
-    { value: 'Lora', category: 'Serif' },
-    { value: 'Dancing Script', category: 'Script' },
-    { value: 'Pacifico', category: 'Script' },
-    { value: 'Arial', category: 'Sans-serif' },
-    { value: 'Georgia', category: 'Serif' },
-    { value: 'Times New Roman', category: 'Serif' },
-  ], []);
-  
-  // titleStyle prop이 변경될 때 localStyle 업데이트
-  useEffect(() => {
-    setLocalStyle(titleStyle);
-  }, [titleStyle]);
-  
-  const handleChange = useCallback((field: keyof TitleStyle, value: any) => {
-    const newStyle = { ...localStyle, [field]: value };
-    setLocalStyle(newStyle);
-    onStyleChange(newStyle);
-  }, [localStyle, onStyleChange]);
-  
-  // 슬라이더 진행률 계산 (메모이제이션)
-  const fontSizeProgress = useMemo(() => {
-    return ((localStyle.fontSize - 24) / (72 - 24)) * 100;
-  }, [localStyle.fontSize]);
-  
-  const letterSpacingProgress = useMemo(() => {
-    return ((localStyle.letterSpacing + 2) / 12) * 100;
-  }, [localStyle.letterSpacing]);
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: -20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: -20 }}
-      transition={{ duration: 0.2 }}
-      className="fixed left-1/2 top-1/2 z-[100] max-h-[90vh] w-[90%] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl shadow-2xl"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* 그라데이션 헤더 */}
-      <div 
-        className="relative bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] px-6 py-5 text-white"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-              <Palette className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold">{tp('design_edit_title')}</h3>
-              <p className="text-xs text-white/80">{tp('design_edit_subtitle')}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-            aria-label={ct('close')}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-      
-      {/* 컨텐츠 영역 */}
-      <div className="bg-white p-6 space-y-5">
-        {/* 글자 내용 */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-            {tp('content_label')}
-          </label>
-          <input
-            type="text"
-            value={localStyle.content}
-            onChange={(e) => handleChange('content', e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-            placeholder={tp('title_placeholder')}
-          />
-        </div>
-        
-        {/* 글꼴 선택 */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-            글꼴
-          </label>
-          <select
-            value={localStyle.fontFamily || 'Inter'}
-            onChange={(e) => handleChange('fontFamily', e.target.value)}
-            className="w-full appearance-none cursor-pointer rounded-xl border-2 border-gray-200 bg-white px-4 py-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 focus:border-purple-500"
-          >
-            {fontFamilies.map((font) => (
-              <option key={font.value} value={font.value}>
-                {tp(fontOptionKeys[font.value])}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        {/* 색상 선택 */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-            색상
-          </label>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <input
-                type="color"
-                value={localStyle.color}
-                onChange={(e) => handleChange('color', e.target.value)}
-                className="h-16 w-16 cursor-pointer rounded-xl border-2 border-gray-200 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 [appearance:none] [-moz-appearance:none]"
-              />
-            </div>
-            <input
-              type="text"
-              value={localStyle.color}
-              onChange={(e) => handleChange('color', e.target.value)}
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all font-mono text-sm"
-              placeholder="#9333ea"
-            />
-          </div>
-        </div>
-        
-        {/* 폰트 크기 */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-              폰트 크기
-            </label>
-            <span className="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg">
-              {localStyle.fontSize}px
-            </span>
-          </div>
-          <div className="relative">
-            <input
-              type="range"
-              min="24"
-              max="72"
-              value={localStyle.fontSize}
-              onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
-              className="h-3 w-full appearance-none cursor-pointer rounded-lg bg-gray-200 accent-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
-              style={{
-                background: `linear-gradient(to right, rgb(var(--brand-primary)) 0%, rgb(var(--brand-primary)) ${fontSizeProgress}%, #e5e7eb ${fontSizeProgress}%, #e5e7eb 100%)`,
-              }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>24px</span>
-            <span>72px</span>
-          </div>
-        </div>
-        
-        {/* 폰트 두께 */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-            {tp('font_weight_label')}
-          </label>
-          <select
-            value={localStyle.fontWeight}
-            onChange={(e) => handleChange('fontWeight', e.target.value)}
-            className="w-full cursor-pointer rounded-xl border-2 border-gray-200 px-4 py-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 focus:border-purple-500"
-          >
-            <option value="300">{tp('font_weight_300')}</option>
-            <option value="400">{tp('font_weight_400')}</option>
-            <option value="500">{tp('font_weight_500')}</option>
-            <option value="600">{tp('font_weight_600')}</option>
-            <option value="700">{tp('font_weight_700')}</option>
-            <option value="800">{tp('font_weight_800')}</option>
-            <option value="900">{tp('font_weight_900')}</option>
-          </select>
-        </div>
-        
-        {/* 자간 */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-              {tp('letter_spacing_label')}
-            </label>
-            <span className="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg">
-              {localStyle.letterSpacing}px
-            </span>
-          </div>
-          <div className="relative">
-            <input
-              type="range"
-              min="-2"
-              max="10"
-              step="0.5"
-              value={localStyle.letterSpacing}
-              onChange={(e) => handleChange('letterSpacing', parseFloat(e.target.value))}
-              className="h-3 w-full appearance-none cursor-pointer rounded-lg bg-gray-200 accent-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
-              style={{
-                background: `linear-gradient(to right, rgb(var(--brand-primary)) 0%, rgb(var(--brand-primary)) ${letterSpacingProgress}%, #e5e7eb ${letterSpacingProgress}%, #e5e7eb 100%)`,
-              }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>-2px</span>
-            <span>10px</span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
+
 
 // 떠다니는 꽃잎 컴포넌트
 const FloatingPetals: React.FC = () => {
@@ -931,7 +694,6 @@ const TitlePage: React.FC<TitlePageProps> = ({
 }) => {
   const { lang } = useLanguage();
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
-  const [showEditor, setShowEditor] = useState(false);
   const [frameStyle, setFrameStyle] = useState<FrameStyle>('no_frame');
 
   useEffect(() => {
@@ -939,6 +701,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
     const stored = readStoredFrameStyle(frameStyleStorageScope);
     if (stored) setFrameStyle(stored);
   }, [frameStyleStorageScope]);
+
 
   const handleFrameChange = useCallback(
     (style: FrameStyle) => {
@@ -970,13 +733,6 @@ const TitlePage: React.FC<TitlePageProps> = ({
       onTitleStyleChange(newStyle);
     }
   }, [onTitleStyleChange]);
-  
-  // 타이틀 클릭 핸들러 (editable일 때만 디자인 에디터 표시)
-  const handleTitleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!editable) return;
-    setShowEditor((prev) => !prev);
-  }, [editable]);
   
   return (
     <div
@@ -1067,38 +823,12 @@ const TitlePage: React.FC<TitlePageProps> = ({
           <TitleText 
             title={title || ct('app_title')} 
             titleStyle={titleStyle}
-            onTitleClick={editable ? handleTitleClick : undefined} 
           />
         )}
       </div>
-      
-      {/* 디자인 에디터 (editable일 때만, 타이틀 클릭 시 표시) */}
-      {editable && (
-      <AnimatePresence>
-        {showEditor && (
-          <>
-            {/* 모달 오버레이 */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowEditor(false)}
-              className="fixed inset-0 bg-black/30 z-[99]"
-            />
-            {/* 에디터 */}
-            <DesignEditor
-              titleStyle={titleStyle}
-              onStyleChange={handleStyleChange}
-              onClose={() => setShowEditor(false)}
-            />
-          </>
-        )}
-      </AnimatePresence>
-      )}
     </div>
   );
 };
 
 export default TitlePage;
-export { DesignEditor };
 export type { TitleStyle };
