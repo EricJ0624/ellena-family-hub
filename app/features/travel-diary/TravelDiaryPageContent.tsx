@@ -32,6 +32,13 @@ import { getTravelTranslation } from '@/lib/translations/travel';
 const API = '/api/v1/travel';
 const VIEW_MODE_KEY = 'ellena-travel-diary-view';
 
+function localTodayYmd(): string {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 type DiaryViewMode = 'vertical' | 'horizontal';
 
 type PlannerBundle = {
@@ -69,6 +76,13 @@ export function TravelDiaryPageContent() {
   const [titleDraft, setTitleDraft] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
   const [viewMode, setViewMode] = useState<DiaryViewMode>('vertical');
+  const [showAddItinerary, setShowAddItinerary] = useState(false);
+  const [addDay, setAddDay] = useState('');
+  const [addTitle, setAddTitle] = useState('');
+  const [addStart, setAddStart] = useState('');
+  const [addEnd, setAddEnd] = useState('');
+  const [addingItinerary, setAddingItinerary] = useState(false);
+  const addingItineraryRef = useRef(false);
   const [entryPhotos, setEntryPhotos] = useState<Map<string, UploadedAttachment[]> | null>(null);
   const shownTripRef = useRef<string | null>(null);
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
@@ -500,6 +514,59 @@ export function TravelDiaryPageContent() {
     }
   };
 
+  const openAddItinerary = () => {
+    setAddDay((trip?.start_date || localTodayYmd()).slice(0, 10));
+    setAddTitle('');
+    setAddStart('');
+    setAddEnd('');
+    setShowAddItinerary(true);
+  };
+
+  const submitAddItinerary = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!currentGroupId || !tripIdParam || addingItineraryRef.current) return;
+    const day = addDay.trim().slice(0, 10);
+    const title = addTitle.trim();
+    if (!day || !title) {
+      alert(getTravelTranslation(lang, 'alert_itinerary_required'));
+      return;
+    }
+    addingItineraryRef.current = true;
+    setAddingItinerary(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) throw new Error('auth');
+      const res = await fetch(`${API}/trips/${tripIdParam}/itineraries`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          day_date: day,
+          title,
+          place_type: 'other',
+          start_time: addStart.trim() || undefined,
+          end_time: addEnd.trim() || undefined,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || getTravelTranslation(lang, 'itinerary_add_failed'));
+      setShowAddItinerary(false);
+      setAddTitle('');
+      setAddStart('');
+      setAddEnd('');
+      await loadAll();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : getTravelTranslation(lang, 'itinerary_add_failed'));
+    } finally {
+      addingItineraryRef.current = false;
+      setAddingItinerary(false);
+    }
+  };
+
   const restoreSlot = async (slot: (typeof hiddenSlots)[0]) => {
     if (!currentGroupId || !slot.entry?.id) return;
     const { data: session } = await supabase.auth.getSession();
@@ -790,12 +857,95 @@ export function TravelDiaryPageContent() {
           <p className={['mt-8 text-sm', isDarkPage ? 'text-violet-200' : 'text-violet-600'].join(' ')}>
             {t('cannot_write')}
           </p>
-        ) : timelineSlots.length === 0 && hiddenSlots.length === 0 ? (
+        ) : (
+          <>
+          <div className="mt-4">
+            {showAddItinerary ? (
+              <form
+                onSubmit={(event) => void submitAddItinerary(event)}
+                className={[
+                  'rounded-xl border p-3',
+                  isDarkPage ? 'border-white/15 bg-white/5' : 'border-slate-200 bg-white',
+                ].join(' ')}
+              >
+                <p className={['text-sm font-semibold', isDarkPage ? 'text-white' : 'text-slate-800'].join(' ')}>
+                  {getTravelTranslation(lang, 'add_itinerary')}
+                </p>
+                <label className={['mt-3 block text-xs font-medium', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+                  {getTravelTranslation(lang, 'label_date')}
+                  <input
+                    type="date"
+                    required
+                    value={addDay}
+                    onChange={(event) => setAddDay(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                  />
+                </label>
+                <label className={['mt-3 block text-xs font-medium', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+                  {getTravelTranslation(lang, 'label_title')}
+                  <input
+                    type="text"
+                    required
+                    maxLength={200}
+                    value={addTitle}
+                    onChange={(event) => setAddTitle(event.target.value)}
+                    placeholder={getTravelTranslation(lang, 'placeholder_itinerary_title')}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                  />
+                </label>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className={['block text-xs font-medium', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+                    {getTravelTranslation(lang, 'label_start_time')}
+                    <input
+                      type="time"
+                      value={addStart}
+                      onChange={(event) => setAddStart(event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                    />
+                  </label>
+                  <label className={['block text-xs font-medium', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+                    {getTravelTranslation(lang, 'label_end_time')}
+                    <input
+                      type="time"
+                      value={addEnd}
+                      onChange={(event) => setAddEnd(event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                    />
+                  </label>
+                </div>
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={addingItinerary}
+                    onClick={() => setShowAddItinerary(false)}
+                    className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-60"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingItinerary}
+                    className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                  >
+                    {addingItinerary ? t('loading') : t('save')}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={openAddItinerary}
+                className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                + {getTravelTranslation(lang, 'add_itinerary')}
+              </button>
+            )}
+          </div>
+          {timelineSlots.length === 0 && hiddenSlots.length === 0 ? (
           <p className={['mt-8 text-sm', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
             {t('no_slots')}
           </p>
-        ) : (
-          <>
+          ) : null}
           {timelineSlots.length > 0 ? (
             <div
               role="group"

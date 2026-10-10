@@ -1556,7 +1556,7 @@ export function TravelPlannerContent() {
           description: itineraryDescription.trim() || null,
           start_time: itineraryStartTime.trim() || null,
           end_time: itineraryEndTime.trim() || null,
-          place_type: itineraryPlaceType || null,
+          place_type: editingItinerary.field_record_kind ? 'other' : itineraryPlaceType || null,
           address: itineraryAddress.trim() || null,
           latitude: itineraryLatitude.trim() ? Number(itineraryLatitude) : null,
           longitude: itineraryLongitude.trim() ? Number(itineraryLongitude) : null,
@@ -4323,18 +4323,22 @@ export function TravelPlannerContent() {
                 rows={3}
                 className="mb-3 w-full resize-y box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_place_type')}</label>
-              <select
-                value={itineraryPlaceType}
-                onChange={(e) => setItineraryPlaceType(e.target.value as '' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other')}
-                className="mb-3 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-              >
-                <option value="attraction">{tt('place_type_attraction')} 🏛️</option>
-                <option value="transport_air">{tt('place_type_transport_air')} ✈️</option>
-                <option value="transport_car">{tt('place_type_transport_car')} 🚗</option>
-                <option value="transport_bike">{tt('place_type_transport_bike')} 🚲</option>
-                <option value="other">{tt('place_type_other')} 📌</option>
-              </select>
+              {editingItinerary?.field_record_kind ? null : (
+                <>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_place_type')}</label>
+                  <select
+                    value={itineraryPlaceType}
+                    onChange={(e) => setItineraryPlaceType(e.target.value as '' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other')}
+                    className="mb-3 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                  >
+                    <option value="attraction">{tt('place_type_attraction')} 🏛️</option>
+                    <option value="transport_air">{tt('place_type_transport_air')} ✈️</option>
+                    <option value="transport_car">{tt('place_type_transport_car')} 🚗</option>
+                    <option value="transport_bike">{tt('place_type_transport_bike')} 🚲</option>
+                    <option value="other">{tt('place_type_other')} 📌</option>
+                  </select>
+                </>
+              )}
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_address')}</label>
               <input
                 ref={itineraryAddressInputRef}

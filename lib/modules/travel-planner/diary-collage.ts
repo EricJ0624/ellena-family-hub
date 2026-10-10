@@ -1,4 +1,4 @@
-export const COLLAGE_SLOT_COUNT = 6;
+export const COLLAGE_SLOT_COUNT = 8;
 
 export type DiaryCollageStyle = 'film' | 'postal';
 export type CollageSlotIds = (string | null)[];
@@ -17,7 +17,7 @@ export function parseCollageStyle(raw: unknown): DiaryCollageStyle {
   return raw === 'postal' ? 'postal' : 'film';
 }
 
-/** null = not customized yet (show first photos). Otherwise always length 6. */
+/** null = not customized yet (show first photos). Otherwise always length 8. */
 export function parseCollageAttachmentIds(raw: unknown): CollageSlotIds | null {
   if (raw == null) return null;
   if (!Array.isArray(raw)) return null;
@@ -79,7 +79,12 @@ export function resolveCollageSlots(
 ): CollageSlotIds {
   if (!saved) return defaultCollageSlots(attachmentIds);
   const known = new Set(attachmentIds);
-  return saved.map((id) => (id && known.has(id) ? id : null));
+  const next = emptyCollageSlots();
+  for (let i = 0; i < COLLAGE_SLOT_COUNT; i += 1) {
+    const id = saved[i];
+    next[i] = id && known.has(id) ? id : null;
+  }
+  return next;
 }
 
 /** 새로 올라온 첨부만 빈 칸에 넣는다. 사용자가 뺀 기존 사진은 다시 채우지 않는다. */

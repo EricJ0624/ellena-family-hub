@@ -4,7 +4,28 @@ import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import type { DiaryCollageStyle, PhotoFocusMap } from '@/lib/modules/travel-planner/diary-collage';
 import { COLLAGE_SLOT_COUNT, objectPositionCss } from '@/lib/modules/travel-planner/diary-collage';
 
-const FILM_SLOTS: Record<1 | 2 | 3 | 4 | 5 | 6, string[]> = {
+const DENSE_SLOTS_7 = [
+  'left-[3%] top-[4%] z-[1] h-[43%] w-[22%] rotate-[-2deg]',
+  'left-[26%] top-[5%] z-[2] h-[43%] w-[22%] rotate-[2deg]',
+  'left-[49%] top-[4%] z-[1] h-[43%] w-[22%] rotate-[-1deg]',
+  'left-[72%] top-[5%] z-[2] h-[43%] w-[22%] rotate-[2deg]',
+  'left-[14%] top-[52%] z-[2] h-[43%] w-[22%] rotate-[1deg]',
+  'left-[39%] top-[51%] z-[1] h-[43%] w-[22%] rotate-[-2deg]',
+  'left-[64%] top-[52%] z-[2] h-[43%] w-[22%] rotate-[1deg]',
+];
+
+const DENSE_SLOTS_8 = [
+  'left-[3%] top-[4%] z-[1] h-[43%] w-[22%] rotate-[-2deg]',
+  'left-[26%] top-[5%] z-[2] h-[43%] w-[22%] rotate-[2deg]',
+  'left-[49%] top-[4%] z-[1] h-[43%] w-[22%] rotate-[-1deg]',
+  'left-[72%] top-[5%] z-[2] h-[43%] w-[22%] rotate-[2deg]',
+  'left-[3%] top-[52%] z-[2] h-[43%] w-[22%] rotate-[1deg]',
+  'left-[26%] top-[51%] z-[1] h-[43%] w-[22%] rotate-[-2deg]',
+  'left-[49%] top-[52%] z-[2] h-[43%] w-[22%] rotate-[1deg]',
+  'left-[72%] top-[51%] z-[1] h-[43%] w-[22%] rotate-[-1deg]',
+];
+
+const FILM_SLOTS: Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8, string[]> = {
   1: ['left-[6%] top-[7%] z-[1] h-[86%] w-[88%] rotate-[-1deg]'],
   2: [
     'left-[4%] top-[10%] z-[1] h-[80%] w-[44%] rotate-[-3deg]',
@@ -36,9 +57,11 @@ const FILM_SLOTS: Record<1 | 2 | 3 | 4 | 5 | 6, string[]> = {
     'left-[36%] top-[51%] z-[1] h-[43%] w-[28%] rotate-[-2deg]',
     'left-[68%] top-[52%] z-[2] h-[43%] w-[28%] rotate-[1deg]',
   ],
+  7: DENSE_SLOTS_7,
+  8: DENSE_SLOTS_8,
 };
 
-const POSTAL_SLOTS: Record<1 | 2 | 3 | 4 | 5 | 6, string[]> = {
+const POSTAL_SLOTS: Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8, string[]> = {
   1: ['left-[10%] top-[8%] z-[1] h-[84%] w-[80%] rotate-[-1deg]'],
   2: [
     'left-[4%] top-[10%] z-[1] h-[80%] w-[44%] rotate-[-3deg]',
@@ -70,12 +93,15 @@ const POSTAL_SLOTS: Record<1 | 2 | 3 | 4 | 5 | 6, string[]> = {
     'left-[36%] top-[51%] z-[1] h-[43%] w-[28%] rotate-[-2deg]',
     'left-[68%] top-[52%] z-[2] h-[43%] w-[28%] rotate-[1deg]',
   ],
+  7: DENSE_SLOTS_7,
+  8: DENSE_SLOTS_8,
 };
 
 function panoramaClass(count: number): string {
   if (count <= 1) return 'aspect-[16/9]';
   if (count <= 3) return 'aspect-[2/1]';
-  return 'aspect-[5/3]';
+  if (count <= 6) return 'aspect-[5/3]';
+  return 'aspect-[4/3]';
 }
 
 function photoSrc(attachment: UploadedAttachment): string {
@@ -97,7 +123,16 @@ export function DiaryPhotoCollage({
   onSelectPhoto?: (attachment: UploadedAttachment) => void;
   photoFocus?: PhotoFocusMap;
 }) {
-  const count = Math.min(Math.max(photos.length, 0), COLLAGE_SLOT_COUNT) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  const count = Math.min(Math.max(photos.length, 0), COLLAGE_SLOT_COUNT) as
+    | 0
+    | 1
+    | 2
+    | 3
+    | 4
+    | 5
+    | 6
+    | 7
+    | 8;
   if (count === 0) {
     return (
       <button

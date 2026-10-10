@@ -323,7 +323,7 @@ export function DiaryPhotoGalleryModal({
         <div className="mt-3 rounded-xl border-2 border-violet-400 bg-violet-50/50 p-3">
           <p className="text-xs font-semibold text-violet-800">{labels.slotsLabel}</p>
           <p className="mt-0.5 text-[11px] leading-relaxed text-violet-700">{labels.slotsHint}</p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-2 grid grid-cols-4 gap-2">
             {Array.from({ length: COLLAGE_SLOT_COUNT }, (_, index) => {
               const id = slotIds[index];
               const photo = id ? byId.get(id) ?? null : null;

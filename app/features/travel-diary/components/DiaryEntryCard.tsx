@@ -247,6 +247,8 @@ export function DiaryEntryCard({
   const slotsCustomized = useRef(entry?.collage_attachment_ids != null);
   const slotIdsRef = useRef<CollageSlotIds>(emptyCollageSlots());
   const photoFocusRef = useRef<PhotoFocusMap>(parsePhotoFocus(entry?.photo_focus));
+  const focusQueueRef = useRef<UploadedAttachment[]>([]);
+  const manualFocusRef = useRef<UploadedAttachment | null>(null);
   const attachmentLoadGen = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const receiptFileRef = useRef<HTMLInputElement>(null);
@@ -254,6 +256,7 @@ export function DiaryEntryCard({
   const entryId = entry?.id ?? null;
 
   const focusCurrent = manualFocus ?? focusQueue[0] ?? null;
+  const portraitSetupOpen = focusQueue.length > 0 || Boolean(manualFocus);
 
   useEffect(() => {
     pendingReceiptsRef.current = pendingReceipts;
@@ -460,6 +463,8 @@ export function DiaryEntryCard({
     photoFocusRef.current = nextFocus;
     slotsCustomized.current = entry?.collage_attachment_ids != null;
     setSlotIds(resolveCollageSlots(attachments.map((item) => item.id), entry?.collage_attachment_ids ?? null));
+    manualFocusRef.current = null;
+    focusQueueRef.current = [];
     setManualFocus(null);
     setFocusQueue([]);
     clearPendingReceipts();
@@ -496,8 +501,12 @@ export function DiaryEntryCard({
     setCollageStyle(next);
   };
 
+  const finalSaveBlocked = () =>
+    focusQueueRef.current.length > 0 || Boolean(manualFocusRef.current);
+
   const handleSave = async (opts?: { stayInEdit?: boolean }) => {
     if (uploading) return null;
+    if (!opts?.stayInEdit && finalSaveBlocked()) return null;
     const nextTitle = titleDraft.trim();
     if (!opts?.stayInEdit && slot.source_id && !nextTitle) {
       alert(labels.title_required);
@@ -621,14 +630,14 @@ export function DiaryEntryCard({
       }
     }
     if (portraits.length === 0) return;
-    setFocusQueue((prev) => {
-      const seen = new Set(prev.map((item) => item.id));
-      const next = [...prev];
-      for (const item of portraits) {
-        if (!seen.has(item.id)) next.push(item);
-      }
-      return next;
-    });
+    const seen = new Set(focusQueueRef.current.map((item) => item.id));
+    const next = [...focusQueueRef.current];
+    for (const item of portraits) {
+      if (!seen.has(item.id)) next.push(item);
+    }
+    if (next.length === focusQueueRef.current.length) return;
+    focusQueueRef.current = next;
+    setFocusQueue(next);
   };
 
   const refreshAttachments = async (targetId: string, previousIds?: Set<string>) => {
@@ -655,15 +664,18 @@ export function DiaryEntryCard({
       const savedChanged = savedNext.some((id, index) => id !== savedResolved[index]);
       if (savedChanged) await persistCollage(savedNext, undefined, targetId);
     }
-    void enqueuePortraitFocus(rows, before);
+    await enqueuePortraitFocus(rows, before);
   };
 
   const finishFocusCurrent = () => {
-    if (manualFocus) {
+    if (manualFocusRef.current) {
+      manualFocusRef.current = null;
       setManualFocus(null);
       return;
     }
-    setFocusQueue((prev) => prev.slice(1));
+    const next = focusQueueRef.current.slice(1);
+    focusQueueRef.current = next;
+    setFocusQueue(next);
   };
 
   const onFocusConfirm = (y: number) => {
@@ -1260,7 +1272,7 @@ export function DiaryEntryCard({
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={saving || uploading}
+              disabled={saving || uploading || portraitSetupOpen}
               onClick={() => void handleSave()}
               className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
             >
@@ -1285,7 +1297,7 @@ export function DiaryEntryCard({
             {entryId && (
               <button
                 type="button"
-                disabled={saving || uploading}
+                disabled={saving || uploading || portraitSetupOpen}
                 onClick={() => {
                   restoreFromSaved();
                   setMode('view');
@@ -1336,6 +1348,7 @@ export function DiaryEntryCard({
         adjustLabel={labels.photos_adjust}
         onAdjustFocus={(attachment) => {
           setGalleryOpen(false);
+          manualFocusRef.current = attachment;
           setManualFocus(attachment);
         }}
         labels={{
