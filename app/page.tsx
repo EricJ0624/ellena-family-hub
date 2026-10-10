@@ -44,7 +44,7 @@ function SessionRestoreSplash() {
       aria-label={appName}
     >
       <Image
-        src="/branding/hearth-splash-icon.png"
+        src="/branding/hearth-splash-icon-v2.png"
         alt=""
         width={216}
         height={202}
