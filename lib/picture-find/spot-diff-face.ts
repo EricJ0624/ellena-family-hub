@@ -146,7 +146,6 @@ export function layoutFace(grid: FaceGrid): FaceLayout | null {
     { kind: 'glasses', x: clampUnit(eyeX), y: clampUnit(eyeY) },
     { kind: 'mole', x: clampUnit(nx0 + w * 0.32), y: clampUnit(ny0 + h * 0.66) },
     { kind: 'mole', x: clampUnit(nx0 + w * 0.7), y: clampUnit(ny0 + h * 0.7) },
-    { kind: 'mole', x: clampUnit(nx0 + w * 0.48), y: clampUnit(ny0 + h * 0.76) },
   ];
   const earY = clampUnit(ny0 + h * 0.58);
   if (earSideInFrame(grid, x0, y0, x1, y1, 'left')) {
@@ -243,16 +242,17 @@ function findEyeBlobs(
 
 /**
  * 얼굴 상자 안의 차이만 옮긴다. 손처럼 상자 밖 피부는 그대로 둔다.
- * 정면은 안경과 점을 두고, 귀가 보이는 쪽에만 귀걸이를 더한다. 옆모습은 점만 둔다.
- * 앵커보다 많은 자리는 점이 되며, 마지막 앵커가 귀걸이여도 귀걸이를 복제하지 않는다.
+ * 정면은 안경과 점 최대 2개를 두고, 귀가 보이는 쪽에만 귀걸이를 더한다.
+ * 정면에서 남는 얼굴 자리는 색조만 두고, 물건은 두지 않는다. 옆모습의 남는 자리는 점이다.
  */
 export function assignFaceDifferences(
   regions: NormalizedRegion[],
   layout: FaceLayout | null,
-): { regions: NormalizedRegion[]; faceKinds: Array<FaceAnchorKind | null> } {
+): { regions: NormalizedRegion[]; faceKinds: Array<FaceAnchorKind | null>; hueOnly: boolean[] } {
   const next = regions.map((region) => ({ ...region }));
   const faceKinds: Array<FaceAnchorKind | null> = regions.map(() => null);
-  if (!layout) return { regions: next, faceKinds };
+  const hueOnly = regions.map(() => false);
+  if (!layout) return { regions: next, faceKinds, hueOnly };
 
   const candidates = regions
     .map((region, index) => ({ region, index }))
@@ -260,6 +260,10 @@ export function assignFaceDifferences(
     .map(({ index }) => index);
 
   candidates.forEach((regionIndex, order) => {
+    if (layout.pose === 'front' && order >= layout.anchors.length) {
+      hueOnly[regionIndex] = true;
+      return;
+    }
     const overflow = order >= layout.anchors.length;
     const anchor = layout.anchors[Math.min(order, layout.anchors.length - 1)];
     const kind: FaceAnchorKind = overflow ? 'mole' : anchor.kind;
@@ -280,5 +284,5 @@ export function assignFaceDifferences(
     faceKinds[regionIndex] = kind;
   });
 
-  return { regions: next, faceKinds };
+  return { regions: next, faceKinds, hueOnly };
 }

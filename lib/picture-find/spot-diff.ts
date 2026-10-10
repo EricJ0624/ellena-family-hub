@@ -212,6 +212,10 @@ export async function generateSpotDiffVariantDataUrl(
       paintSpotSprite(ctx, faceKind, cx, cy, radius, index);
       return;
     }
+    if (placed.hueOnly[index]) {
+      paintSoftTone(ctx, cx, cy, radius, index, appearances[index].saturation);
+      return;
+    }
     if (surface === 'skin') {
       paintSpotSprite(ctx, 'mole', cx, cy, radius, index);
       return;
