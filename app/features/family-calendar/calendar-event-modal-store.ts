@@ -17,6 +17,8 @@ export type CalendarEventModalSnapshot = {
   translations: CalendarEventModalTranslations;
   sanitizeInput: (input: string | null | undefined, maxLength?: number) => string;
   onSubmit: (payload: CalendarEventSubmitPayload) => void;
+  /** 채팅 메시지에서 열 때 제목 미리 채우기 */
+  prefillTitle?: string;
 };
 
 type Listener = () => void;

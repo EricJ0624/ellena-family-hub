@@ -398,6 +398,12 @@ interface FamilyCalendarSectionProps {
   lang: any;
   /** 대시보드에서 내려줌 — 내부 useGroup 금지(memo가 깨져 위젯 클릭 시 전체 재렌더됨) */
   uiTheme: UiTheme;
+  /**
+   * 채팅 위젯에서 "일정 추가" 클릭 시 이 컴포넌트가 소유한 캘린더 모달을 열어주는 함수를 외부에 노출.
+   * page.tsx에서 ref를 생성해 내려주면, 마운트 후 ref.current에 함수가 채워진다.
+   * (메모·렌더 사이클에 영향 없도록 ref 패턴 사용)
+   */
+  openFromChatRef?: React.MutableRefObject<((titlePrefill: string) => void) | undefined>;
   translations: {
     section_title_calendar: string;
     calendar_prev_month: string;
@@ -462,6 +468,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   lang,
   uiTheme,
   translations: t,
+  openFromChatRef,
 }: FamilyCalendarSectionProps) {
   const intlLocale = intlLocaleForLang(lang as LangCode);
   const formatMonthYear = useCallback(
@@ -611,15 +618,20 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     return (events || []).filter((e) => eventMatchesDate(e, key));
   }, [selectedDate, events, eventMatchesDate]);
 
-  const openEventModal = useCallback(() => {
+  const openCreateEventModal = (initialDate: Date, prefillTitle?: string) => {
     openCalendarEventModal({
       isKidsTheme: isKidsThemeRef.current,
-      initialDate: selectedDateRef.current || new Date(),
+      initialDate,
       editingEvent: null,
       translations: translationsRef.current,
       sanitizeInput: (input, maxLength) => sanitizeInputRef.current(input, maxLength),
+      prefillTitle,
       onSubmit: (payload) => submitEventRef.current(payload),
     });
+  };
+
+  const openEventModal = useCallback(() => {
+    openCreateEventModal(selectedDateRef.current || new Date());
   }, []);
 
   const handlePrevMonth = useCallback(() => {
@@ -717,6 +729,12 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     });
   };
   submitEventRef.current = handleEventSubmit;
+
+  if (openFromChatRef) {
+    openFromChatRef.current = (titlePrefill: string) => {
+      openCreateEventModal(new Date(), titlePrefill);
+    };
+  }
 
   const handleDeleteEvent = async (eventId: number | string) => {
     if (!confirm(t.delete_confirm)) return;

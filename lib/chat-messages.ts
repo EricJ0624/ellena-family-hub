@@ -68,8 +68,47 @@ export function trimMessagesToMax(messages: ChatUiMessage[]): ChatUiMessage[] {
   return messages.slice(messages.length - CHAT_MAX_MESSAGES_IN_MEMORY);
 }
 
-function isChatCipherText(text: string | null | undefined): boolean {
+export function isChatCipherText(text: string | null | undefined): boolean {
   return Boolean(text && String(text).startsWith('U2FsdGVkX1'));
+}
+
+export function listUnreadChatMessages(
+  messages: ChatUiMessage[],
+  userId: string,
+  lastSeenAt: string | null | undefined,
+): ChatUiMessage[] {
+  if (!lastSeenAt) return [];
+  return messages.filter(
+    (m) => m.sender_id !== userId && Boolean(m.created_at) && String(m.created_at) > lastSeenAt,
+  );
+}
+
+export type UnreadChatSenderSummary = {
+  id: string;
+  name: string;
+  count: number;
+  first: string;
+};
+
+export function summarizeUnreadChatBySender(
+  unread: ChatUiMessage[],
+  eventAuthorNames: Record<string, string>,
+  displayText: (text: string) => string,
+): UnreadChatSenderSummary[] {
+  const byUser: Record<string, UnreadChatSenderSummary> = {};
+  for (const m of unread) {
+    const uid = m.sender_id ?? 'unknown';
+    if (!byUser[uid]) {
+      byUser[uid] = {
+        id: uid,
+        name: eventAuthorNames[uid] ?? m.user ?? '?',
+        count: 0,
+        first: displayText(m.text),
+      };
+    }
+    byUser[uid].count += 1;
+  }
+  return Object.values(byUser).sort((a, b) => b.count - a.count);
 }
 
 /** 복호화 실패로 암호문이 남은 경우 UI에 평문 대신 안내 문구를 표시한다. */

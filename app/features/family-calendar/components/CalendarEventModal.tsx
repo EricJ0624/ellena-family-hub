@@ -84,6 +84,8 @@ type CalendarEventModalProps = {
   sanitizeInput: (input: string | null | undefined, maxLength?: number) => string;
   onClose: () => void;
   onSubmit: (payload: CalendarEventSubmitPayload) => void;
+  /** 채팅 메시지에서 열 때 제목 미리 채우기 */
+  prefillTitle?: string;
 };
 
 /**
@@ -108,6 +110,7 @@ function CalendarEventForm({
   isKidsTheme,
   initialDate,
   editingEvent,
+  prefillTitle,
   translations: t,
   sanitizeInput,
   onClose,
@@ -121,7 +124,7 @@ function CalendarEventForm({
   const [pickerView, setPickerView] = useState({ year: startDate.getFullYear(), month: startDate.getMonth() });
   const [formError, setFormError] = useState<string | null>(null);
   const [eventForm, setEventForm] = useState({
-    title: editingEvent?.title || '',
+    title: editingEvent?.title || prefillTitle || '',
     month: editingEvent?.month || startDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
     day: editingEvent?.day || String(startDate.getDate()),
     desc: editingEvent?.desc || '',

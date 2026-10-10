@@ -30,7 +30,7 @@ export function CalendarEventModalHost() {
 
   const modalKey = snap.editingEvent
     ? `edit-${String(snap.editingEvent.id)}`
-    : `new-${snap.initialDate.getTime()}`;
+    : `new-${snap.initialDate.getTime()}-${snap.prefillTitle ?? ''}`;
 
   return (
     <CalendarEventModal
@@ -41,6 +41,7 @@ export function CalendarEventModalHost() {
       editingEvent={snap.editingEvent}
       translations={snap.translations}
       sanitizeInput={snap.sanitizeInput}
+      prefillTitle={snap.prefillTitle}
       onClose={closeCalendarEventModal}
       onSubmit={handleSubmit}
     />

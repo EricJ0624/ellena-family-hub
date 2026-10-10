@@ -5,12 +5,20 @@
 'use client';
 
 import { Camera, ImageIcon, Mic, Paperclip, Plus, Send } from 'lucide-react';
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { ChatUiMessage } from '../types';
-import { getChatMessageDisplayText } from '@/lib/chat-messages';
+import {
+  getChatMessageDisplayText,
+  isChatCipherText,
+  listUnreadChatMessages,
+  summarizeUnreadChatBySender,
+  type UnreadChatSenderSummary,
+} from '@/lib/chat-messages';
+
+const EMPTY_UNREAD_SUMMARY: UnreadChatSenderSummary[] = [];
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
 import { isValidLang } from '@/lib/language-fonts';
@@ -44,6 +52,10 @@ interface FamilyChatSectionProps {
   eventAuthorNames: Record<string, string>;
   lang: any;
   uiTheme?: UiTheme;
+  /** 채팅 메시지 텍스트를 할 일로 빠르게 추가 (FamilyTasksSection.addTaskRef 경유) */
+  onQuickAddTask?: (text: string) => Promise<void>;
+  /** 채팅 메시지 텍스트를 제목으로 캘린더 모달 열기 (FamilyCalendarSection.openFromChatRef 경유) */
+  onOpenCalendarWithText?: (text: string) => void;
   translations: {
     section_title_chat: string;
     section_chat_bubble_greeting: string;
@@ -55,6 +67,15 @@ interface FamilyChatSectionProps {
     chat_camera_btn: string;
     chat_attach_btn_aria: string;
     chat_remove_attachment_aria: string;
+    chat_quick_add_task: string;
+    chat_quick_add_calendar: string;
+    chat_task_added_ok: string;
+    chat_task_add_failed: string;
+    chat_unread_summary_btn: string;
+    chat_unread_dismiss: string;
+    chat_unread_badge: string;
+    chat_unread_summary_title: string;
+    chat_unread_mark_all: string;
     me: string;
     user: string;
   };
@@ -100,7 +121,7 @@ export const KidsChatDecorations = memo(function KidsChatDecorations() {
   );
 });
 
-export function FamilyChatSection({
+export const FamilyChatSection = memo(function FamilyChatSection({
   messages,
   userId,
   currentGroupId,
@@ -125,11 +146,112 @@ export function FamilyChatSection({
   eventAuthorNames,
   lang,
   uiTheme,
+  onQuickAddTask,
+  onOpenCalendarWithText,
   translations: t,
 }: FamilyChatSectionProps) {
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const isKidsTheme = uiTheme === 'kids_friendly';
+
+  // ── 안 읽은 메시지 추적 ──────────────────────────────────────────
+  const storageKey = userId && currentGroupId
+    ? `family_chat_last_seen:${userId}:${currentGroupId}`
+    : null;
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
+  /** 모바일 탭으로 연 메시지 액션. PC는 hover로도 보임. */
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [taskFeedback, setTaskFeedback] = useState<Record<string, 'ok' | 'fail'>>({});
+  const feedbackTimersRef = useRef<number[]>([]);
+  const didInitSeenRef = useRef(false);
+  const roomModePrevRef = useRef(roomMode);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  const unavailableLabel = lang === 'en' ? 'Unable to load message' : '메시지를 불러올 수 없습니다';
+
+  const setUnreadCountIfChanged = (next: number) => {
+    setUnreadCount((prev) => (prev === next ? prev : next));
+  };
+
+  const hideSummaryIfOpen = () => {
+    setShowSummary((prev) => (prev ? false : prev));
+  };
+
+  const markLatestSeen = () => {
+    if (!storageKey) return;
+    const latest = messagesRef.current.length
+      ? messagesRef.current[messagesRef.current.length - 1]?.created_at
+      : null;
+    if (latest) localStorage.setItem(storageKey, latest);
+    setUnreadCountIfChanged(0);
+    hideSummaryIfOpen();
+  };
+
+  useEffect(() => {
+    return () => {
+      for (const id of feedbackTimersRef.current) window.clearTimeout(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    didInitSeenRef.current = false;
+    hideSummaryIfOpen();
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageKey || !messages.length) {
+      setUnreadCountIfChanged(0);
+      return;
+    }
+    if (!didInitSeenRef.current) {
+      didInitSeenRef.current = true;
+      if (!localStorage.getItem(storageKey)) {
+        const latest = messages[messages.length - 1]?.created_at;
+        if (latest) localStorage.setItem(storageKey, latest);
+        setUnreadCountIfChanged(0);
+        return;
+      }
+    }
+    const lastSeenAt = localStorage.getItem(storageKey);
+    setUnreadCountIfChanged(listUnreadChatMessages(messages, userId, lastSeenAt).length);
+  }, [messages, storageKey, userId]);
+
+  // 대화 화면을 닫을 때만 읽음 처리 — messages deps에 넣으면 수신마다 effect가 돈다
+  useEffect(() => {
+    const wasOpen = roomModePrevRef.current;
+    roomModePrevRef.current = roomMode;
+    if (wasOpen && !roomMode) markLatestSeen();
+  }, [roomMode, storageKey]);
+
+  const handleQuickAddTask = async (messageId: string, text: string) => {
+    if (!onQuickAddTask || isChatCipherText(text)) return;
+    try {
+      await onQuickAddTask(text);
+      setTaskFeedback((prev) => ({ ...prev, [messageId]: 'ok' }));
+    } catch {
+      setTaskFeedback((prev) => ({ ...prev, [messageId]: 'fail' }));
+    }
+    const timer = window.setTimeout(() => {
+      setTaskFeedback((prev) => {
+        if (!(messageId in prev)) return prev;
+        const next = { ...prev };
+        delete next[messageId];
+        return next;
+      });
+    }, 2500);
+    feedbackTimersRef.current.push(timer);
+  };
+
+  const unreadSummary = useMemo(() => {
+    if (!showSummary || !storageKey) return EMPTY_UNREAD_SUMMARY;
+    const unread = listUnreadChatMessages(messages, userId, localStorage.getItem(storageKey));
+    return summarizeUnreadChatBySender(unread, eventAuthorNames, (text) =>
+      getChatMessageDisplayText(text, unavailableLabel),
+    );
+  }, [showSummary, messages, storageKey, userId, eventAuthorNames, unavailableLabel]);
 
   useEffect(() => {
     if (!attachMenuOpen) return;
@@ -150,6 +272,26 @@ export function FamilyChatSection({
       document.removeEventListener('keydown', closeOnEscape, true);
     };
   }, [attachMenuOpen]);
+
+  useEffect(() => {
+    if (!activeMessageId) return;
+    const closeOnOutside = (e: PointerEvent) => {
+      const box = chatBoxRef.current;
+      if (box && box.contains(e.target as Node)) return;
+      setActiveMessageId(null);
+    };
+    const closeOnEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setActiveMessageId(null);
+    };
+    document.addEventListener('pointerdown', closeOnOutside);
+    document.addEventListener('keydown', closeOnEscape, true);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside);
+      document.removeEventListener('keydown', closeOnEscape, true);
+    };
+  }, [activeMessageId, chatBoxRef]);
 
   const openAlbumPicker = () => {
     setAttachMenuOpen(false);
@@ -247,9 +389,51 @@ export function FamilyChatSection({
         ) : (
           <h3 className="section-title">{t.section_title_chat}</h3>
         )}
+        {unreadCount >= 5 && (
+          <div className="flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 border border-indigo-200"
+            style={{ fontSize: '3.2cqmin' }}>
+            <span className="font-semibold">{t.chat_unread_badge.replace('{count}', String(unreadCount))}</span>
+            <button
+              type="button"
+              onClick={() => setShowSummary((v) => !v)}
+              className="rounded-full bg-indigo-500 px-2 py-0.5 text-white font-semibold hover:bg-indigo-600 transition-colors"
+              style={{ fontSize: '3cqmin' }}
+            >
+              {showSummary ? t.chat_unread_dismiss : t.chat_unread_summary_btn}
+            </button>
+          </div>
+        )}
       </div>
+      {showSummary && unreadSummary.length > 0 && (
+        <div className="relative z-[3] mx-2 mb-1 rounded-xl border border-indigo-100 bg-indigo-50/90 px-3 py-2"
+          style={{ fontSize: '3.5cqmin' }}>
+          <p className="mb-1 font-bold text-indigo-700" style={{ fontSize: '3.8cqmin' }}>
+            {t.chat_unread_summary_title.replace('{count}', String(unreadCount))}
+          </p>
+          {unreadSummary.map((s) => (
+            <div key={s.id} className="flex items-baseline gap-1 text-indigo-800">
+              <span className="font-semibold">{s.name}</span>
+              <span className="text-indigo-500">{s.count}</span>
+              <span className="truncate text-indigo-600 opacity-80">— {s.first}</span>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={markLatestSeen}
+            className="mt-1.5 text-indigo-400 hover:text-indigo-600 transition-colors text-xs"
+          >
+            {t.chat_unread_mark_all}
+          </button>
+        </div>
+      )}
       <div className="section-body chat-section-body relative z-[3]">
-        <div ref={chatBoxRef} className="chat-messages">
+        <div
+          ref={chatBoxRef}
+          className="chat-messages"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setActiveMessageId(null);
+          }}
+        >
           {chatHasMoreOlder && (
             <div className="text-center" style={{ padding: '2cqmin 0 1cqmin' }}>
               <button
@@ -262,8 +446,23 @@ export function FamilyChatSection({
               </button>
             </div>
           )}
-          {(messages || []).map((m) => (
-            <div key={String(m.id)} className="message-item">
+          {(messages || []).map((m) => {
+            const messageId = String(m.id);
+            const canQuickAdd = Boolean(
+              m.text &&
+                !isChatCipherText(m.text) &&
+                (onQuickAddTask || onOpenCalendarWithText),
+            );
+            const actionsOpen = activeMessageId === messageId;
+            return (
+            <div
+              key={messageId}
+              className="message-item group/msg relative"
+              onClick={() => {
+                if (!canQuickAdd) return;
+                setActiveMessageId((prev) => (prev === messageId ? null : messageId));
+              }}
+            >
               <div className="message-header">
                 <span className="message-user flex items-center gap-1">
                   {m.sender_id && familyRoleByUserId[m.sender_id] && (
@@ -287,6 +486,49 @@ export function FamilyChatSection({
                   </span>
                 </span>
                 <span className="message-time">{m.time}</span>
+                {/* PC: hover, 모바일: 메시지 탭으로 토글 */}
+                {canQuickAdd && (
+                  <span
+                    className={`ml-auto flex items-center gap-1 transition-opacity ${
+                      actionsOpen ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'
+                    }`}
+                  >
+                    {taskFeedback[messageId] ? (
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${taskFeedback[messageId] === 'ok' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                        {taskFeedback[messageId] === 'ok' ? t.chat_task_added_ok : t.chat_task_add_failed}
+                      </span>
+                    ) : (
+                      <>
+                        {onQuickAddTask && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleQuickAddTask(messageId, m.text);
+                            }}
+                            className="rounded-full border border-indigo-200 bg-white px-2 py-0.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            title={t.chat_quick_add_task}
+                          >
+                            ✅ {t.chat_quick_add_task}
+                          </button>
+                        )}
+                        {onOpenCalendarWithText && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenCalendarWithText(m.text);
+                            }}
+                            className="rounded-full border border-violet-200 bg-white px-2 py-0.5 text-xs font-semibold text-violet-600 hover:bg-violet-50 transition-colors"
+                            title={t.chat_quick_add_calendar}
+                          >
+                            📅 {t.chat_quick_add_calendar}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </span>
+                )}
               </div>
               <div className="message-bubble">
                 {(() => {
@@ -319,7 +561,12 @@ export function FamilyChatSection({
                         ))}
                       {rows.map((att) => (
                         <div key={att.id} className="chat-attachment-cell relative">
-                          <a href={att.image_url} target="_blank" rel="noopener noreferrer">
+                          <a
+                            href={att.image_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <img
                               src={att.thumbnail_url || att.image_url}
                               alt={att.original_filename}
@@ -330,7 +577,8 @@ export function FamilyChatSection({
                           {m.sender_id === userId && (
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 if (!currentGroupId) return;
                                 void onDeleteAttachment(att.id);
                               }}
@@ -355,7 +603,8 @@ export function FamilyChatSection({
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         <div className="chat-input-wrapper">
           {isKidsTheme ? (
@@ -415,4 +664,4 @@ export function FamilyChatSection({
       </div>
     </section>
   );
-}
+});

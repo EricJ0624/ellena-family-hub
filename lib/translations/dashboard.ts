@@ -102,6 +102,23 @@ export type DashboardTranslations = {
   chat_camera_btn: string;
   chat_attach_btn_aria: string;
   chat_remove_attachment_aria: string;
+  /** 채팅 메시지 → 할 일 빠른 추가 버튼 */
+  chat_quick_add_task: string;
+  /** 채팅 메시지 → 캘린더 일정 빠른 추가 버튼 */
+  chat_quick_add_calendar: string;
+  /** 할 일 추가 성공 피드백 */
+  chat_task_added_ok: string;
+  /** 할 일 추가 실패 피드백 */
+  chat_task_add_failed: string;
+  /** 안 읽은 메시지 요약 보기 버튼 */
+  chat_unread_summary_btn: string;
+  /** 안 읽은 메시지 요약 닫기 버튼 */
+  chat_unread_dismiss: string;
+  /** 위젯 배지. `{count}` */
+  chat_unread_badge: string;
+  /** 요약 패널 제목. `{count}` */
+  chat_unread_summary_title: string;
+  chat_unread_mark_all: string;
   /** 그룹 미선택 등으로 채팅 전송 불가 */
   chat_send_no_group: string;
   /** 멤버십 없음·잘못된 그룹 선택 시 RLS 차단 대응 */
@@ -416,6 +433,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: '카메라',
     chat_attach_btn_aria: '사진 첨부',
     chat_remove_attachment_aria: '첨부 삭제',
+    chat_quick_add_task: '할 일 추가',
+    chat_quick_add_calendar: '일정 추가',
+    chat_task_added_ok: '✅ 추가됨',
+    chat_task_add_failed: '추가 실패',
+    chat_unread_summary_btn: '요약 보기',
+    chat_unread_dismiss: '닫기',
+    chat_unread_badge: '{count}개 안 읽음',
+    chat_unread_summary_title: '{count}개 안 읽은 메시지',
+    chat_unread_mark_all: '모두 읽음으로 표시',
     chat_send_no_group: '가족 그룹이 아직 선택되지 않았습니다. 잠시 후 다시 시도해 주세요.',
     chat_send_no_access:
       '이 그룹에 채팅을 보낼 권한이 없습니다. 상단에서 참여 중인 가족 그룹을 선택했는지 확인하거나, 페이지를 새로고침해 주세요.',
@@ -712,6 +738,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Camera',
     chat_attach_btn_aria: 'Attach photo',
     chat_remove_attachment_aria: 'Remove attachment',
+    chat_quick_add_task: 'Add as task',
+    chat_quick_add_calendar: 'Add as event',
+    chat_task_added_ok: '✅ Added',
+    chat_task_add_failed: 'Failed to add',
+    chat_unread_summary_btn: 'View summary',
+    chat_unread_dismiss: 'Dismiss',
+    chat_unread_badge: '{count} unread',
+    chat_unread_summary_title: '{count} unread messages',
+    chat_unread_mark_all: 'Mark all as read',
     chat_send_no_group: 'No family group selected yet. Please try again in a moment.',
     chat_send_no_access:
       'You cannot send messages in this family group. Select a group you belong to or refresh the page.',
@@ -1008,6 +1043,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'カメラ',
     chat_attach_btn_aria: '写真を添付',
     chat_remove_attachment_aria: '添付を削除',
+    chat_quick_add_task: 'タスクに追加',
+    chat_quick_add_calendar: '予定に追加',
+    chat_task_added_ok: '✅ 追加しました',
+    chat_task_add_failed: '追加に失敗しました',
+    chat_unread_summary_btn: '要約を見る',
+    chat_unread_dismiss: '閉じる',
+    chat_unread_badge: '未読 {count}件',
+    chat_unread_summary_title: '未読メッセージ {count}件',
+    chat_unread_mark_all: 'すべて既読にする',
     chat_send_no_group: 'ファミリーグループがまだ選択されていません。しばらくしてから再度お試しください。',
     chat_send_no_access:
       'このグループにメッセージを送る権限がありません。参加中のファミリーグループを選び直すか、ページを更新してください。',
@@ -1304,6 +1348,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: '相机',
     chat_attach_btn_aria: '添加照片',
     chat_remove_attachment_aria: '删除附件',
+    chat_quick_add_task: '添加为任务',
+    chat_quick_add_calendar: '添加为日程',
+    chat_task_added_ok: '✅ 已添加',
+    chat_task_add_failed: '添加失败',
+    chat_unread_summary_btn: '查看摘要',
+    chat_unread_dismiss: '关闭',
+    chat_unread_badge: '{count}条未读',
+    chat_unread_summary_title: '{count}条未读消息',
+    chat_unread_mark_all: '全部标为已读',
     chat_send_no_group: '尚未选择家庭群组。请稍后再试。',
     chat_send_no_access: '您没有权限在此群组发送消息。请在上方的家庭群组中选择您已加入的群组，或刷新页面后重试。',
     map_error_no_key: '未设置 Google Maps API 密钥。请检查环境变量。',
@@ -1597,6 +1650,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: '相機',
     chat_attach_btn_aria: '新增照片',
     chat_remove_attachment_aria: '移除附件',
+    chat_quick_add_task: '新增為任務',
+    chat_quick_add_calendar: '新增為行程',
+    chat_task_added_ok: '✅ 已新增',
+    chat_task_add_failed: '新增失敗',
+    chat_unread_summary_btn: '查看摘要',
+    chat_unread_dismiss: '關閉',
+    chat_unread_badge: '{count}則未讀',
+    chat_unread_summary_title: '{count}則未讀訊息',
+    chat_unread_mark_all: '全部標為已讀',
     chat_send_no_group: '尚未選擇家庭群組。請稍後再試。',
     chat_send_no_access: '您沒有權限在此群組傳送訊息。請在上方選擇您已加入的家庭群組，或重新整理頁面後再試。',
     map_error_no_key: '未設定 Google Maps API 金鑰。請檢查環境變數。',
@@ -1890,6 +1952,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Cámara',
     chat_attach_btn_aria: 'Adjuntar foto',
     chat_remove_attachment_aria: 'Quitar archivo adjunto',
+    chat_quick_add_task: 'Agregar tarea',
+    chat_quick_add_calendar: 'Agregar evento',
+    chat_task_added_ok: '✅ Agregado',
+    chat_task_add_failed: 'Error al agregar',
+    chat_unread_summary_btn: 'Ver resumen',
+    chat_unread_dismiss: 'Cerrar',
+    chat_unread_badge: '{count} sin leer',
+    chat_unread_summary_title: '{count} mensajes sin leer',
+    chat_unread_mark_all: 'Marcar todo como leído',
     chat_send_no_group: 'Aún no se ha seleccionado ningún grupo familiar. Inténtelo de nuevo en un momento.',
     chat_send_no_access: 'No puedes enviar mensajes en este grupo familiar. Seleccione un grupo al que pertenece o actualice la página.',
     map_error_no_key: 'La clave API de Google Maps no está configurada. Verifique las variables de su entorno.',
@@ -2182,6 +2253,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Caméra',
     chat_attach_btn_aria: 'Joindre une photo',
     chat_remove_attachment_aria: 'Supprimer la pièce jointe',
+    chat_quick_add_task: 'Ajouter comme tâche',
+    chat_quick_add_calendar: 'Ajouter comme événement',
+    chat_task_added_ok: '✅ Ajouté',
+    chat_task_add_failed: 'Échec de l\'ajout',
+    chat_unread_summary_btn: 'Voir le résumé',
+    chat_unread_dismiss: 'Fermer',
+    chat_unread_badge: '{count} non lus',
+    chat_unread_summary_title: '{count} messages non lus',
+    chat_unread_mark_all: 'Tout marquer comme lu',
     chat_send_no_group: 'Aucun groupe familial sélectionné pour l\'instant. Veuillez réessayer dans un instant.',
     chat_send_no_access: 'Vous ne pouvez pas envoyer de messages dans ce groupe familial. Sélectionnez un groupe auquel vous appartenez ou actualisez la page.',
     map_error_no_key: 'La clé API Google Maps n\'est pas définie. Vérifiez vos variables d\'environnement.',
@@ -2474,6 +2554,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Kamera',
     chat_attach_btn_aria: 'Foto anhängen',
     chat_remove_attachment_aria: 'Anhang entfernen',
+    chat_quick_add_task: 'Als Aufgabe hinzufügen',
+    chat_quick_add_calendar: 'Als Termin hinzufügen',
+    chat_task_added_ok: '✅ Hinzugefügt',
+    chat_task_add_failed: 'Hinzufügen fehlgeschlagen',
+    chat_unread_summary_btn: 'Zusammenfassung anzeigen',
+    chat_unread_dismiss: 'Schließen',
+    chat_unread_badge: '{count} ungelesen',
+    chat_unread_summary_title: '{count} ungelesene Nachrichten',
+    chat_unread_mark_all: 'Alle als gelesen markieren',
     chat_send_no_group: 'Noch keine Familiengruppe ausgewählt. Bitte versuchen Sie es gleich noch einmal.',
     chat_send_no_access: 'In dieser Familiengruppe können Sie keine Nachrichten senden. Wählen Sie eine Gruppe aus, zu der Sie gehören, oder aktualisieren Sie die Seite.',
     map_error_no_key: 'Der Google Maps-API-Schlüssel ist nicht festgelegt. Überprüfen Sie Ihre Umgebungsvariablen.',
@@ -2766,6 +2855,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Telecamera',
     chat_attach_btn_aria: 'Allega foto',
     chat_remove_attachment_aria: 'Rimuovi l\'allegato',
+    chat_quick_add_task: 'Aggiungi come attività',
+    chat_quick_add_calendar: 'Aggiungi come evento',
+    chat_task_added_ok: '✅ Aggiunto',
+    chat_task_add_failed: 'Aggiunta non riuscita',
+    chat_unread_summary_btn: 'Vedi riepilogo',
+    chat_unread_dismiss: 'Chiudi',
+    chat_unread_badge: '{count} non letti',
+    chat_unread_summary_title: '{count} messaggi non letti',
+    chat_unread_mark_all: 'Segna tutti come letti',
     chat_send_no_group: 'Nessun gruppo familiare ancora selezionato. Per favore riprova tra un attimo.',
     chat_send_no_access: 'Non puoi inviare messaggi in questo gruppo familiare. Seleziona un gruppo a cui appartieni o aggiorna la pagina.',
     map_error_no_key: 'La chiave API di Google Maps non è impostata. Controlla le variabili d\'ambiente.',
@@ -3058,6 +3156,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Câmera',
     chat_attach_btn_aria: 'Anexar foto',
     chat_remove_attachment_aria: 'Remover anexo',
+    chat_quick_add_task: 'Adicionar como tarefa',
+    chat_quick_add_calendar: 'Adicionar como evento',
+    chat_task_added_ok: '✅ Adicionado',
+    chat_task_add_failed: 'Falha ao adicionar',
+    chat_unread_summary_btn: 'Ver resumo',
+    chat_unread_dismiss: 'Fechar',
+    chat_unread_badge: '{count} não lidas',
+    chat_unread_summary_title: '{count} mensagens não lidas',
+    chat_unread_mark_all: 'Marcar todas como lidas',
     chat_send_no_group: 'Nenhum grupo familiar selecionado ainda. Tente novamente em instantes.',
     chat_send_no_access: 'Você não pode enviar mensagens neste grupo familiar. Selecione um grupo ao qual pertence ou atualize a página.',
     map_error_no_key: 'A chave da API do Google Maps não está configurada. Verifique suas variáveis de ambiente.',

@@ -532,12 +532,35 @@ export default function FamilyHub() {
     chat_camera_btn: getDashboardTranslation(lang, 'chat_camera_btn'),
     chat_attach_btn_aria: getDashboardTranslation(lang, 'chat_attach_btn_aria'),
     chat_remove_attachment_aria: getDashboardTranslation(lang, 'chat_remove_attachment_aria'),
+    chat_quick_add_task: getDashboardTranslation(lang, 'chat_quick_add_task'),
+    chat_quick_add_calendar: getDashboardTranslation(lang, 'chat_quick_add_calendar'),
+    chat_task_added_ok: getDashboardTranslation(lang, 'chat_task_added_ok'),
+    chat_task_add_failed: getDashboardTranslation(lang, 'chat_task_add_failed'),
+    chat_unread_summary_btn: getDashboardTranslation(lang, 'chat_unread_summary_btn'),
+    chat_unread_dismiss: getDashboardTranslation(lang, 'chat_unread_dismiss'),
+    chat_unread_badge: getDashboardTranslation(lang, 'chat_unread_badge'),
+    chat_unread_summary_title: getDashboardTranslation(lang, 'chat_unread_summary_title'),
+    chat_unread_mark_all: getDashboardTranslation(lang, 'chat_unread_mark_all'),
     me: getCommonTranslation(lang, 'me'),
     user: getCommonTranslation(lang, 'user'),
   }), [lang]);
 
   /** 태스크 drag 핸들러 — 안정적인 참조 유지 (React.memo 안정성) */
   const handleDropChatFilesRef = useRef<((files: File[]) => void) | null>(null);
+  /** 채팅→할 일 빠른 추가: FamilyTasksSection이 매 렌더마다 최신 addTask를 여기에 등록 */
+  const chatAddTaskRef = useRef<((text: string) => Promise<void>) | undefined>(undefined);
+  /** 채팅→캘린더 모달 열기: FamilyCalendarSection이 매 렌더마다 최신 openCalendarEventModal 래퍼를 여기에 등록 */
+  const chatOpenCalendarRef = useRef<((titlePrefill: string) => void) | undefined>(undefined);
+  /** 채팅에서 할 일 추가 — ref를 호출 시점에 읽는 안정적인 래퍼 */
+  const handleChatQuickAddTask = useCallback(async (text: string) => {
+    const add = chatAddTaskRef.current;
+    if (!add) throw new Error('TASKS_UNAVAILABLE');
+    await add(text);
+  }, []);
+  /** 채팅에서 캘린더 모달 열기 — ref를 호출 시점에 읽는 안정적인 래퍼 */
+  const handleChatOpenCalendar = useCallback((text: string) => {
+    chatOpenCalendarRef.current?.(text);
+  }, []);
   const handleTaskChatDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setChatDragOver(true);
@@ -6818,6 +6841,9 @@ export default function FamilyHub() {
     setChatRoomOpen(true);
     focusInput();
   }, [pinChatRoomToLatest]);
+  const handleChatInputFocus = useCallback(() => {
+    openChatRoom();
+  }, [openChatRoom]);
 
   useLayoutEffect(() => {
     if (!chatRoomOpen || !chatRoomPinLatestRef.current) return;
@@ -7022,6 +7048,7 @@ export default function FamilyHub() {
             onChatDragOver={handleTaskChatDragOver}
             onChatDragLeave={handleTaskChatDragLeave}
             onChatDrop={handleTaskChatDrop}
+            addTaskRef={chatAddTaskRef}
           />
         );
       case 'calendar':
@@ -7041,6 +7068,7 @@ export default function FamilyHub() {
             lang={lang}
             uiTheme={uiTheme}
             translations={calendarTranslations}
+            openFromChatRef={chatOpenCalendarRef}
           />
         );
       case 'chat':
@@ -7051,7 +7079,7 @@ export default function FamilyHub() {
             currentGroupId={currentGroupId}
             isSendingText={chatTextSendingUi}
             onSendMessage={sendChat}
-            onInputFocus={() => openChatRoom()}
+            onInputFocus={handleChatInputFocus}
             chatBoxRef={chatBoxRef}
             chatInputRef={chatInputRef}
             chatFileInputRef={chatFileInputRef}
@@ -7071,6 +7099,8 @@ export default function FamilyHub() {
             uiTheme={uiTheme}
             roomMode={chatRoomOpen}
             translations={chatTranslations}
+            onQuickAddTask={handleChatQuickAddTask}
+            onOpenCalendarWithText={handleChatOpenCalendar}
           />
         );
       case 'travel':

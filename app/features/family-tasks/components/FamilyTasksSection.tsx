@@ -72,6 +72,12 @@ interface FamilyTasksSectionProps {
   onChatDragOver: (e: React.DragEvent) => void;
   onChatDragLeave: () => void;
   onChatDrop: (e: React.DragEvent) => void;
+  /**
+   * 채팅 위젯에서 "할 일 추가" 클릭 시 바로 할 일을 삽입할 수 있도록
+   * addTask 래퍼를 외부 ref에 노출.
+   * (메모·렌더 사이클에 영향 없도록 ref 패턴 사용)
+   */
+  addTaskRef?: React.MutableRefObject<((text: string) => Promise<void>) | undefined>;
 }
 
 function isTempTaskId(id: number | string): boolean {
@@ -142,6 +148,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   onChatDragOver,
   onChatDragLeave,
   onChatDrop,
+  addTaskRef,
 }: FamilyTasksSectionProps) {
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [todoError, setTodoError] = useState<string | null>(null);
@@ -220,6 +227,51 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     applyTasksChange(next);
   };
 
+  const insertTask = async (sanitizedText: string, assignedToUserId: string | null) => {
+    const assigneeStr = assignedToUserId ? formatAssigneeDisplay(assignedToUserId) : '누구나';
+    const tempId = nextTempTaskId();
+    const optimisticTask: FamilyTask = {
+      id: tempId,
+      text: sanitizedText,
+      assignee: assigneeStr,
+      done: false,
+      assigned_to_user_id: assignedToUserId ?? undefined,
+      created_by: userId,
+    };
+    commitTasks([optimisticTask, ...tasksRef.current]);
+    try {
+      const inserted = await addTask({
+        text: sanitizedText,
+        assignee: assigneeStr,
+        done: false,
+        assignedToUserId,
+      });
+      const latest = tasksRef.current.filter(
+        (row) => row.id !== tempId && String(row.id) !== String(inserted.id),
+      );
+      commitTasks([
+        {
+          ...optimisticTask,
+          id: inserted.id,
+          created_by: inserted.created_by ?? userId,
+          done: inserted.is_completed ?? false,
+        },
+        ...latest,
+      ]);
+    } catch (error) {
+      commitTasks(tasksRef.current.filter((row) => row.id !== tempId));
+      throw error;
+    }
+  };
+
+  if (addTaskRef) {
+    addTaskRef.current = async (text: string) => {
+      const sanitized = sanitizeInput(text, 100);
+      if (!sanitized) throw new Error('EMPTY_TASK');
+      await insertTask(sanitized, null);
+    };
+  }
+
   const handleToggleTask = (taskId: number | string) => {
     const latest = tasksRef.current;
     const task = latest.find((x) => x.id === taskId);
@@ -296,47 +348,16 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
 
     const selectedUserId = (todoWhoRef.current?.value ?? '').trim();
     const assignedToUserId = selectedUserId.length > 0 ? selectedUserId : null;
-    const assigneeStr = assignedToUserId ? formatAssigneeDisplay(assignedToUserId) : '누구나';
-
-    const tempId = nextTempTaskId();
-    const optimisticTask: FamilyTask = {
-      id: tempId,
-      text: sanitizedText,
-      assignee: assigneeStr,
-      done: false,
-      assigned_to_user_id: assignedToUserId ?? undefined,
-      created_by: userId,
-    };
 
     if (todoTextRef.current) todoTextRef.current.value = '';
     if (todoWhoRef.current) todoWhoRef.current.value = '';
     setTodoError(null);
     setIsTodoModalOpen(false);
-    commitTasks([optimisticTask, ...tasksRef.current]);
 
     try {
-      const inserted = await addTask({
-        text: sanitizedText,
-        assignee: assigneeStr,
-        done: false,
-        assignedToUserId,
-      });
-
-      const latest = tasksRef.current.filter(
-        (row) => row.id !== tempId && String(row.id) !== String(inserted.id),
-      );
-      commitTasks([
-        {
-          ...optimisticTask,
-          id: inserted.id,
-          created_by: inserted.created_by ?? userId,
-          done: inserted.is_completed ?? false,
-        },
-        ...latest,
-      ]);
+      await insertTask(sanitizedText, assignedToUserId);
     } catch (error) {
       console.error('임무 추가 실패:', error);
-      commitTasks(tasksRef.current.filter((row) => row.id !== tempId));
       alert('임무 저장에 실패했습니다. 다시 시도해 주세요.');
     }
   };
