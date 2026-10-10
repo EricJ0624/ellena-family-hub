@@ -222,6 +222,7 @@ export function FamilyChatSection({
       ref={chatInputRef}
       type="text"
       aria-busy={isSendingText}
+      onPointerDown={() => onInputFocus?.()}
       onFocus={onInputFocus}
       onKeyDown={handleKeyDown}
       className={`chat-input min-w-0 flex-1 ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}

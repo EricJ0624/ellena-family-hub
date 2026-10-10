@@ -4,6 +4,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, startTransition } from 'react';
+import { createPortal } from 'react-dom';
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
@@ -6916,11 +6917,7 @@ export default function FamilyHub() {
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
 
-  const renderWidgetSection = (
-    widgetKey: DashboardWidgetKey,
-    widgetRowSpan?: number,
-    chatInputOpensRoom = false,
-  ) => {
+  const renderWidgetSection = (widgetKey: DashboardWidgetKey, widgetRowSpan?: number) => {
     switch (widgetKey) {
       case 'tasks':
         return (
@@ -6973,7 +6970,7 @@ export default function FamilyHub() {
             currentGroupId={currentGroupId}
             isSendingText={chatTextSendingUi}
             onSendMessage={sendChat}
-            onInputFocus={chatInputOpensRoom ? () => openChatRoom() : undefined}
+            onInputFocus={() => openChatRoom()}
             chatBoxRef={chatBoxRef}
             chatInputRef={chatInputRef}
             chatFileInputRef={chatFileInputRef}
@@ -7726,10 +7723,12 @@ export default function FamilyHub() {
                     },
                   )}
                 >
+                  {(() => {
+                    const chatRoomPanel = (
                   <div
                     className={
                       isChatRoom
-                        ? `fixed inset-x-0 z-[8100] flex flex-col overflow-hidden bg-white${
+                        ? `fixed inset-x-0 z-[10040] flex flex-col overflow-hidden bg-white${
                             chatRoomFrame != null &&
                             window.innerHeight - chatRoomFrame.top - chatRoomFrame.height > 80
                               ? ''
@@ -7749,6 +7748,10 @@ export default function FamilyHub() {
                     style={
                       isChatRoom
                         ? {
+                            position: 'fixed',
+                            left: 0,
+                            right: 0,
+                            zIndex: 10040,
                             top: chatRoomFrame?.top ?? 0,
                             height: chatRoomFrame ? `${chatRoomFrame.height}px` : '100dvh',
                           }
@@ -7802,19 +7805,20 @@ export default function FamilyHub() {
                         rowSpan={rowSpan}
                         onExpand={
                           isSmallWidget && !isExpanded && !isChatRoom && cfg.widget_key !== 'album'
-                            ? handleExpandWidget
+                            ? cfg.widget_key === 'chat'
+                              ? () => openChatRoom({ focusInput: true })
+                              : handleExpandWidget
                             : undefined
                         }
                         expandLabel={dt('widgets_magnify_open')}
                       >
-                        {renderWidgetSection(
-                          cfg.widget_key,
-                          rowSpan,
-                          cfg.widget_key === 'chat' && !isSmallWidget,
-                        )}
+                        {renderWidgetSection(cfg.widget_key, rowSpan)}
                       </WidgetChrome>
                     </div>
                   </div>
+                    );
+                    return isChatRoom ? createPortal(chatRoomPanel, document.body) : chatRoomPanel;
+                  })()}
                 </div>
               );
             })}
