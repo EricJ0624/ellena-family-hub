@@ -8,8 +8,10 @@ import {
   WIDGET_PREVIEW_MAP,
   WidgetPreviewSurfaceProvider,
 } from '@/app/components/group-admin/WidgetPreviewComponents';
+import { CalendarShowroomDemo } from '@/app/components/dashboard/CalendarShowroomDemo';
 import { TasksShowroomDemo } from '@/app/components/dashboard/TasksShowroomDemo';
 import {
+  CALENDAR_SHOWROOM_STEP_MS,
   getWidgetShowroomHowtoSteps,
   getWidgetShowroomTranslation,
   TASKS_SHOWROOM_STEP_MS,
@@ -28,7 +30,7 @@ type Props = {
 
 /**
  * 쇼룸 「미리보기」— 이용법 단계 + 위젯 카드 연출 (실기능 없음).
- * tasks 는 7단계, 그 외 위젯은 기존 3단계.
+ * tasks 는 7단계, calendar 는 6단계, 그 외 위젯은 기존 3단계.
  */
 export function WidgetShowroomDemoOverlay({
   lang,
@@ -42,7 +44,7 @@ export function WidgetShowroomDemoOverlay({
     [lang, widgetKey],
   );
   const [step, setStep] = useState(0);
-  const isTasks = widgetKey === 'tasks';
+  const isScripted = widgetKey === 'tasks' || widgetKey === 'calendar';
 
   useEffect(() => {
     if (steps.length === 0) return;
@@ -51,7 +53,9 @@ export function WidgetShowroomDemoOverlay({
     const durations =
       widgetKey === 'tasks' && steps.length === TASKS_SHOWROOM_STEP_MS.length
         ? TASKS_SHOWROOM_STEP_MS
-        : steps.map(() => STEP_MS);
+        : widgetKey === 'calendar' && steps.length === CALENDAR_SHOWROOM_STEP_MS.length
+          ? CALENDAR_SHOWROOM_STEP_MS
+          : steps.map(() => STEP_MS);
     const tick = () => {
       timer = window.setTimeout(() => {
         current = (current + 1) % steps.length;
@@ -100,8 +104,10 @@ export function WidgetShowroomDemoOverlay({
           <WidgetPreviewSurfaceProvider surface="showroom">
             <div className="pointer-events-none h-full min-h-0 select-none [&_.content-section]:shadow-none">
               <ShowroomPreviewFit>
-                {isTasks ? (
+                {widgetKey === 'tasks' ? (
                   <TasksShowroomDemo lang={lang} step={step} />
+                ) : widgetKey === 'calendar' ? (
+                  <CalendarShowroomDemo lang={lang} step={step} />
                 ) : (
                   <motion.div
                     key={`${widgetKey}-${step}`}
@@ -117,7 +123,7 @@ export function WidgetShowroomDemoOverlay({
             </div>
           </WidgetPreviewSurfaceProvider>
 
-          {isTasks ? null : (
+          {isScripted ? null : (
             <motion.div
               key={`pulse-${step}`}
               className="pointer-events-none absolute inset-x-6 top-[18%] h-10 rounded-xl border-2 border-indigo-400/80 bg-indigo-400/10"
