@@ -6,7 +6,7 @@
  * surface=showroom 이면 호스트에 이미 제목/설명이 있으므로 본문 위주·빈 영역 최소화.
  */
 
-import { Camera, MapPin, Mic, Navigation, Paperclip, Plus, Send } from 'lucide-react';
+import { Camera, MapPin, Mic, Navigation, Paperclip, Send } from 'lucide-react';
 import React, { createContext, useContext, useLayoutEffect, useMemo, useRef } from 'react';
 import { KidsChatDecorations } from '@/app/features/family-chat/components/FamilyChatSection';
 import { AlbumPageDoodles } from '@/app/features/family-album/components/FamilyAlbumSection';
@@ -337,10 +337,6 @@ function ChatPreview() {
               placeholder={dt('chat_placeholder')}
               aria-hidden
             />
-            <span className="chat-kids-add" aria-hidden>
-              <Plus className="chat-kids-add-plus" />
-              <span className="chat-kids-add-label">{dt('todo_register_btn')}</span>
-            </span>
             <div className="chat-attach-wrap">
               <button type="button" tabIndex={-1} className="chat-attach-btn" aria-hidden>
                 <Camera className="chat-attach-icon" aria-hidden />

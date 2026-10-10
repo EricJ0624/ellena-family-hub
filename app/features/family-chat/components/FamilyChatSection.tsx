@@ -4,7 +4,7 @@
 
 'use client';
 
-import { Camera, ImageIcon, Mic, Paperclip, Plus, Send } from 'lucide-react';
+import { Camera, ImageIcon, Mic, Paperclip, Send } from 'lucide-react';
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
@@ -20,9 +20,7 @@ import {
 
 const EMPTY_UNREAD_SUMMARY: UnreadChatSenderSummary[] = [];
 import { getCommonTranslation } from '@/lib/translations/common';
-import { getDashboardTranslation } from '@/lib/translations/dashboard';
 import { isValidLang } from '@/lib/language-fonts';
-import type { LangCode } from '@/lib/language-fonts';
 
 interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
@@ -613,15 +611,6 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                 <Mic className="chat-kids-mic-icon" />
               </span>
               {inputField}
-              <span className="chat-kids-add" aria-hidden>
-                <Plus className="chat-kids-add-plus" />
-                <span className="chat-kids-add-label">
-                  {getDashboardTranslation(
-                    (isValidLang(lang) ? lang : 'en') as LangCode,
-                    'todo_register_btn',
-                  )}
-                </span>
-              </span>
               {attachControls}
             </div>
           ) : (
