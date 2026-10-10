@@ -1,43 +1,85 @@
 import { supabase } from '@/lib/supabase';
+import { assignFaceDifferences, layoutFace, type FaceGrid } from './spot-diff-face';
+import {
+  classifySpotSurface,
+  paintSpotSprite,
+  pickSpotSprite,
+  type RegionAppearance,
+} from './spot-diff-sprites';
 import type { NormalizedRegion } from './types';
 
 /**
- * 각 diff 영역에 적용할 색조 변환 팔레트.
- * Canvas 'hue' 합성 모드 사용 → 원본 밝기/채도를 유지하면서 색조만 바꿔
- * 자연스러운 틀린그림 효과를 만든다.
+ * 각 diff 영역에 적용할 색조. 밝기·채도는 두고 색만 바꾼다.
+ * 가장자리는 투명해져서 색 원 마커처럼 보이지 않는다.
  */
 const HUE_COLORS = [
-  'hsl(210, 100%, 50%)',  // 파랑
-  'hsl(0,   100%, 50%)',  // 빨강
-  'hsl(120, 100%, 35%)',  // 초록
-  'hsl(270, 100%, 55%)',  // 보라
-  'hsl(50,  100%, 50%)',  // 노랑
-  'hsl(330, 100%, 50%)',  // 핑크
-  'hsl(180, 100%, 35%)',  // 청록
-  'hsl(30,  100%, 50%)',  // 주황
+  'hsla(210, 100%, 50%, 1)',
+  'hsla(0,   100%, 50%, 1)',
+  'hsla(120, 100%, 35%, 1)',
+  'hsla(270, 100%, 55%, 1)',
+  'hsla(50,  100%, 50%, 1)',
+  'hsla(330, 100%, 50%, 1)',
+  'hsla(180, 100%, 35%, 1)',
+  'hsla(30,  100%, 50%, 1)',
 ];
 
 /**
- * 채도 판별 기준값 (0~1). 이 값 미만이면 저채도로 판정해 difference blend를 사용한다.
+ * 채도 판별 기준값 (0~1). 이 값 미만이면 저채도로 판정해 부드러운 명도 차이를 쓴다.
  * 0.12 = 대략 흑백에 가까운 중립 영역 (예: 흰 벽, 회색 도로, 흑백 사진)
  */
 const SATURATION_THRESHOLD = 0.12;
 
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l < 0.5 ? d / (max + min) : d / (2 - max - min);
+  let h = 0;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return { h: h * 60, s, l };
+}
+
+function isSkinRgb(r255: number, g255: number, b255: number): boolean {
+  return r255 > 95 && g255 > 40 && b255 > 20 && r255 > g255 && r255 > b255 && Math.abs(r255 - g255) > 15 && r255 - b255 > 15;
+}
+
+function isSkinTone(r255: number, g255: number, b255: number, saturation: number, lightness: number): boolean {
+  return isSkinRgb(r255, g255, b255) && saturation >= 0.12 && saturation <= 0.58 && lightness >= 0.25 && lightness <= 0.9;
+}
+
+function isSkinPixel(r255: number, g255: number, b255: number): boolean {
+  const { s, l } = rgbToHsl(r255 / 255, g255 / 255, b255 / 255);
+  return isSkinTone(r255, g255, b255, s, l);
+}
+
 /**
- * 원형 영역 내 픽셀들의 평균 HSL 채도(0~1)를 반환한다.
- * getImageData로 해당 박스를 읽고, 원 안에 있는 픽셀만 계산한다.
+ * 원 안의 색·살색 비율·밝기 흔들림을 읽는다.
+ * 색조를 칠하기 전에 호출해야 원본 기준으로 그림 종류를 고른다.
  */
-function sampleRegionAvgSaturation(
+function sampleRegionAppearance(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   radius: number,
-): number {
+  yNorm: number,
+): RegionAppearance {
+  const empty: RegionAppearance = {
+    y: yNorm,
+    hue: 0,
+    saturation: 0,
+    lightness: 0,
+    skinRatio: 0,
+    lightnessStd: 0,
+  };
   const x0 = Math.max(0, Math.round(cx - radius));
   const y0 = Math.max(0, Math.round(cy - radius));
   const bw = Math.min(ctx.canvas.width - x0, Math.round(radius * 2));
   const bh = Math.min(ctx.canvas.height - y0, Math.round(radius * 2));
-  if (bw <= 0 || bh <= 0) return 0;
+  if (bw <= 0 || bh <= 0) return empty;
 
   const data = ctx.getImageData(x0, y0, bw, bh).data;
   const boxCx = cx - x0;
@@ -45,41 +87,93 @@ function sampleRegionAvgSaturation(
   const r2 = radius * radius;
 
   let totalSat = 0;
+  let totalL = 0;
+  let totalL2 = 0;
   let count = 0;
+  let skin = 0;
+  let sumSin = 0;
+  let sumCos = 0;
+  let chroma = 0;
 
-  for (let py = 0; py < bh; py++) {
-    for (let px = 0; px < bw; px++) {
+  for (let py = 0; py < bh; py += 1) {
+    for (let px = 0; px < bw; px += 1) {
       const dx = px - boxCx;
       const dy = py - boxCy;
-      if (dx * dx + dy * dy > r2) continue;          // 원 밖 픽셀 제외
+      if (dx * dx + dy * dy > r2) continue;
 
       const i = (py * bw + px) * 4;
-      const r = data[i] / 255;
-      const g = data[i + 1] / 255;
-      const b = data[i + 2] / 255;
+      const r255 = data[i];
+      const g255 = data[i + 1];
+      const b255 = data[i + 2];
+      const { h, s, l } = rgbToHsl(r255 / 255, g255 / 255, b255 / 255);
+      const l255 = l * 255;
 
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-      if (max === min) { count++; continue; }        // 완전 중립 → 채도 0
-
-      const l = (max + min) / 2;
-      const sat = l < 0.5
-        ? (max - min) / (max + min)
-        : (max - min) / (2 - max - min);
-
-      totalSat += sat;
-      count++;
+      totalSat += s;
+      totalL += l255;
+      totalL2 += l255 * l255;
+      count += 1;
+      if (isSkinTone(r255, g255, b255, s, l)) skin += 1;
+      if (s > 0.12) {
+        const rad = (h * Math.PI) / 180;
+        sumSin += Math.sin(rad) * s;
+        sumCos += Math.cos(rad) * s;
+        chroma += s;
+      }
     }
   }
 
-  return count > 0 ? totalSat / count : 0;
+  if (count === 0) return empty;
+  const meanL = totalL / count;
+  const variance = Math.max(0, totalL2 / count - meanL * meanL);
+  const hue = chroma > 0 ? (Math.atan2(sumSin, sumCos) * 180) / Math.PI : 0;
+
+  return {
+    y: yNorm,
+    hue: hue < 0 ? hue + 360 : hue,
+    saturation: totalSat / count,
+    lightness: meanL / 255,
+    skinRatio: skin / count,
+    lightnessStd: Math.sqrt(variance),
+  };
+}
+
+/** 색조(또는 저채도 명도)를 가장자리가 흐린 원으로 입힌다. 테두리 링은 그리지 않는다. */
+function paintSoftTone(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  index: number,
+  saturation: number,
+): void {
+  const lowSat = saturation < SATURATION_THRESHOLD;
+  const gradient = ctx.createRadialGradient(cx, cy, radius * 0.08, cx, cy, radius);
+  ctx.save();
+  if (lowSat) {
+    gradient.addColorStop(0, 'rgba(255,255,255,0.72)');
+    gradient.addColorStop(0.62, 'rgba(255,255,255,0.28)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.globalCompositeOperation = 'difference';
+  } else {
+    const color = HUE_COLORS[index % HUE_COLORS.length];
+    const fade = color.replace(', 1)', ', 0)');
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(0.58, color);
+    gradient.addColorStop(1, fade);
+    ctx.globalCompositeOperation = 'hue';
+  }
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 /**
- * 하나의 원본 이미지에서 diff 영역만 색조를 바꾼 오른쪽 비교 이미지를 생성한다.
- *
- * Canvas 'hue' blend 모드: 원본 픽셀의 밝기(L)·채도(S)는 유지하고 색조(H)만 교체 →
- * 색칠된 원이 아닌, 해당 부분 색깔이 실제로 달라 보이는 자연스러운 차이가 만들어진다.
+ * 비교 이미지를 만든다.
+ * 정면이고 귀가 화면 안에 있으면 안경·귀걸이·점을 나누고, 귀가 잘렸으면 안경과 점만 둔다.
+ * 옆모습은 점만 둔다. 얼굴 밖은 색조와 장면 그림을 서로 다른 자리에 둔다.
+ * 색조는 가장자리를 흐리게 해 색 원 마커로 보이지 않게 한다.
  *
  * SVG 파일 대응: naturalWidth/naturalHeight가 0인 경우(viewBox만 있는 SVG)
  * 800×600 폴백을 사용해 canvas가 0×0이 되는 문제를 방지한다.
@@ -87,11 +181,10 @@ function sampleRegionAvgSaturation(
 export async function generateSpotDiffVariantDataUrl(
   imageUrl: string,
   regions: NormalizedRegion[],
-): Promise<string> {
+): Promise<{ url: string; regions: NormalizedRegion[] }> {
   const img = await loadImageForCanvas(imageUrl);
   const canvas = document.createElement('canvas');
 
-  // SVG 등 naturalWidth=0 인 경우 viewBox 대신 안전한 fallback 사용
   const W = img.naturalWidth || img.width || 800;
   const H = img.naturalHeight || img.height || 600;
   canvas.width = W;
@@ -100,46 +193,59 @@ export async function generateSpotDiffVariantDataUrl(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas unsupported');
 
-  // 1) 원본 이미지를 먼저 그린다 (이후 hue blend의 대상 레이어가 됨)
   ctx.drawImage(img, 0, 0, W, H);
 
-  // 2) 각 diff 영역에 색조 변환 적용
-  //    - 채도가 충분한 영역: 'hue' blend → 색조만 바꿔 자연스러운 색깔 차이
-  //    - 저채도(흑백·회색) 영역: 'difference' blend → 명도 반전으로 눈에 띄는 차이
-  regions.forEach((region, index) => {
+  const appearances = regions.map((region) => {
+    const radius = region.r * Math.min(W, H);
+    return sampleRegionAppearance(ctx, region.x * W, region.y * H, radius, region.y);
+  });
+  const surfaces = appearances.map((appearance) => classifySpotSurface(appearance));
+  const placed = assignFaceDifferences(regions, layoutFace(sampleFaceGrid(ctx, W, H)));
+
+  placed.regions.forEach((region, index) => {
     const cx = region.x * W;
     const cy = region.y * H;
     const radius = region.r * Math.min(W, H);
-
-    // 원형 영역의 평균 채도를 계산해 blend 방식 결정
-    const avgSat = sampleRegionAvgSaturation(ctx, cx, cy, radius);
-    const useDifference = avgSat < SATURATION_THRESHOLD;
-
-    ctx.save();
-
-    // 원형 영역으로 클리핑
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.clip();
-
-    if (useDifference) {
-      // 저채도 영역: difference + white → 전체 채널 반전 (어둠↔밝음)
-      // 흑백 사진이나 회색 벽 등 색 없는 부분에서도 명확한 차이를 만든다
-      ctx.globalCompositeOperation = 'difference';
-      ctx.globalAlpha = 1.0;
-      ctx.fillStyle = '#ffffff';
-    } else {
-      // 고채도 영역: hue blend → 원본 밝기·채도 유지, 색조만 교체
-      ctx.globalCompositeOperation = 'hue';
-      ctx.globalAlpha = 1.0;
-      ctx.fillStyle = HUE_COLORS[index % HUE_COLORS.length];
+    const faceKind = placed.faceKinds[index];
+    const surface = surfaces[index];
+    if (faceKind) {
+      paintSpotSprite(ctx, faceKind, cx, cy, radius, index);
+      return;
     }
-
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-    ctx.restore();
+    if (surface === 'skin') {
+      paintSpotSprite(ctx, 'mole', cx, cy, radius, index);
+      return;
+    }
+    if (index % 2 === 1) {
+      paintSpotSprite(ctx, pickSpotSprite(surface, index), cx, cy, radius, index);
+      return;
+    }
+    paintSoftTone(ctx, cx, cy, radius, index, appearances[index].saturation);
   });
 
-  return canvas.toDataURL('image/jpeg', 0.92);
+  return { url: canvas.toDataURL('image/jpeg', 0.92), regions: placed.regions };
+}
+
+function sampleFaceGrid(ctx: CanvasRenderingContext2D, width: number, height: number): FaceGrid {
+  const stride = width * height > 2_000_000 ? 6 : 4;
+  const cols = Math.max(1, Math.floor(width / stride));
+  const rows = Math.max(1, Math.floor(height / stride));
+  const skin = new Uint8Array(cols * rows);
+  const lum = new Uint8Array(cols * rows);
+  const data = ctx.getImageData(0, 0, width, height).data;
+
+  for (let gy = 0; gy < rows; gy += 1) {
+    for (let gx = 0; gx < cols; gx += 1) {
+      const px = Math.min(width - 1, gx * stride);
+      const py = Math.min(height - 1, gy * stride);
+      const i = (py * width + px) * 4;
+      const idx = gy * cols + gx;
+      lum[idx] = Math.round(data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722);
+      skin[idx] = isSkinPixel(data[i], data[i + 1], data[i + 2]) ? 1 : 0;
+    }
+  }
+
+  return { cols, rows, skin, lum };
 }
 
 async function resolveCanvasSourceUrl(src: string): Promise<string> {
@@ -183,10 +289,10 @@ export async function resolveSpotDiffPair(
   variantImageUrl: string | null,
   diffMode: 'auto' | 'manual',
   regions: NormalizedRegion[],
-): Promise<{ leftUrl: string; rightUrl: string }> {
+): Promise<{ leftUrl: string; rightUrl: string; regions: NormalizedRegion[] }> {
   if (diffMode === 'manual' && variantImageUrl) {
-    return { leftUrl: sceneImageUrl, rightUrl: variantImageUrl };
+    return { leftUrl: sceneImageUrl, rightUrl: variantImageUrl, regions };
   }
-  const rightUrl = await generateSpotDiffVariantDataUrl(sceneImageUrl, regions);
-  return { leftUrl: sceneImageUrl, rightUrl };
+  const generated = await generateSpotDiffVariantDataUrl(sceneImageUrl, regions);
+  return { leftUrl: sceneImageUrl, rightUrl: generated.url, regions: generated.regions };
 }

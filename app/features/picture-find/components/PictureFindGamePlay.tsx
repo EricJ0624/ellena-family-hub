@@ -42,6 +42,7 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
   const [hintFlashId, setHintFlashId] = useState<string | null>(null);
   const [wrongFlash, setWrongFlash] = useState(false);
   const [variantUrl, setVariantUrl] = useState<string | null>(null);
+  const [spotRegions, setSpotRegions] = useState<NormalizedRegion[] | null>(null);
   const [pairLoading, setPairLoading] = useState(mode === 'spot_diff');
   const [finished, setFinished] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -57,7 +58,7 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
   useEffect(() => { hintsUsedRef.current = hintsUsed; }, [hintsUsed]);
   useEffect(() => { foundIdsRef.current = foundIds; }, [foundIds]);
 
-  const targets = mode === 'hidden' ? puzzle.hiddenItems : puzzle.diffRegions;
+  const targets = mode === 'hidden' ? puzzle.hiddenItems : (spotRegions ?? puzzle.diffRegions);
   const total = puzzle.itemCount;
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
     setHintFlashId(null);
     setWrongFlash(false);
     setFinished(false);
+    setSpotRegions(null);
     completedRef.current = false;
   }, [puzzle.seed, mode, scene.id]);
 
@@ -79,7 +81,10 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
     setPairLoading(true);
     void resolveSpotDiffPair(scene.imageUrl, scene.variantImageUrl, scene.diffMode, puzzle.diffRegions)
       .then((pair) => {
-        if (!cancelled) setVariantUrl(pair.rightUrl);
+        if (!cancelled) {
+          setVariantUrl(pair.rightUrl);
+          setSpotRegions(pair.regions);
+        }
       })
       .catch(() => {
         if (!cancelled) setVariantUrl(scene.imageUrl);
@@ -134,7 +139,7 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
 
   const handleTap = (clientX: number, clientY: number, side?: 'left' | 'right') => {
     if (finished || !boardRef.current) return;
-    if (mode === 'spot_diff' && side === 'left') return;
+    if (mode === 'spot_diff' && (side === 'left' || pairLoading)) return;
 
     const rect = boardRef.current.getBoundingClientRect();
     const { x, y } = tapToNormalized(clientX, clientY, rect);
@@ -247,7 +252,7 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
             title={scene.title}
             side="left"
             readOnly
-            regions={puzzle.diffRegions}
+            regions={spotRegions ?? puzzle.diffRegions}
             foundIds={foundIds}
             hintFlashId={hintFlashId}
           />
@@ -259,7 +264,7 @@ export function PictureFindGamePlay({ mode, scene, puzzle, t, onComplete }: Pict
             loading={pairLoading}
             onTap={handleTap}
             boardRef={boardRef}
-            regions={puzzle.diffRegions}
+            regions={spotRegions ?? puzzle.diffRegions}
             foundIds={foundIds}
             hintFlashId={hintFlashId}
           />
