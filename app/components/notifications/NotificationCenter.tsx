@@ -35,6 +35,8 @@ interface NotificationCenterProps {
   groupId: string | null;
   userId: string;
   lang?: string;
+  /** 채팅 알림을 열 때 대시보드 대화 화면을 띄운다. */
+  onOpenChatRoom?: () => void;
 }
 
 async function authHeaders(): Promise<HeadersInit | null> {
@@ -49,7 +51,7 @@ async function authHeaders(): Promise<HeadersInit | null> {
 }
 
 /** 알림 목록·배지. 설정(하쓰/위젯)은 내 계정 모달에서 관리 */
-export default function NotificationCenter({ groupId, userId }: NotificationCenterProps) {
+export default function NotificationCenter({ groupId, userId, onOpenChatRoom }: NotificationCenterProps) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationRow[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -237,6 +239,10 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
       setUnreadCount((c) => Math.max(0, c - 1));
     }
     setOpen(false);
+    if (item.widget_key === 'chat') {
+      onOpenChatRoom?.();
+      return;
+    }
     const target = notificationOpenUrl(item.url || '/dashboard', item.widget_key);
     let next: URL;
     try {

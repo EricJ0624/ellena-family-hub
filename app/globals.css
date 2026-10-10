@@ -6594,6 +6594,24 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
   gap: 0.35rem;
 }
 
+/*
+ * 채팅 대화 화면: .widget-scale-root 높이는 @layer 칸 높이(--widget-scale-box-h)라
+ * 부모 유틸만으로는 전체 높이를 못 채운다. 대화 화면에서만 남는 높이를 목록이 쓰게 한다.
+ */
+[data-chat-room='open'] .widget-chrome {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+[data-chat-room='open'] .widget-chrome > .widget-scale-root {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
 .chat-widget-section .message-item {
   gap: 0;
 }

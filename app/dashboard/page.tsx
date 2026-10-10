@@ -353,6 +353,14 @@ const INITIAL_STATE: AppState = {
   }
 };
 
+function WidgetPanelCloseIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M2 2l12 12M14 2L2 14" />
+    </svg>
+  );
+}
+
 export default function FamilyHub() {
   const router = useRouter();
   // 그룹 컨텍스트에서 현재 그룹 ID 및 권한 정보 가져오기 (안전하게 처리)
@@ -675,6 +683,11 @@ export default function FamilyHub() {
     startLng?: number;
   } | null>(null);
   const [expandedWidget, setExpandedWidget] = useState<DashboardWidgetKey | null>(null);
+  /** 입력칸·채팅 알림으로 여는 대화 화면. S 칸 돋보기(expandedWidget)와 분리. */
+  const [chatRoomOpen, setChatRoomOpen] = useState(false);
+  const [chatRoomFrame, setChatRoomFrame] = useState<{ top: number; height: number } | null>(null);
+  const chatRoomFromUrlRef = useRef(false);
+  const chatRoomOpenRef = useRef(false);
   const handleMagnifyClose = useCallback(() => {
     setExpandedWidget(null);
   }, []);
@@ -6731,9 +6744,98 @@ export default function FamilyHub() {
     [widgetConfigs],
   );
 
+  const chatRoomScrollModeRef = useRef<'latest' | 'stick' | null>(null);
+  chatRoomOpenRef.current = chatRoomOpen;
+  const openChatRoom = useCallback((opts?: { focusInput?: boolean }) => {
+    const mode: 'latest' | 'stick' = opts?.focusInput ? 'latest' : 'stick';
+    const focusInput = () => {
+      window.requestAnimationFrame(() => {
+        chatInputRef.current?.focus({ preventScroll: true });
+      });
+    };
+    if (chatRoomOpenRef.current) {
+      if (mode === 'latest') {
+        const el = chatBoxRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      }
+      if (opts?.focusInput) focusInput();
+      return;
+    }
+    chatRoomScrollModeRef.current = mode;
+    setExpandedWidget((key) => (key === 'chat' ? null : key));
+    setChatRoomOpen(true);
+    focusInput();
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!chatRoomOpen) return;
+    const mode = chatRoomScrollModeRef.current;
+    if (!mode) return;
+    chatRoomScrollModeRef.current = null;
+    const el = chatBoxRef.current;
+    if (!el) return;
+    if (mode === 'latest') {
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < 48) el.scrollTop = el.scrollHeight;
+  }, [chatRoomOpen]);
+
+  const closeChatRoom = useCallback(() => {
+    setChatRoomOpen(false);
+    setChatRoomFrame(null);
+  }, []);
+
+  useEffect(() => {
+    if (!chatRoomOpen) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      closeChatRoom();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [chatRoomOpen, closeChatRoom]);
+
+  useEffect(() => {
+    if (!chatRoomOpen) return undefined;
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
+    const apply = () => {
+      const top = Math.max(0, Math.round(vv.offsetTop));
+      const height = Math.max(0, Math.round(vv.height));
+      if (height < 80) return;
+      setChatRoomFrame((prev) => {
+        if (prev && Math.abs(prev.top - top) < 2 && Math.abs(prev.height - height) < 2) return prev;
+        return { top, height };
+      });
+    };
+    apply();
+    vv.addEventListener('resize', apply);
+    vv.addEventListener('scroll', apply);
+    return () => {
+      vv.removeEventListener('resize', apply);
+      vv.removeEventListener('scroll', apply);
+    };
+  }, [chatRoomOpen]);
+
+  useEffect(() => {
+    if (!chatRoomOpen || orderedWidgets.length === 0) return;
+    if (orderedWidgets.some((w) => w.widget_key === 'chat')) return;
+    setChatRoomOpen(false);
+  }, [chatRoomOpen, orderedWidgets]);
+
   useEffect(() => {
     const focus = focusWidgetFromLocation(window.location.search);
     if (!focus || orderedWidgets.length === 0) return undefined;
+    if (focus === 'chat') {
+      if (!orderedWidgets.some((w) => w.widget_key === 'chat')) return undefined;
+      if (chatRoomFromUrlRef.current) return undefined;
+      chatRoomFromUrlRef.current = true;
+      openChatRoom({ focusInput: true });
+      return undefined;
+    }
     let cancelled = false;
     const tryScroll = () => {
       if (!cancelled) scrollDashboardWidgetIntoView(focus);
@@ -6745,7 +6847,7 @@ export default function FamilyHub() {
       window.clearTimeout(first);
       window.clearTimeout(second);
     };
-  }, [orderedWidgets]);
+  }, [orderedWidgets, openChatRoom]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -6765,11 +6867,15 @@ export default function FamilyHub() {
         return;
       }
       const focus = focusWidgetFromLocation(next.search);
+      if (focus === 'chat') {
+        openChatRoom({ focusInput: true });
+        return;
+      }
       if (focus) scrollDashboardWidgetIntoView(focus);
     };
     navigator.serviceWorker?.addEventListener('message', onMessage);
     return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
-  }, []);
+  }, [openChatRoom]);
 
   // 개발 모드 전용: 위젯 그리드 배치 충돌 감지 (명시적 gridColumnStart/gridRowStart 기준)
   useEffect(() => {
@@ -6810,7 +6916,11 @@ export default function FamilyHub() {
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
 
-  const renderWidgetSection = (widgetKey: DashboardWidgetKey, widgetRowSpan?: number) => {
+  const renderWidgetSection = (
+    widgetKey: DashboardWidgetKey,
+    widgetRowSpan?: number,
+    chatInputOpensRoom = false,
+  ) => {
     switch (widgetKey) {
       case 'tasks':
         return (
@@ -6863,6 +6973,7 @@ export default function FamilyHub() {
             currentGroupId={currentGroupId}
             isSendingText={chatTextSendingUi}
             onSendMessage={sendChat}
+            onInputFocus={chatInputOpensRoom ? () => openChatRoom() : undefined}
             chatBoxRef={chatBoxRef}
             chatInputRef={chatInputRef}
             chatFileInputRef={chatFileInputRef}
@@ -7383,7 +7494,12 @@ export default function FamilyHub() {
                 isKidsTheme ? 'translate-y-[11px]' : '',
               ].filter(Boolean).join(' ')}
             >
-              <NotificationCenter groupId={currentGroupId} userId={userId} lang={lang} />
+              <NotificationCenter
+                groupId={currentGroupId}
+                userId={userId}
+                lang={lang}
+                onOpenChatRoom={() => openChatRoom({ focusInput: true })}
+              />
               {isGroupLoading ? (
                 <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
               ) : showAdminButton ? (
@@ -7567,7 +7683,8 @@ export default function FamilyHub() {
             {orderedWidgets.map((cfg) => {
               const placement = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const { colSpan, rowSpan } = placement;
-              const isExpanded = expandedWidget === cfg.widget_key;
+              const isChatRoom = cfg.widget_key === 'chat' && chatRoomOpen;
+              const isExpanded = expandedWidget === cfg.widget_key && !isChatRoom;
 
               // Phase E: S 사이즈 여부 — 실제 layout 너비가 portrait 6열(50%) 이하이면 S로 판단.
               // landscape: 12열(24열 기준 50%) 이하. 미설정(null)이면 size 프리셋으로 폴백.
@@ -7590,7 +7707,7 @@ export default function FamilyHub() {
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
                   // kids 칠판은 CSS :has(.chalkboard-frame) 로 overflow visible 보정
                   className={
-                    isExpanded
+                    isExpanded || isChatRoom
                       ? 'min-w-0 max-w-full'
                       : 'min-w-0 max-w-full isolate overflow-x-clip overflow-y-visible'
                   }
@@ -7611,7 +7728,14 @@ export default function FamilyHub() {
                 >
                   <div
                     className={
-                      isExpanded
+                      isChatRoom
+                        ? `fixed inset-x-0 z-[8100] flex flex-col overflow-hidden bg-white${
+                            chatRoomFrame != null &&
+                            window.innerHeight - chatRoomFrame.top - chatRoomFrame.height > 80
+                              ? ''
+                              : ' pb-[env(safe-area-inset-bottom,0px)]'
+                          }`
+                        : isExpanded
                         ? [
                             'fixed inset-x-0 z-[8001] mx-auto flex w-[min(32rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl',
                             cfg.widget_key === 'chat'
@@ -7622,7 +7746,27 @@ export default function FamilyHub() {
                           ? 'flex min-h-[var(--widget-min-h,0px)] flex-col'
                           : 'flex h-full min-h-0 flex-col'
                     }
+                    style={
+                      isChatRoom
+                        ? {
+                            top: chatRoomFrame?.top ?? 0,
+                            height: chatRoomFrame ? `${chatRoomFrame.height}px` : '100dvh',
+                          }
+                        : undefined
+                    }
                   >
+                    {isChatRoom ? (
+                      <div className="flex shrink-0 justify-end px-3 pt-[max(0.5rem,env(safe-area-inset-top,0px))]">
+                        <button
+                          type="button"
+                          onClick={closeChatRoom}
+                          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                          aria-label={dt('widgets_magnify_close')}
+                        >
+                          <WidgetPanelCloseIcon />
+                        </button>
+                      </div>
+                    ) : null}
                     {isExpanded ? (
                       <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
                         <h2 className="text-sm font-semibold text-slate-800">
@@ -7634,15 +7778,16 @@ export default function FamilyHub() {
                           className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
                           aria-label={dt('widgets_magnify_close')}
                         >
-                          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                            <path d="M2 2l12 12M14 2L2 14" />
-                          </svg>
+                          <WidgetPanelCloseIcon />
                         </button>
                       </div>
                     ) : null}
                     <div
+                      data-chat-room={isChatRoom ? 'open' : undefined}
                       className={
-                        isExpanded
+                        isChatRoom
+                          ? 'relative min-h-0 flex-1 overflow-hidden'
+                          : isExpanded
                           ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-4'
                           : contentGrowsWithBody
                             ? 'min-h-[var(--widget-min-h,0px)]'
@@ -7656,13 +7801,17 @@ export default function FamilyHub() {
                         colSpan={colSpan}
                         rowSpan={rowSpan}
                         onExpand={
-                          isSmallWidget && !isExpanded && cfg.widget_key !== 'album'
+                          isSmallWidget && !isExpanded && !isChatRoom && cfg.widget_key !== 'album'
                             ? handleExpandWidget
                             : undefined
                         }
                         expandLabel={dt('widgets_magnify_open')}
                       >
-                        {renderWidgetSection(cfg.widget_key, rowSpan)}
+                        {renderWidgetSection(
+                          cfg.widget_key,
+                          rowSpan,
+                          cfg.widget_key === 'chat' && !isSmallWidget,
+                        )}
                       </WidgetChrome>
                     </div>
                   </div>

@@ -23,6 +23,8 @@ interface FamilyChatSectionProps {
   /** 텍스트 전송 중 — 버튼·입력 잠금 (늦은 중복 전송·연타 완화) */
   isSendingText?: boolean;
   onSendMessage: (message: string) => void;
+  /** M 이상 칸에서 입력칸 포커스 시 대화 화면을 연다. S 칸 돋보기와는 별개. */
+  onInputFocus?: () => void;
   chatBoxRef: React.RefObject<HTMLDivElement | null>;
   chatInputRef: React.RefObject<HTMLInputElement | null>;
   chatFileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -102,6 +104,7 @@ export function FamilyChatSection({
   currentGroupId,
   isSendingText = false,
   onSendMessage,
+  onInputFocus,
   chatBoxRef,
   chatInputRef,
   chatFileInputRef,
@@ -133,13 +136,15 @@ export function FamilyChatSection({
       }
     };
     const closeOnEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setAttachMenuOpen(false);
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setAttachMenuOpen(false);
     };
     document.addEventListener('pointerdown', closeOnOutside);
-    document.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('keydown', closeOnEscape, true);
     return () => {
       document.removeEventListener('pointerdown', closeOnOutside);
-      document.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('keydown', closeOnEscape, true);
     };
   }, [attachMenuOpen]);
 
@@ -217,6 +222,7 @@ export function FamilyChatSection({
       ref={chatInputRef}
       type="text"
       aria-busy={isSendingText}
+      onFocus={onInputFocus}
       onKeyDown={handleKeyDown}
       className={`chat-input min-w-0 flex-1 ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
       placeholder={t.chat_placeholder}
