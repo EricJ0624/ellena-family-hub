@@ -25,6 +25,8 @@ interface FamilyChatSectionProps {
   onSendMessage: (message: string) => void;
   /** M 이상 칸에서 입력칸 포커스 시 대화 화면을 연다. S 칸 돋보기와는 별개. */
   onInputFocus?: () => void;
+  /** 대화 화면(큰 창)일 때만 글자·입력·버튼을 키운다. */
+  roomMode?: boolean;
   chatBoxRef: React.RefObject<HTMLDivElement | null>;
   chatInputRef: React.RefObject<HTMLInputElement | null>;
   chatFileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -105,6 +107,7 @@ export function FamilyChatSection({
   isSendingText = false,
   onSendMessage,
   onInputFocus,
+  roomMode = false,
   chatBoxRef,
   chatInputRef,
   chatFileInputRef,
@@ -232,7 +235,7 @@ export function FamilyChatSection({
 
   return (
     <section
-      className={`content-section chat-widget-section${isKidsTheme ? ' chat-widget-section--kids' : ''}`}
+      className={`content-section chat-widget-section${isKidsTheme ? ' chat-widget-section--kids' : ''}${roomMode ? ' chat-widget-section--room' : ''}`}
     >
       {isKidsTheme ? <KidsChatDecorations /> : null}
       <div className="section-header chat-section-header relative z-[3]">
@@ -253,8 +256,7 @@ export function FamilyChatSection({
                 type="button"
                 onClick={onLoadOlderMessages}
                 disabled={chatLoadingOlder}
-                className="cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-wait disabled:opacity-75"
-                style={{ padding: '1.5cqmin 3.5cqmin', fontSize: '4cqmin' }}
+                className="chat-load-older cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-wait disabled:opacity-75"
               >
                 {chatLoadingOlder ? t.chat_loading_older : t.chat_load_older}
               </button>
@@ -266,10 +268,10 @@ export function FamilyChatSection({
                 <span className="message-user flex items-center gap-1">
                   {m.sender_id && familyRoleByUserId[m.sender_id] && (
                     <>
-                      <span style={{ fontSize: '6cqmin', lineHeight: 1 }}>
+                      <span className="chat-role-emoji">
                         {getFamilyRoleEmoji(familyRoleByUserId[m.sender_id])}
                       </span>
-                      <span className="font-semibold text-slate-500" style={{ fontSize: '3cqmin' }}>
+                      <span className="chat-role-label font-semibold text-slate-500">
                         {getFamilyRoleLabel(lang, familyRoleByUserId[m.sender_id])}
                       </span>
                     </>
@@ -333,7 +335,6 @@ export function FamilyChatSection({
                                 void onDeleteAttachment(att.id);
                               }}
                               className="chat-attachment-delete-btn absolute right-1 top-1 cursor-pointer rounded-full border-none bg-red-500/95 p-0 font-bold leading-none text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
-                              style={{ width: '5cqmin', height: '5cqmin', fontSize: '3cqmin' }}
                               aria-label={t.chat_remove_attachment_aria}
                             >
                               x
@@ -356,7 +357,7 @@ export function FamilyChatSection({
             </div>
           ))}
         </div>
-        <div className="chat-input-wrapper" style={{ gap: '1.5cqmin' }}>
+        <div className="chat-input-wrapper">
           {isKidsTheme ? (
             <div className="chat-kids-composer">
               <span className="chat-kids-mic" aria-hidden>

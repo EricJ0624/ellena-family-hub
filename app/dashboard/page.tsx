@@ -6745,43 +6745,61 @@ export default function FamilyHub() {
     [widgetConfigs],
   );
 
-  const chatRoomScrollModeRef = useRef<'latest' | 'stick' | null>(null);
+  const chatRoomPinLatestRef = useRef(false);
   chatRoomOpenRef.current = chatRoomOpen;
+  const pinChatRoomToLatest = useCallback(() => {
+    const box = chatBoxRef.current;
+    if (box) box.scrollTop = box.scrollHeight;
+    let node = box?.parentElement ?? null;
+    while (node && node !== document.body) {
+      const overflowY = window.getComputedStyle(node).overflowY;
+      if (
+        (overflowY === 'auto' || overflowY === 'scroll') &&
+        node.scrollHeight > node.clientHeight + 1
+      ) {
+        node.scrollTop = node.scrollHeight;
+      }
+      node = node.parentElement;
+    }
+  }, []);
   const openChatRoom = useCallback((opts?: { focusInput?: boolean }) => {
-    const mode: 'latest' | 'stick' = opts?.focusInput ? 'latest' : 'stick';
     const focusInput = () => {
       window.requestAnimationFrame(() => {
         chatInputRef.current?.focus({ preventScroll: true });
       });
     };
     if (chatRoomOpenRef.current) {
-      if (mode === 'latest') {
-        const el = chatBoxRef.current;
-        if (el) el.scrollTop = el.scrollHeight;
-      }
+      if (opts?.focusInput) pinChatRoomToLatest();
       if (opts?.focusInput) focusInput();
       return;
     }
-    chatRoomScrollModeRef.current = mode;
+    chatRoomPinLatestRef.current = true;
     setExpandedWidget((key) => (key === 'chat' ? null : key));
     setChatRoomOpen(true);
     focusInput();
-  }, []);
+  }, [pinChatRoomToLatest]);
 
   useLayoutEffect(() => {
-    if (!chatRoomOpen) return;
-    const mode = chatRoomScrollModeRef.current;
-    if (!mode) return;
-    chatRoomScrollModeRef.current = null;
-    const el = chatBoxRef.current;
-    if (!el) return;
-    if (mode === 'latest') {
-      el.scrollTop = el.scrollHeight;
-      return;
-    }
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (distanceFromBottom < 48) el.scrollTop = el.scrollHeight;
-  }, [chatRoomOpen]);
+    if (!chatRoomOpen || !chatRoomPinLatestRef.current) return;
+    pinChatRoomToLatest();
+  }, [chatRoomOpen, chatRoomFrame, pinChatRoomToLatest]);
+
+  useEffect(() => {
+    if (!chatRoomOpen || !chatRoomPinLatestRef.current) return undefined;
+    let frames = 0;
+    let raf = 0;
+    const tick = () => {
+      pinChatRoomToLatest();
+      frames += 1;
+      if (frames < 4) {
+        raf = window.requestAnimationFrame(tick);
+        return;
+      }
+      chatRoomPinLatestRef.current = false;
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [chatRoomOpen, chatRoomFrame, pinChatRoomToLatest]);
 
   const closeChatRoom = useCallback(() => {
     setChatRoomOpen(false);
@@ -6988,6 +7006,7 @@ export default function FamilyHub() {
             eventAuthorNames={eventAuthorNames}
             lang={lang}
             uiTheme={uiTheme}
+            roomMode={chatRoomOpen}
             translations={chatTranslations}
           />
         );
@@ -7763,7 +7782,7 @@ export default function FamilyHub() {
                         <button
                           type="button"
                           onClick={closeChatRoom}
-                          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                          className="rounded-lg p-2.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 [&_svg]:h-7 [&_svg]:w-7"
                           aria-label={dt('widgets_magnify_close')}
                         >
                           <WidgetPanelCloseIcon />

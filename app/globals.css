@@ -6644,6 +6644,30 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
   height: 1.65rem;
 }
 
+.chat-widget-section .chat-input-wrapper {
+  gap: 1.5cqmin;
+}
+
+.chat-widget-section .chat-load-older {
+  padding: 1.5cqmin 3.5cqmin;
+  font-size: 4cqmin;
+}
+
+.chat-widget-section .chat-role-emoji {
+  font-size: 6cqmin;
+  line-height: 1;
+}
+
+.chat-widget-section .chat-role-label {
+  font-size: 3cqmin;
+}
+
+.chat-widget-section .chat-attachment-delete-btn {
+  width: 5cqmin;
+  height: 5cqmin;
+  font-size: 3cqmin;
+}
+
 /*
  * Kids Family Chat — 표현만. 전송·첨부·크기 규칙은 위 공통 블록 유지.
  * backdrop-filter 는 쓰지 않음 (반투명+inset shadow 로 글래스/뉴모픽).
@@ -6982,5 +7006,133 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .
   padding-bottom: 0;
 }
 
-/* Travel itinerary document — preview uses iframe (srcDoc); print via iframe.contentWindow.print() */
+/*
+ * 채팅 대화 화면(큰 창)만 글자·입력·버튼을 키운다.
+ * --room 클래스는 섹션 자신에 붙는다. cqmin 칸 크기보다 우선한다.
+ */
+.chat-widget-section--room .section-title,
+.chat-widget-section--room h3.section-title {
+  font-size: clamp(1.35rem, 2.4vw, 2rem) !important;
+}
 
+.widget-chrome[data-widget-key='chat'] .chat-widget-section--room .chat-kids-title {
+  height: clamp(2.4rem, 3.6vw, 3.4rem) !important;
+}
+
+.chat-widget-section--room .chat-messages {
+  gap: clamp(0.65rem, 1.4vw, 1rem) !important;
+  margin-bottom: 0.65rem !important;
+  overflow-anchor: none;
+}
+
+.chat-widget-section--room .message-user,
+.chat-widget-section--room .message-time,
+.chat-widget-section--room .chat-role-label {
+  font-size: clamp(0.95rem, 1.7vw, 1.3rem) !important;
+}
+
+.chat-widget-section--room .chat-role-emoji {
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem) !important;
+}
+
+.chat-widget-section--room .message-bubble {
+  padding: clamp(0.45rem, 0.9vw, 0.8rem) clamp(0.9rem, 1.6vw, 1.35rem) !important;
+}
+
+.chat-widget-section--room.chat-widget-section--kids .message-bubble {
+  padding: clamp(0.5rem, 1vw, 0.85rem) clamp(1rem, 1.8vw, 1.5rem) !important;
+}
+
+.chat-widget-section--room .message-text {
+  font-size: clamp(1.25rem, 2.4vw, 2rem) !important;
+  line-height: 1.45 !important;
+}
+
+.chat-widget-section--room .chat-load-older {
+  padding: 0.7rem 1.35rem !important;
+  font-size: clamp(1rem, 1.8vw, 1.3rem) !important;
+}
+
+.chat-widget-section--room .chat-input-wrapper {
+  gap: clamp(0.65rem, 1.2vw, 1rem) !important;
+}
+
+.chat-widget-section--room .chat-input {
+  font-size: clamp(1.15rem, 2vw, 1.6rem) !important;
+  padding: 0.85rem 1rem !important;
+  min-height: clamp(3.1rem, 5.5vw, 4rem) !important;
+}
+
+.chat-widget-section--room.chat-widget-section--kids .chat-input {
+  padding-top: 0.8rem !important;
+  padding-bottom: 0.8rem !important;
+  padding-left: 0.35rem !important;
+  padding-right: 0.35rem !important;
+}
+
+.chat-widget-section--room .btn-send {
+  font-size: clamp(1.05rem, 1.8vw, 1.45rem) !important;
+  padding: 0.85rem 1.35rem !important;
+  min-height: clamp(3.1rem, 5.5vw, 4rem) !important;
+}
+
+.chat-widget-section--room .chat-attach-btn {
+  height: clamp(3.1rem, 5.5vw, 4rem) !important;
+  min-width: clamp(3.1rem, 5.5vw, 4rem) !important;
+  gap: 0.45rem !important;
+  padding: 0 0.85rem !important;
+}
+
+.chat-widget-section--room .chat-attach-icon {
+  width: clamp(1.35rem, 2.2vw, 1.7rem) !important;
+  height: clamp(1.35rem, 2.2vw, 1.7rem) !important;
+}
+
+.chat-widget-section--room .chat-attach-menu {
+  min-width: 13.5rem !important;
+  padding: 0.5rem !important;
+}
+
+.chat-widget-section--room .chat-attach-menu-item {
+  gap: 0.7rem !important;
+  padding: 0.85rem 1rem !important;
+  font-size: clamp(1rem, 1.7vw, 1.3rem) !important;
+}
+
+.chat-widget-section--room .chat-attach-menu-icon {
+  width: 1.3rem !important;
+  height: 1.3rem !important;
+}
+
+.chat-widget-section--room .chat-attachment-delete-btn {
+  width: 1.6rem !important;
+  height: 1.6rem !important;
+  font-size: 0.95rem !important;
+}
+
+.chat-widget-section--room .chat-kids-composer {
+  gap: 0.5rem !important;
+  padding: 0.25rem 0.55rem 0.25rem 0.85rem !important;
+}
+
+.chat-widget-section--room .chat-kids-add {
+  gap: 0.35rem !important;
+  padding: 0.3rem 0.8rem !important;
+}
+
+.widget-chrome[data-widget-key='chat'] .chat-widget-section--room .chat-kids-add-label {
+  font-size: clamp(0.95rem, 1.6vw, 1.2rem) !important;
+}
+
+.widget-chrome[data-widget-key='chat'] .chat-widget-section--room .chat-kids-mic-icon,
+.widget-chrome[data-widget-key='chat'] .chat-widget-section--room .chat-kids-add-plus,
+.widget-chrome[data-widget-key='chat'] .chat-widget-section--room .chat-kids-send-icon {
+  width: clamp(1.35rem, 2.2vw, 1.7rem) !important;
+  height: clamp(1.35rem, 2.2vw, 1.7rem) !important;
+}
+
+.widget-chrome[data-widget-key='chat'] .chat-widget-section--room .chat-kids-rocket {
+  width: clamp(3.8rem, 5.5vw, 5rem) !important;
+}
+
+/* Travel itinerary document — preview uses iframe (srcDoc); print via iframe.contentWindow.print() */
