@@ -8,27 +8,6 @@ import {
 } from './spot-diff-sprites';
 import type { NormalizedRegion } from './types';
 
-/**
- * 각 diff 영역에 적용할 색조. 밝기·채도는 두고 색만 바꾼다.
- * 가장자리는 투명해져서 색 원 마커처럼 보이지 않는다.
- */
-const HUE_COLORS = [
-  'hsla(210, 100%, 50%, 1)',
-  'hsla(0,   100%, 50%, 1)',
-  'hsla(120, 100%, 35%, 1)',
-  'hsla(270, 100%, 55%, 1)',
-  'hsla(50,  100%, 50%, 1)',
-  'hsla(330, 100%, 50%, 1)',
-  'hsla(180, 100%, 35%, 1)',
-  'hsla(30,  100%, 50%, 1)',
-];
-
-/**
- * 채도 판별 기준값 (0~1). 이 값 미만이면 저채도로 판정해 부드러운 명도 차이를 쓴다.
- * 0.12 = 대략 흑백에 가까운 중립 영역 (예: 흰 벽, 회색 도로, 흑백 사진)
- */
-const SATURATION_THRESHOLD = 0.12;
-
 function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
@@ -58,7 +37,7 @@ function isSkinPixel(r255: number, g255: number, b255: number): boolean {
 
 /**
  * 원 안의 색·살색 비율·밝기 흔들림을 읽는다.
- * 색조를 칠하기 전에 호출해야 원본 기준으로 그림 종류를 고른다.
+ * 그림을 고르기 전에 호출해야 원본 기준으로 종류를 정한다.
  */
 function sampleRegionAppearance(
   ctx: CanvasRenderingContext2D,
@@ -137,43 +116,10 @@ function sampleRegionAppearance(
   };
 }
 
-/** 색조(또는 저채도 명도)를 가장자리가 흐린 원으로 입힌다. 테두리 링은 그리지 않는다. */
-function paintSoftTone(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  index: number,
-  saturation: number,
-): void {
-  const lowSat = saturation < SATURATION_THRESHOLD;
-  const gradient = ctx.createRadialGradient(cx, cy, radius * 0.08, cx, cy, radius);
-  ctx.save();
-  if (lowSat) {
-    gradient.addColorStop(0, 'rgba(255,255,255,0.72)');
-    gradient.addColorStop(0.62, 'rgba(255,255,255,0.28)');
-    gradient.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.globalCompositeOperation = 'difference';
-  } else {
-    const color = HUE_COLORS[index % HUE_COLORS.length];
-    const fade = color.replace(', 1)', ', 0)');
-    gradient.addColorStop(0, color);
-    gradient.addColorStop(0.58, color);
-    gradient.addColorStop(1, fade);
-    ctx.globalCompositeOperation = 'hue';
-  }
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
 /**
  * 비교 이미지를 만든다.
  * 정면이고 귀가 화면 안에 있으면 안경·귀걸이·점을 나누고, 귀가 잘렸으면 안경과 점만 둔다.
- * 옆모습은 점만 둔다. 얼굴 밖은 색조와 장면 그림을 서로 다른 자리에 둔다.
- * 색조는 가장자리를 흐리게 해 색 원 마커로 보이지 않게 한다.
+ * 옆모습은 점만 둔다. 얼굴 밖은 그 자리의 장면 그림을 둔다.
  *
  * SVG 파일 대응: naturalWidth/naturalHeight가 0인 경우(viewBox만 있는 SVG)
  * 800×600 폴백을 사용해 canvas가 0×0이 되는 문제를 방지한다.
@@ -212,19 +158,11 @@ export async function generateSpotDiffVariantDataUrl(
       paintSpotSprite(ctx, faceKind, cx, cy, radius, index);
       return;
     }
-    if (placed.hueOnly[index]) {
-      paintSoftTone(ctx, cx, cy, radius, index, appearances[index].saturation);
-      return;
-    }
     if (surface === 'skin') {
       paintSpotSprite(ctx, 'mole', cx, cy, radius, index);
       return;
     }
-    if (index % 2 === 1) {
-      paintSpotSprite(ctx, pickSpotSprite(surface, index), cx, cy, radius, index);
-      return;
-    }
-    paintSoftTone(ctx, cx, cy, radius, index, appearances[index].saturation);
+    paintSpotSprite(ctx, pickSpotSprite(surface, index), cx, cy, radius, index);
   });
 
   return { url: canvas.toDataURL('image/jpeg', 0.92), regions: placed.regions };

@@ -243,16 +243,15 @@ function findEyeBlobs(
 /**
  * 얼굴 상자 안의 차이만 옮긴다. 손처럼 상자 밖 피부는 그대로 둔다.
  * 정면은 안경과 점 최대 2개를 두고, 귀가 보이는 쪽에만 귀걸이를 더한다.
- * 정면에서 남는 얼굴 자리는 색조만 두고, 물건은 두지 않는다. 옆모습의 남는 자리는 점이다.
+ * 남는 얼굴 자리는 점으로 둔다.
  */
 export function assignFaceDifferences(
   regions: NormalizedRegion[],
   layout: FaceLayout | null,
-): { regions: NormalizedRegion[]; faceKinds: Array<FaceAnchorKind | null>; hueOnly: boolean[] } {
+): { regions: NormalizedRegion[]; faceKinds: Array<FaceAnchorKind | null> } {
   const next = regions.map((region) => ({ ...region }));
   const faceKinds: Array<FaceAnchorKind | null> = regions.map(() => null);
-  const hueOnly = regions.map(() => false);
-  if (!layout) return { regions: next, faceKinds, hueOnly };
+  if (!layout) return { regions: next, faceKinds };
 
   const candidates = regions
     .map((region, index) => ({ region, index }))
@@ -260,10 +259,6 @@ export function assignFaceDifferences(
     .map(({ index }) => index);
 
   candidates.forEach((regionIndex, order) => {
-    if (layout.pose === 'front' && order >= layout.anchors.length) {
-      hueOnly[regionIndex] = true;
-      return;
-    }
     const overflow = order >= layout.anchors.length;
     const anchor = layout.anchors[Math.min(order, layout.anchors.length - 1)];
     const kind: FaceAnchorKind = overflow ? 'mole' : anchor.kind;
@@ -284,5 +279,5 @@ export function assignFaceDifferences(
     faceKinds[regionIndex] = kind;
   });
 
-  return { regions: next, faceKinds, hueOnly };
+  return { regions: next, faceKinds };
 }
