@@ -151,6 +151,9 @@ async function extractTakenAt(file: File): Promise<string | null> {
 function MemoriesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  useEffect(() => {
+    router.prefetch('/dashboard');
+  }, [router]);
   const { currentGroupId } = useGroup();
   const { album, addPhoto, deletePhoto, updatePhotoDescription, updatePhotoId } = useAlbum();
   const { lang } = useLanguage();
@@ -408,7 +411,13 @@ function MemoriesPageContent() {
     router.replace('/memories', { scroll: false });
   }, [searchParams, album, viewMode, groupedByDate, router]);
 
-  const handleBack = () => { window.location.href = '/dashboard'; };
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push('/dashboard');
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

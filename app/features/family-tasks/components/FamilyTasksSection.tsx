@@ -73,11 +73,10 @@ interface FamilyTasksSectionProps {
   onChatDragLeave: () => void;
   onChatDrop: (e: React.DragEvent) => void;
   /**
-   * 채팅 위젯에서 "할 일 추가" 클릭 시 바로 할 일을 삽입할 수 있도록
-   * addTask 래퍼를 외부 ref에 노출.
-   * (메모·렌더 사이클에 영향 없도록 ref 패턴 사용)
+   * 채팅 위젯에서 "할 일 추가" 클릭 시 새 할 일 모달을 열도록
+   * 래퍼를 외부 ref에 노출. (캘린더 openFromChatRef와 동일 패턴)
    */
-  addTaskRef?: React.MutableRefObject<((text: string) => Promise<void>) | undefined>;
+  openFromChatRef?: React.MutableRefObject<((titlePrefill: string) => void) | undefined>;
 }
 
 function isTempTaskId(id: number | string): boolean {
@@ -148,7 +147,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   onChatDragOver,
   onChatDragLeave,
   onChatDrop,
-  addTaskRef,
+  openFromChatRef,
 }: FamilyTasksSectionProps) {
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [todoError, setTodoError] = useState<string | null>(null);
@@ -264,14 +263,6 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     }
   };
 
-  if (addTaskRef) {
-    addTaskRef.current = async (text: string) => {
-      const sanitized = sanitizeInput(text, 100);
-      if (!sanitized) throw new Error('EMPTY_TASK');
-      await insertTask(sanitized, null);
-    };
-  }
-
   const handleToggleTask = (taskId: number | string) => {
     const latest = tasksRef.current;
     const task = latest.find((x) => x.id === taskId);
@@ -324,14 +315,23 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     })();
   };
 
-  const openTodoModal = () => {
+  const openTodoModal = (titlePrefill?: string) => {
     setTodoError(null);
     setIsTodoModalOpen(true);
     requestAnimationFrame(() => {
-      if (todoTextRef.current) todoTextRef.current.value = '';
+      if (todoTextRef.current) {
+        const raw = titlePrefill?.trim() ?? '';
+        todoTextRef.current.value = raw ? sanitizeInput(raw, 100) : '';
+      }
       if (todoWhoRef.current) todoWhoRef.current.value = '';
     });
   };
+
+  if (openFromChatRef) {
+    openFromChatRef.current = (titlePrefill: string) => {
+      openTodoModal(titlePrefill);
+    };
+  }
 
   const submitNewTodo = async () => {
     const text = todoTextRef.current?.value;
@@ -595,7 +595,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
             <h3 className="section-title">{t.todo_section_title}</h3>
             <button
               type="button"
-              onClick={openTodoModal}
+              onClick={() => openTodoModal()}
               className="inline-flex cursor-pointer items-center rounded-lg border-0 bg-indigo-500 font-bold text-white transition-colors hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
               style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '4cqmin' }}
             >
@@ -658,18 +658,16 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                         내가 할게요
                       </button>
                     ) : null}
-                    {(task.created_by === userId || !task.created_by) && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                        aria-label="delete"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                      aria-label="delete"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </li>
                   );
                 })}
@@ -734,7 +732,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
             {/* chalkboard-bg.png 에 Family Tasks 타이틀이 포함됨 — HTML은 a11y용 sr-only */}
             <h3 className="chalkboard-title chalkboard-title--sr-only">{t.todo_section_title}</h3>
             <div className="chalkboard-top-actions">
-              <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
+              <button type="button" onClick={() => openTodoModal()} className="chalkboard-btn-add">
                 {t.todo_add_btn}
               </button>
             </div>
@@ -786,13 +784,11 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                         내가 할게요
                       </button>
                     ) : null}
-                    {(task.created_by === userId || !task.created_by) && (
-                      <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
-                        <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    )}
+                    <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
+                      <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
                   </div>
                   );
                 })}

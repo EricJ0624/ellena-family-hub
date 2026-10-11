@@ -48,7 +48,6 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Caveat:wght@400;600;700&family=Gochi+Hand&family=Patrick+Hand&family=Gaegu:wght@400;700&display=swap"
           rel="stylesheet"
         />
-        {/* 타이틀 디자인 에디터용 폰트는 대시보드(TitlePage)에서 동적 로드 — 초기 렌더 블로킹 제거 */}
         {/* 모바일 앱 느낌을 주기 위한 설정 */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

@@ -58,10 +58,7 @@ import {
   fitKidsGlassTitleFontSize,
   fitNeoStampTitleFontSize,
   fitHighendCapsuleTitleFontSize,
-  shrinkFontSizeToElement,
   CUSTOM_TITLE_FONT_MIN_PX,
-  NEO_STAMP_TITLE_MIN_PX,
-  HIGHEND_CAPSULE_TITLE_MIN_PX,
   DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
   DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
   customTitleMaxFontSize,
@@ -110,9 +107,7 @@ import { useFamilyChatActions } from '@/app/features/family-chat/hooks/useFamily
 import { useFamilyChatInitialLoad } from '@/app/features/family-chat/hooks/useFamilyChatInitialLoad';
 import { useFamilyChatRealtime } from '@/app/features/family-chat/hooks/useFamilyChatRealtime';
 import { useFamilyChatScroll } from '@/app/features/family-chat/hooks/useFamilyChatScroll';
-import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
 import { openNavMapApp, isLocationInSouthKorea, type NavMapApp } from '@/lib/nav-map-apps';
-import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
 import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
 import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
 import { useDiaryInvite } from '@/app/features/travel-diary/hooks/useDiaryInvite';
@@ -150,10 +145,26 @@ import {
 import { WIDGET_CONFIGS_UPDATED_EVENT, dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
 import { groupNeedsWidgetShowroom } from '@/lib/widgets/widget-showroom';
+import {
+  OnlinePresenceProvider,
+  DashboardOnlineUsersStrip,
+  getOnlineUsersSnapshot,
+  teardownDashboardPresence,
+  useOnlineUsers,
+} from '@/app/dashboard/online-presence';
+import { useDashboardTitleMeasureEffects } from '@/app/dashboard/use-dashboard-title-fit';
 import dynamicImport from 'next/dynamic';
 
 // --- 조건부·모달·기능 위젯 — 동적 로드로 초기 번들에서 분리 ---
 // ssr: false — 이 위젯들은 서버에서 렌더 불필요(클라이언트 전용 상태 기반)
+const FamilyLocationSection = dynamicImport(
+  () => import('@/app/features/family-location/components/FamilyLocationSection').then(m => ({ default: m.FamilyLocationSection })),
+  { ssr: false }
+);
+const FamilyAlbumSection = dynamicImport(
+  () => import('@/app/features/family-album/components/FamilyAlbumSection').then(m => ({ default: m.FamilyAlbumSection })),
+  { ssr: false }
+);
 const FamilyLocationRequestModal = dynamicImport(
   () => import('@/app/features/family-location/components/FamilyLocationRequestModal').then(m => ({ default: m.FamilyLocationRequestModal })),
   { ssr: false }
@@ -194,6 +205,13 @@ const WidgetShowroomHost = dynamicImport(
   () => import('@/app/components/dashboard/WidgetShowroomHost'),
   { ssr: false }
 );
+
+function FamilyLocationRequestModalWithPresence(
+  props: Omit<React.ComponentProps<typeof FamilyLocationRequestModal>, 'onlineUsers'>,
+) {
+  const onlineUsers = useOnlineUsers();
+  return <FamilyLocationRequestModal {...props} onlineUsers={onlineUsers} />;
+}
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -285,17 +303,9 @@ function tasksSignature(tasks: ReadonlyArray<FamilyTask>): string {
   return tasks
     .map(
       (t) =>
-        `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.supabaseId ?? ''}`,
+        `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.supabaseId ?? ''}:${t.created_by ?? ''}`,
     )
     .join('|');
-}
-
-/** Presence 목록 동일 여부 — sync 하트비트마다 대시보드 전체 re-render 방지 */
-function onlineUsersSignature(
-  users: ReadonlyArray<{ id: string; name: string; isCurrentUser: boolean }>,
-): string {
-  if (!users.length) return '';
-  return users.map((u) => `${u.id}:${u.name}:${u.isCurrentUser ? 1 : 0}`).join('|');
 }
 
 /** events 동일 여부 — Realtime/초기 로드 시 불필요한 setState 방지 */
@@ -547,15 +557,13 @@ export default function FamilyHub() {
 
   /** 태스크 drag 핸들러 — 안정적인 참조 유지 (React.memo 안정성) */
   const handleDropChatFilesRef = useRef<((files: File[]) => void) | null>(null);
-  /** 채팅→할 일 빠른 추가: FamilyTasksSection이 매 렌더마다 최신 addTask를 여기에 등록 */
-  const chatAddTaskRef = useRef<((text: string) => Promise<void>) | undefined>(undefined);
+  /** 채팅→할 일 모달 열기: FamilyTasksSection이 매 렌더마다 최신 openTodoModal 래퍼를 여기에 등록 */
+  const chatOpenTaskRef = useRef<((titlePrefill: string) => void) | undefined>(undefined);
   /** 채팅→캘린더 모달 열기: FamilyCalendarSection이 매 렌더마다 최신 openCalendarEventModal 래퍼를 여기에 등록 */
   const chatOpenCalendarRef = useRef<((titlePrefill: string) => void) | undefined>(undefined);
-  /** 채팅에서 할 일 추가 — ref를 호출 시점에 읽는 안정적인 래퍼 */
-  const handleChatQuickAddTask = useCallback(async (text: string) => {
-    const add = chatAddTaskRef.current;
-    if (!add) throw new Error('TASKS_UNAVAILABLE');
-    await add(text);
+  /** 채팅에서 할 일 모달 열기 — ref를 호출 시점에 읽는 안정적인 래퍼 */
+  const handleChatOpenTask = useCallback((text: string) => {
+    chatOpenTaskRef.current?.(text);
   }, []);
   /** 채팅에서 캘린더 모달 열기 — ref를 호출 시점에 읽는 안정적인 래퍼 */
   const handleChatOpenCalendar = useCallback((text: string) => {
@@ -613,7 +621,6 @@ export default function FamilyHub() {
   const [nicknameModalFamilyRole, setNicknameModalFamilyRole] = useState<'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>(null);
   const [accountModalLang, setAccountModalLang] = useState<LangCode>('en');
   const [accountModalCountry, setAccountModalCountry] = useState('');
-  const [onlineUsers, setOnlineUsers] = useState<Array<{ id: string; name: string; isCurrentUser: boolean }>>([]);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [adminStatusResolved, setAdminStatusResolved] = useState(false);
   const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; nickname: string | null }>>([]);
@@ -1033,29 +1040,10 @@ export default function FamilyHub() {
     // 재로그인 시에도 기존 state를 유지하고, Supabase에서 사진을 로드한 후 업데이트
 
     // ✅ Supabase에서 사진 불러오기 (Multi-tenant: group_id 필터링)
-    try {
-      let photos: unknown[] | null = null;
-      let error: { message?: string; code?: string } | null = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        if (isLoadStale()) return;
-
-        const res = await supabase
-          .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
-          .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
-          .eq('group_id', groupIdForThisLoad)
-          .order('created_at', { ascending: false })
-          .limit(100);
-        error = res.error;
-        photos = (res.data as unknown[]) ?? null;
-        if (!res.error) break;
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[loadData] memory_vault load failed, retry', attempt + 1, res.error?.message, res.error?.code);
-        }
-        if (attempt < 2) {
-          await new Promise((r) => setTimeout(r, 450 * (attempt + 1)));
-        }
-      }
-
+    const applyAlbumQueryResult = (
+      photos: unknown[] | null,
+      error: { message?: string; code?: string } | null,
+    ) => {
       if (isLoadStale()) return;
 
       if (error) {
@@ -1164,6 +1152,46 @@ export default function FamilyHub() {
           if (groupIdForThisLoad !== dashboardCurrentGroupIdRef.current) return prev;
           return { ...prev, album: stableOnlyPrecomputed };
         });
+      }
+    };
+
+    try {
+      const fetchAlbumPage = () =>
+        supabase
+          .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
+          .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
+          .eq('group_id', groupIdForThisLoad)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+      const firstAlbumRes = await fetchAlbumPage();
+      if (isLoadStale()) return;
+
+      if (!firstAlbumRes.error) {
+        applyAlbumQueryResult((firstAlbumRes.data as unknown[]) ?? null, null);
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(
+            '[loadData] memory_vault load failed, retry in background',
+            firstAlbumRes.error.message,
+            firstAlbumRes.error.code,
+          );
+        }
+        void (async () => {
+          for (let attempt = 1; attempt < 3; attempt++) {
+            await new Promise((r) => setTimeout(r, 450 * attempt));
+            if (isLoadStale()) return;
+            const res = await fetchAlbumPage();
+            if (isLoadStale()) return;
+            if (!res.error) {
+              applyAlbumQueryResult((res.data as unknown[]) ?? null, null);
+              return;
+            }
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[loadData] memory_vault load failed, retry', attempt + 1, res.error?.message, res.error?.code);
+            }
+          }
+        })();
       }
     } catch (supabaseError: any) {
       // Supabase 불러오기 실패해도 localStorage 사진은 사용 가능
@@ -2314,78 +2342,25 @@ export default function FamilyHub() {
     kidsTitleFontMaxPx,
   ]);
 
-  useLayoutEffect(() => {
-    measureCustomTitleFontSize();
-    const row = titleRowRef.current;
-    const container = titleContainerRef.current;
-    // h1은 관찰하지 않음 — fontSize 변경으로 높이가 바뀌면 RO→setState 무한 루프(#185)
-    if (!row && !container) return;
-    const ro = new ResizeObserver((entries) => {
-      const w = Math.round(entries[0]?.contentRect.width ?? 0);
-      if (Math.abs(w - titleBoxWidthRef.current) < 2) return;
-      titleBoxWidthRef.current = w;
-      measureCustomTitleFontSize();
-    });
-    if (row) ro.observe(row);
-    if (container) ro.observe(container);
-    const onFonts = () => measureCustomTitleFontSize();
-    document.fonts?.addEventListener?.('loadingdone', onFonts);
-    void document.fonts?.ready?.then(onFonts);
-    return () => {
-      ro.disconnect();
-      document.fonts?.removeEventListener?.('loadingdone', onFonts);
-    };
-  }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait, isAdminTitleContext]);
-
-  /** DOM 실측 — scrollWidth 초과 시 축소 (canvas 추정 보정). 결과 fontSize는 deps에 넣지 않음(자기 루프 #185). */
-  useLayoutEffect(() => {
-    const el = titleH1Ref.current;
-    if (!el) return;
-    /* kids 간판은 테두리가 h1 scrollWidth에 포함된다. 여기서 다시 줄이면 글자가 최소 크기까지 떨어진다. */
-    if (isKidsTheme) return;
-
-    if (frameIsPortrait && isDefaultDashboardTitle && !isHighendTheme) {
-      const maxPx = Math.min(
-        customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
-        DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
-      );
-      const startPx = customTitleFontSizeRef.current ?? estimatedCustomTitleFontSize ?? maxPx;
-      const fitted = shrinkFontSizeToElement(el, startPx, DEFAULT_APP_TITLE_MIN_PX_PORTRAIT);
-      setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
-      return;
-    }
-
-    if (!frameIsPortrait && isDefaultDashboardTitle && !isNeoTheme && !isHighendTheme) return;
-
-    // Neo/High-end: h1이 아니라 칩/텍스트 기준으로 실측 (overflow:hidden 칩 보정)
-    const chipTarget = isNeoTheme
-      ? ((el.querySelector('.dashboard-neo-title-text') as HTMLElement | null)
-        ?? (el.querySelector('.dashboard-neo-title-stamp') as HTMLElement | null)
-        ?? el)
-      : isHighendTheme
-        ? ((el.querySelector('.dashboard-highend-title-text') as HTMLElement | null)
-          ?? (el.querySelector('.dashboard-highend-title-capsule') as HTMLElement | null)
-          ?? el)
-        : el;
-    const minPx = isNeoTheme
-      ? NEO_STAMP_TITLE_MIN_PX
-      : isHighendTheme
-        ? HIGHEND_CAPSULE_TITLE_MIN_PX
-        : CUSTOM_TITLE_FONT_MIN_PX;
-    const startPx = customTitleFontSizeRef.current ?? estimatedCustomTitleFontSize ?? titleFitMaxPx;
-    const fitted = shrinkFontSizeToElement(chipTarget, startPx, minPx);
-    setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
-  }, [
-    frameIsPortrait,
-    isDefaultDashboardTitle,
-    estimatedCustomTitleFontSize,
+  useDashboardTitleMeasureEffects({
+    measureCustomTitleFontSize,
+    titleRowRef,
+    titleContainerRef,
+    titleH1Ref,
+    titleBoxWidthRef,
+    customTitleFontSizeRef,
+    setCustomTitleFontSize,
     dashboardTitleText,
-    titleFitMaxPx,
-    customFontSizeCap,
+    isDefaultDashboardTitle,
+    frameIsPortrait,
+    isAdminTitleContext,
+    isKidsTheme,
     isNeoTheme,
     isHighendTheme,
-    isKidsTheme,
-  ]);
+    estimatedCustomTitleFontSize,
+    titleFitMaxPx,
+    customFontSizeCap,
+  });
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
   } as React.CSSProperties;
@@ -3312,171 +3287,7 @@ export default function FamilyHub() {
     familyChatDebug('Realtime 구독 시작', userId);
 
     // ========== 기능별 구독 함수 분리 ==========
-    
-    // 1. Presence 구독 설정 (온라인 사용자 추적)
-    const setupPresenceSubscription = () => {
-      // 클라이언트에서만 실행되도록 보호
-      if (typeof window === 'undefined') {
-        return;
-      }
-
-      if (!currentGroupId) {
-        setOnlineUsers([]);
-        return;
-      }
-
-      console.log('👥 Presence subscription 설정 중...');
-
-      /** sync / join / leave 모두 동일: profiles 우선 표시 (join·leave에서 닉네임 누락되던 문제 수정) */
-      const buildOnlineUsersListFromPresence = async (
-        presenceState: Record<string, unknown>
-      ): Promise<Array<{ id: string; name: string; isCurrentUser: boolean }>> => {
-        const me = dashboardUserIdRef.current;
-        const gid = dashboardCurrentGroupIdRef.current;
-        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
-        if (me) {
-          usersList.push({
-            id: me,
-            name: dashboardUserNameRef.current?.trim() || '',
-            isCurrentUser: true,
-          });
-        }
-        const sameGroup = (p: { groupId?: string }) =>
-          gid != null &&
-          p.groupId != null &&
-          String(p.groupId) === String(gid);
-        const otherIds = new Set<string>();
-        for (const presenceId of Object.keys(presenceState)) {
-          const presence = presenceState[presenceId];
-          if (Array.isArray(presence) && presence.length > 0) {
-            const userPresence = presence[0] as { userId?: string; groupId?: string; userName?: string };
-            const uid = userPresence.userId;
-            if (uid && String(uid) !== String(me) && sameGroup(userPresence)) {
-              otherIds.add(uid);
-            }
-          }
-        }
-        let profilesMap = new Map<string, { nickname?: string | null; email?: string | null }>();
-        if (otherIds.size > 0) {
-          const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('id, nickname, email')
-            .in('id', [...otherIds]);
-          profilesMap = new Map(
-            (profilesData || []).map((p: { id: string; nickname?: string | null; email?: string | null }) => [
-              p.id,
-              { nickname: p.nickname, email: p.email },
-            ])
-          );
-        }
-        const othersById = new Map<string, { id: string; name: string; isCurrentUser: boolean }>();
-        for (const presenceId of Object.keys(presenceState)) {
-          const presence = presenceState[presenceId];
-          if (Array.isArray(presence) && presence.length > 0) {
-            const userPresence = presence[0] as { userId?: string; groupId?: string; userName?: string };
-            const uid = userPresence.userId;
-            if (uid && String(uid) !== String(me) && sameGroup(userPresence)) {
-              const profile = profilesMap.get(uid);
-              const nick = profile?.nickname != null ? String(profile.nickname).trim() : '';
-              const em = profile?.email != null ? String(profile.email).trim() : '';
-              const presName = userPresence.userName != null ? String(userPresence.userName).trim() : '';
-              const displayName =
-                nick ||
-                em ||
-                presName ||
-                `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
-              othersById.set(uid, { id: uid, name: displayName, isCurrentUser: false });
-            }
-          }
-        }
-        usersList.push(...othersById.values());
-        return usersList;
-      };
-
-      // Presence는 그룹당 하나의 채널만 사용해야 함(세션마다 다른 realtimeSubscriptionId를 넣으면 상대방과 방이 분리됨)
-      const presenceTopic = `online_users:${currentGroupId}`;
-      const isPresenceTopic = (ch: { topic?: string }) => {
-        const topic = ch.topic ?? '';
-        return topic === presenceTopic || topic === `realtime:${presenceTopic}`;
-      };
-      const leftoverPresence = supabase.getChannels().filter(isPresenceTopic);
-      const reusablePresence = leftoverPresence.find((ch) => ch.state === 'joined' || ch.state === 'joining');
-      if (reusablePresence) {
-        subscriptionsRef.current.presence = reusablePresence;
-        return;
-      }
-
-      const bindPresenceChannel = () => {
-      const alreadyBound = supabase.getChannels().find(
-        (ch) => isPresenceTopic(ch) && (ch.state === 'joined' || ch.state === 'joining'),
-      );
-      if (alreadyBound) {
-        subscriptionsRef.current.presence = alreadyBound;
-        return;
-      }
-      const presenceSubscription = supabase
-      .channel(presenceTopic)
-      .on('presence', { event: 'sync' }, async () => {
-        const state = presenceSubscription.presenceState();
-        const usersList = await buildOnlineUsersListFromPresence(state);
-        console.log('현재 로그인 중인 사용자 목록 (Presence):', usersList);
-        setOnlineUsers((prev) =>
-          onlineUsersSignature(prev) === onlineUsersSignature(usersList) ? prev : usersList,
-        );
-      })
-      .on('presence', { event: 'join' }, async ({ key, newPresences }) => {
-        console.log('사용자 접속:', key, newPresences);
-        const state = presenceSubscription.presenceState();
-        const usersList = await buildOnlineUsersListFromPresence(state);
-        setOnlineUsers((prev) =>
-          onlineUsersSignature(prev) === onlineUsersSignature(usersList) ? prev : usersList,
-        );
-      })
-      .on('presence', { event: 'leave' }, async ({ key, leftPresences }) => {
-        console.log('사용자 접속 해제:', key, leftPresences);
-        const state = presenceSubscription.presenceState();
-        const usersList = await buildOnlineUsersListFromPresence(state);
-        setOnlineUsers((prev) =>
-          onlineUsersSignature(prev) === onlineUsersSignature(usersList) ? prev : usersList,
-        );
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Presence subscription 연결 성공');
-          subscriptionsRef.current.presence = presenceSubscription;
-          // 현재 사용자의 presence 전송 (ref = 최신 그룹·유저)
-          await presenceSubscription.track({
-            userId: dashboardUserIdRef.current,
-            userName: dashboardUserNameRef.current?.trim() || '',
-            groupId: dashboardCurrentGroupIdRef.current,
-            onlineAt: new Date().toISOString()
-          });
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          // 개발 환경에서만 경고 로그 출력 (반복 로그 방지)
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('⚠️ Presence subscription 연결 실패:', status);
-          }
-          // CLOSED 상태일 때는 자동 재연결 시도하지 않음 (무한 루프 방지)
-          // 네트워크 재연결이나 페이지 포커스 시 useEffect가 자동으로 재실행됨
-        }
-      });
-        subscriptionsRef.current.presence = presenceSubscription;
-      };
-
-      if (leftoverPresence.length > 0) {
-        void Promise.all(leftoverPresence.map((ch) => supabase.removeChannel(ch))).finally(() => {
-          const again = supabase.getChannels().filter(isPresenceTopic);
-          const joined = again.find((ch) => ch.state === 'joined' || ch.state === 'joining');
-          if (joined) {
-            subscriptionsRef.current.presence = joined;
-            return;
-          }
-          bindPresenceChannel();
-        });
-        return;
-      }
-      bindPresenceChannel();
-    };
+    // Presence는 OnlinePresenceProvider가 담당 (하트비트가 대시보드 전체를 다시 그리지 않도록)
 
     // 채팅 초기 로드는 전용 effect(재시도 포함). Realtime·위치 구독은 아래 runLocationLoad에서 담당.
     const setupLocationsSubscription = () => {
@@ -3731,10 +3542,6 @@ export default function FamilyHub() {
         removePromises.push(supabase.removeChannel(subscriptionsRef.current.photos));
         subscriptionsRef.current.photos = null;
       }
-      if (subscriptionsRef.current.presence) {
-        removePromises.push(supabase.removeChannel(subscriptionsRef.current.presence));
-        subscriptionsRef.current.presence = null;
-      }
       if (subscriptionsRef.current.locations) {
         removePromises.push(supabase.removeChannel(subscriptionsRef.current.locations));
         subscriptionsRef.current.locations = null;
@@ -3763,8 +3570,6 @@ export default function FamilyHub() {
           setRealtimeSubscriptionEpoch(nextRealtimeId);
         });
         familyChatDebug('새 Realtime 구독 epoch', nextRealtimeId);
-
-        setupPresenceSubscription();
 
         const INITIAL_DELAY_MS = 100;
         const STAGGER_MS = 200;
@@ -3926,10 +3731,6 @@ export default function FamilyHub() {
       if (subscriptionsRef.current.events) {
         supabase.removeChannel(subscriptionsRef.current.events);
         subscriptionsRef.current.events = null;
-      }
-      if (subscriptionsRef.current.presence) {
-        supabase.removeChannel(subscriptionsRef.current.presence);
-        subscriptionsRef.current.presence = null;
       }
       if (subscriptionsRef.current.locations) {
         supabase.removeChannel(subscriptionsRef.current.locations);
@@ -5188,7 +4989,7 @@ export default function FamilyHub() {
             return hasAcceptedRequest;
           })
           .map((loc: any) => {
-            const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
+            const onlineUser = getOnlineUsersSnapshot().find(u => u.id === loc.user_id);
             const userName =
               profileDisplayByUserId.get(loc.user_id) ||
               onlineUser?.name ||
@@ -6217,10 +6018,8 @@ export default function FamilyHub() {
           await supabase.removeChannel(subscriptionsRef.current.photos);
           subscriptionsRef.current.photos = null;
         }
-        if (subscriptionsRef.current.presence) {
-          await supabase.removeChannel(subscriptionsRef.current.presence);
-          subscriptionsRef.current.presence = null;
-        }
+        await teardownDashboardPresence();
+        subscriptionsRef.current.presence = null;
         if (subscriptionsRef.current.locations) {
           await supabase.removeChannel(subscriptionsRef.current.locations);
           subscriptionsRef.current.locations = null;
@@ -7048,7 +6847,7 @@ export default function FamilyHub() {
             onChatDragOver={handleTaskChatDragOver}
             onChatDragLeave={handleTaskChatDragLeave}
             onChatDrop={handleTaskChatDrop}
-            addTaskRef={chatAddTaskRef}
+            openFromChatRef={chatOpenTaskRef}
           />
         );
       case 'calendar':
@@ -7099,7 +6898,7 @@ export default function FamilyHub() {
             uiTheme={uiTheme}
             roomMode={chatRoomOpen}
             translations={chatTranslations}
-            onQuickAddTask={handleChatQuickAddTask}
+            onOpenTaskWithText={handleChatOpenTask}
             onOpenCalendarWithText={handleChatOpenCalendar}
           />
         );
@@ -7420,6 +7219,12 @@ export default function FamilyHub() {
   ) : null;
 
   return (
+    <OnlinePresenceProvider
+      isAuthenticated={isAuthenticated}
+      userId={userId}
+      currentGroupId={currentGroupId}
+      userName={userName}
+    >
     <>
       <WidgetShowroomHost onGestureHintEnabledChange={setShowroomAllowsFrameHint} />
       {previewOrientationToggle}
@@ -7681,53 +7486,13 @@ export default function FamilyHub() {
               <span className="status-dot-ping"></span>
               <span className="status-dot-core"></span>
             </span>
-            <div className="flex flex-wrap items-center gap-2">
-              {onlineUsers.map((user) => {
-                const nicknamePart = (
-                  user.isCurrentUser ? (userName?.trim() || user.name.trim()) : user.name.trim()
-                ) || '';
-                const rolePart = familyRoleByUserId[user.id]
-                  ? `${getFamilyRoleEmoji(familyRoleByUserId[user.id])} ${getFamilyRoleLabel(lang, familyRoleByUserId[user.id])}`
-                  : '';
-                return (
-                <div 
-                  key={user.id}
-                  className={`user-info rounded-md border border-[rgba(99,102,241,0.3)] bg-[rgba(99,102,241,0.1)] px-1.5 py-[3px] ${
-                    user.isCurrentUser ? 'cursor-pointer' : 'cursor-default'
-                  }`} 
-                  onClick={user.isCurrentUser ? () => setIsNicknameModalOpen(true) : undefined}
-                >
-                  <span className="user-icon text-xs">👤</span>
-                  <p className={`user-name m-0 text-xs ${user.isCurrentUser ? 'font-semibold' : 'font-medium'}`}>
-                    {nicknamePart ? `${nicknamePart} ` : ''}
-                    {rolePart}
-                    {user.isCurrentUser && ct('me_suffix')}
-                  </p>
-                </div>
-                );
-              })}
-              {onlineUsers.length === 0 && (
-                <div className="user-info cursor-pointer" onClick={() => setIsNicknameModalOpen(true)}>
-                  <span className="user-icon">👤</span>
-                  <p className="user-name">
-                    {(() => {
-                      const nick = userName?.trim() || '';
-                      const role = familyRoleByUserId[userId]
-                        ? `${getFamilyRoleEmoji(familyRoleByUserId[userId])} ${getFamilyRoleLabel(lang, familyRoleByUserId[userId])}`
-                        : '';
-                      if (!nick && !role) return ct('loading');
-                      return (
-                        <>
-                          {nick ? `${nick} ` : ''}
-                          {role}
-                          {ct('me_suffix')}
-                        </>
-                      );
-                    })()}
-                  </p>
-                </div>
-              )}
-            </div>
+            <DashboardOnlineUsersStrip
+              userId={userId}
+              userName={userName}
+              familyRoleByUserId={familyRoleByUserId}
+              lang={lang}
+              onCurrentUserClick={() => setIsNicknameModalOpen(true)}
+            />
             <button
               onClick={handleLogout}
               className="ml-3 cursor-pointer whitespace-nowrap rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-500 transition-all duration-300 hover:border-red-500/50 hover:bg-red-500/20"
@@ -7951,13 +7716,12 @@ export default function FamilyHub() {
             enabled={Boolean(currentGroupId)}
           />
 
-          <FamilyLocationRequestModal
+          <FamilyLocationRequestModalWithPresence
           open={showLocationRequestModal}
           mode={locationRequestModalMode}
           userId={userId}
           loadingUsers={loadingUsers}
           allUsers={allUsers}
-          onlineUsers={onlineUsers}
           locationRequests={locationRequests}
           onBackdropClose={() => {
             setShowLocationRequestModal(false);
@@ -8055,5 +7819,6 @@ export default function FamilyHub() {
       </div>
     </div>
     </>
+    </OnlinePresenceProvider>
   );
 }

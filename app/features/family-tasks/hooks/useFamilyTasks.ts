@@ -353,8 +353,8 @@ export function useFamilyTasks({
           };
         });
 
-        const nextSig = formattedTasks.map((t) => `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}`).join('|');
-        const prevSig = tasksRt.tasks.current.map((t) => `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}`).join('|');
+        const nextSig = formattedTasks.map((t) => `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.created_by ?? ''}`).join('|');
+        const prevSig = tasksRt.tasks.current.map((t) => `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.created_by ?? ''}`).join('|');
         // [수정 5] tasksRt.onTasksChange.current() ref 경유 → deps에서 onTasksChange 제거 가능
         if (nextSig !== prevSig) tasksRt.onTasksChange.current(formattedTasks);
       }

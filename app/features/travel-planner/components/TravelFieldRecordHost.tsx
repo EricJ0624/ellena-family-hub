@@ -4,9 +4,8 @@
  * widget:
  *   - 0 trips → auto-create trip, then location/route itinerary
  *   - 1+ trips → same picker UI: new trip OR add itinerary to existing trip
- * page:
- *   - 0 itineraries → create itinerary
- *   - 1+ itineraries → picker: create vs attach to existing itinerary
+ * page (이미 여행 일정 안):
+ *   - 지금여기 / 루트기록은 현재 trip에 바로 추가. 일정 고르는 창은 띄우지 않음
  */
 
 'use client';
@@ -210,44 +209,6 @@ export function TravelFieldRecordHost({
     });
   }, [trips]);
 
-  const loadItineraryOptions = useCallback(async () => {
-    if (!groupId || !effectiveTripId) {
-      setOptions([]);
-      return [];
-    }
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(
-        `/api/v1/travel/trips/${effectiveTripId}/itineraries?groupId=${encodeURIComponent(groupId)}`,
-        { headers },
-      );
-      const json = await res.json().catch(() => ({}));
-      const rows = Array.isArray(json.data) ? json.data : [];
-      const mapped: FieldTargetOption[] = rows
-        .filter(
-          (r: { field_record_kind?: string | null }) =>
-            !r.field_record_kind || !String(r.field_record_kind).trim(),
-        )
-        .map(
-          (r: { id: string; title?: string; day_date?: string; start_time?: string | null }) => ({
-            id: r.id,
-            title: r.title || '일정',
-            day_date: String(r.day_date || '').slice(0, 10),
-            start_time: r.start_time ?? null,
-          }),
-        );
-      setOptions(mapped);
-      return mapped;
-    } catch {
-      setOptions([]);
-      return [];
-    }
-  }, [groupId, effectiveTripId, getAuthHeaders]);
-
-  useEffect(() => {
-    if (mode === 'page' && canUse) void loadItineraryOptions();
-  }, [mode, canUse, loadItineraryOptions]);
-
   const runPageChoice = (choice: FieldAttachChoice) => {
     setPickerOpen(false);
     const kind = pickerKind;
@@ -286,29 +247,13 @@ export function TravelFieldRecordHost({
       setPickerOpen(true);
       return;
     }
-    const list = await loadItineraryOptions();
-    if (list.length === 0) {
-      void recorder.checkInHere({ attachMode: 'create' });
-      return;
-    }
-    setPickerKind('checkin');
-    setPickerOpen(true);
+    void recorder.checkInHere({ attachMode: 'create' });
   };
 
   const handleToggleRoute = async () => {
     if (!canUse) return;
     if (recorder.recording) {
-      if (mode === 'widget') {
-        void recorder.stopRoute({ attachMode: 'create' });
-        return;
-      }
-      const list = await loadItineraryOptions();
-      if (list.length === 0) {
-        void recorder.stopRoute({ attachMode: 'create' });
-        return;
-      }
-      setPickerKind('route_stop');
-      setPickerOpen(true);
+      void recorder.stopRoute({ attachMode: 'create' });
       return;
     }
     if (mode === 'widget') {

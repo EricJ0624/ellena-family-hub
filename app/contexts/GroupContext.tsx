@@ -170,22 +170,22 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         throw new Error('세션이 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
       }
 
-      // 1. memberships 테이블에서 사용자가 속한 그룹 조회
-      let { data: membershipData, error: membershipError } = await supabase
-        .from('memberships')
-        .select('group_id, role, family_role')
-        .eq('user_id', userId)
-        .eq('app_id', CURRENT_APP_ID);
+      // 1+2. memberships / 소유 그룹 — 서로 독립이므로 병렬
+      let [{ data: membershipData, error: membershipError }, { data: ownedGroupsData, error: ownedGroupsError }] =
+        await Promise.all([
+          supabase
+            .from('memberships')
+            .select('group_id, role, family_role')
+            .eq('user_id', userId)
+            .eq('app_id', CURRENT_APP_ID),
+          supabase
+            .from('groups')
+            .select('id')
+            .eq('owner_id', userId)
+            .eq('app_id', CURRENT_APP_ID),
+        ]);
 
       if (membershipError) throw membershipError;
-
-      // 2. groups 테이블에서 사용자가 소유한 그룹 조회
-      let { data: ownedGroupsData, error: ownedGroupsError } = await supabase
-        .from('groups')
-        .select('id')
-        .eq('owner_id', userId)
-        .eq('app_id', CURRENT_APP_ID);
-
       if (ownedGroupsError) throw ownedGroupsError;
 
       const recomputeAllGroupIds = () => {
@@ -201,16 +201,18 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       // bootstrap이 그룹 있음을 알려주면 빈 결과 재시도 대기를 줄인다.
       if (allGroupIds.length === 0) {
         await new Promise((r) => setTimeout(r, bootstrapHint?.hasGroups ? 120 : 450));
-        const rM = await supabase
-          .from('memberships')
-          .select('group_id, role, family_role')
-          .eq('user_id', userId)
-          .eq('app_id', CURRENT_APP_ID);
-        const rO = await supabase
-          .from('groups')
-          .select('id')
-          .eq('owner_id', userId)
-          .eq('app_id', CURRENT_APP_ID);
+        const [rM, rO] = await Promise.all([
+          supabase
+            .from('memberships')
+            .select('group_id, role, family_role')
+            .eq('user_id', userId)
+            .eq('app_id', CURRENT_APP_ID),
+          supabase
+            .from('groups')
+            .select('id')
+            .eq('owner_id', userId)
+            .eq('app_id', CURRENT_APP_ID),
+        ]);
         if (!rM.error && !rO.error) {
           membershipData = rM.data;
           ownedGroupsData = rO.data;
@@ -220,20 +222,22 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       // 온보딩에서 방금 고른 그룹이 스토리지에만 있고 목록 조회가 아직 비는 경우: pinned 단일 행으로 복구
       if (allGroupIds.length === 0 && pinnedSaved) {
-        const { data: pm } = await supabase
-          .from('memberships')
-          .select('group_id, role, family_role')
-          .eq('user_id', userId)
-          .eq('group_id', pinnedSaved)
-          .eq('app_id', CURRENT_APP_ID)
-          .maybeSingle();
-        const { data: po } = await supabase
-          .from('groups')
-          .select('id')
-          .eq('id', pinnedSaved)
-          .eq('owner_id', userId)
-          .eq('app_id', CURRENT_APP_ID)
-          .maybeSingle();
+        const [{ data: pm }, { data: po }] = await Promise.all([
+          supabase
+            .from('memberships')
+            .select('group_id, role, family_role')
+            .eq('user_id', userId)
+            .eq('group_id', pinnedSaved)
+            .eq('app_id', CURRENT_APP_ID)
+            .maybeSingle(),
+          supabase
+            .from('groups')
+            .select('id')
+            .eq('id', pinnedSaved)
+            .eq('owner_id', userId)
+            .eq('app_id', CURRENT_APP_ID)
+            .maybeSingle(),
+        ]);
         if (pm) {
           membershipData = [pm];
           allGroupIds = [pinnedSaved];
@@ -317,13 +321,21 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     }
 
     try {
-      // 그룹 소유자 확인
-      const { data: groupData } = await supabase
-        .from('groups')
-        .select('owner_id')
-        .eq('id', currentGroupId)
-        .eq('app_id', CURRENT_APP_ID)
-        .maybeSingle();
+      // owner_id와 그룹 row는 독립 — 병렬. 멤버 role은 소유자가 아닐 때만 이어서 조회.
+      const [{ data: groupData }, { data: groupInfo }] = await Promise.all([
+        supabase
+          .from('groups')
+          .select('owner_id')
+          .eq('id', currentGroupId)
+          .eq('app_id', CURRENT_APP_ID)
+          .maybeSingle(),
+        supabase
+          .from('groups')
+          .select('*')
+          .eq('id', currentGroupId)
+          .eq('app_id', CURRENT_APP_ID)
+          .maybeSingle(),
+      ]);
 
       if (groupData) {
         const owner = groupData.owner_id === userId;
@@ -332,7 +344,6 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         if (owner) {
           setUserRole('ADMIN');
         } else {
-          // 멤버십 확인
           const { data: membershipData } = await supabase
             .from('memberships')
             .select('role')
@@ -348,14 +359,6 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
           }
         }
       }
-
-      // 현재 그룹 정보 업데이트
-      const { data: groupInfo } = await supabase
-        .from('groups')
-        .select('*')
-        .eq('id', currentGroupId)
-        .eq('app_id', CURRENT_APP_ID)
-        .maybeSingle();
 
       if (groupInfo) {
         setCurrentGroup(groupInfo);

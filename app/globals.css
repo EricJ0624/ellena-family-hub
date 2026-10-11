@@ -3100,7 +3100,6 @@ html[data-ui-theme='default'] body {
   gap: 3cqw;
   flex: 1;
   min-width: 0;
-  max-width: calc(100% - 10cqw);
   cursor: pointer;
 }
 

@@ -50,8 +50,8 @@ interface FamilyChatSectionProps {
   eventAuthorNames: Record<string, string>;
   lang: any;
   uiTheme?: UiTheme;
-  /** 채팅 메시지 텍스트를 할 일로 빠르게 추가 (FamilyTasksSection.addTaskRef 경유) */
-  onQuickAddTask?: (text: string) => Promise<void>;
+  /** 채팅 메시지 텍스트를 제목으로 할 일 모달 열기 (FamilyTasksSection.openFromChatRef 경유) */
+  onOpenTaskWithText?: (text: string) => void;
   /** 채팅 메시지 텍스트를 제목으로 캘린더 모달 열기 (FamilyCalendarSection.openFromChatRef 경유) */
   onOpenCalendarWithText?: (text: string) => void;
   translations: {
@@ -144,7 +144,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
   eventAuthorNames,
   lang,
   uiTheme,
-  onQuickAddTask,
+  onOpenTaskWithText,
   onOpenCalendarWithText,
   translations: t,
 }: FamilyChatSectionProps) {
@@ -161,8 +161,6 @@ export const FamilyChatSection = memo(function FamilyChatSection({
   const [showSummary, setShowSummary] = useState(false);
   /** 모바일 탭으로 연 메시지 액션. PC는 hover로도 보임. */
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
-  const [taskFeedback, setTaskFeedback] = useState<Record<string, 'ok' | 'fail'>>({});
-  const feedbackTimersRef = useRef<number[]>([]);
   const didInitSeenRef = useRef(false);
   const roomModePrevRef = useRef(roomMode);
   const messagesRef = useRef(messages);
@@ -187,12 +185,6 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     setUnreadCountIfChanged(0);
     hideSummaryIfOpen();
   };
-
-  useEffect(() => {
-    return () => {
-      for (const id of feedbackTimersRef.current) window.clearTimeout(id);
-    };
-  }, []);
 
   useEffect(() => {
     didInitSeenRef.current = false;
@@ -223,25 +215,6 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     roomModePrevRef.current = roomMode;
     if (wasOpen && !roomMode) markLatestSeen();
   }, [roomMode, storageKey]);
-
-  const handleQuickAddTask = async (messageId: string, text: string) => {
-    if (!onQuickAddTask || isChatCipherText(text)) return;
-    try {
-      await onQuickAddTask(text);
-      setTaskFeedback((prev) => ({ ...prev, [messageId]: 'ok' }));
-    } catch {
-      setTaskFeedback((prev) => ({ ...prev, [messageId]: 'fail' }));
-    }
-    const timer = window.setTimeout(() => {
-      setTaskFeedback((prev) => {
-        if (!(messageId in prev)) return prev;
-        const next = { ...prev };
-        delete next[messageId];
-        return next;
-      });
-    }, 2500);
-    feedbackTimersRef.current.push(timer);
-  };
 
   const unreadSummary = useMemo(() => {
     if (!showSummary || !storageKey) return EMPTY_UNREAD_SUMMARY;
@@ -449,7 +422,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
             const canQuickAdd = Boolean(
               m.text &&
                 !isChatCipherText(m.text) &&
-                (onQuickAddTask || onOpenCalendarWithText),
+                (onOpenTaskWithText || onOpenCalendarWithText),
             );
             const actionsOpen = activeMessageId === messageId;
             return (
@@ -491,39 +464,32 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                       actionsOpen ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'
                     }`}
                   >
-                    {taskFeedback[messageId] ? (
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${taskFeedback[messageId] === 'ok' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                        {taskFeedback[messageId] === 'ok' ? t.chat_task_added_ok : t.chat_task_add_failed}
-                      </span>
-                    ) : (
-                      <>
-                        {onQuickAddTask && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleQuickAddTask(messageId, m.text);
-                            }}
-                            className="rounded-full border border-indigo-200 bg-white px-2 py-0.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
-                            title={t.chat_quick_add_task}
-                          >
-                            ✅ {t.chat_quick_add_task}
-                          </button>
-                        )}
-                        {onOpenCalendarWithText && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenCalendarWithText(m.text);
-                            }}
-                            className="rounded-full border border-violet-200 bg-white px-2 py-0.5 text-xs font-semibold text-violet-600 hover:bg-violet-50 transition-colors"
-                            title={t.chat_quick_add_calendar}
-                          >
-                            📅 {t.chat_quick_add_calendar}
-                          </button>
-                        )}
-                      </>
+                    {onOpenTaskWithText && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isChatCipherText(m.text)) return;
+                          onOpenTaskWithText(m.text);
+                        }}
+                        className="rounded-full border border-indigo-200 bg-white px-2 py-0.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        title={t.chat_quick_add_task}
+                      >
+                        ✅ {t.chat_quick_add_task}
+                      </button>
+                    )}
+                    {onOpenCalendarWithText && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenCalendarWithText(m.text);
+                        }}
+                        className="rounded-full border border-violet-200 bg-white px-2 py-0.5 text-xs font-semibold text-violet-600 hover:bg-violet-50 transition-colors"
+                        title={t.chat_quick_add_calendar}
+                      >
+                        📅 {t.chat_quick_add_calendar}
+                      </button>
                     )}
                   </span>
                 )}
