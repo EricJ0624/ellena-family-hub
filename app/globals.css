@@ -2091,6 +2091,9 @@ select:not(.chalkboard-form-input) {
 .status-indicator {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
   gap: var(--spacing-sm);
 }
 
@@ -2133,6 +2136,8 @@ select:not(.chalkboard-form-input) {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
+    max-width: 100%;
     padding: 0.375rem 0.75rem;
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
     border-radius: 1rem;
@@ -2167,6 +2172,9 @@ select:not(.chalkboard-form-input) {
     color: #4f46e5;
     letter-spacing: 0.025em;
     margin: 0;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -3160,14 +3168,14 @@ html[data-ui-theme='default'] body {
 }
 
 .todo-text {
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   font-size: 5.5cqw;
   font-weight: 600;
   line-height: 1.2;
   color: #ffffff;
   letter-spacing: 0.03em;
   min-width: 0;
-  max-width: 100%;
+  max-width: none;
   overflow-wrap: anywhere;
   word-break: break-word;
   display: -webkit-box;
@@ -3189,11 +3197,10 @@ html[data-ui-theme='default'] body {
   font-weight: 600;
   line-height: 1.2;
   color: rgba(255, 255, 255, 0.85);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
   max-width: 46%;
-  min-width: 22%;
+  min-width: 0;
 }
 
 .chalkboard-btn-delete {

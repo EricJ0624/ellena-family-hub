@@ -8,6 +8,7 @@
 
 import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TopLayerDialog } from '@/app/components/TopLayerDialog';
+import { useOnlineUsers } from '@/app/dashboard/online-presence';
 import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
@@ -158,10 +159,13 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   const [emptyStateFontPx, setEmptyStateFontPx] = useState<number | null>(null);
   const [chalkTodoListMaxPx, setChalkTodoListMaxPx] = useState<number | null>(null);
 
+  const onlineUsers = useOnlineUsers();
+
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
       const member = taskMembers.find((m) => m.userId === uid);
-      const rawNick = member?.nickname?.trim() ?? '';
+      const presenceName = onlineUsers.find((user) => user.id === uid)?.name?.trim() ?? '';
+      const rawNick = member?.nickname?.trim() || presenceName;
       const nick = rawNick && !isOpaqueIdLabel(rawNick, uid) ? rawNick : '';
       const role = familyRoleByUserId[uid] ?? null;
       if (!nick && !role) return '';
@@ -169,7 +173,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       if (!nick) return `${getFamilyRoleEmoji(role)} ${getFamilyRoleLabel(lang, role)}`;
       return `${getFamilyRoleEmoji(role)} ${nick} - ${getFamilyRoleLabel(lang, role)}`;
     },
-    [taskMembers, familyRoleByUserId, lang, getFamilyRoleEmoji, getFamilyRoleLabel]
+    [taskMembers, onlineUsers, familyRoleByUserId, lang, getFamilyRoleEmoji, getFamilyRoleLabel]
   );
 
   const assigneeText = useCallback(
@@ -209,7 +213,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       return task;
     });
     if (changed) onTasksChange(next);
-  }, [tasks, taskMembers, familyRoleByUserId, lang, onTasksChange]);
+  }, [tasks, taskMembers, onlineUsers, familyRoleByUserId, lang, onTasksChange]);
 
   const { addTask, toggleTask, deleteTask, claimTask, applyTasksChange } = useFamilyTasks({
     currentGroupId,
