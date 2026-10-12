@@ -15,13 +15,39 @@ interface MemberSelectProps {
   id?: string;
 }
 
+const ID_PLACEHOLDER_LABEL = /^사용자\s+[0-9a-f-]{6,}$/i;
+
 export function isOpaqueIdLabel(label: string, userId: string): boolean {
   const value = label.trim();
   const id = userId.trim();
   if (!value || !id) return true;
+  if (ID_PLACEHOLDER_LABEL.test(value)) return true;
   if (value === id) return true;
   const compact = id.replace(/-/g, '');
-  return value === compact || value === id.slice(0, 8) || value === compact.slice(0, 8);
+  const head = id.slice(0, 8);
+  const compactHead = compact.slice(0, 8);
+  const tail = id.length > 8 ? id.slice(-8) : id;
+  const compactTail = compact.length > 8 ? compact.slice(-8) : compact;
+  return (
+    value === compact ||
+    value === head ||
+    value === compactHead ||
+    value === tail ||
+    value === compactTail
+  );
+}
+
+/** 프로필 별명 → 표시 이름 → 이메일. 아이디로 만든 임시 이름은 쓰지 않는다. */
+export function profileNicknameLabel(
+  profile: { nickname?: string | null; display_name?: string | null; email?: string | null } | null | undefined,
+  userId: string,
+): string {
+  const nickname = profile?.nickname?.trim() || '';
+  const displayName = profile?.display_name?.trim() || '';
+  const email = profile?.email?.trim() || '';
+  const chosen = nickname || displayName || email;
+  if (!chosen || isOpaqueIdLabel(chosen, userId)) return '';
+  return chosen;
 }
 
 export function getMemberNickname(

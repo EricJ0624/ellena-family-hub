@@ -164,9 +164,11 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
       const member = taskMembers.find((m) => m.userId === uid);
+      const memberNick = member?.nickname?.trim() ?? '';
       const presenceName = onlineUsers.find((user) => user.id === uid)?.name?.trim() ?? '';
-      const rawNick = member?.nickname?.trim() || presenceName;
-      const nick = rawNick && !isOpaqueIdLabel(rawNick, uid) ? rawNick : '';
+      const nick =
+        (memberNick && !isOpaqueIdLabel(memberNick, uid) ? memberNick : '') ||
+        (presenceName && !isOpaqueIdLabel(presenceName, uid) ? presenceName : '');
       const role = familyRoleByUserId[uid] ?? null;
       if (!nick && !role) return '';
       if (!role) return nick;

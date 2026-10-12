@@ -108,7 +108,7 @@ import { useFamilyChatInitialLoad } from '@/app/features/family-chat/hooks/useFa
 import { useFamilyChatRealtime } from '@/app/features/family-chat/hooks/useFamilyChatRealtime';
 import { useFamilyChatScroll } from '@/app/features/family-chat/hooks/useFamilyChatScroll';
 import { openNavMapApp, isLocationInSouthKorea, type NavMapApp } from '@/lib/nav-map-apps';
-import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
+import { isOpaqueIdLabel, profileNicknameLabel } from '@/app/features/family-games/components/MemberSelect';
 import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
 import { useDiaryInvite } from '@/app/features/travel-diary/hooks/useDiaryInvite';
 import { getTravelDiaryTranslation, getDiaryModalText } from '@/lib/translations/travel-diary';
@@ -3761,10 +3761,12 @@ export default function FamilyHub() {
       return;
     }
     (async () => {
-      const { data } = await supabase.from('profiles').select('id, nickname, email').in('id', authorIds);
+      await waitForSupabaseSession(supabase);
+      const { data } = await supabase.from('profiles').select('id, nickname, display_name, email').in('id', authorIds);
       const map: Record<string, string> = {};
-      (data || []).forEach((p: { id: string; nickname?: string | null; email?: string }) => {
-        map[p.id] = p.nickname || p.email || p.id?.substring(0, 8) || '알 수 없음';
+      (data || []).forEach((p: { id: string; nickname?: string | null; display_name?: string | null; email?: string | null }) => {
+        const label = profileNicknameLabel(p, p.id);
+        if (label) map[p.id] = label;
       });
       setEventAuthorNames((prev) => {
         const keys = Object.keys(map);
@@ -3788,6 +3790,9 @@ export default function FamilyHub() {
     }
     let cancelled = false;
     (async () => {
+      const session = await waitForSupabaseSession(supabase);
+      if (cancelled || !session) return;
+
       // 1단계: groups(owner) + memberships(members+role) 병렬 조회
       const [groupResult, memResult] = await Promise.all([
         supabase.from('groups').select('owner_id').eq('id', currentGroupId).maybeSingle(),
@@ -3811,29 +3816,28 @@ export default function FamilyHub() {
         if (!cancelled) setFamilyTaskMembers([]);
         return;
       }
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, nickname, display_name, email')
-        .in('id', idList);
-      if (cancelled || profilesError || !profiles) return;
+      const loadMemberProfiles = () =>
+        supabase
+          .from('profiles')
+          .select('id, nickname, display_name, email')
+          .in('id', idList);
+      let profilesResult = await loadMemberProfiles();
+      if ((profilesResult.error || !profilesResult.data) && !cancelled) {
+        profilesResult = await loadMemberProfiles();
+      }
+      if (cancelled || profilesResult.error || !profilesResult.data) return;
 
-      const byId: Record<string, { nickname: string | null; displayName: string | null; email: string | null }> = {};
-      (profiles || []).forEach((p: { id: string; nickname?: string | null; display_name?: string | null; email?: string | null }) => {
-        byId[p.id] = {
-          nickname: p.nickname ?? null,
-          displayName: p.display_name ?? null,
-          email: p.email ?? null,
-        };
+      const nicknameById = new Map<string, string>();
+      profilesResult.data.forEach((p: { id: string; nickname?: string | null; display_name?: string | null; email?: string | null }) => {
+        const label = profileNicknameLabel(p, p.id);
+        if (label) nicknameById.set(String(p.id).toLowerCase(), label);
       });
       setFamilyTaskMembers((prev) => {
         const prevById = new Map(prev.map((member) => [member.userId, member.nickname]));
         const members: FamilyTaskMemberOption[] = idList.map((memberUserId) => {
-          const p = byId[memberUserId];
           const previous = prevById.get(memberUserId) ?? '';
           const nickname =
-            (p?.nickname && String(p.nickname).trim()) ||
-            (p?.displayName && String(p.displayName).trim()) ||
-            (p?.email && String(p.email).trim()) ||
+            nicknameById.get(memberUserId.toLowerCase()) ||
             (previous && !isOpaqueIdLabel(previous, memberUserId) ? previous : '');
           return { userId: memberUserId, nickname };
         });
@@ -4946,17 +4950,15 @@ export default function FamilyHub() {
           (membershipData || []).forEach((m: any) => familyRoleMap.set(m.user_id, m.family_role ?? null));
         }
 
-        // 지도 마커 표시명: Presence(onlineUsers)만 쓰면 오프라인·동기 지연 시 "사용자 xxxxxxxx"로 떨어짐 → profiles 우선
+        // 지도 마커 표시명: 프로필 별명. 아이디로 만든 임시 이름은 쓰지 않는다.
         const profileDisplayByUserId = new Map<string, string>();
         if (otherUserIds.length > 0) {
           const { data: profilesForMarkers } = await supabase
             .from('profiles')
-            .select('id, nickname, email')
+            .select('id, nickname, display_name, email')
             .in('id', otherUserIds);
-          (profilesForMarkers || []).forEach((p: { id: string; nickname: string | null; email: string | null }) => {
-            const nick = p.nickname?.trim();
-            const mail = p.email?.trim();
-            const label = nick || mail;
+          (profilesForMarkers || []).forEach((p: { id: string; nickname: string | null; display_name?: string | null; email: string | null }) => {
+            const label = profileNicknameLabel(p, p.id);
             if (label) profileDisplayByUserId.set(p.id, label);
           });
         }
@@ -4988,10 +4990,10 @@ export default function FamilyHub() {
           })
           .map((loc: any) => {
             const onlineUser = getOnlineUsersSnapshot().find(u => u.id === loc.user_id);
+            const onlineName = onlineUser?.name?.trim() ?? '';
             const userName =
               profileDisplayByUserId.get(loc.user_id) ||
-              onlineUser?.name ||
-              `사용자 ${loc.user_id.substring(0, 8)}`;
+              (onlineName && !isOpaqueIdLabel(onlineName, loc.user_id) ? onlineName : '');
             const familyRole = familyRoleMap.get(loc.user_id) ?? null;
             
             // Geocoding 미사용 — 저장된 주소만 사용, 없으면 빈 문자열 (좌표로 지도/링크 표시)
