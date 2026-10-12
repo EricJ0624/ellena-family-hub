@@ -3784,28 +3784,42 @@ export default function FamilyHub() {
   // - 이후 profiles 쿼리만 추가 1회 → 총 2 RTT (기존 3 RTT 직렬 → 단축)
   useEffect(() => {
     if (!currentGroupId) {
-      setFamilyRoleByUserId({});
-      setFamilyTaskMembers([]);
+      if (!userId) {
+        setFamilyRoleByUserId({});
+        setFamilyTaskMembers([]);
+      }
       return;
     }
+    const groupId = currentGroupId;
     let cancelled = false;
-    (async () => {
+    const authBag: { unsubscribe?: () => void } = {};
+
+    const loadFamilyRoles = async (): Promise<'ok' | 'no-session' | 'error'> => {
       const session = await waitForSupabaseSession(supabase);
-      if (cancelled || !session) return;
+      if (cancelled) return 'ok';
+      if (!session?.access_token) return 'no-session';
 
-      // 1단계: groups(owner) + memberships(members+role) 병렬 조회
-      const [groupResult, memResult] = await Promise.all([
-        supabase.from('groups').select('owner_id').eq('id', currentGroupId).maybeSingle(),
-        supabase.from('memberships').select('user_id, family_role').eq('group_id', currentGroupId),
-      ]);
-      if (cancelled) return;
+      const loadMemberships = () =>
+        supabase.from('memberships').select('user_id, family_role').eq('group_id', groupId);
+      const groupPromise = supabase.from('groups').select('owner_id').eq('id', groupId).maybeSingle();
+      let memResult = await loadMemberships();
+      if ((memResult.error || !memResult.data) && !cancelled) {
+        memResult = await loadMemberships();
+      }
+      const groupResult = await groupPromise;
+      if (cancelled) return 'ok';
+      if (memResult.error || !memResult.data) return 'error';
 
-      // familyRoleByUserId 즉시 반영 (profiles 대기 불필요)
       const roleMap: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null> = {};
-      (memResult.data || []).forEach((m: { user_id: string; family_role?: string | null }) => {
+      memResult.data.forEach((m: { user_id: string; family_role?: string | null }) => {
         roleMap[m.user_id] = (m.family_role as 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other') ?? null;
       });
-      setFamilyRoleByUserId(roleMap);
+      setFamilyRoleByUserId((prev) => {
+        const nextKeys = Object.keys(roleMap);
+        const prevKeys = Object.keys(prev);
+        if (prevKeys.length === nextKeys.length && nextKeys.every((key) => prev[key] === roleMap[key])) return prev;
+        return roleMap;
+      });
 
       // 2단계: 멤버 ID 수집 → profiles 조회
       const ids = new Set<string>();
@@ -3814,7 +3828,7 @@ export default function FamilyHub() {
       const idList = Array.from(ids);
       if (idList.length === 0) {
         if (!cancelled) setFamilyTaskMembers([]);
-        return;
+        return 'ok';
       }
       const loadMemberProfiles = () =>
         supabase
@@ -3825,7 +3839,7 @@ export default function FamilyHub() {
       if ((profilesResult.error || !profilesResult.data) && !cancelled) {
         profilesResult = await loadMemberProfiles();
       }
-      if (cancelled || profilesResult.error || !profilesResult.data) return;
+      if (cancelled || profilesResult.error || !profilesResult.data) return 'ok';
 
       const nicknameById = new Map<string, string>();
       profilesResult.data.forEach((p: { id: string; nickname?: string | null; display_name?: string | null; email?: string | null }) => {
@@ -3846,9 +3860,27 @@ export default function FamilyHub() {
         const prevSig = prev.map((member) => `${member.userId}:${member.nickname}`).join('|');
         return nextSig === prevSig ? prev : members;
       });
-    })();
+      return 'ok';
+    };
+
+    void loadFamilyRoles().then((result) => {
+      if (cancelled || result === 'ok' || result === 'error') return;
+      let retried = false;
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        if (retried || cancelled || !session?.access_token) return;
+        if (event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION' && event !== 'TOKEN_REFRESHED') return;
+        retried = true;
+        setTimeout(() => {
+          data.subscription.unsubscribe();
+          if (!cancelled) void loadFamilyRoles();
+        }, 0);
+      });
+      authBag.unsubscribe = () => data.subscription.unsubscribe();
+    });
+
     return () => {
       cancelled = true;
+      authBag.unsubscribe?.();
     };
   }, [currentGroupId, userId]);
 
