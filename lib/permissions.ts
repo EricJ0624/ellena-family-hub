@@ -6,6 +6,7 @@
  */
 
 import { getSupabaseServerClient } from './api-helpers';
+import { systemAdminPrivilegeAllowed } from './system-admin-session';
 import { isValidUUID } from './validation';
 import { formatUnknownError, isAbortLikeError } from './supabase-error';
 import type { MembershipRole } from '@/types/db';
@@ -224,7 +225,9 @@ export async function isSystemAdmin(userId?: string): Promise<boolean> {
       return false;
     }
     
-    return data === true;
+    if (data !== true) return false;
+    // service role RPC는 JWT aal을 보지 않으므로, 인증된 요청의 본인 권한만 여기서 막는다.
+    return systemAdminPrivilegeAllowed(userId);
   } catch (error) {
     if (!isAbortLikeError(error)) {
       console.error('시스템 관리자 확인 중 오류:', formatUnknownError(error));

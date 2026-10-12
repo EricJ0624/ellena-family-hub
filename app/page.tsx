@@ -14,6 +14,7 @@ import { getAppBrandName } from '@/lib/apps';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
 import { cn } from '@/lib/ui/cn';
 import { fetchAuthBootstrapWithCache, getCachedAuthBootstrap, loginViaServerApi, setCachedAuthBootstrap } from '@/lib/auth-bootstrap';
+import { systemAdminSessionNeedsMfa } from '@/lib/system-admin-mfa';
 import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap';
 import { resolvePostAuthPath } from '@/lib/app-enrollment-routing';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
@@ -259,7 +260,12 @@ export default function LoginPage() {
         if (cancelled) return;
 
         // 캐시로 바로 이동 가능하면 getUser 완료를 기다리지 않음 (백그라운드 검증)
+        // 시스템 관리자이고 이번 세션이 아직 AAL1일 때만 2차 인증으로 보낸다.
         if (cached && !invite) {
+          if (cached.isSystemAdmin && (await systemAdminSessionNeedsMfa(supabase, true))) {
+            if (!cancelled) router.replace('/auth/mfa?resume=1');
+            return;
+          }
           routeFromBootstrap(cached, invite);
           void userPromise.then(({ user, error }) => {
             if (error || !user) {
@@ -280,6 +286,10 @@ export default function LoginPage() {
           bootstrap = await bootstrapPromise;
         }
         if (cancelled) return;
+        if (bootstrap?.isSystemAdmin && (await systemAdminSessionNeedsMfa(supabase, true))) {
+          if (!cancelled) router.replace('/auth/mfa?resume=1');
+          return;
+        }
         routeFromBootstrap(bootstrap, invite);
       } catch {
         if (!cancelled) setSessionCheckDone(true); // 오류 → 로그인 폼
@@ -374,6 +384,7 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     const normalizedEmail = email.trim().toLowerCase();
+    let adminMfaRequired = false;
 
     try {
       if (!normalizedEmail) {
@@ -415,6 +426,7 @@ export default function LoginPage() {
         });
       }
 
+      adminMfaRequired = loginResult.data.bootstrap.isSystemAdmin === true;
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: loginResult.data.access_token,
         refresh_token: loginResult.data.refresh_token,
@@ -422,6 +434,10 @@ export default function LoginPage() {
       if (sessionError) throw sessionError;
 
       setCachedAuthBootstrap(loginResult.data.user.id, loginResult.data.bootstrap);
+      if (adminMfaRequired) {
+        router.push('/auth/mfa');
+        return;
+      }
       routeAfterLoginBootstrap(loginResult.data.bootstrap, normalizedEmail);
     } catch (error: any) {
       if (process.env.NODE_ENV === 'development') {
@@ -449,6 +465,10 @@ export default function LoginPage() {
           } = await supabase.auth.getSession();
           if (session?.user?.email_confirmed_at) {
             setErrorMsg('');
+            if (adminMfaRequired) {
+              router.push('/auth/mfa');
+              return;
+            }
             const emailForRoute = (session.user.email || normalizedEmail).trim().toLowerCase();
             await completeAuthRoutingAfterConfirmedUser(emailForRoute);
             return;

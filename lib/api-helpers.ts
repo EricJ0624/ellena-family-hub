@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { enterSystemAdminSession, readJwtAal } from '@/lib/system-admin-session';
 import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { CURRENT_APP_ID } from './apps';
@@ -151,6 +152,7 @@ export async function authenticateUser(request: NextRequest): Promise<{ user: { 
       );
     }
 
+    enterSystemAdminSession(user.id, readJwtAal(token));
     return { user };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';

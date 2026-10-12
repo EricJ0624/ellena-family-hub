@@ -10,6 +10,7 @@ import {
   invalidateCachedAuthBootstrap,
 } from '@/lib/auth-bootstrap';
 import { resolvePostAuthPath } from '@/lib/app-enrollment-routing';
+import { systemAdminSessionNeedsMfa } from '@/lib/system-admin-mfa';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
 import { takePendingGoogleSignupMeta } from '@/lib/google-oauth-signup';
@@ -196,6 +197,11 @@ export default function AuthCallbackPage() {
 
         if (!bootstrap) {
           router.push('/');
+          return;
+        }
+
+        if (bootstrap.isSystemAdmin && (await systemAdminSessionNeedsMfa(supabase, true))) {
+          router.push('/auth/mfa');
           return;
         }
 

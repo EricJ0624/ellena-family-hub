@@ -34,7 +34,8 @@ export async function requireAuthUser(request: NextRequest): Promise<
 }
 
 /**
- * 시스템 관리자 필수 가드
+ * 시스템 관리자 필수 가드.
+ * 호출자 본인은 이번 로그인에서 2차 인증(AAL2)을 통과한 세션만 인정한다.
  * 
  * @param userId - 검증할 사용자 ID
  * @returns void (성공) 또는 에러 응답
