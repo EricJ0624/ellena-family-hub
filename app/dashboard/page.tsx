@@ -3249,11 +3249,9 @@ export default function FamilyHub() {
   }, [userId, masterKey]);
 
   // 페인트 전에 같은 그룹 일정·할 일을 깐다. 그룹이 바뀌기 전에는 서버가 채운 값을 스냅샷으로 덮지 않는다.
+  // 그룹 id가 잠깐 비었다가 같은 값으로 돌아와도 ref를 지우지 않는다. 지우면 빈 로컬 목록이 서버 목록을 덮는다.
   useLayoutEffect(() => {
-    if (!userId || !currentGroupId) {
-      if (!currentGroupId) contentGroupRef.current = null;
-      return;
-    }
+    if (!userId || !currentGroupId) return;
     if (contentGroupRef.current === currentGroupId) return;
     const snap = readDashboardContentSnapshot(userId, currentGroupId, getCurrentKey());
     const nextTodos = snap?.todos ?? [];

@@ -20,6 +20,7 @@ const RELEASE_DELAY_MS = 400;
 export function acquireRealtimeChannel(
   topic: string,
   bind: (channel: RealtimeChannel) => RealtimeChannel,
+  onStatus?: (status: string) => void,
 ): () => void {
   let lease = leases.get(topic);
 
@@ -32,6 +33,7 @@ export function acquireRealtimeChannel(
   if (!lease || state === 'closed' || state === 'errored') {
     const channel = bind(supabase.channel(topic));
     channel.subscribe((status) => {
+      onStatus?.(status);
       if (status === 'SUBSCRIBED') {
         if (process.env.NODE_ENV === 'development') {
           console.log('[realtime] subscribed', topic);
@@ -44,6 +46,8 @@ export function acquireRealtimeChannel(
     });
     lease = { channel, refCount: 0, releaseTimer: null };
     leases.set(topic, lease);
+  } else if (state === 'joined') {
+    onStatus?.('SUBSCRIBED');
   }
 
   lease.refCount += 1;

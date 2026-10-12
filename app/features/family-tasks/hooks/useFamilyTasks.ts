@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import { emitNotificationClient } from '@/lib/notifications/client';
+import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
 import type { FamilyTask } from '../types';
 
 const ASSIGNED_TO_USER_UUID_RE =
@@ -26,6 +27,10 @@ const ASSIGNED_TO_USER_UUID_RE =
 
 function isAssignedToUserUuid(value: string | null | undefined): value is string {
   return typeof value === 'string' && ASSIGNED_TO_USER_UUID_RE.test(value);
+}
+
+function isPendingTaskId(id: number | string): boolean {
+  return typeof id === 'number' || /^\d+$/.test(String(id));
 }
 
 interface UseFamilyTasksProps {
@@ -48,6 +53,9 @@ const tasksRt = {
   getCurrentKey: { current: () => '' },
   crypto: { current: null as UseFamilyTasksProps['CryptoService'] | null },
   assigneeDisplay: { current: ((_id: string) => '') as (userId: string) => string },
+  reload: { current: (() => {}) as () => void },
+  /** 실시간 채널이 끊긴 뒤에만 목록을 다시 받는다. 첫 연결·돋보기 재마운트는 제외. */
+  realtime: { groupId: '', live: false, reloadOnNextSubscribe: false },
 };
 
 export function useFamilyTasks({
@@ -276,93 +284,136 @@ export function useFamilyTasks({
     }
   };
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드. 성공하면 여기서 끝이고, 실패하면 한 번만 다시 가져온다.
   useEffect(() => {
     if (!currentGroupId || !userId) return;
     // [수정 4] cancelled 플래그: 그룹 전환/언마운트 시 구 비동기 완료 콜백이 새 상태를 덮어쓰는 레이스 컨디션 방지
     let cancelled = false;
+    const groupId = currentGroupId;
+    const authBag: { unsubscribe: (() => void) | null } = { unsubscribe: null };
 
-    const loadTasks = async () => {
+    const loadTasks = async (): Promise<'ok' | 'no-session' | 'error' | 'cancelled'> => {
       const session = await waitForSupabaseSession(supabase);
-      if (cancelled || !session?.access_token) return;
+      if (cancelled) return 'cancelled';
+      if (!session?.access_token) return 'no-session';
 
       const { data: tasksData, error: tasksError } = await supabase
         .from('family_tasks')
         .select('id, title, is_completed, assigned_to, created_by, created_at, group_id') // app_id 미사용 — 불필요 컬럼 제거
-        .eq('group_id', currentGroupId)
+        .eq('group_id', groupId)
         .order('created_at', { ascending: false });
 
-      if (cancelled) return;
+      if (cancelled) return 'cancelled';
 
-      if (!tasksError && tasksData) {
-        const formattedTasks: FamilyTask[] = tasksData.map((task: any) => {
-          const taskText = task.title || task.task_text || '';
-          let decryptedText = taskText;
-          const currentKey = tasksRt.getCurrentKey.current();
+      if (tasksError || !tasksData) return 'error';
 
-          if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
-            const isEncrypted = taskText.startsWith('U2FsdGVkX1');
-            if (isEncrypted) {
-              try {
-                const decrypted = tasksRt.crypto.current!.decrypt(taskText, currentKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedText = decrypted;
-                } else {
-                  decryptedText = taskText;
-                }
-              } catch (e: any) {
+      const formattedTasks: FamilyTask[] = tasksData.map((task: any) => {
+        const taskText = task.title || task.task_text || '';
+        let decryptedText = taskText;
+        const currentKey = tasksRt.getCurrentKey.current();
+
+        if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
+          const isEncrypted = taskText.startsWith('U2FsdGVkX1');
+          if (isEncrypted) {
+            try {
+              const decrypted = tasksRt.crypto.current!.decrypt(taskText, currentKey);
+              if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                decryptedText = decrypted;
+              } else {
                 decryptedText = taskText;
               }
-            } else {
+            } catch (e: any) {
               decryptedText = taskText;
             }
           } else {
             decryptedText = taskText;
           }
+        } else {
+          decryptedText = taskText;
+        }
 
-          const assignedToUserId = isAssignedToUserUuid(task.assigned_to) ? task.assigned_to : undefined;
+        const assignedToUserId = isAssignedToUserUuid(task.assigned_to) ? task.assigned_to : undefined;
+        const prev = tasksRt.tasks.current.find((row) => String(row.id) === String(task.id));
 
-          let decryptedAssignee = '누구나';
-          if (assignedToUserId) {
-            decryptedAssignee = tasksRt.assigneeDisplay.current(assignedToUserId);
-          } else if (
-            task.assigned_to &&
-            typeof task.assigned_to === 'string' &&
-            task.assigned_to !== '누구나' &&
-            !isAssignedToUserUuid(task.assigned_to)
-          ) {
-            try {
-              const decrypted = CryptoService.decrypt(task.assigned_to, currentKey);
-              if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                decryptedAssignee = decrypted;
-              }
-            } catch (e) {
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('담당자 복호화 실패:', e);
-              }
+        let decryptedAssignee = '누구나';
+        if (assignedToUserId) {
+          const shown = tasksRt.assigneeDisplay.current(assignedToUserId).trim();
+          const prevLabel =
+            prev?.assignee && !isOpaqueIdLabel(prev.assignee, assignedToUserId) ? prev.assignee : '';
+          decryptedAssignee = shown || prevLabel;
+        } else if (
+          task.assigned_to &&
+          typeof task.assigned_to === 'string' &&
+          task.assigned_to !== '누구나' &&
+          !isAssignedToUserUuid(task.assigned_to)
+        ) {
+          try {
+            const decrypted = CryptoService.decrypt(task.assigned_to, currentKey);
+            if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+              decryptedAssignee = decrypted;
+            }
+          } catch (e) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('담당자 복호화 실패:', e);
             }
           }
+        }
 
-          return {
-            id: task.id,
-            text: decryptedText,
-            assignee: decryptedAssignee,
-            done: task.is_completed || false,
-            created_by: task.created_by || undefined,
-            assigned_to_user_id: assignedToUserId,
-          };
-        });
+        return {
+          id: task.id,
+          text: decryptedText,
+          assignee: decryptedAssignee,
+          done: task.is_completed || false,
+          created_by: task.created_by || undefined,
+          assigned_to_user_id: assignedToUserId,
+        };
+      });
 
-        const nextSig = formattedTasks.map((t) => `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.created_by ?? ''}`).join('|');
-        const prevSig = tasksRt.tasks.current.map((t) => `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.created_by ?? ''}`).join('|');
-        // [수정 5] tasksRt.onTasksChange.current() ref 경유 → deps에서 onTasksChange 제거 가능
-        if (nextSig !== prevSig) tasksRt.onTasksChange.current(formattedTasks);
-      }
+      const serverIds = new Set(formattedTasks.map((row) => String(row.id)));
+      const pendingLocal = tasksRt.tasks.current.filter(
+        (row) => isPendingTaskId(row.id) && !serverIds.has(String(row.id)),
+      );
+      const merged = [...pendingLocal, ...formattedTasks];
+
+      const taskSig = (row: FamilyTask) =>
+        `${row.id}:${row.done ? 1 : 0}:${row.text}:${row.assignee}:${row.assigned_to_user_id ?? ''}:${row.created_by ?? ''}`;
+      const nextSig = merged.map(taskSig).join('|');
+      const prevSig = tasksRt.tasks.current.map(taskSig).join('|');
+      // [수정 5] tasksRt.onTasksChange.current() ref 경유 → deps에서 onTasksChange 제거 가능
+      if (nextSig !== prevSig) tasksRt.onTasksChange.current(merged);
+      return 'ok';
     };
 
-    loadTasks();
+    tasksRt.reload.current = () => {
+      if (!cancelled) void loadTasks();
+    };
+
+    void loadTasks().then((result) => {
+      if (cancelled || result === 'ok' || result === 'cancelled') return;
+      if (result === 'error') {
+        void loadTasks();
+        return;
+      }
+      let retried = false;
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        if (retried || cancelled || !session?.access_token) return;
+        if (event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION' && event !== 'TOKEN_REFRESHED') return;
+        retried = true;
+        // 콜백 안에서 supabase 조회를 바로 하면 auth lock이 멈출 수 있다.
+        setTimeout(() => {
+          data.subscription.unsubscribe();
+          if (!cancelled) void loadTasks();
+        }, 0);
+      });
+      authBag.unsubscribe = () => data.subscription.unsubscribe();
+    });
+
     // [수정 4] 언마운트 / currentGroupId 변경 시 진행 중인 loadTasks 비동기 콜백 차단
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      tasksRt.reload.current = () => {};
+      authBag.unsubscribe?.();
+    };
   // [수정 5] onTasksChange, assigneeDisplayFromUserIdRef 는 tasksRt ref로 항상 최신값 참조 → deps 불필요
   }, [currentGroupId, userId]);
 
@@ -371,6 +422,11 @@ export function useFamilyTasks({
     if (!currentGroupId) return;
 
     const gid = currentGroupId;
+    if (tasksRt.realtime.groupId !== gid) {
+      tasksRt.realtime.groupId = gid;
+      tasksRt.realtime.live = false;
+      tasksRt.realtime.reloadOnNextSubscribe = false;
+    }
     const release = acquireRealtimeChannel(`family_tasks_changes:${gid}`, (channel) =>
       channel.on(
         'postgres_changes',
@@ -439,19 +495,33 @@ export function useFamilyTasks({
             decryptedAssignee = updatedTask.assigned_to;
           }
 
+          const exists = latestTasks.some((t) => String(t.id) === String(updatedTask.id));
           publish(
-            latestTasks.map((t) =>
-              t.id === updatedTask.id
-                ? {
-                    ...t,
+            exists
+              ? latestTasks.map((t) =>
+                  String(t.id) === String(updatedTask.id)
+                    ? {
+                        ...t,
+                        id: updatedTask.id,
+                        text: decryptedText,
+                        assignee: decryptedAssignee || t.assignee,
+                        done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done,
+                        assigned_to_user_id: updatedAssignedToUserId ?? t.assigned_to_user_id,
+                        created_by: updatedTask.created_by || t.created_by,
+                      }
+                    : t
+                )
+              : [
+                  {
                     id: updatedTask.id,
                     text: decryptedText,
-                    assignee: decryptedAssignee || t.assignee,
-                    done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done,
-                    assigned_to_user_id: updatedAssignedToUserId ?? t.assigned_to_user_id,
-                  }
-                : t
-            )
+                    assignee: decryptedAssignee,
+                    done: updatedTask.is_completed || false,
+                    created_by: updatedTask.created_by,
+                    assigned_to_user_id: updatedAssignedToUserId,
+                  },
+                  ...latestTasks,
+                ],
           );
           return;
         }
@@ -465,11 +535,11 @@ export function useFamilyTasks({
           return;
         }
 
-        if (newTask.group_id !== currentGroupId) {
+        if (newTask.group_id && newTask.group_id !== gid) {
           if (process.env.NODE_ENV === 'development') {
             console.log('Realtime 할일: 다른 그룹의 데이터는 무시합니다.', {
               eventGroupId: newTask.group_id,
-              currentGroupId,
+              currentGroupId: gid,
             });
           }
           return;
@@ -576,7 +646,19 @@ export function useFamilyTasks({
           },
           ...latestTasks,
         ]);
-      })
+      }),
+      (status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          if (tasksRt.realtime.live) tasksRt.realtime.reloadOnNextSubscribe = true;
+          tasksRt.realtime.live = false;
+          return;
+        }
+        if (status !== 'SUBSCRIBED') return;
+        const shouldReload = tasksRt.realtime.reloadOnNextSubscribe;
+        tasksRt.realtime.live = true;
+        tasksRt.realtime.reloadOnNextSubscribe = false;
+        if (shouldReload) tasksRt.reload.current();
+      },
     );
 
     return release;

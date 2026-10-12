@@ -3183,16 +3183,17 @@ html[data-ui-theme='default'] body {
 }
 
 .todo-assignee {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   align-self: center;
   font-size: 4cqw;
   font-weight: 600;
   line-height: 1.2;
   color: rgba(255, 255, 255, 0.85);
-  white-space: normal;
-  overflow-wrap: anywhere;
-  max-width: 38%;
-  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 46%;
+  min-width: 22%;
 }
 
 .chalkboard-btn-delete {
