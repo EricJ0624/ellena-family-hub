@@ -3159,8 +3159,8 @@ html[data-ui-theme='default'] body {
 .todo-text-wrapper {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 2cqw;
   flex: 1;
   min-width: 0;
@@ -3191,15 +3191,15 @@ html[data-ui-theme='default'] body {
 }
 
 .todo-assignee {
-  flex: 1 1 100%;
-  align-self: flex-start;
+  flex: 0 1 auto;
+  align-self: center;
   font-size: 4cqw;
   font-weight: 600;
   line-height: 1.2;
   color: rgba(255, 255, 255, 0.85);
   white-space: normal;
   overflow-wrap: anywhere;
-  max-width: 100%;
+  max-width: 46%;
   min-width: 0;
 }
 
