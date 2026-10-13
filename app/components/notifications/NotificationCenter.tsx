@@ -60,7 +60,7 @@ export default function NotificationCenter({ groupId, userId, onOpenChatRoom }: 
     subsequent_mode: DEFAULT_SUBSEQUENT_ALERT_MODE,
   });
   const [loading, setLoading] = useState(false);
-  const [panelPos, setPanelPos] = useState<{ top: number; right: number } | null>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; right: number; width: number } | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
   const unreadCountRef = useRef(0);
@@ -192,9 +192,15 @@ export default function NotificationCenter({ groupId, userId, onOpenChatRoom }: 
     const update = () => {
       const rect = bellRef.current?.getBoundingClientRect();
       if (!rect) return;
-      setPanelPos({
-        top: rect.bottom + 8,
-        right: Math.max(8, window.innerWidth - rect.right),
+      const margin = 8;
+      const vw = window.innerWidth;
+      const width = Math.min(352, Math.max(0, vw - margin * 2));
+      const rightFromBell = Math.max(margin, vw - rect.right);
+      const right = rightFromBell + width > vw - margin ? margin : rightFromBell;
+      const top = rect.bottom + 8;
+      setPanelPos((prev) => {
+        if (prev && prev.top === top && prev.right === right && prev.width === width) return prev;
+        return { top, right, width };
       });
     };
     update();
@@ -337,8 +343,8 @@ export default function NotificationCenter({ groupId, userId, onOpenChatRoom }: 
               onClick={() => setOpen(false)}
             />
             <div
-              className="fixed z-[1101] w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
-              style={{ top: panelPos.top, right: panelPos.right }}
+              className="fixed z-[1101] max-w-[calc(100%-1rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+              style={{ top: panelPos.top, right: panelPos.right, width: panelPos.width }}
               role="dialog"
               aria-label="알림"
             >
@@ -353,7 +359,7 @@ export default function NotificationCenter({ groupId, userId, onOpenChatRoom }: 
                   모두 읽음
                 </button>
               </div>
-              <p className="border-b border-slate-50 px-3 py-1.5 text-[10px] text-slate-500">
+              <p className="break-words border-b border-slate-50 px-3 py-1.5 text-[10px] text-slate-500">
                 소리·위젯 설정은 닉네임 → 내 계정에서 변경할 수 있습니다.
               </p>
               <ul className="max-h-80 overflow-y-auto">
@@ -370,23 +376,23 @@ export default function NotificationCenter({ groupId, userId, onOpenChatRoom }: 
                     return (
                       <li key={item.id}>
                         <div
-                          className={`flex w-full flex-col gap-1.5 border-b border-slate-50 px-3 py-2.5 text-left ${
+                          className={`flex w-full min-w-0 flex-col gap-1.5 border-b border-slate-50 px-3 py-2.5 text-left ${
                             item.read_at ? 'opacity-70' : 'bg-sky-50/60'
                           }`}
                         >
                           <button
                             type="button"
                             onClick={() => void openItem(item)}
-                            className="flex w-full flex-col gap-0.5 text-left hover:opacity-90"
+                            className="flex w-full min-w-0 flex-col gap-0.5 text-left hover:opacity-90"
                           >
-                            <span className="text-[11px] font-medium text-slate-500">
+                            <span className="break-words text-[11px] font-medium text-slate-500">
                               {NOTIFIABLE_WIDGET_LABELS[item.widget_key as NotifiableWidgetKey] ||
                                 item.widget_key}
                             </span>
-                            <span className="text-sm font-semibold text-slate-800">
+                            <span className="break-words text-sm font-semibold text-slate-800">
                               {item.title}
                             </span>
-                            <span className="line-clamp-2 text-xs text-slate-600">{item.body}</span>
+                            <span className="line-clamp-2 break-words text-xs text-slate-600">{item.body}</span>
                           </button>
                           {canApproveJoin ? (
                             <button
