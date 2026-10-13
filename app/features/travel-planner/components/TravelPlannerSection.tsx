@@ -44,16 +44,18 @@ export function TravelPlannerSection({
   const plannerTrips = trips.filter(isTripVisibleInPlanner);
   const isKidsTheme = uiTheme === 'kids_friendly';
 
-  // 목록 스크롤: TRAVEL_SCROLL_AFTER 개 초과 시 실측 maxHeight 적용
+  // Family 테마는 카드 수만큼 위젯이 길어지므로 목록을 스크롤하지 않는다.
+  // 그 외 테마만 TRAVEL_SCROLL_AFTER 개 초과 시 목록 높이 제한.
   const tripListRef = useRef<HTMLUListElement>(null);
   const [tripListMaxPx, setTripListMaxPx] = useState<number | null>(null);
-  const tripsScrollable = plannerTrips.length > TRAVEL_SCROLL_AFTER;
+  const tripsScrollable = !isKidsTheme && plannerTrips.length > TRAVEL_SCROLL_AFTER;
 
   const tripListLayoutKey = plannerTrips
     .map((trip) => `${trip.id}:${trip.title}:${trip.start_date}:${trip.end_date}`)
     .join('|');
 
   const measureAndCap = useCallback(() => {
+    if (isKidsTheme) return;
     const list = tripListRef.current;
     if (!list) return;
 
@@ -72,10 +74,10 @@ export function TravelPlannerSection({
     if (next <= 0) return;
     // 2px 미만 변화는 무시 (대시보드 재렌더 가드)
     setTripListMaxPx((prev) => (prev !== null && Math.abs(prev - next) < 2 ? prev : next));
-  }, [plannerTrips.length]);
+  }, [isKidsTheme, plannerTrips.length]);
 
   useLayoutEffect(() => {
-    if (plannerTrips.length === 0) {
+    if (isKidsTheme || plannerTrips.length === 0) {
       setTripListMaxPx((prev) => (prev === null ? prev : null));
       return;
     }
@@ -92,7 +94,7 @@ export function TravelPlannerSection({
       if (child instanceof HTMLElement) ro.observe(child);
     }
     return () => ro.disconnect();
-  }, [plannerTrips.length, tripListLayoutKey, measureAndCap]);
+  }, [isKidsTheme, plannerTrips.length, tripListLayoutKey, measureAndCap]);
 
   if (isKidsTheme) {
     return (
@@ -129,15 +131,7 @@ export function TravelPlannerSection({
               ) : plannerTrips.length === 0 ? (
                 <p className="travel-kids-widget-empty">{t.empty_state}</p>
               ) : (
-                <ul
-                  ref={tripListRef}
-                  className={`travel-kids-widget-trips${tripsScrollable ? ' travel-trip-list--scroll' : ''}`}
-                  style={
-                    tripsScrollable && tripListMaxPx != null
-                      ? { ['--travel-trip-list-max-h' as string]: `${tripListMaxPx}px` }
-                      : undefined
-                  }
-                >
+                <ul className="travel-kids-widget-trips">
                   {plannerTrips.map((trip) => (
                     <li key={trip.id} className="travel-kids-widget-trip-item">
                       <button

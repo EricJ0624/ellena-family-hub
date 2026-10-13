@@ -268,7 +268,9 @@ button.travel-kids-add-trip-submit {
 }
 
 /*
- * Kids travel — 칠판과 동일: section height:auto + 배너 100% 100%, 버튼 아래 일정
+ * Kids travel — 기본 높이는 다른 위젯과 같은 칸.
+ * 여행 카드가 칸을 넘으면 카드 높이만큼만 늘어난다.
+ * 배경은 원본 비율(100% auto)이라 늘어난 만큼 아래 그림이 더 보인다.
  */
 .widget-chrome[data-widget-key='travel']:has(.travel-kids-widget) {
   height: auto;
@@ -288,7 +290,6 @@ button.travel-kids-add-trip-submit {
 }
 
 .content-section.travel-kids-widget {
-  --travel-kids-banner: url('/travel-planner/widget-banner.webp?v=68');
   position: relative;
   isolation: isolate;
   display: flex;
@@ -303,11 +304,12 @@ button.travel-kids-add-trip-submit {
   border: 0;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  background-color: #edebf6;
-  background-image: var(--travel-kids-banner);
+  background-color: #fdf9ee;
+  /* 파일 비율 유지. 위젯 박스 밖은 잘라 내고, 박스 높이는 일정 카드가 정한다. */
+  background-image: url('/travel-planner/widget-bg.webp?v=5');
   background-repeat: no-repeat;
   background-position: top center;
-  background-size: 100% 100%;
+  background-size: 100% auto;
   box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
   container-type: inline-size;
   border-radius: var(--border-radius-xl, 1rem);
@@ -437,12 +439,13 @@ button.travel-kids-add-trip-submit {
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2.2cqmin;
+  align-items: stretch;
+  gap: 0.35rem;
   margin: 0;
-  padding: 6% 5% max(5%, 0.75rem) 36%;
+  padding: 0 4% 0.55rem;
   pointer-events: none;
   background: transparent;
+  box-sizing: border-box;
 }
 
 .travel-kids-widget-title {
@@ -461,13 +464,42 @@ button.travel-kids-add-trip-submit {
   pointer-events: none;
 }
 
-.travel-kids-widget-actions {
+/* 플래너 카드 리본 안. 글자 크기는 위젯 제목 통일 규칙을 유지 */
+.content-section.travel-kids-widget .travel-kids-widget-title {
+  position: absolute;
+  z-index: 4;
+  top: 15cqw;
+  left: 14%;
+  right: 14%;
   display: flex;
-  max-width: 100%;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
-  gap: 1.6cqmin;
+  justify-content: center;
+  height: 10.2cqw;
+  max-width: none;
+  margin: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1;
+  color: #6b4630;
+}
+
+.travel-kids-widget-actions {
+  position: absolute;
+  z-index: 4;
+  top: 31cqw;
+  left: 8%;
+  right: 8%;
+  display: flex;
+  height: 12cqw;
+  max-width: none;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4cqw;
+  overflow: hidden;
   pointer-events: auto;
 }
 
@@ -477,16 +509,17 @@ button.travel-kids-add-trip-submit {
   flex-shrink: 1;
   align-items: center;
   justify-content: center;
+  max-height: 100%;
   overflow: hidden;
   border-radius: 999px;
-  padding: 1.2cqmin 2.6cqmin;
-  font-size: clamp(0.48rem, 3cqmin, 0.72rem);
+  padding: 0.15rem 0.7rem;
+  font-size: clamp(0.58rem, 3.1cqw, 0.72rem);
   font-weight: 700;
   line-height: 1.1;
   white-space: nowrap;
   pointer-events: auto;
   cursor: pointer;
-  gap: 0.8cqmin;
+  gap: 0.3rem;
   border: 0;
 }
 
@@ -672,17 +705,37 @@ button.travel-kids-add-trip-submit {
   flex-shrink: 0;
 }
 
-/* 일정 목록만 — 툴바와 분리 */
+/* 일정 목록만 — 레이스 끝(너비의 58%) 아래에서 시작 */
 .travel-kids-widget-bottom {
   position: relative;
   z-index: 2;
   flex: 0 0 auto;
   width: 100%;
-  margin-top: 2.4cqmin;
+  margin-top: 60cqw;
   padding: 0;
   overflow: visible;
   pointer-events: auto;
   background: transparent;
+}
+
+.content-section.travel-kids-widget .travel-kids-widget-empty,
+.content-section.travel-kids-widget .travel-kids-widget-trip-title,
+.content-section.travel-kids-widget .travel-kids-widget-trip-dates {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 0.35rem;
+  background: rgb(255 250 242 / 0.72);
+  padding: 0.04rem 0.35rem;
+  color: #3f2a1d;
+  text-shadow:
+    0 0 0.28rem rgb(255 250 242 / 0.9),
+    0 1px 0 rgb(255 250 242 / 0.7);
+}
+
+.content-section.travel-kids-widget .travel-kids-widget-trip-dates {
+  color: #5a4032;
 }
 
 .travel-kids-widget-empty {
@@ -690,7 +743,6 @@ button.travel-kids-add-trip-submit {
   font-size: clamp(0.58rem, 3.6cqmin, 0.82rem);
   font-weight: 500;
   line-height: 1.35;
-  color: #4b5563;
   word-break: keep-all;
 }
 
@@ -704,31 +756,13 @@ button.travel-kids-add-trip-submit {
   padding: 0;
 }
 
-/* 5개+ : kids overflow:visible 을 이기고 4줄 높이에서 목록만 스크롤 */
+/* 5개+ : 기본·글래스 테마만 목록 스크롤. Family는 카드 수만큼 위젯이 길어진다. */
 ul.travel-trip-list--scroll {
   min-height: 0;
   max-height: var(--travel-trip-list-max-h, none);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.travel-kids-widget-trips.travel-trip-list--scroll {
-  min-height: 0;
-  max-height: var(
-    --travel-trip-list-max-h,
-    calc(
-      (4 * (0.3rem + (1.2 * clamp(0.74rem, 0.64rem + 0.5vw, 0.92rem)) + 0.1rem + (1.2 * clamp(0.62rem, 0.54rem + 0.4vw, 0.78rem))))
-      + (3 * 0.3rem)
-    )
-  );
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.travel-kids-widget-bottom:has(.travel-trip-list--scroll) {
-  overflow: hidden;
 }
 
 .travel-kids-widget-trip-item {
