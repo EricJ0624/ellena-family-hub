@@ -844,6 +844,8 @@ export default function FamilyHub() {
   /** 일정·할 일 스냅샷을 이미 깐 그룹. 서버 갱신 뒤에 옛 스냅샷으로 되돌리지 않는다. */
   const contentGroupRef = useRef<string | null>(null);
   const tasksSnapSigRef = useRef('');
+  const albumSnapSigRef = useRef('');
+  const messagesSnapSigRef = useRef('');
   const eventsSnapSigRef = useRef('');
   const acceptedUserIdsRef = useRef<Set<string>>(new Set()); // 승인된 위치공유 상대 ID (첫 사라짐 방지용, 취소 시에만 제거)
   const updateMapMarkersDebounceRef = useRef<NodeJS.Timeout | null>(null); // 지도 마커 업데이트 디바운스
@@ -1023,7 +1025,7 @@ export default function FamilyHub() {
           // todos/events: useFamilyTasks / useFamilyCalendar(Supabase)가 소스.
           // localStorage의 빈 배열로 hydrate하면 로드된 임무·일정이 통째로 사라진다 (messages와 동일 이슈).
           todos: prev.todos,
-          album: stableAlbum,
+          album: stableAlbum.length > 0 ? stableAlbum : prev.album,
           events: prev.events,
           messages: prev.messages,
           titleStyle: d.titleStyle && typeof d.titleStyle === 'object' && d.titleStyle !== null
@@ -1119,6 +1121,9 @@ export default function FamilyHub() {
             album: mergedAlbumPrecomputed,
           };
         });
+        if (groupIdForThisLoad === dashboardCurrentGroupIdRef.current) {
+          writeDashboardContentSnapshot(userId, groupIdForThisLoad, key, { album: mergedAlbumPrecomputed });
+        }
       } else {
         // ✅ Supabase 조회 성공 & 0건: 이 그룹 localStorage의 안정 URL만 앨범에 반영(빈 그룹은 빈 앨범으로 확정)
         if (process.env.NODE_ENV === 'development') {
@@ -1152,6 +1157,9 @@ export default function FamilyHub() {
           if (groupIdForThisLoad !== dashboardCurrentGroupIdRef.current) return prev;
           return { ...prev, album: stableOnlyPrecomputed };
         });
+        if (groupIdForThisLoad === dashboardCurrentGroupIdRef.current) {
+          writeDashboardContentSnapshot(userId, groupIdForThisLoad, key, { album: stableOnlyPrecomputed });
+        }
       }
     };
 
@@ -1212,13 +1220,15 @@ export default function FamilyHub() {
     if (typeof window === 'undefined') return;
     if (!isAuthenticated || !userId || !currentGroupId) return;
     
-    // 그룹이 변경되었는지 확인
-    const isGroupChanged = lastLoadedGroupIdRef.current !== currentGroupId;
+    // ref는 마운트마다 null이다. null과 그룹 id가 다르다고 그룹 전환으로 보면
+    // 저금통 화면에서 돌아올 때마다 앨범·채팅을 비우고 전부 다시 받는다.
+    const previousGroupId = lastLoadedGroupIdRef.current;
+    const isRealGroupSwitch = previousGroupId !== null && previousGroupId !== currentGroupId;
     
-    if (isGroupChanged) {
+    if (isRealGroupSwitch) {
       // 🔒 CRITICAL: 그룹 전환 시 이전 그룹의 데이터 완전 초기화
       console.log('🔄 그룹 전환 감지 - 데이터 초기화 시작:', {
-        previousGroupId: lastLoadedGroupIdRef.current,
+        previousGroupId,
         newGroupId: currentGroupId,
         timestamp: new Date().toISOString(),
       });
@@ -1236,17 +1246,22 @@ export default function FamilyHub() {
       const contentSnap = readDashboardContentSnapshot(userId, currentGroupId, key);
       const nextTodos = contentSnap?.todos ?? [];
       const nextEvents = contentSnap?.events ?? [];
+      const nextAlbum = contentSnap?.album ?? [];
+      const nextMessages = contentSnap?.messages ?? [];
       contentGroupRef.current = currentGroupId;
       tasksSnapSigRef.current = `${currentGroupId}:${tasksSignature(nextTodos)}`;
       eventsSnapSigRef.current = `${currentGroupId}:${eventsSignature(nextEvents)}`;
+      albumSnapSigRef.current = `${currentGroupId}:${nextAlbum.map((p) => String(p.id)).join(',')}`;
+      messagesSnapSigRef.current = `${currentGroupId}:${nextMessages.map((m) => m.id).join(',')}`;
       setState({
         familyName: INITIAL_STATE.familyName,
         location: INITIAL_STATE.location,
         familyLocations: [],
         todos: nextTodos,
         events: nextEvents,
-        album: [], // 🔒 가장 중요: 이전 그룹의 사진 완전 제거
-        messages: [],
+        // 이전 그룹 사진은 버리고, 이 그룹에 기억해 둔 목록만 먼저 깐다
+        album: nextAlbum,
+        messages: nextMessages,
         titleStyle: INITIAL_STATE.titleStyle,
       });
       
@@ -1260,8 +1275,8 @@ export default function FamilyHub() {
       });
       
       console.log('✅ 그룹 전환 완료 - 데이터 격리 보장됨');
-    } else if (!lastLoadedGroupIdRef.current) {
-      // 초기 로드
+    } else if (previousGroupId !== currentGroupId) {
+      // 첫 마운트(저금통 등에서 복귀 포함). 레이아웃 효과가 깐 같은 그룹 스냅샷은 지우지 않는다.
       const authKey = getAuthKey(userId);
       const key = masterKey || sessionStorage.getItem(authKey) ||
         process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
@@ -1678,24 +1693,50 @@ export default function FamilyHub() {
       }
 
       setPiggyLoaded(true);
-      if (result.data?.memberPiggies && Array.isArray(result.data.memberPiggies)) {
-        setPiggyMemberPiggies(result.data.memberPiggies);
-        setPendingAccountRequests(Array.isArray(result.data.pendingAccountRequests) ? result.data.pendingAccountRequests : []);
+      const nextSummary = result.data?.memberPiggies && Array.isArray(result.data.memberPiggies)
+        ? null
+        : result.data?.account
+          ? {
+              name: result.data.account.name || 'Ellena Piggy Bank',
+              walletBalance: result.data.wallet?.balance ?? 0,
+              bankBalance: result.data.account.balance ?? 0,
+              ownerNickname: result.data.account.ownerNickname || null,
+              currency: result.data.account.currency,
+            }
+          : null;
+      const nextMemberPiggies = result.data?.memberPiggies && Array.isArray(result.data.memberPiggies)
+        ? result.data.memberPiggies
+        : null;
+      const nextPending = nextMemberPiggies
+        ? (Array.isArray(result.data.pendingAccountRequests) ? result.data.pendingAccountRequests : [])
+        : [];
+      if (nextMemberPiggies) {
+        setPiggyMemberPiggies(nextMemberPiggies);
+        setPendingAccountRequests(nextPending);
         setPiggySummary(null);
-      } else if (result.data?.account) {
-        setPiggySummary({
-          name: result.data.account.name || 'Ellena Piggy Bank',
-          walletBalance: result.data.wallet?.balance ?? 0,
-          bankBalance: result.data.account.balance ?? 0,
-          ownerNickname: result.data.account.ownerNickname || null,
-          currency: result.data.account.currency,
-        });
+      } else if (nextSummary) {
+        setPiggySummary(nextSummary);
         setPiggyMemberPiggies(null);
         setPendingAccountRequests([]);
       } else {
         setPiggySummary(null);
         setPiggyMemberPiggies(null);
         setPendingAccountRequests([]);
+      }
+      if (userId && dashboardCurrentGroupIdRef.current === currentGroupId) {
+        const authKey = getAuthKey(userId);
+        const key =
+          masterKey ||
+          sessionStorage.getItem(authKey) ||
+          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+          'ellena_family_shared_key_2024';
+        writeDashboardContentSnapshot(userId, currentGroupId, key, {
+          piggy: {
+            summary: nextSummary,
+            memberPiggies: nextMemberPiggies,
+            pendingAccountRequests: nextPending,
+          },
+        });
       }
     } catch (err: any) {
       // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
@@ -1704,7 +1745,7 @@ export default function FamilyHub() {
       }
       setPiggyLoaded(true);
     }
-  }, [isAuthenticated, currentGroupId]);
+  }, [isAuthenticated, currentGroupId, userId, masterKey]);
 
   loadPiggySummaryRef.current = loadPiggySummary;
 
@@ -3256,17 +3297,30 @@ export default function FamilyHub() {
     const snap = readDashboardContentSnapshot(userId, currentGroupId, getCurrentKey());
     const nextTodos = snap?.todos ?? [];
     const nextEvents = snap?.events ?? [];
+    const nextAlbum = snap?.album ?? [];
+    const nextMessages = snap?.messages ?? [];
     contentGroupRef.current = currentGroupId;
     tasksSnapSigRef.current = `${currentGroupId}:${tasksSignature(nextTodos)}`;
     eventsSnapSigRef.current = `${currentGroupId}:${eventsSignature(nextEvents)}`;
+    albumSnapSigRef.current = `${currentGroupId}:${nextAlbum.map((p) => String(p.id)).join(',')}`;
+    messagesSnapSigRef.current = `${currentGroupId}:${nextMessages.map((m) => m.id).join(',')}`;
+    if (snap?.piggy) {
+      piggyLoadedGroupIdRef.current = currentGroupId;
+      setPiggySummary(snap.piggy.summary);
+      setPiggyMemberPiggies(snap.piggy.memberPiggies);
+      setPendingAccountRequests(snap.piggy.pendingAccountRequests);
+      setPiggyLoaded(true);
+    }
     setState((prev) => {
       if (
         tasksSignature(prev.todos) === tasksSignature(nextTodos) &&
-        eventsSignature(prev.events) === eventsSignature(nextEvents)
+        eventsSignature(prev.events) === eventsSignature(nextEvents) &&
+        prev.album.map((p) => String(p.id)).join(',') === nextAlbum.map((p) => String(p.id)).join(',') &&
+        prev.messages.map((m) => m.id).join(',') === nextMessages.map((m) => m.id).join(',')
       ) {
         return prev;
       }
-      return { ...prev, todos: nextTodos, events: nextEvents };
+      return { ...prev, todos: nextTodos, events: nextEvents, album: nextAlbum, messages: nextMessages };
     });
   }, [userId, currentGroupId, getCurrentKey]);
 
@@ -6222,11 +6276,23 @@ export default function FamilyHub() {
   };
 
   const setMessages = useCallback((updater: React.SetStateAction<Message[]>) => {
-    setState((prev) => ({
-      ...prev,
-      messages: typeof updater === 'function' ? (updater as (prev: Message[]) => Message[])(prev.messages) : updater,
-    }));
-  }, []);
+    setState((prev) => {
+      const messages = typeof updater === 'function'
+        ? (updater as (prev: Message[]) => Message[])(prev.messages)
+        : updater;
+      const groupId = dashboardCurrentGroupIdRef.current;
+      if (userId && groupId && messages !== prev.messages) {
+        const authKey = getAuthKey(userId);
+        const key =
+          masterKey ||
+          sessionStorage.getItem(authKey) ||
+          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+          'ellena_family_shared_key_2024';
+        writeDashboardContentSnapshot(userId, groupId, key, { messages });
+      }
+      return { ...prev, messages };
+    });
+  }, [userId, masterKey]);
 
   const handleTasksChange = useCallback((tasks: AppState['todos']) => {
     setState((prev) => {
@@ -7602,8 +7668,7 @@ export default function FamilyHub() {
                 ? effectiveW <= sMaxUnits
                 : cfg.size === 'S';
 
-              // tasks·travel(kids): 내용이 칸보다 크면 세로 성장. h-full 래퍼는 행 높이에
-              // %로 묶여 성장이 막히므로 min-height만 유지하고 height는 auto.
+              // tasks·travel: 내용이 칸보다 크면 세로 성장. 저금통은 다른 위젯과 같은 칸 높이를 유지한다.
               const contentGrowsWithBody =
                 cfg.widget_key === 'tasks' || cfg.widget_key === 'travel';
 

@@ -5244,6 +5244,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section[data-piggy-filled='true']::after,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section[data-piggy-filled='true']::after {
     opacity: 0.16;
+    z-index: 0;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-body,
@@ -5265,9 +5266,9 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     background-color: transparent !important;
     background-image: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.62) 0%,
-      rgba(252, 231, 243, 0.68) 55%,
-      rgba(186, 230, 253, 0.6) 100%
+      rgba(255, 255, 255, 0.32) 0%,
+      rgba(252, 231, 243, 0.36) 55%,
+      rgba(186, 230, 253, 0.3) 100%
     );
     border-color: rgba(255, 255, 255, 0.55) !important;
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
@@ -5284,7 +5285,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet {
-    background-color: rgba(255, 228, 230, 0.82) !important;
+    background-color: rgba(255, 228, 230, 0.48) !important;
     border-width: 2px;
     border-color: #fb7185 !important;
   }
@@ -5305,7 +5306,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank {
-    background-color: rgba(255, 237, 213, 0.82) !important;
+    background-color: rgba(255, 237, 213, 0.48) !important;
     border-width: 2px;
     border-color: #f97316 !important;
   }
@@ -6272,6 +6273,95 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     flex: 1 1 auto;
     min-height: var(--widget-min-h, 0px);
     height: var(--widget-scale-box-h, 100%);
+  }
+
+  /*
+   * 저금통 카드 크기는 기본 칸(--piggy-ref-h)에 고정한다.
+   * 1~2개면 배경만 카드 높이까지 늘릴 수 있다.
+   * 3개부터는 max(위젯 칸, 카드 2개 높이) 안에서 스크롤한다.
+   * 위젯을 키우면 그 칸이 커져 카드가 더 보이고, 그 높이를 넘으면 스크롤된다.
+   * h-full/flex-1 은 Tailwind 유틸이라 높이만 !important 로 덮는다.
+   */
+  .dashboard-widget-grid:not([data-layout-editor]) > *:has(.piggy-widget-section) > .flex.h-full {
+    height: auto !important;
+    min-height: var(--widget-min-h, auto);
+    max-height: none;
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) > *:has(.piggy-widget-section) > .flex.h-full > .min-h-0 {
+    flex: none !important;
+    height: auto !important;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: var(--widget-scale-box-h, var(--widget-min-h, auto));
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] > .widget-scale-root {
+    display: flex;
+    flex-direction: column;
+    container-type: inline-size;
+    container-name: widget;
+    --piggy-u: min(1cqw, calc(var(--piggy-ref-h, var(--widget-scale-box-h, 100px)) * 0.01));
+    --piggy-fit-h: max(var(--widget-scale-box-h, 0px), calc(var(--piggy-u) * 148));
+    height: auto;
+    min-height: var(--widget-scale-box-h, var(--widget-min-h, auto));
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] > .widget-scale-root:has([data-piggy-count='3']) {
+    height: var(--piggy-fit-h);
+    min-height: var(--piggy-fit-h);
+    max-height: var(--piggy-fit-h);
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] .content-section.piggy-widget-section {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    height: auto;
+    min-height: var(--widget-scale-box-h, var(--widget-min-h, auto));
+    overflow: hidden;
+    padding: calc(var(--piggy-u) * 4) calc(var(--piggy-u) * 4.5) calc(var(--piggy-u) * 4.5);
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] .piggy-widget-section > .section-header {
+    flex: none;
+    margin-bottom: calc(var(--piggy-u) * 2.5);
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] .piggy-widget-section > .section-header .section-title {
+    font-size: calc(var(--piggy-u) * 5.5);
+    padding-left: calc(var(--piggy-u) * 1.25);
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] .piggy-widget-section > .section-body {
+    flex: none;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] .piggy-widget-section[data-piggy-count='3'] {
+    height: var(--piggy-fit-h);
+    min-height: var(--piggy-fit-h);
+    max-height: var(--piggy-fit-h);
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] .piggy-widget-section[data-piggy-count='3'] > .section-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /*

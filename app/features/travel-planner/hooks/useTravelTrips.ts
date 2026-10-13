@@ -4,10 +4,17 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import type { TravelTrip } from '../types';
+
+const tripMemory = new Map<string, TravelTrip[]>();
+
+function sameTripList(a: TravelTrip[], b: TravelTrip[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((trip, index) => trip.id === b[index]?.id);
+}
 
 interface UseTravelTripsProps {
   currentGroupId: string | null;
@@ -20,13 +27,22 @@ export function useTravelTrips({
   isAuthenticated,
   errorMessage = 'Failed to load trips'
 }: UseTravelTripsProps) {
-  const [trips, setTrips] = useState<TravelTrip[]>([]);
+  const [trips, setTrips] = useState<TravelTrip[]>(() =>
+    currentGroupId ? (tripMemory.get(currentGroupId) ?? []) : [],
+  );
   const [loading, setLoading] = useState(false);
   /**
    * 기존 여행 데이터 유무 추적 — 재조회 시 기존 목록을 보존하기 위해 ref로 관리.
    * 그룹/인증 변경 시 초기화해 새 그룹에서는 로딩 표시가 정상 동작.
+   * tripMemory는 저금통 등 다른 화면을 다녀온 뒤에도 같은 그룹 목록을 먼저 그린다.
    */
-  const tripsRef = useRef<TravelTrip[]>([]);
+  const tripsRef = useRef<TravelTrip[]>(trips);
+
+  useLayoutEffect(() => {
+    const next = currentGroupId ? (tripMemory.get(currentGroupId) ?? []) : [];
+    tripsRef.current = next;
+    setTrips((prev) => (sameTripList(prev, next) ? prev : next));
+  }, [currentGroupId]);
 
   const loadTrips = useCallback(async () => {
     if (!isAuthenticated || !currentGroupId) {
@@ -54,6 +70,7 @@ export function useTravelTrips({
       if (!response.ok) throw new Error(result.error || errorMessage);
       
       const newTrips = Array.isArray(result.data) ? result.data : [];
+      tripMemory.set(currentGroupId, newTrips);
       tripsRef.current = newTrips;
       setTrips(newTrips);
     } catch (error) {

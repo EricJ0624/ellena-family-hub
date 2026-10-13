@@ -356,6 +356,8 @@ export type WidgetGridItemStyle = {
   ['--editor-widget-cell-h']?: string;
   ['--editor-preview-h']?: string;
   ['--widget-scale-box-h']?: string;
+  /** 저금통 카드 기준 높이(M=8행). 칸을 키워도 카드는 이 크기를 유지하고, 남는 높이에 더 들어간다. */
+  ['--piggy-ref-h']?: string;
   ['--widget-scale']?: string;
   ['--widget-scale-w']?: string;
   ['--widget-scale-h']?: string;
@@ -435,6 +437,9 @@ export function buildWidgetGridItemStyle(
     }
     style['--widget-min-h'] = `${minPx}px`;
     style['--widget-scale-box-h'] = `${inEditor ? previewPx : minPx}px`;
+    if (widgetKey === 'piggy' && cellRowH > 0) {
+      style['--piggy-ref-h'] = `${cellRowH * WIDGET_SCALE_REF_H}px`;
+    }
     if (widgetKey === 'tasks') {
       // kids 칠판 min-height 폴백 (CSS :has(.chalkboard-frame))
       style['--tasks-min-h'] = `${minPx}px`;
