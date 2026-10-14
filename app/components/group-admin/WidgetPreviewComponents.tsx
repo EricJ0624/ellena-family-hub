@@ -209,7 +209,7 @@ function CalendarPreview() {
         <div className="section-header relative z-[2] mb-2">
           <h3 className="section-title m-0 flex items-center gap-2 font-extrabold text-violet-800">
             <span aria-hidden>📅</span>
-            FAMILY CALENDAR
+            {dt('section_title_calendar')}
           </h3>
         </div>
       ) : null}
@@ -305,9 +305,7 @@ function ChatPreview() {
       <KidsChatDecorations />
       {surface !== 'showroom' ? (
         <div className="section-header chat-section-header relative z-[3]">
-          <h3 className="sr-only">{dt('section_title_chat')}</h3>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/family-chat/title.png" alt="" className="chat-kids-title" />
+          <h3 className="section-title chat-kids-title">{dt('section_title_chat')}</h3>
         </div>
       ) : null}
       <div className="section-body chat-section-body relative z-[3]">

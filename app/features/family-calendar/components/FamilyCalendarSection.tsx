@@ -155,11 +155,11 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
             style={{ color: skin.titleColor, fontWeight: 800 }}
           >
             {isKidsTheme ? (
-              <span role="img" aria-label="calendar" style={{ fontSize: '1.05em' }}>📅</span>
+              <span aria-hidden style={{ fontSize: '1.05em' }}>📅</span>
             ) : (
               <Calendar className="calendar-section-title-icon" />
             )}
-            {isKidsTheme ? 'FAMILY CALENDAR' : sectionTitle}
+            {sectionTitle}
           </h3>
         </div>
         <div className="section-body calendar-section-body" style={{ gap: '2.2cqmin' }}>

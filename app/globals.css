@@ -6841,19 +6841,18 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
 }
 
 .chat-kids-title {
-  display: block;
-  height: 1.35rem;
-  width: auto;
-  max-width: 88%;
-  margin-inline: auto;
-  object-fit: contain;
-  pointer-events: none;
-  background: transparent;
+  max-width: 100%;
+  color: #4a4458;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.chat-widget-section--kids .chat-section-header > .chat-kids-title {
+  flex: 0 1 auto;
 }
 
 .chat-widget-section--kids .chat-kids-deco,
-.chat-widget-section--kids .chat-kids-rocket,
-.chat-widget-section--kids .chat-kids-title {
+.chat-widget-section--kids .chat-kids-rocket {
   background: transparent;
   background-color: transparent;
 }
@@ -6877,10 +6876,6 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
 .chat-widget-section--kids .message-text {
   position: relative;
   z-index: 4;
-}
-
-.widget-chrome[data-widget-key='chat'] .chat-kids-title {
-  height: 6.5cqmin;
 }
 
 .chat-widget-section--kids .message-user {
@@ -7145,10 +7140,6 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .
 .chat-widget-section--room .section-title,
 .chat-widget-section--room h3.section-title {
   font-size: clamp(1.35rem, 2.4vw, 2rem) !important;
-}
-
-.widget-chrome[data-widget-key='chat'] .chat-widget-section--room .chat-kids-title {
-  height: clamp(2.4rem, 3.6vw, 3.4rem) !important;
 }
 
 .chat-widget-section--room .chat-messages {

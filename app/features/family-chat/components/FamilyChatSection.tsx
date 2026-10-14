@@ -352,14 +352,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     >
       {isKidsTheme ? <KidsChatDecorations /> : null}
       <div className="section-header chat-section-header relative z-[3]">
-        {isKidsTheme ? (
-          <>
-            <h3 className="sr-only">{t.section_title_chat}</h3>
-            <img src="/family-chat/title.png" alt="" className="chat-kids-title" />
-          </>
-        ) : (
-          <h3 className="section-title">{t.section_title_chat}</h3>
-        )}
+        <h3 className={`section-title${isKidsTheme ? ' chat-kids-title' : ''}`}>{t.section_title_chat}</h3>
         {unreadCount >= 5 && (
           <div className="flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 border border-indigo-200"
             style={{ fontSize: '3.2cqmin' }}>

@@ -43,6 +43,7 @@ export type CalendarEventSubmitPayload = {
 };
 
 export type CalendarEventModalTranslations = {
+  section_title_calendar: string;
   event_add_title: string;
   event_edit_title: string;
   event_title_label: string;
@@ -224,7 +225,7 @@ function CalendarEventForm({
         <div className={isKidsTheme ? 'relative z-10' : undefined}>
         {isKidsTheme && (
           <p className="mb-0 mt-0 text-center text-xs font-bold uppercase tracking-widest text-violet-400">
-            FAMILY CALENDAR
+            {t.section_title_calendar}
           </p>
         )}
         <h3

@@ -101,7 +101,7 @@ const IDLE_DECOS: IdleDeco[] = [
  * Add Event 버튼 위(앞) 겹침은 허용.
  */
 const SAFE_SLOTS: IdleSlot[] = [
-  // 타이틀(FAMILY CALENDAR)과 우측 끝 사이 빈 구간 — 항상 2개
+  // 타이틀과 우측 끝 사이 빈 구간 — 항상 2개
   { size: 'sm', className: 'top-[1.5cqmin] left-[61cqmin] w-[5.6cqmin] rotate-[12deg]' },
   { size: 'md', className: 'top-[2.2cqmin] left-[71cqmin] w-[7cqmin] -rotate-10' },
   // 우측 상단 끝

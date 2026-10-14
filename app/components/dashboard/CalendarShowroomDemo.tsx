@@ -206,7 +206,7 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
             </div>
             <div className="relative z-[1]">
               <p className="m-0 text-center text-[10px] font-bold uppercase tracking-widest text-violet-400">
-                FAMILY CALENDAR
+                {dt('section_title_calendar')}
               </p>
               <h3 className="mb-3 mt-1 text-center text-2xl font-bold text-violet-700">{dt('event_add_title')}</h3>
               <div className="mb-3 grid grid-cols-2 gap-2">
@@ -320,7 +320,7 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                   <span className="text-base" aria-hidden>
                     📅
                   </span>
-                  <h3 className="m-0 text-base font-extrabold tracking-wide text-violet-800">FAMILY CALENDAR</h3>
+                  <h3 className="m-0 text-base font-extrabold tracking-wide text-violet-800">{dt('section_title_calendar')}</h3>
                 </div>
                 <div className="mb-2 flex items-center justify-between rounded-full bg-white/90 px-2 py-1 shadow-sm">
                   <span className="px-2 text-sm font-extrabold text-violet-400">‹</span>
