@@ -7777,11 +7777,11 @@ export default function FamilyHub() {
                     }
                   >
                     {isChatRoom ? (
-                      <div className="flex shrink-0 justify-end px-3 pt-[max(0.5rem,env(safe-area-inset-top,0px))]">
+                      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end px-3 pt-[max(0.5rem,env(safe-area-inset-top,0px))]">
                         <button
                           type="button"
                           onClick={closeChatRoom}
-                          className="rounded-lg p-2.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 [&_svg]:h-7 [&_svg]:w-7"
+                          className="pointer-events-auto rounded-lg p-2.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 [&_svg]:h-7 [&_svg]:w-7"
                           aria-label={dt('widgets_magnify_close')}
                         >
                           <WidgetPanelCloseIcon />

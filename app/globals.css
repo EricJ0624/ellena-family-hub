@@ -6751,6 +6751,21 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
   flex: 1 1 auto;
 }
 
+/* 대화 화면은 위쪽까지 채운다. 닫기 버튼은 패널에 겹쳐 두므로 흰 띠·위 둥근 모서리를 남기지 않는다. */
+[data-chat-room='open'] .widget-chrome[data-widget-key='chat'],
+[data-chat-room='open'] .widget-chrome[data-widget-key='chat'] > .widget-scale-root,
+[data-chat-room='open'] .widget-chrome[data-widget-key='chat']:has(.chat-widget-section--kids),
+[data-chat-room='open'] .widget-chrome[data-widget-key='chat']:has(.chat-widget-section--kids) > .widget-scale-root,
+[data-chat-room='open'] .chat-widget-section {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+:root[data-ui-theme='highend_glass'] [data-chat-room='open'] .chat-widget-section,
+.dark[data-ui-theme='highend_glass'] [data-chat-room='open'] .chat-widget-section {
+  clip-path: inset(0 round 0 0 var(--border-radius-xl) var(--border-radius-xl));
+}
+
 .chat-widget-section .message-item {
   gap: 0;
 }
