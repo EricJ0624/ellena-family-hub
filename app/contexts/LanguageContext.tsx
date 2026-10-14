@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { type LangCode, isValidLang } from '@/lib/language-fonts';
 import { fetchProfilePreferences, saveProfilePreferences } from '@/lib/profile-preferences';
@@ -35,6 +35,12 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   const [lang, setLangState] = useState<LangCode>('en');
   const [loading, setLoading] = useState(true);
 
+  // 첫 페인트 전에 저장된 언어를 넣는다. useEffect면 대시보드가 먼저 그려져 영어 제목이 한 프레임 보인다.
+  useLayoutEffect(() => {
+    const stored = getStoredLang();
+    if (stored) setLangState(stored);
+  }, []);
+
   useEffect(() => {
     const applyLang = (next: LangCode) => {
       setLangState(next);
@@ -61,14 +67,6 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
         setLoading(false);
       }
     };
-
-    // 세션 조회 전에도 저장된 언어을 즉시 반영 (한 프레임만 en일 수 있음)
-    const stored = getStoredLang();
-    if (stored) applyLang(stored);
-
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      void loadForUser(session?.user?.id);
-    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       void loadForUser(session?.user?.id);

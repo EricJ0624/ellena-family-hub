@@ -306,7 +306,7 @@ button.travel-kids-add-trip-submit {
   backdrop-filter: none;
   background-color: #fdf9ee;
   /* 파일 비율 유지. 위젯 박스 밖은 잘라 내고, 박스 높이는 일정 카드가 정한다. */
-  background-image: url('/travel-planner/widget-bg.webp?v=5');
+  background-image: url('/travel-planner/widget-bg.webp?v=7');
   background-repeat: no-repeat;
   background-position: top center;
   background-size: 100% auto;
@@ -6329,13 +6329,19 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     max-height: none;
   }
 
+  .dashboard-widget-grid:not([data-layout-editor]) > *:has(.piggy-widget-section) {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
   .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] {
     display: flex;
     flex-direction: column;
     height: auto;
     min-height: var(--widget-scale-box-h, var(--widget-min-h, auto));
     max-height: none;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] > .widget-scale-root {
@@ -6348,13 +6354,14 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     height: auto;
     min-height: var(--widget-scale-box-h, var(--widget-min-h, auto));
     max-height: none;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] > .widget-scale-root:has([data-piggy-count='3']) {
     height: var(--piggy-fit-h);
     min-height: var(--piggy-fit-h);
     max-height: var(--piggy-fit-h);
+    overflow: hidden;
   }
 
   .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] .content-section.piggy-widget-section {
@@ -6363,7 +6370,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     flex: none;
     height: auto;
     min-height: var(--widget-scale-box-h, var(--widget-min-h, auto));
-    overflow: hidden;
+    overflow: visible;
     padding: calc(var(--piggy-u) * 4) calc(var(--piggy-u) * 4.5) calc(var(--piggy-u) * 4.5);
   }
 
@@ -7086,6 +7093,18 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .
   line-height: 1.15 !important;
   z-index: 6;
   overflow: visible;
+}
+
+/*
+ * 키즈 저금통 제목은 공통 회색(--section-title-fg)이라 파스텔 배경 위에서 옅어 보인다.
+ * 배경·일러스트는 그대로 두고 글자만 불투명한 진한 색으로 둔다.
+ */
+:root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-title,
+.dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-title,
+html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-title {
+  color: #0f172a;
+  opacity: 1;
+  letter-spacing: 0.01em;
 }
 
 /*

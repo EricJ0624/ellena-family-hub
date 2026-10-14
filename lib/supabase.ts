@@ -147,6 +147,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     storage: customStorage,
     storageKey: AUTH_STORAGE_KEY,
+    // 만료 임박 세션은 락을 잡은 채 토큰을 갱신한다.
+    // 대시보드가 getSession 을 동시에 여러 번 호출하면, 기본 5초 뒤 대기 요청이 그 락을 steal 한다.
+    // 갱신 중이던 요청은 AbortError(Lock broken ... 'steal')가 된다.
+    // 로그인 방식은 그대로 두고, 느린 갱신이 끝날 때까지 기다리게만 한다.
+    lockAcquireTimeout: 30000,
   },
   realtime: {
     params: {
@@ -184,6 +189,8 @@ if (typeof window !== 'undefined') {
   supabase.auth.getSession().then(({ data: { session } }) => {
     if (session?.access_token) setAuthPresenceCookie();
     else clearAuthPresenceCookie();
+  }).catch((err) => {
+    console.warn('세션 확인 실패', err);
   });
   
   // 전역 에러 핸들러로 Refresh Token 에러 및 Map ID 에러 필터링

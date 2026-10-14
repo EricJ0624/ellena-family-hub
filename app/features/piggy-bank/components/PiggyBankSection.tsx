@@ -8,6 +8,20 @@
 import React from 'react';
 import type { AccountRequest, PiggyMemberOrAccount, PiggySummary } from '../types';
 
+function withPiggyName(template: string, name: string | null | undefined) {
+  return template.replace(/\{name\}/g, name?.trim() || 'Ellena');
+}
+
+function piggyCardHeading(
+  savedName: string | null | undefined,
+  nickname: string | null | undefined,
+  template: string,
+) {
+  const saved = savedName?.trim();
+  if (saved && !/piggy\s*bank/i.test(saved)) return saved;
+  return withPiggyName(template, nickname);
+}
+
 interface PiggyBankSectionProps {
   currentGroupId: string | null;
   isAdmin: boolean;
@@ -73,7 +87,7 @@ export function PiggyBankSection({
 }: PiggyBankSectionProps) {
   const sectionTitle = isAdmin
     ? t.section_title_admin
-    : t.section_title_user.replace(/\{name\}/g, piggySummary?.ownerNickname?.trim() || 'Ellena');
+    : withPiggyName(t.section_title_user, piggySummary?.ownerNickname);
 
   const buttonText = isAdmin ? t.manage_all : t.go;
   const hasPiggyFilled = isAdmin
@@ -210,7 +224,7 @@ export function PiggyBankSection({
                         >
                           <div className="flex flex-wrap items-center justify-between" style={{ marginBottom: pu(3), gap: pu(2) }}>
                             <h4 className="m-0 font-bold text-[#1f2937]" style={{ fontSize: pu(6) }}>
-                              {t.card_title.replace(/\{name\}/g, p.ownerNickname?.trim() || 'Ellena')}
+                              {piggyCardHeading(p.name, p.ownerNickname, t.card_title)}
                             </h4>
                             <div
                               className="flex items-center"

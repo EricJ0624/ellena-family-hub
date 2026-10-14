@@ -638,6 +638,12 @@ export default function FamilyHub() {
   const piggyAccountRequestsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 마지막으로 piggy 데이터를 로드한 groupId — 그룹 전환 시 로딩 표시 초기화용 */
   const piggyLoadedGroupIdRef = useRef<string | null>(null);
+  /** 요청 순서. 더 나중에 성공한 응답만 그 이전 성공을 덮어쓴다. */
+  const piggyLoadSeqRef = useRef(0);
+  const piggyAppliedSeqRef = useRef(0);
+  const piggyFailRetryRef = useRef(0);
+  const piggyMemberPiggiesRef = useRef<PiggyMemberOrAccount[] | null>(null);
+  piggyMemberPiggiesRef.current = piggyMemberPiggies;
   const { trips: travelTrips, loading: travelTripsLoading, reload: reloadTravelTrips } = useTravelTrips({
     currentGroupId,
     isAuthenticated,
@@ -1660,7 +1666,7 @@ export default function FamilyHub() {
     };
   }, [isAuthenticated, userId, currentGroupId, router]);
 
-  // Piggy Bank 요약 정보 로드 함수 (재사용 가능하도록 useCallback으로 분리)
+  // 저금통 요약. 느린 응답이 나중에 도착해도 이미 받은 카드 목록을 지우지 않는다.
   const loadPiggySummary = useCallback(async () => {
     if (!isAuthenticated || !currentGroupId) {
       setPiggySummary(null);
@@ -1669,48 +1675,75 @@ export default function FamilyHub() {
       return;
     }
 
+    const groupId = currentGroupId;
+    const seq = ++piggyLoadSeqRef.current;
+    const expectAdminList = groupUserRole === 'ADMIN' || groupIsOwner;
+    const sameGroup = () => dashboardCurrentGroupIdRef.current === groupId;
+    /** 더 새로운 성공이 이미 반영됐으면 늦은 응답은 버린다. 진행 중인 다음 요청만으로는 성공을 버리지 않는다. */
+    const canApply = () => sameGroup() && seq >= piggyAppliedSeqRef.current;
+
     try {
       setPiggySummaryError(null);
-      // 그룹이 바뀐 첫 로드일 때만 로딩 표시 — 같은 그룹 재조회 시 기존 데이터를 유지해 위젯 공백 방지
-      if (piggyLoadedGroupIdRef.current !== currentGroupId) {
+      // 그룹이 바뀐 첫 로드일 때만 로딩 표시 — 같은 그룹 재조회 시 기존 카드를 유지
+      if (piggyLoadedGroupIdRef.current !== groupId) {
         setPiggyLoaded(false);
-        piggyLoadedGroupIdRef.current = currentGroupId;
+        piggyLoadedGroupIdRef.current = groupId;
+        piggyFailRetryRef.current = 0;
+        piggyAppliedSeqRef.current = 0;
       }
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await waitForSupabaseSession(supabase);
+      if (!sameGroup()) return;
       if (!session?.access_token) {
-        setPiggyLoaded(true);
+        if (seq === piggyLoadSeqRef.current) {
+          setPiggySummaryError('저금통 정보를 불러오지 못했습니다.');
+          setPiggyLoaded(true);
+        }
         return;
       }
 
-      const response = await fetch(`/api/piggy-bank/summary?group_id=${currentGroupId}`, {
+      const response = await fetch(`/api/piggy-bank/summary?group_id=${groupId}`, {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
+        cache: 'no-store',
       });
       const result = await response.json();
+      if (!canApply()) return;
       if (!response.ok) {
-        throw new Error(result.error || 'Piggy Bank 요약 정보를 불러오지 못했습니다.');
+        throw new Error(result.error || '저금통 요약 정보를 불러오지 못했습니다.');
       }
 
-      setPiggyLoaded(true);
-      const nextSummary = result.data?.memberPiggies && Array.isArray(result.data.memberPiggies)
-        ? null
-        : result.data?.account
-          ? {
-              name: result.data.account.name || 'Ellena Piggy Bank',
-              walletBalance: result.data.wallet?.balance ?? 0,
-              bankBalance: result.data.account.balance ?? 0,
-              ownerNickname: result.data.account.ownerNickname || null,
-              currency: result.data.account.currency,
-            }
-          : null;
-      const nextMemberPiggies = result.data?.memberPiggies && Array.isArray(result.data.memberPiggies)
-        ? result.data.memberPiggies
+      const hasMemberList = Array.isArray(result.data?.memberPiggies);
+      const keptList = piggyMemberPiggiesRef.current;
+      // 관리자인데 목록이 없는 응답은 카드를 확정하지 않는다.
+      // 순서를 여기서 닫으면, 폰에서 먼저 성공한 목록이 버려진다.
+      if (!hasMemberList && expectAdminList) {
+        if (Array.isArray(keptList) && keptList.length > 0) {
+          piggyAppliedSeqRef.current = seq;
+          setPiggyLoaded(true);
+        } else if (seq === piggyLoadSeqRef.current) {
+          setPiggyLoaded(true);
+        }
+        return;
+      }
+
+      const nextSummary = !hasMemberList && result.data?.account
+        ? {
+            name: result.data.account.name || 'Ellena Piggy Bank',
+            walletBalance: result.data.wallet?.balance ?? 0,
+            bankBalance: result.data.account.balance ?? 0,
+            ownerNickname: result.data.account.ownerNickname || null,
+            currency: result.data.account.currency,
+          }
         : null;
-      const nextPending = nextMemberPiggies
-        ? (Array.isArray(result.data.pendingAccountRequests) ? result.data.pendingAccountRequests : [])
+      const nextMemberPiggies = hasMemberList ? result.data.memberPiggies : null;
+      const nextPending = hasMemberList && Array.isArray(result.data?.pendingAccountRequests)
+        ? result.data.pendingAccountRequests
         : [];
-      if (nextMemberPiggies) {
+
+      piggyAppliedSeqRef.current = seq;
+      piggyFailRetryRef.current = 0;
+      if (hasMemberList) {
         setPiggyMemberPiggies(nextMemberPiggies);
         setPendingAccountRequests(nextPending);
         setPiggySummary(null);
@@ -1723,14 +1756,16 @@ export default function FamilyHub() {
         setPiggyMemberPiggies(null);
         setPendingAccountRequests([]);
       }
-      if (userId && dashboardCurrentGroupIdRef.current === currentGroupId) {
+      setPiggyLoaded(true);
+
+      if (userId && sameGroup()) {
         const authKey = getAuthKey(userId);
         const key =
           masterKey ||
           sessionStorage.getItem(authKey) ||
           process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
           'ellena_family_shared_key_2024';
-        writeDashboardContentSnapshot(userId, currentGroupId, key, {
+        writeDashboardContentSnapshot(userId, groupId, key, {
           piggy: {
             summary: nextSummary,
             memberPiggies: nextMemberPiggies,
@@ -1739,13 +1774,22 @@ export default function FamilyHub() {
         });
       }
     } catch (err: any) {
-      // Supabase 내부 lock 경쟁 에러는 사용자에게 노출하지 않음
+      if (!sameGroup() || seq < piggyAppliedSeqRef.current) return;
+      const hasCards = Array.isArray(piggyMemberPiggiesRef.current) && piggyMemberPiggiesRef.current.length > 0;
+      if (!hasCards && piggyFailRetryRef.current < 2 && seq === piggyLoadSeqRef.current) {
+        piggyFailRetryRef.current += 1;
+        window.setTimeout(() => {
+          if (sameGroup()) void loadPiggySummaryRef.current();
+        }, 700);
+        return;
+      }
+      if (seq !== piggyLoadSeqRef.current) return;
       if (!isSupabaseLockError(err)) {
-        setPiggySummaryError(err.message || 'Piggy Bank 정보를 불러오지 못했습니다.');
+        setPiggySummaryError(err.message || '저금통 정보를 불러오지 못했습니다.');
       }
       setPiggyLoaded(true);
     }
-  }, [isAuthenticated, currentGroupId, userId, masterKey]);
+  }, [isAuthenticated, currentGroupId, userId, masterKey, groupUserRole, groupIsOwner]);
 
   loadPiggySummaryRef.current = loadPiggySummary;
 
@@ -7074,7 +7118,7 @@ export default function FamilyHub() {
         return (
           <PiggyBankSection
             currentGroupId={currentGroupId}
-            isAdmin={piggyMemberPiggies !== null}
+            isAdmin={isGroupAdmin || piggyMemberPiggies !== null}
             piggySummary={piggySummary}
             piggyMemberPiggies={piggyMemberPiggies}
             piggyLoaded={piggyLoaded}
