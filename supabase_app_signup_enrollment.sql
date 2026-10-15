@@ -1,5 +1,7 @@
 -- 앱별 가입 허용/한도 + 앱 가입 동의(enrollment)
--- 인원 카운트 = user_app_enrollments (동의 완료 시점). 결제 entitlement는 별도 확장 예정.
+-- 이 파일의 한도 카운트는 적용 당시 기준(user_app_enrollments)이다.
+-- 현재 한도는 supabase_signup_availability_live_members.sql 이 담당한다.
+-- 이 파일을 다시 실행하면 get_signup_availability(text)가 동의 행 카운트로 되돌아간다.
 -- 전역 auth.users 한도 트리거는 완화(계정 생성 자체는 허용, 앱 한도는 enrollment에서 적용).
 
 CREATE TABLE IF NOT EXISTS public.app_signup_settings (
