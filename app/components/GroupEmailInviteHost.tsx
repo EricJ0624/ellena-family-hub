@@ -15,6 +15,7 @@ import {
 import { dashboardHrefWithOpenGroup, writeStoredGroupId } from '@/lib/group-id-resolve';
 import { refreshAuthBootstrapCache } from '@/lib/auth-bootstrap';
 import { GROUP_SUSPENDED_CODE, suspendedPath } from '@/lib/account-suspend-access';
+import { billingApiMessage } from '@/lib/translations/billing';
 
 function shouldSkipPath(pathname: string | null): boolean {
   if (!pathname) return true;
@@ -134,7 +135,7 @@ export function GroupEmailInviteHost({ userId }: GroupEmailInviteHostProps) {
           advanceQueue();
           return;
         }
-        throw new Error(json.error || t('accept_failed'));
+        throw new Error(billingApiMessage(lang, json, t('accept_failed')));
       }
       const groupId = typeof json.group_id === 'string' ? json.group_id : currentInvite.group_id;
       writeStoredGroupId(groupId);

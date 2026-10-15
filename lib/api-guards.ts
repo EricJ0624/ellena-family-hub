@@ -161,9 +161,48 @@ export async function requireGroupAdmin(
  * @param groupId - 그룹 ID
  * @returns PermissionResult (성공) 또는 에러 응답
  */
+const BETA_PERIOD_CACHE_MS = 5_000;
+let betaPeriodCache: { at: number; enabled: boolean } | null = null;
+
+async function betaPeriodEnabledForCurrentApp(): Promise<boolean> {
+  if (betaPeriodCache && Date.now() - betaPeriodCache.at < BETA_PERIOD_CACHE_MS) {
+    return betaPeriodCache.enabled;
+  }
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('billing_plans')
+    .select('beta_period_enabled')
+    .eq('app_id', CURRENT_APP_ID)
+    .maybeSingle();
+  const enabled = Boolean(error) || !data || data.beta_period_enabled !== false;
+  if (!error) betaPeriodCache = { at: Date.now(), enabled };
+  return enabled;
+}
+
+async function rejectIfBillingLocked(groupId: string): Promise<NextResponse | null> {
+  if (await betaPeriodEnabledForCurrentApp()) return null;
+  const supabase = getSupabaseServerClient();
+  const { data: subscription, error } = await supabase
+    .from('billing_subscriptions')
+    .select('status')
+    .eq('app_id', CURRENT_APP_ID)
+    .eq('group_id', groupId)
+    .eq('status', 'active')
+    .maybeSingle();
+  if (error || subscription?.status === 'active') return null;
+  return NextResponse.json(
+    {
+      error: '베타 기간이 끝나 구독이 있어야 이용할 수 있습니다.',
+      code: 'BILLING_SUBSCRIPTION_REQUIRED',
+    },
+    { status: 402 },
+  );
+}
+
 export async function requireGroupMember(
   userId: string,
-  groupId: string
+  groupId: string,
+  options?: { skipBillingLock?: boolean },
 ): Promise<
   | { role: MembershipRole; isOwner: boolean }
   | NextResponse
@@ -184,6 +223,10 @@ export async function requireGroupMember(
   if (!sysAdmin) {
     const blocked = await rejectIfGroupSuspended(userId, groupId);
     if (blocked) return blocked;
+    if (!options?.skipBillingLock) {
+      const billingLocked = await rejectIfBillingLocked(groupId);
+      if (billingLocked) return billingLocked;
+    }
   }
 
   return {

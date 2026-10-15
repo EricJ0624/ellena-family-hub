@@ -1,4 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { isAppId } from '@/lib/apps';
+import { getAppBetaQualification } from '@/lib/beta-testers';
 import { DB_TABLES } from '@/lib/db-table-names';
 
 export const DEFAULT_GROUP_STORAGE_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // 5GB
@@ -7,16 +9,68 @@ export async function getGroupStorageQuotaBytes(groupId: string): Promise<number
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('groups')
-    .select('storage_quota_bytes')
+    .select('owner_id, app_id, storage_quota_bytes')
     .eq('id', groupId)
     .single();
 
-  if (error) {
+  if (error || !data) {
     console.error('그룹 용량 한도 조회 오류:', error);
     return DEFAULT_GROUP_STORAGE_QUOTA_BYTES;
   }
 
-  return data?.storage_quota_bytes ?? DEFAULT_GROUP_STORAGE_QUOTA_BYTES;
+  const storedQuota = data.storage_quota_bytes ?? DEFAULT_GROUP_STORAGE_QUOTA_BYTES;
+  const appId = data.app_id;
+  if (!isAppId(appId)) return storedQuota;
+
+  const { data: subscription } = await supabase
+    .from('billing_subscriptions')
+    .select('status, quota_bytes')
+    .eq('app_id', appId)
+    .eq('group_id', groupId)
+    .maybeSingle();
+  if (subscription?.status === 'active' && subscription.quota_bytes) {
+    return subscription.quota_bytes;
+  }
+
+  try {
+    const beta = await getAppBetaQualification(appId, data.owner_id);
+    if (!beta.qualified) return storedQuota;
+    const { data: plan } = await supabase
+      .from('billing_plans')
+      .select('beta_free_quota_bytes')
+      .eq('app_id', appId)
+      .maybeSingle();
+    return plan?.beta_free_quota_bytes ?? storedQuota;
+  } catch (betaError) {
+    console.error('베타 용량 계산 오류:', betaError);
+    return storedQuota;
+  }
+}
+
+export async function groupAllowsOriginalUpload(groupId: string): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+  const { data: group } = await supabase
+    .from('groups')
+    .select('app_id')
+    .eq('id', groupId)
+    .maybeSingle();
+  if (!group || !isAppId(group.app_id)) return false;
+
+  const { data: subscription } = await supabase
+    .from('billing_subscriptions')
+    .select('status, quota_bytes')
+    .eq('app_id', group.app_id)
+    .eq('group_id', groupId)
+    .maybeSingle();
+  if (subscription?.status !== 'active' || !subscription.quota_bytes) return false;
+
+  const { data: plan } = await supabase
+    .from('billing_plans')
+    .select('upgraded_quota_bytes')
+    .eq('app_id', group.app_id)
+    .maybeSingle();
+  if (!plan?.upgraded_quota_bytes) return false;
+  return subscription.quota_bytes >= plan.upgraded_quota_bytes;
 }
 
 export async function getGroupStorageUsedBytes(groupId: string): Promise<number> {

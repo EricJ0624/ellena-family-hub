@@ -8,7 +8,7 @@ import {
 } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
-import { getGroupStorageStats } from '@/lib/storage-quota';
+import { getGroupStorageStats, groupAllowsOriginalUpload } from '@/lib/storage-quota';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 // Vercel body 제한: Base64 시 약 1.33배 → 3MB 파일까지
@@ -65,6 +65,13 @@ export async function POST(request: NextRequest) {
 
     const memberCheck = await requireGroupMember(user.id, groupId);
     if (memberCheck instanceof NextResponse) return memberCheck;
+
+    if (upload_mode !== 'normal' && !(await groupAllowsOriginalUpload(groupId))) {
+      return NextResponse.json(
+        { error: '원본 업로드는 10GB 구독에서만 가능합니다.' },
+        { status: 403 },
+      );
+    }
 
     const estimatedSize = (originalData.length * 3) / 4;
     if (estimatedSize > MAX_BODY_SIZE) {

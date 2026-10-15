@@ -19,6 +19,7 @@ import {
   isRawFileExtension,
 } from '@/lib/photo-upload-utils';
 import { supabase } from '@/lib/supabase';
+import { getBillingTranslation } from '@/lib/translations/billing';
 import * as exifr from 'exifr';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
 
@@ -155,6 +156,40 @@ function MemoriesPageContent() {
     router.prefetch('/dashboard');
   }, [router]);
   const { currentGroupId } = useGroup();
+  useEffect(() => {
+    if (!currentGroupId) {
+      setOriginalUploadEnabled(false);
+      setUploadMode('normal');
+      return;
+    }
+    let cancelled = false;
+    const loadOriginalUpload = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch(`/api/billing/group-state?groupId=${encodeURIComponent(currentGroupId)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok || cancelled) return;
+      const json = await res.json();
+      const enabled = json.originalUploadEnabled === true;
+      if (cancelled) return;
+      setOriginalUploadEnabled(enabled);
+      if (!enabled) setUploadMode('normal');
+    };
+    void loadOriginalUpload();
+    const channel = supabase
+      .channel(`billing-memories:${currentGroupId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'billing_subscriptions', filter: `group_id=eq.${currentGroupId}` },
+        () => { void loadOriginalUpload(); },
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [currentGroupId]);
   const { album, addPhoto, deletePhoto, updatePhotoDescription, updatePhotoId } = useAlbum();
   const { lang } = useLanguage();
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
@@ -176,6 +211,7 @@ function MemoriesPageContent() {
   const [gridColumns, setGridColumns] = useState(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
   const [uploadMode, setUploadMode] = useState<'normal' | 'original'>('normal');
+  const [originalUploadEnabled, setOriginalUploadEnabled] = useState(false);
   /** 이미지 로드 실패한 사진 id (진단 링크 표시용). 문자열로 통일해 비교 */
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
   const markImageFailed = (id: string | number) =>
@@ -460,6 +496,11 @@ function MemoriesPageContent() {
     }
     const isRawFile = isRawFileExtension(ext);
     const effectiveMode = isRawFile ? 'original' as const : uploadMode;
+    if (effectiveMode === 'original' && !originalUploadEnabled) {
+      alert(getBillingTranslation(lang, 'original_10gb_only'));
+      e.target.value = '';
+      return;
+    }
     let imageData: string;
     let originalData: string;
     try {
@@ -636,6 +677,8 @@ function MemoriesPageContent() {
         failureReason = 'S3 버킷 CORS 설정이 필요합니다.\n\nS3 버킷의 CORS 설정을 확인하거나 관리자에게 문의하세요.';
       } else if (errorMessage.includes('타임아웃') || errorMessage.toLowerCase().includes('timeout')) {
         failureReason = '파일이 너무 크거나 네트워크 연결이 불안정합니다.';
+      } else if (errorMessage.includes('10GB') || errorMessage.includes('ORIGINAL_UPLOAD')) {
+        failureReason = getBillingTranslation(lang, 'original_10gb_only');
       } else {
         failureReason = errorMessage;
       }
@@ -712,16 +755,27 @@ function MemoriesPageContent() {
               />
               {uploadModeCompressedLabel}
             </label>
-            <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] whitespace-nowrap text-[calc(13px*var(--hs))] leading-tight">
+            <label className={`flex items-center gap-[calc(6px*var(--hs))] whitespace-nowrap text-[calc(13px*var(--hs))] leading-tight ${originalUploadEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
               <input
                 type="radio"
                 name="uploadMode"
                 checked={uploadMode === 'original'}
-                onChange={() => setUploadMode('original')}
+                disabled={!originalUploadEnabled}
+                onChange={() => {
+                  if (originalUploadEnabled) setUploadMode('original');
+                }}
                 className="h-[14px] w-[14px] shrink-0"
               />
               {uploadModeOriginalLabel}
             </label>
+            {!originalUploadEnabled && currentGroupId ? (
+              <a
+                href={`/billing?groupId=${encodeURIComponent(currentGroupId)}&intent=storage`}
+                className="text-[calc(12px*var(--hs))] text-white underline"
+              >
+                {getBillingTranslation(lang, 'pay_10gb')}
+              </a>
+            ) : null}
           </div>
         </div>
         <label

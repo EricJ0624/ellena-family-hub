@@ -10,6 +10,7 @@ import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } f
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
+import { getBillingTranslation } from '@/lib/translations/billing';
 import {
   getFamilyRoleSelectOptions,
   getMemberManagementTranslation,
@@ -765,7 +766,12 @@ export default function OnboardingPage() {
         }
       }
 
-      if (joinError) throw joinError;
+      if (joinError) {
+        if (String(joinError.message || '').includes('BILLING_SEAT_REQUIRED')) {
+          throw new Error(getBillingTranslation(lang, 'seat_required'));
+        }
+        throw joinError;
+      }
 
       setSuccess(ot('success_joined'));
       const fromRpc = normalizeGroupIdFromRpc(joinedGroupIdData);

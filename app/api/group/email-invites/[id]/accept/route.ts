@@ -36,6 +36,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (error) {
       const message = error.message || '';
+      if (message.includes('BILLING_SEAT_REQUIRED')) {
+        return NextResponse.json(
+          { error: '기본 2명을 넘기려면 가상결제로 인원을 추가해야 합니다.', code: 'BILLING_SEAT_REQUIRED' },
+          { status: 402 },
+        );
+      }
       if (message.includes('GROUP_SUSPENDED')) {
         return NextResponse.json(
           { error: '이 그룹은 현재 이용할 수 없습니다.', code: GROUP_SUSPENDED_CODE },

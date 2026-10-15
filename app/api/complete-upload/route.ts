@@ -6,7 +6,7 @@ import {
 } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
-import { getGroupStorageStats } from '@/lib/storage-quota';
+import { getGroupStorageStats, groupAllowsOriginalUpload } from '@/lib/storage-quota';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
@@ -44,6 +44,14 @@ export async function POST(request: NextRequest) {
 
     const memberCheck = await requireGroupMember(user.id, groupId);
     if (memberCheck instanceof NextResponse) return memberCheck;
+
+    if (upload_mode === 'original' && !(await groupAllowsOriginalUpload(groupId))) {
+      await deleteFromS3(s3Key);
+      return NextResponse.json(
+        { error: '원본 업로드는 10GB 구독에서만 가능합니다.' },
+        { status: 403 },
+      );
+    }
 
     const incomingSize = originalSize || 0;
     if (incomingSize > MAX_FILE_SIZE) {

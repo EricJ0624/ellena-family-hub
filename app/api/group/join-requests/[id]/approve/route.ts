@@ -44,6 +44,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
     if (error) {
+      if ((error.message || '').includes('BILLING_SEAT_REQUIRED')) {
+        return NextResponse.json(
+          { error: '기본 2명을 넘기려면 가상결제로 인원을 추가해야 합니다.', code: 'BILLING_SEAT_REQUIRED' },
+          { status: 402 },
+        );
+      }
       const mapped = mapShortInviteRpcError(error.message || '');
       return NextResponse.json({ code: mapped.code }, { status: mapped.status });
     }

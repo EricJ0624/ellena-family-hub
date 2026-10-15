@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GroupProvider } from '@/app/contexts/GroupContext';
 import { AlbumProvider } from '@/app/contexts/AlbumContext';
+import { BillingAccessGuard } from '@/app/components/BillingAccessGuard';
 
 export function GroupProviderWrapper({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
@@ -27,7 +28,9 @@ export function GroupProviderWrapper({ children }: { children: React.ReactNode }
 
   return (
     <GroupProvider userId={userId}>
-      <AlbumProvider>{children}</AlbumProvider>
+      <AlbumProvider>
+        <BillingAccessGuard>{children}</BillingAccessGuard>
+      </AlbumProvider>
     </GroupProvider>
   );
 }

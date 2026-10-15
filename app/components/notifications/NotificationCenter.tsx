@@ -30,6 +30,8 @@ import {
   notificationOpenUrl,
   scrollDashboardWidgetIntoView,
 } from '@/lib/notifications/dashboard-focus';
+import { LANG_CODES, type LangCode } from '@/lib/language-fonts';
+import { billingApiMessage } from '@/lib/translations/billing';
 
 interface NotificationCenterProps {
   groupId: string | null;
@@ -51,7 +53,8 @@ async function authHeaders(): Promise<HeadersInit | null> {
 }
 
 /** 알림 목록·배지. 설정(하쓰/위젯)은 내 계정 모달에서 관리 */
-export default function NotificationCenter({ groupId, userId, onOpenChatRoom }: NotificationCenterProps) {
+export default function NotificationCenter({ groupId, userId, lang, onOpenChatRoom }: NotificationCenterProps) {
+  const billingLang: LangCode = LANG_CODES.includes(lang as LangCode) ? (lang as LangCode) : 'ko';
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationRow[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -295,7 +298,7 @@ export default function NotificationCenter({ groupId, userId, onOpenChatRoom }: 
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(typeof json.error === 'string' ? json.error : '승인에 실패했습니다.');
+        alert(billingApiMessage(billingLang, json, '승인에 실패했습니다.'));
         return;
       }
       await syncAfterAdminJoinResolve({

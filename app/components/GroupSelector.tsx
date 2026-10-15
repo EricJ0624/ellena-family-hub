@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
+import { getBillingTranslation } from '@/lib/translations/billing';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import {
@@ -226,7 +227,12 @@ const GroupSelector: React.FC = () => {
         p_app_id: CURRENT_APP_ID,
       });
 
-      if (joinError) throw joinError;
+      if (joinError) {
+        if (String(joinError.message || '').includes('BILLING_SEAT_REQUIRED')) {
+          throw new Error(getBillingTranslation(lang, 'seat_required'));
+        }
+        throw joinError;
+      }
 
       setInviteCode('');
       setSuccess(ot('success_joined'));

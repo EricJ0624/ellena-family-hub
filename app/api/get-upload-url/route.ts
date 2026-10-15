@@ -7,7 +7,8 @@ import {
   generatePublicAssetUrl
 } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
-import { getGroupStorageStats } from '@/lib/storage-quota';
+import { getGroupStorageStats, groupAllowsOriginalUpload } from '@/lib/storage-quota';
+import { isRawFileExtension } from '@/lib/photo-upload-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,15 @@ export async function POST(request: NextRequest) {
 
     const memberCheck = await requireGroupMember(user.id, groupId);
     if (memberCheck instanceof NextResponse) return memberCheck;
+
+    const extension = String(fileName).split('.').pop() || '';
+    const requestsOriginal = upload_mode === 'original' || isRawFileExtension(extension);
+    if (requestsOriginal && !(await groupAllowsOriginalUpload(groupId))) {
+      return NextResponse.json(
+        { error: '원본 업로드는 10GB 구독에서만 가능합니다.' },
+        { status: 403 },
+      );
+    }
 
     // 용량 제한: 모두 20MB 통일
     const MAX_FILE_SIZE = 20 * 1024 * 1024;

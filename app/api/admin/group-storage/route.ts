@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
-import { DEFAULT_GROUP_STORAGE_QUOTA_BYTES, getGroupStorageUsedBytes } from '@/lib/storage-quota';
+import { DEFAULT_GROUP_STORAGE_QUOTA_BYTES, getGroupStorageQuotaBytes, getGroupStorageUsedBytes } from '@/lib/storage-quota';
 
 /**
  * 시스템 관리자 전용: 전 앱 그룹 저장용량 목록/변경.
@@ -54,7 +54,10 @@ export async function GET(request: NextRequest) {
           console.warn(`그룹 ${group.id} 멤버 수 조회 오류:`, countError);
         }
 
-        const usedBytes = await getGroupStorageUsedBytes(group.id);
+        const [usedBytes, quotaBytes] = await Promise.all([
+          getGroupStorageUsedBytes(group.id),
+          getGroupStorageQuotaBytes(group.id),
+        ]);
 
         return {
           id: group.id,
@@ -65,7 +68,7 @@ export async function GET(request: NextRequest) {
           invite_code: group.invite_code ?? null,
           member_count: memberCount,
           created_at: group.created_at,
-          storage_quota_bytes: group.storage_quota_bytes ?? DEFAULT_GROUP_STORAGE_QUOTA_BYTES,
+          storage_quota_bytes: quotaBytes,
           storage_used_bytes: usedBytes,
         };
       })

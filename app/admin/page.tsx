@@ -59,6 +59,8 @@ import {
 import { getGroupSelectorLabel, getGroupDisplayNameRaw } from '@/lib/group-display-name';
 import { FeatureUsageSection } from '@/app/components/admin/FeatureUsageSection';
 import { SignupSettingsSection } from '@/app/components/admin/SignupSettingsSection';
+import { BetaStatusSection } from '@/app/components/admin/BetaStatusSection';
+import { getBillingTranslation } from '@/lib/translations/billing';
 import { AdminModerationInbox } from '@/app/components/admin/AdminModerationInbox';
 import { AdminSuspendModals, type AdminSuspendTarget } from '@/app/components/admin/AdminSuspendModals';
 import { AdminForceLeaveModal, type AdminForceLeaveTarget } from '@/app/components/admin/AdminForceLeaveModal';
@@ -1687,6 +1689,12 @@ export default function AdminPage() {
               </span>
             )}
           </button>
+          <Link
+            href="/billing?mode=new-user-test"
+            className="cursor-pointer border-none border-b-[3px] border-transparent bg-transparent px-6 py-3 text-base font-medium text-slate-500"
+          >
+            {getBillingTranslation(adminLang, 'new_payment_test')}
+          </Link>
           <button
             onClick={() => setActiveTab('member-inquiries')}
             className={`relative cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
@@ -1869,6 +1877,7 @@ export default function AdminPage() {
                 )}
 
                 <SignupSettingsSection lang={adminLang} />
+                <BetaStatusSection lang={adminLang} />
 
                 <div className="mt-8 grid gap-6 md:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-6">
