@@ -18,8 +18,39 @@ import {
   isKidsCongratsFrame,
   kidsCongratsVariant,
   kidsStickerFromTitles,
-  layoutKidsIdleDecos,
 } from '../kids-decorations';
+
+/** Family 테마 월별 위젯 배경. JS month는 0부터. */
+const KIDS_MONTH_BG: Partial<Record<number, string>> = {
+  0: '/family-calendar/backgrounds/calendar-jan-bg.png?v=2',
+  1: '/family-calendar/backgrounds/calendar-feb-bg.png?v=1',
+  2: '/family-calendar/backgrounds/calendar-mar-bg.png?v=3',
+  3: '/family-calendar/backgrounds/calendar-apr-bg.png?v=1',
+  4: '/family-calendar/backgrounds/calendar-may-bg.png?v=1',
+  5: '/family-calendar/backgrounds/calendar-jun-bg.png?v=1',
+  6: '/family-calendar/backgrounds/calendar-jul-bg.png?v=1',
+  7: '/family-calendar/backgrounds/calendar-aug-bg.png?v=2',
+  8: '/family-calendar/backgrounds/calendar-sep-bg.png?v=1',
+  9: '/family-calendar/backgrounds/calendar-oct-bg.png?v=1',
+  10: '/family-calendar/backgrounds/calendar-nov-bg.png?v=1',
+  11: '/family-calendar/backgrounds/calendar-dec-bg.png?v=2',
+};
+
+/** 설계된 달의 바탕. 장식 PNG 뒤만 바꾸고, 요일 글자가 읽히도록 밝게 둔다. */
+const KIDS_MONTH_WASH: Partial<Record<number, string>> = {
+  0: 'linear-gradient(180deg, rgba(236,246,252,0.96) 0%, rgba(210,232,246,0.92) 36%, rgba(190,222,240,0.86) 68%, rgba(226,240,248,0.94) 100%)',
+  1: 'linear-gradient(180deg, rgba(228,242,252,0.97) 0%, rgba(214,234,250,0.95) 22%, rgba(255,220,232,0.93) 46%, rgba(248,198,216,0.9) 100%)',
+  2: 'linear-gradient(180deg, rgba(246,252,236,0.97) 0%, rgba(236,246,214,0.94) 34%, rgba(255,248,226,0.92) 68%, rgba(252,244,228,0.95) 100%)',
+  3: 'linear-gradient(180deg, rgba(255,246,248,0.97) 0%, rgba(255,230,236,0.94) 38%, rgba(252,214,224,0.9) 72%, rgba(255,228,236,0.95) 100%)',
+  4: 'linear-gradient(180deg, rgba(244,252,240,0.97) 0%, rgba(228,246,224,0.94) 36%, rgba(255,236,232,0.9) 70%, rgba(246,248,236,0.95) 100%)',
+  5: 'linear-gradient(180deg, rgba(232,246,236,0.97) 0%, rgba(210,232,214,0.93) 40%, rgba(196,220,200,0.9) 72%, rgba(220,236,222,0.95) 100%)',
+  6: 'linear-gradient(180deg, rgba(230,246,252,0.97) 0%, rgba(214,236,246,0.94) 38%, rgba(255,244,230,0.9) 72%, rgba(236,246,250,0.95) 100%)',
+  7: 'linear-gradient(180deg, rgba(255,250,230,0.97) 0%, rgba(255,242,214,0.94) 40%, rgba(255,232,210,0.9) 72%, rgba(255,246,230,0.95) 100%)',
+  8: 'linear-gradient(180deg, rgba(255,246,250,0.97) 0%, rgba(252,232,240,0.94) 38%, rgba(255,236,220,0.9) 72%, rgba(252,240,236,0.95) 100%)',
+  9: 'linear-gradient(180deg, rgba(255,246,236,0.97) 0%, rgba(255,232,214,0.94) 40%, rgba(255,220,200,0.9) 72%, rgba(255,236,220,0.95) 100%)',
+  10: 'linear-gradient(180deg, rgba(255,252,236,0.97) 0%, rgba(255,244,200,0.94) 40%, rgba(250,230,170,0.9) 72%, rgba(255,246,214,0.95) 100%)',
+  11: 'linear-gradient(180deg, rgba(226,238,250,0.97) 0%, rgba(196,220,242,0.94) 38%, rgba(176,208,236,0.9) 70%, rgba(214,230,246,0.96) 100%)',
+};
 
 /** 레이아웃은 공통, 색·그라데이션만 테마별 — 모듈 상수로 매 렌더 할당을 막음 */
 const CALENDAR_SKINS = {
@@ -76,29 +107,6 @@ type CalendarGridCell =
   | { type: 'empty' }
   | { type: 'day'; date: Date; day: number; isToday: boolean; eventCount: number; kidsSticker: string | null };
 
-/** Kids 평상시 장식. 달력 칸이 아니라 위젯 가장자리만. */
-const KidsIdleDecorations = memo(function KidsIdleDecorations({
-  year,
-  month,
-}: {
-  year: number;
-  month: number;
-}) {
-  const items = useMemo(() => layoutKidsIdleDecos(year, month), [year, month]);
-  return (
-    <div className="pointer-events-none absolute inset-0 z-[4] overflow-hidden bg-transparent" aria-hidden>
-      {items.map((item, index) => (
-        <img
-          key={`${item.src}-${index}`}
-          src={item.src}
-          alt=""
-          className={`absolute bg-transparent object-contain ${item.className}`}
-        />
-      ))}
-    </div>
-  );
-});
-
 const CalendarMonthGrid = memo(function CalendarMonthGrid({
   calendarGrid,
   selectedDate,
@@ -137,6 +145,11 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
     if (isKidsTheme) setRocketTick((tick) => tick + 1);
     onAdd();
   };
+  const monthBgSrc = isKidsTheme ? KIDS_MONTH_BG[calendarGrid.month] : undefined;
+  const monthBg = !!monthBgSrc;
+  const monthWash = monthBg ? (KIDS_MONTH_WASH[calendarGrid.month] ?? skin.sectionBg) : skin.sectionBg;
+  const monthPadL = '4cqmin';
+  const monthPadR = '4.5cqmin';
 
   return (
     <div className="calendar-widget-cq-frame">
@@ -145,11 +158,20 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
           isKidsTheme ? ' relative' : ''
         }`}
         style={
-          skin.sectionBg !== 'transparent' ? { background: skin.sectionBg } : undefined
+          monthBg
+            ? {
+                backgroundColor: 'transparent',
+                backgroundImage: `url('${monthBgSrc}'), ${monthWash}`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                backgroundSize: '100% 100%',
+              }
+            : skin.sectionBg !== 'transparent'
+              ? { background: skin.sectionBg }
+              : undefined
         }
       >
-        {isKidsTheme ? <KidsIdleDecorations year={calendarGrid.year} month={calendarGrid.month} /> : null}
-        <div className="section-header calendar-section-header relative z-[5]" style={{ marginBottom: '2.5cqmin' }}>
+        <div className="section-header calendar-section-header relative z-[5]" style={{ marginBottom: monthBg && calendarGrid.month === 0 ? '1cqmin' : '2.5cqmin' }}>
           <h3
             className="section-title m-0 flex items-center calendar-section-title"
             style={{ color: skin.titleColor, fontWeight: 800 }}
@@ -162,42 +184,39 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
             {sectionTitle}
           </h3>
         </div>
-        <div className="section-body calendar-section-body" style={{ gap: '2.2cqmin' }}>
+        <div className="section-body calendar-section-body" style={{ gap: monthBg && calendarGrid.month === 0 ? '1cqmin' : '2.2cqmin' }}>
           <div
             className="calendar-month-block min-h-0"
-            style={{ gap: '2.2cqmin', flex: '1 1 0%', minHeight: 0 }}
+            style={{ gap: monthBg && calendarGrid.month === 0 ? '0.8cqmin' : '2.2cqmin', flex: '1 1 0%', minHeight: 0 }}
           >
             <div
-              className="relative z-[5]"
+              className={`relative z-[5] ${monthBg ? 'mx-auto w-[54%] max-w-[68%] self-center' : ''}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                background: skin.navBg,
+                background: monthBg ? 'transparent' : skin.navBg,
                 borderRadius: '999px',
-                padding: '1.4cqmin 1.8cqmin',
-                boxShadow: '0 2px 10px rgba(15,23,42,0.12)',
+                padding: monthBg ? '1.15cqmin 1.7cqmin' : '1.4cqmin 1.8cqmin',
+                boxShadow: monthBg ? 'none' : '0 2px 10px rgba(15,23,42,0.12)',
               }}
             >
               <button
                 type="button"
                 onClick={onPrevMonth}
                 aria-label={prevLabel}
-                className="flex items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: skin.navBtn, fontSize: '5.5cqmin', fontWeight: 800, padding: '0 1.5cqmin', lineHeight: 1 }}
+                className="flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: skin.navBtn, fontSize: monthBg ? '5.4cqmin' : '5.5cqmin', fontWeight: 800, padding: monthBg ? '0 1.2cqmin' : '0 1.5cqmin', lineHeight: 1 }}
               >
                 ‹
               </button>
               <div className="relative flex min-w-0 flex-1 items-center justify-center">
-                {isKidsTheme ? (
-                  <span className="calendar-kids-month-glow pointer-events-none absolute -inset-y-[55%] inset-x-[2%] rounded-full" aria-hidden />
-                ) : null}
                 <h4
-                  className="relative z-[1]"
+                  className="relative z-[1] whitespace-nowrap"
                   style={{
-                    flex: 1,
+                    flex: monthBg ? '0 0 auto' : 1,
                     textAlign: 'center',
                     margin: 0,
-                    fontSize: '5.5cqmin',
+                    fontSize: monthBg ? '5.3cqmin' : '5.5cqmin',
                     fontWeight: 800,
                     backgroundImage: skin.navTitle,
                     backgroundColor: 'transparent',
@@ -206,20 +225,34 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                     backgroundClip: 'text',
                   }}
                 >
-                  {monthTitle}
+                  {monthTitle.split('\uE000').map((part, index) => (
+                    <span key={index} className={index > 0 ? 'ml-[0.7em]' : undefined}>
+                      {part}
+                    </span>
+                  ))}
                 </h4>
               </div>
               <button
                 type="button"
                 onClick={onNextMonth}
                 aria-label={nextLabel}
-                className="flex items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: skin.navBtn, fontSize: '5.5cqmin', fontWeight: 800, padding: '0 1.5cqmin', lineHeight: 1 }}
+                className="flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: skin.navBtn, fontSize: monthBg ? '5.4cqmin' : '5.5cqmin', fontWeight: 800, padding: monthBg ? '0 1.2cqmin' : '0 1.5cqmin', lineHeight: 1 }}
               >
                 ›
               </button>
             </div>
-            <div className="calendar-grid-wrap relative z-[5]">
+            <div
+              className="calendar-grid-wrap relative z-[5]"
+              style={
+                monthBg
+                  ? {
+                      paddingLeft: calendarGrid.month === 0 ? '4cqmin' : monthPadL,
+                      paddingRight: calendarGrid.month === 0 ? '7.5cqmin' : monthPadR,
+                    }
+                  : undefined
+              }
+            >
               <div
                 className="calendar-grid"
                 style={{
@@ -237,7 +270,11 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                           ? 'calendar-weekday--sat'
                           : 'calendar-weekday--mid'
                     }`}
-                    style={{ background: 'transparent' }}
+                    style={{
+                      background: 'transparent',
+                      fontSize: monthBg ? '3.8cqmin' : undefined,
+                      marginBottom: monthBg ? '1.2cqmin' : undefined,
+                    }}
                   >
                     {day}
                   </div>
@@ -335,7 +372,10 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               </div>
             </div>
           </div>
-          <div className="relative z-[2] w-full">
+          <div
+            className="relative z-[2] w-full"
+            style={monthBg ? { paddingLeft: `calc(${monthPadL} + 5cqmin)`, paddingRight: `calc(${monthPadR} + 5cqmin)` } : undefined}
+          >
             {isKidsTheme && rocketTick > 0 ? (
               <img
                 key={rocketTick}
@@ -350,12 +390,12 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               onClick={handleAddClick}
               className="calendar-kids-add-btn relative z-[2] w-full rounded-full border-0 outline-none appearance-none transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:outline-none"
               style={{
-                padding: '2.8cqmin 3cqmin',
+                padding: monthBg ? '2.2cqmin 2.4cqmin' : '2.8cqmin 3cqmin',
                 borderRadius: '999px',
                 background: skin.addBg,
                 color: '#fff',
                 fontWeight: 700,
-                fontSize: '4.2cqmin',
+                fontSize: monthBg ? '3.5cqmin' : '4.2cqmin',
                 border: 'none',
                 outline: 'none',
                 boxShadow: 'none',
@@ -370,7 +410,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                 gap: '1.5cqmin',
               }}
             >
-              <Plus className="calendar-add-btn-icon" />
+              <Plus className="calendar-add-btn-icon" style={monthBg ? { width: '4.6cqmin', height: '4.6cqmin' } : undefined} />
               {addLabel}
             </button>
           </div>
@@ -472,8 +512,16 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
 }: FamilyCalendarSectionProps) {
   const intlLocale = intlLocaleForLang(lang as LangCode);
   const formatMonthYear = useCallback(
-    (y: number, mZeroBased: number) =>
-      new Date(y, mZeroBased, 1).toLocaleDateString(intlLocale, { year: 'numeric', month: 'long' }),
+    (y: number, mZeroBased: number) => {
+      const date = new Date(y, mZeroBased, 1);
+      const year = date.toLocaleDateString(intlLocale, { year: 'numeric' });
+      const month = date.toLocaleDateString(intlLocale, { month: 'long' });
+      const combined = date.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long' });
+      const yearAt = combined.indexOf(year);
+      const monthAt = combined.indexOf(month);
+      if (yearAt < 0 || monthAt < 0) return combined;
+      return yearAt < monthAt ? `${year}\uE000${month}` : `${month}\uE000${year}`;
+    },
     [intlLocale],
   );
   const formatLongDate = useCallback(

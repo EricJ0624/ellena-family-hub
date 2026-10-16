@@ -5856,19 +5856,6 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     transform: translateY(0.22cqmin);
   }
 
-  .calendar-kids-month-glow {
-    background: linear-gradient(
-      90deg,
-      #ede4ff 0%,
-      #d6eeff 22%,
-      #d8f8ea 46%,
-      #fff4c4 70%,
-      #ffe4dc 100%
-    );
-    filter: blur(2.8cqmin);
-    opacity: 0.95;
-  }
-
   @keyframes calendar-kids-rocket-fly {
     0% {
       transform: translate(-50%, 0) scale(0.55);
