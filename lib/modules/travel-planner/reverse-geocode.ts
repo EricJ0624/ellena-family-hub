@@ -3,10 +3,15 @@
  * Uses NEXT_PUBLIC_GOOGLE_MAP_API_KEY; returns null on any failure.
  */
 
-export async function reverseGeocodeLatLng(
+type GeocodeResult = {
+  formatted_address?: string;
+  address_components?: Array<{ short_name?: string; types?: string[] }>;
+};
+
+async function fetchGeocodeResults(
   latitude: number,
   longitude: number,
-): Promise<string | null> {
+): Promise<GeocodeResult[] | null> {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
   const key = (process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY || '').trim();
   if (!key) return null;
@@ -21,16 +26,41 @@ export async function reverseGeocodeLatLng(
     if (!res.ok) return null;
     const json = (await res.json().catch(() => null)) as {
       status?: string;
-      results?: Array<{ formatted_address?: string }>;
+      results?: GeocodeResult[];
     } | null;
     if (!json || json.status !== 'OK' || !Array.isArray(json.results) || json.results.length === 0) {
       return null;
     }
-    const addr = json.results[0]?.formatted_address;
-    return typeof addr === 'string' && addr.trim() ? addr.trim() : null;
+    return json.results;
   } catch {
     return null;
   }
+}
+
+export async function reverseGeocodeLatLng(
+  latitude: number,
+  longitude: number,
+): Promise<string | null> {
+  const results = await fetchGeocodeResults(latitude, longitude);
+  const addr = results?.[0]?.formatted_address;
+  return typeof addr === 'string' && addr.trim() ? addr.trim() : null;
+}
+
+/** ISO 3166-1 alpha-2 from the same geocode result, or null when unknown. */
+export async function reverseGeocodeCountryCode(
+  latitude: number,
+  longitude: number,
+): Promise<string | null> {
+  const results = await fetchGeocodeResults(latitude, longitude);
+  if (!results) return null;
+  for (const result of results) {
+    for (const component of result.address_components ?? []) {
+      if (!component.types?.includes('country')) continue;
+      const code = String(component.short_name ?? '').trim().toUpperCase();
+      if (/^[A-Z]{2}$/.test(code)) return code;
+    }
+  }
+  return null;
 }
 
 /** Build default field-record title with local time. */

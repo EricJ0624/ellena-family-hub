@@ -96,6 +96,7 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
   games:        { icon: Dices,    bg: 'bg-amber-500',   fg: 'text-white' },
   travel_diary: { icon: BookOpen, bg: 'bg-violet-600',  fg: 'text-white' },
   travel_quick_record: { icon: Navigation, bg: 'bg-emerald-600', fg: 'text-white' },
+  family_log: { icon: BookOpen, bg: 'bg-amber-700', fg: 'text-white' },
 };
 
 

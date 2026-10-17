@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 import {
   defaultExpenseCategoryForKind,
   type TravelPlaceSourceKind,
@@ -18,7 +19,45 @@ export type PlaceFeedbackSyncInput = {
   expenseDate?: string;
   placeTitle?: string;
   tripCurrency?: string;
+  /** 일정에서 고른 통화. 없으면 tripCurrency. */
+  expenseCurrency?: string | null;
 };
+
+function fallbackTripCurrency(raw: string | null | undefined): string {
+  return (
+    String(raw || 'KRW')
+      .trim()
+      .toUpperCase() || 'KRW'
+  );
+}
+
+/**
+ * 일정 경비 통화.
+ * currency를 비운 채 금액이 있으면 에러. currency를 생략하면 여행 통화를 쓴다.
+ */
+export function resolveLinkedExpenseCurrency(input: {
+  requested?: unknown;
+  actualExpense?: unknown;
+  tripCurrency?: string | null;
+}): { currency: string } | { error: string } {
+  const trip = fallbackTripCurrency(input.tripCurrency);
+  const amount =
+    input.actualExpense == null || input.actualExpense === '' ? null : Number(input.actualExpense);
+  const positive = amount != null && Number.isFinite(amount) && amount > 0;
+  if (input.requested === undefined || input.requested === null) {
+    return { currency: trip };
+  }
+  const raw = String(input.requested).trim();
+  if (!raw) {
+    if (positive) return { error: '통화를 선택해 주세요.' };
+    return { currency: trip };
+  }
+  const code = normalizeCurrencyCode(raw);
+  if (!code || !isAllowedCurrency(code)) {
+    return { error: '유효하지 않은 통화 코드입니다.' };
+  }
+  return { currency: code };
+}
 
 export type PlaceFeedbackRow = {
   id: string;
@@ -79,10 +118,9 @@ async function upsertLinkedExpense(
   }
 
   const now = new Date().toISOString();
+  const explicit = normalizeCurrencyCode(input.expenseCurrency);
   const currency =
-    String(input.tripCurrency || 'KRW')
-      .trim()
-      .toUpperCase() || 'KRW';
+    explicit && isAllowedCurrency(explicit) ? explicit : fallbackTripCurrency(input.tripCurrency);
   const expenseDate = (input.expenseDate || '').slice(0, 10);
   if (!expenseDate) {
     throw new Error('expenseDate가 필요합니다.');

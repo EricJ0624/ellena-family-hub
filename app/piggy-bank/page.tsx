@@ -16,6 +16,7 @@ import {
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
 import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
+import { SearchableSelect } from '@/app/components/SearchableSelect';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import { intlLocaleForLang } from '@/lib/language-fonts';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
@@ -551,17 +552,15 @@ function PiggyBankPageContent() {
           <h2 className="mb-2 mt-0 text-lg">{pt('piggy_currency_admin_title')}</h2>
           <p className="mb-3 mt-0 text-sm text-slate-500">ISO 4217 코드 · 모든 저금통에 동일하게 적용됩니다.</p>
           <div className="flex flex-wrap items-center gap-2.5">
-            <select
+            <SearchableSelect
               value={piggyCurrencySelect}
-              onChange={(e) => setPiggyCurrencySelect(e.target.value)}
-              className="flex-[1_1_200px] rounded-[10px] border border-slate-200 px-3 py-2.5 text-sm"
-            >
-              {PIGGY_CURRENCY_OPTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {formatCurrencyOptionLabel(c, intlLocaleForLang(lang))}
-                </option>
-              ))}
-            </select>
+              onChange={setPiggyCurrencySelect}
+              options={PIGGY_CURRENCY_OPTIONS.map((c) => ({
+                value: c,
+                label: formatCurrencyOptionLabel(c, intlLocaleForLang(lang)),
+              }))}
+              className="flex-[1_1_200px] rounded-[10px] border border-slate-200 bg-white px-3 py-2.5 text-sm"
+            />
             <button
               type="button"
               disabled={piggyCurrencySaving}

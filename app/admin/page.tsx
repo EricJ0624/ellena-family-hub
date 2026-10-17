@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
+import { SearchableSelect } from '@/app/components/SearchableSelect';
 import { GlassSafeModal } from '@/app/components/GlassSafeModal';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { sameGroupId } from '@/lib/group-id-resolve';
@@ -1572,18 +1573,14 @@ export default function AdminPage() {
             <label className="sr-only" htmlFor="admin-lang-select">
               Language
             </label>
-            <select
+            <SearchableSelect
               id="admin-lang-select"
               value={adminLang}
-              onChange={(e) => setAdminLang(e.target.value as LangCode)}
+              ariaLabel="Language"
+              onChange={(next) => setAdminLang(next as LangCode)}
+              options={LANG_OPTIONS.map(({ code, label }) => ({ value: code, label }))}
               className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-            >
-              {LANG_OPTIONS.map(({ code, label }) => (
-                <option key={code} value={code}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            />
             <button
               onClick={() => router.push('/dashboard')}
               className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"

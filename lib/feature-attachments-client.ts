@@ -8,9 +8,11 @@ export type FeatureEntityType =
   | 'travel_expense'
   | 'travel_diary_entry'
   | 'member_support_ticket'
-  | 'support_ticket';
+  | 'support_ticket'
+  | 'family_log_card'
+  | 'family_log_receipt';
 
-export type FeatureType = 'chat' | 'piggy' | 'travel' | 'support';
+export type FeatureType = 'chat' | 'piggy' | 'travel' | 'support' | 'family_log';
 
 export type UploadedAttachment = {
   id: string;

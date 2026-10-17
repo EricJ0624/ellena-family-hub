@@ -9,6 +9,7 @@ export const DASHBOARD_WIDGET_KEYS = [
   'games',
   'travel_diary',
   'travel_quick_record',
+  'family_log',
 ] as const;
 
 export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
@@ -37,6 +38,9 @@ export const TRAVEL_DIARY_M_LAYOUT_H = 6;
 
 /** 빠른 여행 기록 M 기본 높이. 타이틀+원형 버튼(+Neo 섀도우)용으로 travel보다 짧게. */
 export const TRAVEL_QUICK_RECORD_M_LAYOUT_H = 4;
+
+/** Family Log M 기본 높이. 리본 + 카드 2줄 + 하단 버튼이 들어가는 세로. */
+export const FAMILY_LOG_M_LAYOUT_H = 11;
 
 /**
  * Family Location M 기본 높이. 전역 M(8)보다 높여 세로 나무 프레임(992×1070)에 맞춤.
@@ -165,6 +169,7 @@ export const WIDGET_GOLDEN_RATIOS: Record<DashboardWidgetKey, { w: number; h: nu
   games:        { w: 1, h: 1 },
   travel_diary: { w: 1, h: 2 },
   travel_quick_record: { w: 3, h: 1 },
+  family_log: { w: 3, h: 4 },
 };
 
 /** 위젯별 기본 size — 모두 M (스마트폰 세로 최적화, ADR C항) */
@@ -179,6 +184,7 @@ export const WIDGET_DEFAULT_SIZE: Record<DashboardWidgetKey, WidgetSize> = {
   games:        'M',
   travel_diary: 'M',
   travel_quick_record: 'M',
+  family_log: 'M',
 };
 
 /** M 사이즈 기본 레이아웃 (스마트폰 세로 최적화, ADR C항) */
@@ -215,6 +221,13 @@ const _layoutTravelQuickRecord = {
   layoutH: TRAVEL_QUICK_RECORD_M_LAYOUT_H,
   layoutPortraitH: TRAVEL_QUICK_RECORD_M_LAYOUT_H,
   layoutLandscapeH: TRAVEL_QUICK_RECORD_M_LAYOUT_H,
+} as const;
+
+const _layoutFamilyLog = {
+  ..._layoutM,
+  layoutH: FAMILY_LOG_M_LAYOUT_H,
+  layoutPortraitH: FAMILY_LOG_M_LAYOUT_H,
+  layoutLandscapeH: FAMILY_LOG_M_LAYOUT_H,
 } as const;
 
 const _layoutLocation = {
@@ -258,6 +271,18 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
     minH: null,
     priority: 0,
     ..._layoutTravelQuickRecord,
+  },
+  {
+    widget_key: 'family_log',
+    is_enabled: false,
+    display_order: 58,
+    size: 'M',
+    colSpan: _spanM.colSpan,
+    rowSpan: Math.min(6, Math.max(1, Math.round(FAMILY_LOG_M_LAYOUT_H))),
+    minW: null,
+    minH: null,
+    priority: 0,
+    ..._layoutFamilyLog,
   },
   { widget_key: 'album',    is_enabled: false, display_order: 60, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'location', is_enabled: false, display_order: 70, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutLocation },

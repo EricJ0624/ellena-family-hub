@@ -38,6 +38,7 @@ import {
 } from '@/lib/webpush';
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
+import { SearchableSelect } from '@/app/components/SearchableSelect';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { resolveUiTheme } from '@/lib/ui-theme';
 import { useAlbum } from '@/app/contexts/AlbumContext';
@@ -183,6 +184,10 @@ const TravelQuickRecordSection = dynamicImport(
 );
 const FamilyGamesSection = dynamicImport(
   () => import('@/app/features/family-games/components/FamilyGamesSection').then(m => ({ default: m.FamilyGamesSection })),
+  { ssr: false }
+);
+const FamilyLogSection = dynamicImport(
+  () => import('@/app/features/family-log/components/FamilyLogSection').then(m => ({ default: m.FamilyLogSection })),
   { ssr: false }
 );
 const TravelDiaryDashboardSection = dynamicImport(
@@ -594,6 +599,7 @@ export default function FamilyHub() {
       games: gt('section_title'),
       travel_diary: tdy('section_title'),
       travel_quick_record: tt('quick_record_title'),
+      family_log: 'Family Log',
     }),
     [lang],
   );
@@ -7095,6 +7101,8 @@ export default function FamilyHub() {
             }
           />
         );
+      case 'family_log':
+        return <FamilyLogSection currentGroupId={currentGroupId} lang={lang} />;
       case 'travel_diary':
         return (
           <TravelDiaryDashboardSection
@@ -7418,28 +7426,27 @@ export default function FamilyHub() {
               </div>
               <div className="form-field">
                 <label className="form-label">{dt('account_language_label')}</label>
-                <select
-                  className="form-input"
+                <SearchableSelect
                   value={accountModalLang}
-                  onChange={(e) => setAccountModalLang(e.target.value as LangCode)}
-                >
-                  {LANG_OPTIONS.map(({ code, label }) => (
-                    <option key={code} value={code}>{label}</option>
-                  ))}
-                </select>
+                  onChange={(next) => setAccountModalLang(next as LangCode)}
+                  options={LANG_OPTIONS.map(({ code, label }) => ({ value: code, label }))}
+                  className="form-input"
+                />
               </div>
               <div className="form-field">
                 <label className="form-label">{dt('account_country_label')}</label>
-                <select
-                  className="form-input"
+                <SearchableSelect
                   value={accountModalCountry}
-                  onChange={(e) => setAccountModalCountry(e.target.value)}
-                >
-                  <option value="">{getLoginTranslation(lang, 'country_select_placeholder')}</option>
-                  {getCountryOptions(intlLocaleForLang(accountModalLang)).map(({ code, label }) => (
-                    <option key={code} value={code}>{label}</option>
-                  ))}
-                </select>
+                  onChange={setAccountModalCountry}
+                  options={[
+                    { value: '', label: getLoginTranslation(lang, 'country_select_placeholder') },
+                    ...getCountryOptions(intlLocaleForLang(accountModalLang)).map(({ code, label }) => ({
+                      value: code,
+                      label,
+                    })),
+                  ]}
+                  className="form-input"
+                />
               </div>
               <AccountNotificationSettings
                 groupId={currentGroupId}

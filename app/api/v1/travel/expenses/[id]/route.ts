@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 
 /** PATCH: 경비 수정 */
@@ -37,24 +38,17 @@ export async function PATCH(
       return NextResponse.json({ error: '경비 항목을 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    const { data: tripRow } = await supabase
-      .from('travel_trips')
-      .select('currency')
-      .eq('id', (existingExp as { trip_id: string }).trip_id)
-      .eq('group_id', groupId)
-      .is('deleted_at', null)
-      .single();
-
-    const tripCurrency =
-      String((tripRow as { currency?: string } | null)?.currency || 'KRW')
-        .trim()
-        .toUpperCase() || 'KRW';
-
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
       updated_by: user.id,
-      currency: tripCurrency,
     };
+    if (body.currency !== undefined && body.currency !== null && String(body.currency).trim()) {
+      const requested = normalizeCurrencyCode(String(body.currency));
+      if (!requested || !isAllowedCurrency(requested)) {
+        return NextResponse.json({ error: '유효하지 않은 통화 코드입니다.' }, { status: 400 });
+      }
+      updatePayload.currency = requested;
+    }
     if (body.category !== undefined) updatePayload.category = body.category ? String(body.category).trim() : null;
     if (body.entry_type !== undefined) updatePayload.entry_type = body.entry_type === 'addition' ? 'addition' : 'expense';
     if (body.amount !== undefined) updatePayload.amount = Number(body.amount);

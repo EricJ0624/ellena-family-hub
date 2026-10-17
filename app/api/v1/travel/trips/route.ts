@@ -5,6 +5,7 @@ import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 import { enrichTripsWithAutoStatus } from '@/lib/modules/travel-planner/trip-enrich';
 import { computeAutoTripStatus } from '@/lib/modules/travel-planner/trip-status';
 import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
+import { currencyForCountryCode } from '@/lib/modules/travel-planner/location-currency';
 import { getGroupMemberUserIds, notifyFamily } from '@/lib/notifications/notify';
 
 /** GET: 해당 그룹의 여행 목록 (tenant = groupId) */
@@ -80,20 +81,13 @@ export async function POST(request: NextRequest) {
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const isAdmin = memberCheck.role === 'ADMIN' || memberCheck.isOwner;
-    let tripCurrency = 'KRW';
-    if (bodyCurrency != null && String(bodyCurrency).trim()) {
-      const c = normalizeCurrencyCode(String(bodyCurrency));
-      if (!c || !isAllowedCurrency(c)) {
-        return NextResponse.json({ error: '유효하지 않은 통화 코드입니다.' }, { status: 400 });
-      }
-      tripCurrency = isAdmin ? c : 'KRW';
-    }
 
     const supabase = getSupabaseServerClient();
     const initialStatus = computeAutoTripStatus(start_date, end_date);
 
     const dest = destination ? String(destination).trim() : null;
     let creatorCountry = 'KR';
+    let profileCountry: string | null = null;
     try {
       const { data: creatorProfile } = await supabase
         .from('profiles')
@@ -103,9 +97,21 @@ export async function POST(request: NextRequest) {
       const cc = String(creatorProfile?.country_code ?? '')
         .trim()
         .toUpperCase();
-      if (/^[A-Z]{2}$/.test(cc)) creatorCountry = cc;
+      if (/^[A-Z]{2}$/.test(cc)) {
+        creatorCountry = cc;
+        profileCountry = cc;
+      }
     } catch {
       /* ignore */
+    }
+
+    let tripCurrency = currencyForCountryCode(profileCountry) ?? 'KRW';
+    if (bodyCurrency != null && String(bodyCurrency).trim()) {
+      const c = normalizeCurrencyCode(String(bodyCurrency));
+      if (!c || !isAllowedCurrency(c)) {
+        return NextResponse.json({ error: '유효하지 않은 통화 코드입니다.' }, { status: 400 });
+      }
+      if (isAdmin) tripCurrency = c;
     }
 
     const enableDiary = bodyDiaryEnabled === true;

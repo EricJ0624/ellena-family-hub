@@ -76,7 +76,7 @@ export async function PATCH(
 
     const { data: existingTrip, error: fetchErr } = await supabase
       .from('travel_trips')
-      .select('start_date, end_date, status, status_source, diary_invite_status, diary_enabled')
+      .select('start_date, end_date, status, status_source, diary_invite_status, diary_enabled, currency')
       .eq('id', tripId)
       .eq('group_id', groupId)
       .is('deleted_at', null)
@@ -267,15 +267,22 @@ export async function PATCH(
     }
 
     if (data && newTripCurrency) {
-      const now = new Date().toISOString();
-      const { error: expErr } = await supabase
-        .from('travel_expenses')
-        .update({ currency: newTripCurrency, updated_at: now, updated_by: user.id })
-        .eq('trip_id', tripId)
-        .eq('group_id', groupId)
-        .is('deleted_at', null);
-      if (expErr) {
-        console.error('travel_expenses currency sync:', expErr);
+      const previousCurrency =
+        String((existingTrip as { currency?: string }).currency || 'KRW')
+          .trim()
+          .toUpperCase() || 'KRW';
+      if (previousCurrency !== newTripCurrency) {
+        const now = new Date().toISOString();
+        const { error: expErr } = await supabase
+          .from('travel_expenses')
+          .update({ currency: newTripCurrency, updated_at: now, updated_by: user.id })
+          .eq('trip_id', tripId)
+          .eq('group_id', groupId)
+          .eq('currency', previousCurrency)
+          .is('deleted_at', null);
+        if (expErr) {
+          console.error('travel_expenses currency sync:', expErr);
+        }
       }
     }
 

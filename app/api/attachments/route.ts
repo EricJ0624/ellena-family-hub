@@ -13,6 +13,8 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'travel_diary_entry',
   'member_support_ticket',
   'support_ticket',
+  'family_log_card',
+  'family_log_receipt',
 ]);
 
 /* v4 전용이 아닌 일반 UUID(버전·variant 혼용 DB 대비) */

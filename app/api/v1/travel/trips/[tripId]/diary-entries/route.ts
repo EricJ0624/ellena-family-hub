@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, assertTripInGroup } from '@/lib/api-guards';
 import { canWriteDiary } from '@/lib/modules/travel-planner/diary-eligibility';
-import { syncPlaceFeedbackWithExpense } from '@/lib/modules/travel-planner/place-feedback-sync';
+import {
+  resolveLinkedExpenseCurrency,
+  syncPlaceFeedbackWithExpense,
+} from '@/lib/modules/travel-planner/place-feedback-sync';
 import { parseShowMap } from '@/lib/modules/travel-planner/diary-types';
 import type { TravelPlaceSourceKind } from '@/lib/modules/travel-planner/unified-itinerary';
 import {
@@ -392,6 +395,15 @@ export async function POST(
       return NextResponse.json({ error: 'day_date가 필요합니다.' }, { status: 400 });
     }
 
+    const expenseCurrencyResult = resolveLinkedExpenseCurrency({
+      requested: Object.prototype.hasOwnProperty.call(body, 'currency') ? body.currency : undefined,
+      actualExpense: body.actual_expense,
+      tripCurrency: (tripRow as { currency?: string }).currency,
+    });
+    if ('error' in expenseCurrencyResult) {
+      return NextResponse.json({ error: expenseCurrencyResult.error }, { status: 400 });
+    }
+
     const sourceKindRaw = body.source_kind;
     const sourceKind =
       sourceKindRaw == null || sourceKindRaw === ''
@@ -498,6 +510,7 @@ export async function POST(
         expenseDate: dayDate,
         placeTitle: body.place_title,
         tripCurrency: (tripRow as { currency?: string }).currency,
+        expenseCurrency: expenseCurrencyResult.currency,
       });
       travelExpenseId = feedback.travel_expense_id ?? null;
     }

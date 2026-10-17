@@ -331,6 +331,7 @@ export function TravelDiaryPageContent() {
       rating: number | null;
       is_revisit: boolean;
       actual_expense: number | null;
+      currency?: string;
       collage_style?: 'film' | 'postal';
       show_map?: boolean;
     },
@@ -356,6 +357,7 @@ export function TravelDiaryPageContent() {
         rating: payload.rating,
         is_revisit: payload.is_revisit,
         actual_expense: payload.actual_expense,
+        ...(payload.currency ? { currency: payload.currency } : {}),
         place_title: slot.title,
         collage_style: payload.collage_style,
         show_map: payload.show_map,
@@ -619,11 +621,16 @@ export function TravelDiaryPageContent() {
           rating_label: t('rating_label'),
           revisit_label: t('revisit_label'),
           expense_label: t('expense_label'),
+          currency_choose: t('currency_choose'),
+          currency_required: t('currency_required'),
           receipt_upload: t('receipt_upload'),
           receipt_need_expense: t('receipt_need_expense'),
           receipt_upload_failed: t('receipt_upload_failed'),
           save: t('save'),
           saved: t('saved'),
+          save_disabled_uploading: t('save_disabled_uploading'),
+          save_disabled_photo_focus: t('save_disabled_photo_focus'),
+          save_disabled_saving: t('save_disabled_saving'),
           edit: t('edit'),
           cancel: t('cancel'),
           save_failed: t('save_failed'),

@@ -12,6 +12,7 @@ import { formatLoginTranslation, getLoginTranslation, type LoginTranslations } f
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getAppBrandName } from '@/lib/apps';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
+import { SearchableSelect } from '@/app/components/SearchableSelect';
 import { cn } from '@/lib/ui/cn';
 import { fetchAuthBootstrapWithCache, getCachedAuthBootstrap, loginViaServerApi, setCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import { systemAdminSessionNeedsMfa } from '@/lib/system-admin-mfa';
@@ -1095,17 +1096,14 @@ export default function LoginPage() {
               <label className="mb-2 block text-left text-sm font-semibold text-slate-600">
                 {t('label_display_language')}
               </label>
-              <select
+              <SearchableSelect
+                id="signup-language"
+                lang={displayLang}
                 value={signupLang}
-                onChange={(e) => handleSignupLangChange(e.target.value as LangCode)}
+                onChange={(next) => handleSignupLangChange(next as LangCode)}
+                options={LANG_OPTIONS.map(({ code, label }) => ({ value: code, label }))}
                 className="box-border min-h-[60px] w-full cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-5 text-base text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 focus:border-[rgb(var(--brand-primary))] focus:shadow-[0_4px_16px_rgba(102,126,234,0.2)]"
-              >
-                {LANG_OPTIONS.map(({ code, label }) => (
-                  <option key={code} value={code}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           )}
 
@@ -1114,19 +1112,17 @@ export default function LoginPage() {
               <label className="mb-2 block text-left text-sm font-semibold text-slate-600">
                 {t('label_country_residence')}
               </label>
-              <select
+              <SearchableSelect
+                id="signup-country"
+                lang={displayLang}
                 value={signupCountry}
-                onChange={(e) => setSignupCountry(e.target.value)}
-                required
+                onChange={setSignupCountry}
+                options={[
+                  { value: '', label: t('country_select_placeholder') },
+                  ...countryOptions.map(({ code, label }) => ({ value: code, label })),
+                ]}
                 className="box-border min-h-[60px] w-full cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-5 text-base text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 focus:border-[rgb(var(--brand-primary))] focus:shadow-[0_4px_16px_rgba(102,126,234,0.2)]"
-              >
-                <option value="">{t('country_select_placeholder')}</option>
-                {countryOptions.map(({ code, label }) => (
-                  <option key={code} value={code}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              />
               <p className="mt-2 text-left text-xs leading-relaxed text-slate-500">
                 {t('country_residence_help')}
               </p>

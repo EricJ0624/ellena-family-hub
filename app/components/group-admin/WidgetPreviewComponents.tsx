@@ -19,6 +19,7 @@ import { getTravelDiaryTranslation } from '@/lib/translations/travel-diary';
 import { getWidgetPreviewTranslation } from '@/lib/translations/widgetPreview';
 import { getFamilyRoleLabel } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { FamilyLogPreview } from '@/app/features/family-log/components/FamilyLogPreview';
 import { intlLocaleForLang } from '@/lib/language-fonts';
 
 /** 쇼룸 앨범/다이어리용 로컬 가짜 사진 (외부 네트워크 불필요) */
@@ -748,4 +749,5 @@ export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNod
   games: () => <GamesPreview />,
   travel_diary: () => <TravelDiaryPreview />,
   travel_quick_record: () => <TravelQuickRecordPreview />,
+  family_log: () => <FamilyLogPreview />,
 };

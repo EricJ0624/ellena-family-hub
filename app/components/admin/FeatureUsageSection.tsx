@@ -73,6 +73,8 @@ function widgetLabel(lang: LangCode, key: DashboardWidgetKey): string {
       return getTravelTranslation(lang, 'diary_modal_title');
     case 'travel_quick_record':
       return getTravelTranslation(lang, 'quick_record_title');
+    case 'family_log':
+      return 'Family Log';
     default:
       return key;
   }

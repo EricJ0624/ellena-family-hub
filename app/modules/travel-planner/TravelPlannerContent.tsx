@@ -42,6 +42,8 @@ import {
 } from '@/lib/modules/travel-planner/itinerary-display-expand';
 import { buildTransportItineraryTitle, shortItineraryTitle } from '@/lib/modules/travel-planner/short-itinerary-title';
 import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
+import { SearchableSelect } from '@/app/components/SearchableSelect';
+import { resolveDefaultTripCurrency } from '@/lib/modules/travel-planner/default-trip-currency';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import {
   Eye,
@@ -233,6 +235,7 @@ export function TravelPlannerContent() {
   const [formEndDate, setFormEndDate] = useState('');
   const [formBudget, setFormBudget] = useState('');
   const [formTripCurrency, setFormTripCurrency] = useState('KRW');
+  const tripCurrencyTouchedRef = useRef(false);
   const [formCoverBadge, setFormCoverBadge] = useState('');
   const [formSubtitle, setFormSubtitle] = useState('');
   const [formTheme, setFormTheme] = useState('');
@@ -718,6 +721,21 @@ export function TravelPlannerContent() {
   useEffect(() => {
     if (urlOpenAdd) setShowTripForm(true);
   }, [urlOpenAdd]);
+
+  useEffect(() => {
+    if (!showTripForm) {
+      tripCurrencyTouchedRef.current = false;
+      return;
+    }
+    let cancelled = false;
+    void resolveDefaultTripCurrency().then((code) => {
+      if (cancelled || tripCurrencyTouchedRef.current) return;
+      setFormTripCurrency(code);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [showTripForm]);
 
   useEffect(() => {
     if (!urlTripId || trips.length === 0) return;
@@ -3760,18 +3778,19 @@ export function TravelPlannerContent() {
                   <label className="travel-kids-add-trip-label travel-kids-add-trip-label--currency" htmlFor="travel-kids-trip-currency">
                     {tt('label_trip_currency')}
                   </label>
-                  <select
+                  <SearchableSelect
                     id="travel-kids-trip-currency"
                     value={formTripCurrency}
-                    onChange={(e) => setFormTripCurrency(e.target.value)}
+                    onChange={(next) => {
+                      tripCurrencyTouchedRef.current = true;
+                      setFormTripCurrency(next);
+                    }}
+                    options={TRIP_CURRENCY_OPTIONS.map((c) => ({
+                      value: c,
+                      label: formatCurrencyOptionLabel(c, localeForMoney),
+                    }))}
                     className="travel-kids-add-trip-input travel-kids-add-trip-input--currency"
-                  >
-                    {TRIP_CURRENCY_OPTIONS.map((c) => (
-                      <option key={c} value={c}>
-                        {formatCurrencyOptionLabel(c, localeForMoney)}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </>
               ) : null}
               <button
@@ -3852,17 +3871,18 @@ export function TravelPlannerContent() {
               {isTripAdmin && (
                 <>
                   <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_trip_currency')}</label>
-                  <select
+                  <SearchableSelect
                     value={formTripCurrency}
-                    onChange={(e) => setFormTripCurrency(e.target.value)}
+                    onChange={(next) => {
+                      tripCurrencyTouchedRef.current = true;
+                      setFormTripCurrency(next);
+                    }}
+                    options={TRIP_CURRENCY_OPTIONS.map((c) => ({
+                      value: c,
+                      label: formatCurrencyOptionLabel(c, localeForMoney),
+                    }))}
                     className="mb-5 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                  >
-                    {TRIP_CURRENCY_OPTIONS.map((c) => (
-                      <option key={c} value={c}>
-                        {formatCurrencyOptionLabel(c, localeForMoney)}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </>
               )}
               <div className="flex justify-end gap-2">
@@ -3957,17 +3977,15 @@ export function TravelPlannerContent() {
               {isTripAdmin && (
                 <>
                   <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_trip_currency')}</label>
-                  <select
+                  <SearchableSelect
                     value={formTripCurrency}
-                    onChange={(e) => setFormTripCurrency(e.target.value)}
+                    onChange={setFormTripCurrency}
+                    options={TRIP_CURRENCY_OPTIONS.map((c) => ({
+                      value: c,
+                      label: formatCurrencyOptionLabel(c, localeForMoney),
+                    }))}
                     className="mb-5 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                  >
-                    {TRIP_CURRENCY_OPTIONS.map((c) => (
-                      <option key={c} value={c}>
-                        {formatCurrencyOptionLabel(c, localeForMoney)}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </>
               )}
 

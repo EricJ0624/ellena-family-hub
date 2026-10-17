@@ -31,6 +31,7 @@ export type WidgetShowroomTranslations = {
   blurb_travel: string;
   blurb_travel_diary: string;
   blurb_travel_quick_record: string;
+  blurb_family_log: string;
   blurb_album: string;
   blurb_location: string;
   blurb_games: string;
@@ -63,6 +64,9 @@ export type WidgetShowroomTranslations = {
   howto_travel_quick_record_1: string;
   howto_travel_quick_record_2: string;
   howto_travel_quick_record_3: string;
+  howto_family_log_1: string;
+  howto_family_log_2: string;
+  howto_family_log_3: string;
   howto_album_1: string;
   howto_album_2: string;
   howto_album_3: string;
@@ -102,6 +106,7 @@ const ko: WidgetShowroomTranslations = {
   blurb_travel: '여행 일정·숙소·경비를 한곳에서 짜요.',
   blurb_travel_diary: '여행의 순간을 일기처럼 남겨요.',
   blurb_travel_quick_record: '길에서 체크인·동선을 빠르게 남겨요.',
+  blurb_family_log: '하루의 장소와 길을 카드로 남겨요.',
   blurb_album: '가족 사진을 모아 추억을 나눠요.',
   blurb_location: '서로의 위치를 안전하게 확인해요.',
   blurb_games: '가족과 가벼운 게임으로 즐겨요.',
@@ -134,6 +139,9 @@ const ko: WidgetShowroomTranslations = {
   howto_travel_quick_record_1: '지금 위치를 한 번에 기록해요.',
   howto_travel_quick_record_2: '이동 루트를 녹음하듯 남겨요.',
   howto_travel_quick_record_3: '길 위에서 빠르게 남기고 나중에 정리해요.',
+  howto_family_log_1: '내 위치나 루트를 누르면 카드가 생겨요.',
+  howto_family_log_2: '카드 제목은 눌러서 고칠 수 있어요.',
+  howto_family_log_3: '일·월·연으로 모아 보고, 넘기면 다음 카드가 나와요.',
   howto_album_1: '가족 사진을 앨범에 모아요.',
   howto_album_2: '페이지를 넘기며 추억을 봐요.',
   howto_album_3: '전체보기로 더 크게 즐길 수 있어요.',
@@ -173,6 +181,7 @@ const en: WidgetShowroomTranslations = {
   blurb_travel: 'Plan trips, stays, and expenses.',
   blurb_travel_diary: 'Keep a diary of trip moments.',
   blurb_travel_quick_record: 'Quick check-ins and routes on the go.',
+  blurb_family_log: 'Keep places and routes as daily cards.',
   blurb_album: 'Collect and share family photos.',
   blurb_location: 'Check each other’s location safely.',
   blurb_games: 'Play light games together.',
@@ -205,6 +214,9 @@ const en: WidgetShowroomTranslations = {
   howto_travel_quick_record_1: 'Log your location in one tap.',
   howto_travel_quick_record_2: 'Record the route as you go.',
   howto_travel_quick_record_3: 'Capture on the road, tidy later.',
+  howto_family_log_1: 'Log a location or route to create a card.',
+  howto_family_log_2: 'Tap a card to change its title.',
+  howto_family_log_3: 'Filter by day, month, or year, then swipe for more.',
   howto_album_1: 'Collect family photos in an album.',
   howto_album_2: 'Flip pages to browse memories.',
   howto_album_3: 'Open View all for a bigger look.',
@@ -228,6 +240,7 @@ const BLURB_KEY: Record<DashboardWidgetKey, keyof WidgetShowroomTranslations> = 
   travel: 'blurb_travel',
   travel_diary: 'blurb_travel_diary',
   travel_quick_record: 'blurb_travel_quick_record',
+  family_log: 'blurb_family_log',
   album: 'blurb_album',
   location: 'blurb_location',
   games: 'blurb_games',
@@ -275,6 +288,7 @@ const HOWTO_KEYS: Record<
     'howto_travel_quick_record_2',
     'howto_travel_quick_record_3',
   ],
+  family_log: ['howto_family_log_1', 'howto_family_log_2', 'howto_family_log_3'],
   album: ['howto_album_1', 'howto_album_2', 'howto_album_3'],
   location: ['howto_location_1', 'howto_location_2', 'howto_location_3'],
   games: ['howto_games_1', 'howto_games_2', 'howto_games_3'],

@@ -84,6 +84,7 @@ export default function WidgetShowroomHost({
       games: gt('section_title'),
       travel_diary: tdy('section_title'),
       travel_quick_record: tt('quick_record_title'),
+      family_log: 'Family Log',
     };
   }, [lang]);
 

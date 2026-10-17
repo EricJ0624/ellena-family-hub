@@ -5,6 +5,9 @@ import { Pencil, Star, Trash2 } from 'lucide-react';
 import type { DiaryTimelineSlot } from '@/lib/modules/travel-planner/diary-timeline';
 import type { TravelExpense, TravelPlaceFeedback } from '@/lib/modules/travel-planner/types';
 import { formatMoneyAmount } from '@/lib/format-currency';
+import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
+import { SearchableSelect } from '@/app/components/SearchableSelect';
+import { fetchLocationCurrency } from '@/lib/modules/travel-planner/default-trip-currency';
 import {
   deleteAttachment,
   getAttachmentsForEntity,
@@ -57,11 +60,16 @@ type Labels = {
   rating_label: string;
   revisit_label: string;
   expense_label: string;
+  currency_choose: string;
+  currency_required: string;
   receipt_upload: string;
   receipt_need_expense: string;
   receipt_upload_failed: string;
   save: string;
   saved: string;
+  save_disabled_uploading: string;
+  save_disabled_photo_focus: string;
+  save_disabled_saving: string;
   edit: string;
   cancel: string;
   save_failed: string;
@@ -102,6 +110,7 @@ type Props = {
     rating: number | null;
     is_revisit: boolean;
     actual_expense: number | null;
+    currency?: string;
     collage_style?: DiaryCollageStyle;
     show_map?: boolean;
   }) => Promise<{ entryId: string | null; expenseId: string | null } | null>;
@@ -171,6 +180,22 @@ function expenseInputValue(linkedExpense?: TravelExpense | null): string {
   return String(n);
 }
 
+function savedExpenseCurrency(linkedExpense?: TravelExpense | null): string {
+  if (!expenseInputValue(linkedExpense)) return '';
+  return (linkedExpense?.currency || '').trim().toUpperCase();
+}
+
+function defaultEditableCurrency(
+  linkedExpense: TravelExpense | null | undefined,
+  tripCurrency: string,
+  fieldRecordKind: DiaryTimelineSlot['field_record_kind'],
+): string {
+  const saved = savedExpenseCurrency(linkedExpense);
+  if (saved) return saved;
+  if (fieldRecordKind === 'checkin') return '';
+  return (tripCurrency || 'KRW').trim().toUpperCase() || 'KRW';
+}
+
 type PendingReceipt = {
   localId: string;
   file: File;
@@ -221,6 +246,10 @@ export function DiaryEntryCard({
   const [rating, setRating] = useState<number | null>(feedback?.rating ?? null);
   const [isRevisit, setIsRevisit] = useState(Boolean(feedback?.is_revisit));
   const [expense, setExpense] = useState(expenseInputValue(linkedExpense));
+  const [currency, setCurrency] = useState(() =>
+    defaultEditableCurrency(linkedExpense, tripCurrency, slot.field_record_kind),
+  );
+  const currencyTouchedRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [acting, setActing] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -294,7 +323,37 @@ export function DiaryEntryCard({
   useEffect(() => {
     if (mode === 'edit') return;
     setExpense(expenseInputValue(linkedExpense));
-  }, [linkedExpense?.id, linkedExpense?.amount, mode]);
+    currencyTouchedRef.current = false;
+    setCurrency(defaultEditableCurrency(linkedExpense, tripCurrency, slot.field_record_kind));
+  }, [linkedExpense?.id, linkedExpense?.amount, linkedExpense?.currency, mode, tripCurrency, slot.field_record_kind]);
+
+  useEffect(() => {
+    if (mode !== 'edit') return;
+    if (slot.field_record_kind !== 'checkin') return;
+    if (savedExpenseCurrency(linkedExpense)) return;
+    const lat = slot.latitude;
+    const lng = slot.longitude;
+    if (lat == null || lng == null || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+      return;
+    }
+    let cancelled = false;
+    void fetchLocationCurrency(Number(lat), Number(lng)).then((code) => {
+      if (cancelled || currencyTouchedRef.current) return;
+      setCurrency(code ?? '');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    mode,
+    slot.field_record_kind,
+    slot.latitude,
+    slot.longitude,
+    slot.key,
+    linkedExpense?.id,
+    linkedExpense?.currency,
+    linkedExpense?.amount,
+  ]);
 
   useEffect(() => {
     if (mode === 'edit') return;
@@ -413,6 +472,10 @@ export function DiaryEntryCard({
       alert(labels.receipt_need_expense);
       return;
     }
+    if (!currency.trim()) {
+      alert(labels.currency_required);
+      return;
+    }
     receiptFileRef.current?.click();
   };
 
@@ -455,6 +518,8 @@ export function DiaryEntryCard({
     setRating(feedback?.rating ?? null);
     setIsRevisit(Boolean(feedback?.is_revisit));
     setExpense(expenseInputValue(linkedExpense));
+    currencyTouchedRef.current = false;
+    setCurrency(defaultEditableCurrency(linkedExpense, tripCurrency, slot.field_record_kind));
     setCollageStyle(parseCollageStyle(entry?.collage_style));
     setShowMapPref(parseShowMap(entry?.show_map));
     setTitleDraft(slot.title);
@@ -471,6 +536,12 @@ export function DiaryEntryCard({
   };
 
   const currencyCode = (linkedExpense?.currency || tripCurrency || 'KRW').trim().toUpperCase() || 'KRW';
+  const currencyOptions = useMemo(() => {
+    const codes = [...getTopCurrencyCodes()];
+    const current = currency.trim().toUpperCase();
+    if (current && !codes.includes(current)) codes.unshift(current);
+    return codes;
+  }, [currency]);
   const savedExpenseAmount = Number(linkedExpense?.amount);
   const hasSavedExpense = Number.isFinite(savedExpenseAmount) && savedExpenseAmount > 0;
 
@@ -518,12 +589,17 @@ export function DiaryEntryCard({
     setSaving(true);
     try {
       const exp = parseExpenseAmount();
+      if (exp != null && !currency.trim()) {
+        alert(labels.currency_required);
+        return null;
+      }
       const result = await onSave({
         note,
         mood_tags: moods,
         rating,
         is_revisit: isRevisit,
         actual_expense: exp,
+        currency: exp != null ? currency.trim().toUpperCase() : undefined,
         collage_style: styleSnapshot,
         show_map: showMapPref,
       });
@@ -1190,14 +1266,26 @@ export function DiaryEntryCard({
                     onChange={(e) => setExpense(e.target.value)}
                     className="block min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                   />
-                  <span
+                  <SearchableSelect
+                    value={currency}
+                    ariaLabel={labels.expense_label}
+                    tone={isNightShell ? 'night' : 'default'}
+                    onChange={(next) => {
+                      currencyTouchedRef.current = true;
+                      setCurrency(next.toUpperCase());
+                    }}
+                    options={[
+                      ...(currency === '' ? [{ value: '', label: labels.currency_choose }] : []),
+                      ...currencyOptions.map((code) => ({
+                        value: code,
+                        label: formatCurrencyOptionLabel(code, moneyLocale),
+                      })),
+                    ]}
                     className={[
-                      'shrink-0 text-xs font-medium',
-                      isNightShell ? 'text-slate-400' : 'text-slate-500',
+                      'max-w-[11rem] shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-xs',
+                      isNightShell ? 'bg-slate-900 text-slate-200' : 'bg-white text-slate-700',
                     ].join(' ')}
-                  >
-                    {currencyCode}
-                  </span>
+                  />
                 </span>
               </label>
               <div className={displayMap ? '' : 'sm:col-span-2'}>
@@ -1273,8 +1361,17 @@ export function DiaryEntryCard({
             <button
               type="button"
               disabled={saving || uploading || portraitSetupOpen}
+              title={
+                uploading
+                  ? labels.save_disabled_uploading
+                  : portraitSetupOpen
+                    ? labels.save_disabled_photo_focus
+                    : saving
+                      ? labels.save_disabled_saving
+                      : undefined
+              }
               onClick={() => void handleSave()}
-              className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
+              className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:hover:bg-slate-300"
             >
               {savedFlash ? labels.saved : labels.save}
             </button>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, assertTripInGroup } from '@/lib/api-guards';
+import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 
 /** GET: 해당 여행의 경비 목록 */
@@ -105,6 +106,15 @@ export async function POST(
         .trim()
         .toUpperCase() || 'KRW';
 
+    let expenseCurrency = tripCurrency;
+    if (body.currency != null && String(body.currency).trim()) {
+      const requested = normalizeCurrencyCode(String(body.currency));
+      if (!requested || !isAllowedCurrency(requested)) {
+        return NextResponse.json({ error: '유효하지 않은 통화 코드입니다.' }, { status: 400 });
+      }
+      expenseCurrency = requested;
+    }
+
     const sourceKinds = new Set(['attraction', 'dining', 'accommodation', 'transport', 'itinerary']);
     let resolvedSourceKind: string | null = null;
     let resolvedSourceId: string | null = null;
@@ -129,7 +139,7 @@ export async function POST(
         entry_type: resolvedEntryType,
         category: category ? String(category).trim() : null,
         amount: Number(amount),
-        currency: tripCurrency,
+        currency: expenseCurrency,
         paid_by: paid_by || null,
         memo: memo ? String(memo).trim() : null,
         expense_date,

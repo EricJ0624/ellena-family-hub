@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Copy, Loader2, MessageSquare, X } from 'lucide-react';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -8,6 +8,8 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import { supabase } from '@/lib/supabase';
 import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
+import { SearchableSelect } from '@/app/components/SearchableSelect';
+import { resolveDefaultTripCurrency } from '@/lib/modules/travel-planner/default-trip-currency';
 import { intlLocaleForLang } from '@/lib/language-fonts';
 import {
   applyImportedItinerary,
@@ -53,6 +55,7 @@ export function TravelImportWizard() {
   const [formEndDate, setFormEndDate] = useState('');
   const [formBudget, setFormBudget] = useState('');
   const [formCurrency, setFormCurrency] = useState('KRW');
+  const currencyTouchedRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
 
@@ -65,6 +68,17 @@ export function TravelImportWizard() {
       'Content-Type': 'application/json',
     };
   }, [lang]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void resolveDefaultTripCurrency().then((code) => {
+      if (cancelled || currencyTouchedRef.current) return;
+      setFormCurrency(code);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const resolvedItems = useMemo(() => {
     if (!formStartDate || !formEndDate) return items;
@@ -327,17 +341,18 @@ export function TravelImportWizard() {
               {isTripAdmin && (
                 <>
                   <label className="mb-1 block text-xs font-medium text-slate-600">{tt('label_trip_currency')}</label>
-                  <select
+                  <SearchableSelect
                     value={formCurrency}
-                    onChange={(e) => setFormCurrency(e.target.value)}
+                    onChange={(next) => {
+                      currencyTouchedRef.current = true;
+                      setFormCurrency(next);
+                    }}
+                    options={getTopCurrencyCodes().map((c) => ({
+                      value: c,
+                      label: formatCurrencyOptionLabel(c, localeForMoney),
+                    }))}
                     className="box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  >
-                    {getTopCurrencyCodes().map((c) => (
-                      <option key={c} value={c}>
-                        {formatCurrencyOptionLabel(c, localeForMoney)}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </>
               )}
             </div>
