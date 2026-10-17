@@ -51,6 +51,7 @@ export type DashboardTranslations = {
   event_created_at: string;
   // Admin aria
   aria_system_admin: string;
+  leave_granted_dashboard: string;
   aria_group_admin: string;
   /** PC 웹 미리보기: 세로/가로 목업 전환 */
   preview_portrait_btn: string;
@@ -388,6 +389,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: '아래 버튼으로 일정을 추가해 보세요.',
     event_created_at: '등록',
     aria_system_admin: '시스템 관리자 페이지',
+    leave_granted_dashboard: '대시보드 나가기',
     aria_group_admin: '그룹 관리자 페이지',
     preview_portrait_btn: '세로 보기',
     preview_landscape_btn: '가로 보기',
@@ -693,6 +695,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: 'Add an event using the button below.',
     event_created_at: 'Created',
     aria_system_admin: 'System admin page',
+    leave_granted_dashboard: 'Leave dashboard',
     aria_group_admin: 'Group admin page',
     preview_portrait_btn: 'Portrait',
     preview_landscape_btn: 'Landscape',
@@ -998,6 +1001,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: '下のボタンで予定を追加してください。',
     event_created_at: '登録',
     aria_system_admin: 'システム管理ページ',
+    leave_granted_dashboard: 'ダッシュボードを出る',
     aria_group_admin: 'グループ管理ページ',
     preview_portrait_btn: '縦表示',
     preview_landscape_btn: '横表示',
@@ -1303,6 +1307,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: '点击下方按钮添加日程。',
     event_created_at: '创建',
     aria_system_admin: '系统管理页',
+    leave_granted_dashboard: '退出仪表板',
     aria_group_admin: '群组管理页',
     preview_portrait_btn: '竖屏',
     preview_landscape_btn: '横屏',
@@ -1605,6 +1610,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: '點擊下方按鈕新增日程。',
     event_created_at: '建立',
     aria_system_admin: '系統管理頁',
+    leave_granted_dashboard: '離開儀表板',
     aria_group_admin: '群組管理頁',
     preview_portrait_btn: '直向',
     preview_landscape_btn: '橫向',
@@ -1907,6 +1913,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: 'Agregue un evento usando el botón a continuación.',
     event_created_at: 'Creado',
     aria_system_admin: 'Página de administración del sistema',
+    leave_granted_dashboard: 'Salir del panel',
     aria_group_admin: 'Página de administración del grupo',
     preview_portrait_btn: 'Retrato',
     preview_landscape_btn: 'Paisaje',
@@ -2208,6 +2215,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: 'Ajoutez un événement en utilisant le bouton ci-dessous.',
     event_created_at: 'Créé',
     aria_system_admin: 'Page d\'administration du système',
+    leave_granted_dashboard: 'Quitter le tableau de bord',
     aria_group_admin: 'Page d\'administration du groupe',
     preview_portrait_btn: 'Portrait',
     preview_landscape_btn: 'Paysage',
@@ -2509,6 +2517,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: 'Fügen Sie über die Schaltfläche unten ein Ereignis hinzu.',
     event_created_at: 'Erstellt',
     aria_system_admin: 'Systemadministratorseite',
+    leave_granted_dashboard: 'Dashboard verlassen',
     aria_group_admin: 'Gruppenadministratorseite',
     preview_portrait_btn: 'Porträt',
     preview_landscape_btn: 'Landschaft',
@@ -2810,6 +2819,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: 'Aggiungi un evento utilizzando il pulsante qui sotto.',
     event_created_at: 'Creato',
     aria_system_admin: 'Pagina di amministrazione del sistema',
+    leave_granted_dashboard: 'Esci dalla dashboard',
     aria_group_admin: 'Pagina di amministrazione del gruppo',
     preview_portrait_btn: 'Ritratto',
     preview_landscape_btn: 'Paesaggio',
@@ -3111,6 +3121,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_add_hint: 'Adicione um evento usando o botão abaixo.',
     event_created_at: 'Criado em',
     aria_system_admin: 'Página de administração do sistema',
+    leave_granted_dashboard: 'Sair do painel',
     aria_group_admin: 'Página de administração do grupo',
     preview_portrait_btn: 'Retrato',
     preview_landscape_btn: 'Paisagem',

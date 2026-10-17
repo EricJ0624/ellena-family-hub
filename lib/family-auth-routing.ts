@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { listActiveGrantedGroupIds } from '@/lib/dashboard-access-grant';
 import { readStoredGroupId } from '@/lib/group-id-resolve';
 import { CURRENT_APP_ID } from '@/lib/apps';
 
@@ -156,6 +157,11 @@ export async function resolveUserHasGroups(
         return { hasGroups: true };
       }
     }
+  }
+
+  if (!hasGroups) {
+    const granted = await listActiveGrantedGroupIds(supabase, userId);
+    if (granted.length > 0) return { hasGroups: true };
   }
 
   return { hasGroups };

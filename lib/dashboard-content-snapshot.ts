@@ -98,7 +98,7 @@ function sanitizeEvents(raw: unknown): FamilyEvent[] {
 }
 
 function isHttpPhotoUrl(value: string): boolean {
-  return value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/api/photo/proxy');
+  return value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/api/photo/proxy') || value.startsWith('/api/media/file');
 }
 
 function sanitizeAlbum(raw: unknown): DashboardAlbumSnapshotItem[] {

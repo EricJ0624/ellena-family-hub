@@ -121,6 +121,7 @@ export type AdminTranslations = {
   approve_btn: string;
   reject_btn: string;
   revoke_btn: string;
+  open_dashboard_btn: string;
   confirm_revoke_request: string;
   prompt_reject_reason: string;
   success_answer_submitted: string;
@@ -209,6 +210,7 @@ export type AdminTranslations = {
   audit_type_user: string;
   audit_type_announcement: string;
   audit_type_dashboard_access_request: string;
+  audit_type_dashboard_access: string;
   audit_type_support_ticket: string;
   audit_type_member_support_ticket: string;
   audit_type_system_admin: string;
@@ -342,6 +344,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: '승인',
     reject_btn: '거절',
     revoke_btn: '권한 취소',
+    open_dashboard_btn: '대시보드 열기',
     confirm_revoke_request: '정말로 이 접근 권한을 취소하시겠습니까?',
     prompt_reject_reason: '거절 사유를 입력하세요:',
     success_answer_submitted: '답변이 작성되었습니다.',
@@ -430,6 +433,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: '사용자',
     audit_type_announcement: '공지',
     audit_type_dashboard_access_request: '접근 요청',
+    audit_type_dashboard_access: '대시보드 입장',
     audit_type_support_ticket: '문의',
     audit_type_member_support_ticket: '멤버 문의(그룹)',
     audit_type_system_admin: '시스템 관리자',
@@ -559,6 +563,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: 'Approve',
     reject_btn: 'Reject',
     revoke_btn: 'Revoke access',
+    open_dashboard_btn: 'Open dashboard',
     confirm_revoke_request: 'Revoke this access request?',
     prompt_reject_reason: 'Enter rejection reason:',
     success_answer_submitted: 'Answer submitted.',
@@ -647,6 +652,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: 'User',
     audit_type_announcement: 'Announcement',
     audit_type_dashboard_access_request: 'Access request',
+    audit_type_dashboard_access: 'Dashboard entry',
     audit_type_support_ticket: 'Inquiry',
     audit_type_member_support_ticket: 'Member inquiry (group)',
     audit_type_system_admin: 'System admin',
@@ -776,6 +782,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: '承認',
     reject_btn: '拒否',
     revoke_btn: '権限取消',
+    open_dashboard_btn: 'ダッシュボードを開く',
     confirm_revoke_request: 'このアクセス権限を取消しますか？',
     prompt_reject_reason: '拒否理由を入力：',
     success_answer_submitted: '返信しました。',
@@ -864,6 +871,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: 'ユーザー',
     audit_type_announcement: 'お知らせ',
     audit_type_dashboard_access_request: 'アクセス要求',
+    audit_type_dashboard_access: 'ダッシュボード入場',
     audit_type_support_ticket: '問い合わせ',
     audit_type_member_support_ticket: 'メンバー問い合わせ(グループ)',
     audit_type_system_admin: 'システム管理者',
@@ -993,6 +1001,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: '批准',
     reject_btn: '拒绝',
     revoke_btn: '撤销权限',
+    open_dashboard_btn: '打开仪表板',
     confirm_revoke_request: '确定撤销此访问权限？',
     prompt_reject_reason: '输入拒绝理由：',
     success_answer_submitted: '回复已提交。',
@@ -1081,6 +1090,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: '用户',
     audit_type_announcement: '公告',
     audit_type_dashboard_access_request: '访问请求',
+    audit_type_dashboard_access: '仪表板进入',
     audit_type_support_ticket: '咨询',
     audit_type_member_support_ticket: '成员咨询(群组)',
     audit_type_system_admin: '系统管理员',
@@ -1210,6 +1220,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: '核准',
     reject_btn: '拒絕',
     revoke_btn: '撤銷權限',
+    open_dashboard_btn: '開啟儀表板',
     confirm_revoke_request: '確定撤銷此存取權限？',
     prompt_reject_reason: '輸入拒絕理由：',
     success_answer_submitted: '回覆已提交。',
@@ -1298,6 +1309,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: '使用者',
     audit_type_announcement: '公告',
     audit_type_dashboard_access_request: '存取請求',
+    audit_type_dashboard_access: '儀表板進入',
     audit_type_support_ticket: '諮詢',
     audit_type_member_support_ticket: '成員諮詢(群組)',
     audit_type_system_admin: '系統管理員',
@@ -1427,6 +1439,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: 'Aprobar',
     reject_btn: 'Rechazar',
     revoke_btn: 'Revocar acceso',
+    open_dashboard_btn: 'Abrir panel',
     confirm_revoke_request: '¿Revocar esta solicitud de acceso?',
     prompt_reject_reason: 'Ingrese el motivo del rechazo:',
     success_answer_submitted: 'Respuesta enviada.',
@@ -1515,6 +1528,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: 'Usuario',
     audit_type_announcement: 'Anuncio',
     audit_type_dashboard_access_request: 'Solicitud de acceso',
+    audit_type_dashboard_access: 'Entrada al panel',
     audit_type_support_ticket: 'Consulta',
     audit_type_member_support_ticket: 'Consulta de miembro (grupo)',
     audit_type_system_admin: 'Administrador del sistema',
@@ -1644,6 +1658,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: 'Approuver',
     reject_btn: 'Rejeter',
     revoke_btn: 'Révoquer l\'accès',
+    open_dashboard_btn: 'Ouvrir le tableau de bord',
     confirm_revoke_request: 'Révoquer cette demande d\'accès ?',
     prompt_reject_reason: 'Entrez le motif du refus :',
     success_answer_submitted: 'Réponse soumise.',
@@ -1732,6 +1747,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: 'Utilisateur',
     audit_type_announcement: 'Annonce',
     audit_type_dashboard_access_request: 'Demande d\'accès',
+    audit_type_dashboard_access: 'Entrée au tableau de bord',
     audit_type_support_ticket: 'Demande',
     audit_type_member_support_ticket: 'Demande membre (groupe)',
     audit_type_system_admin: 'Administrateur système',
@@ -1861,6 +1877,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: 'Genehmigen',
     reject_btn: 'Ablehnen',
     revoke_btn: 'Zugriff widerrufen',
+    open_dashboard_btn: 'Dashboard öffnen',
     confirm_revoke_request: 'Diese Zugriffsanfrage widerrufen?',
     prompt_reject_reason: 'Geben Sie den Ablehnungsgrund ein:',
     success_answer_submitted: 'Antwort übermittelt.',
@@ -1949,6 +1966,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: 'Benutzer',
     audit_type_announcement: 'Ankündigung',
     audit_type_dashboard_access_request: 'Zugriffsanfrage',
+    audit_type_dashboard_access: 'Dashboard-Zugang',
     audit_type_support_ticket: 'Anfrage',
     audit_type_member_support_ticket: 'Mitgliederanfrage (Gruppe)',
     audit_type_system_admin: 'Systemadministrator',
@@ -2078,6 +2096,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: 'Approvare',
     reject_btn: 'Rifiutare',
     revoke_btn: 'Revoca l\'accesso',
+    open_dashboard_btn: 'Apri dashboard',
     confirm_revoke_request: 'Revocare questa richiesta di accesso?',
     prompt_reject_reason: 'Inserisci il motivo del rifiuto:',
     success_answer_submitted: 'Risposta inviata.',
@@ -2166,6 +2185,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: 'Utente',
     audit_type_announcement: 'Annuncio',
     audit_type_dashboard_access_request: 'Richiesta di accesso',
+    audit_type_dashboard_access: 'Ingresso dashboard',
     audit_type_support_ticket: 'Richiesta',
     audit_type_member_support_ticket: 'Richiesta membro (gruppo)',
     audit_type_system_admin: 'Amministratore di sistema',
@@ -2295,6 +2315,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     approve_btn: 'Aprovar',
     reject_btn: 'Rejeitar',
     revoke_btn: 'Revogar acesso',
+    open_dashboard_btn: 'Abrir painel',
     confirm_revoke_request: 'Revogar esta solicitação de acesso?',
     prompt_reject_reason: 'Digite o motivo da rejeição:',
     success_answer_submitted: 'Resposta enviada.',
@@ -2383,6 +2404,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     audit_type_user: 'Usuário',
     audit_type_announcement: 'Anúncio',
     audit_type_dashboard_access_request: 'Solicitação de acesso',
+    audit_type_dashboard_access: 'Entrada no painel',
     audit_type_support_ticket: 'Consulta',
     audit_type_member_support_ticket: 'Consulta de membro (grupo)',
     audit_type_system_admin: 'Administrador do sistema',

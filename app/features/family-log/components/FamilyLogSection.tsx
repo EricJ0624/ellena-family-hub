@@ -6,6 +6,7 @@ import type { UiTheme } from '@/lib/ui-theme';
 import { useHorizontalPageSwipe } from '@/lib/hooks/useHorizontalPageSwipe';
 import { listAttachments } from '@/lib/feature-attachments-client';
 import {
+  clearFamilyLogAttachmentCache,
   forgetFamilyLogAttachments,
   readFamilyLogAttachments,
   writeFamilyLogAttachments,
@@ -121,6 +122,9 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
   const [editorOpen, setEditorOpen] = useState(false);
 
   const areaRef = useRef<HTMLDivElement | null>(null);
+  const groupIdRef = useRef(currentGroupId);
+  const prevGroupRef = useRef<string | null | undefined>(undefined);
+  groupIdRef.current = currentGroupId;
   const watchRef = useRef<number | null>(null);
   const pointsRef = useRef<RoutePoint[]>([]);
   const startHmRef = useRef('');
@@ -128,25 +132,43 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
 
   const loadCards = useCallback(async (groupId: string) => {
     setLoading(true);
+    setError(null);
     try {
       const headers = await familyLogAuthHeaders();
       const res = await fetch(`/api/v1/family-log/cards?groupId=${encodeURIComponent(groupId)}`, {
         headers,
       });
       const json = await res.json().catch(() => ({}));
+      if (groupIdRef.current !== groupId) return;
       if (!res.ok) throw new Error(json.error || 'load');
       const next = Array.isArray(json.data) ? (json.data as FamilyLogCard[]) : [];
       setCards((prev) => (cardSignature(prev) === cardSignature(next) ? prev : next));
     } catch {
+      if (groupIdRef.current !== groupId) return;
       setError(labels.loadFailed);
     } finally {
-      setLoading(false);
+      if (groupIdRef.current === groupId) setLoading(false);
     }
   }, [labels.loadFailed]);
 
   useEffect(() => {
-    if (!currentGroupId) {
+    const groupChanged = prevGroupRef.current !== currentGroupId;
+    prevGroupRef.current = currentGroupId;
+    if (groupChanged) {
       setCards([]);
+      setViewing(null);
+      setEditorOpen(false);
+      setPage(0);
+      clearFamilyLogAttachmentCache();
+      if (watchRef.current != null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchRef.current);
+        watchRef.current = null;
+      }
+      pointsRef.current = [];
+      setRecording(false);
+    }
+    if (!currentGroupId) {
+      setLoading(false);
       return;
     }
     void loadCards(currentGroupId);

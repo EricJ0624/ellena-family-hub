@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
-import { requireAuthUser, requireGroupMemberOrSystemAdmin } from '@/lib/api-guards';
+import { requireAttachmentGroupAccess, requireAuthUser } from '@/lib/api-guards';
+import { keyMatchesGroup, withMediaFileUrls } from '@/lib/media-access-token';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { ensureFamilyAlbumItemForDiaryPhoto } from '@/lib/storage-object-refs';
 
@@ -74,8 +75,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '파일 크기가 20MB를 초과합니다. (최대 20MB)' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, String(groupId));
+    const memberCheck = await requireAttachmentGroupAccess(user.id, String(groupId), String(entityType));
     if (memberCheck instanceof NextResponse) return memberCheck;
+    if (!keyMatchesGroup(String(s3Key), String(groupId))) {
+      return NextResponse.json({ error: '이 그룹의 파일이 아닙니다.' }, { status: 403 });
+    }
+    if (thumbnailS3Key && !keyMatchesGroup(String(thumbnailS3Key), String(groupId))) {
+      return NextResponse.json({ error: '이 그룹의 파일이 아닙니다.' }, { status: 403 });
+    }
 
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
@@ -113,7 +120,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: withMediaFileUrls(data) });
   } catch (error) {
     const message = error instanceof Error ? error.message : '첨부 저장 중 오류가 발생했습니다.';
     return NextResponse.json({ error: message }, { status: 500 });

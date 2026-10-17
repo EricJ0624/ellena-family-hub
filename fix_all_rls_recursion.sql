@@ -24,11 +24,16 @@ BEGIN
   END IF;
   
   -- 멤버십 확인 (이 함수는 SECURITY DEFINER이므로 RLS 우회)
-  RETURN EXISTS (
+  IF EXISTS (
     SELECT 1 FROM public.memberships
     WHERE group_id = group_id_param
     AND user_id = user_id_param
-  );
+  ) THEN
+    RETURN TRUE;
+  END IF;
+
+  -- 승인된 대시보드 입장 권한 (시스템 관리자, 해당 요청의 당사자, 만료 전)
+  RETURN public.has_active_dashboard_grant(group_id_param, user_id_param);
 END;
 $$;
 
@@ -50,12 +55,17 @@ BEGIN
   END IF;
   
   -- ADMIN 멤버십 확인 (이 함수는 SECURITY DEFINER이므로 RLS 우회)
-  RETURN EXISTS (
+  IF EXISTS (
     SELECT 1 FROM public.memberships
     WHERE group_id = group_id_param
     AND user_id = user_id_param
     AND role = 'ADMIN'
-  );
+  ) THEN
+    RETURN TRUE;
+  END IF;
+
+  -- 승인된 대시보드 입장 권한은 그 기간에만 그룹 관리자
+  RETURN public.has_active_dashboard_grant(group_id_param, user_id_param);
 END;
 $$;
 

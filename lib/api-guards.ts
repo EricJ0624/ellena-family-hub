@@ -199,6 +199,8 @@ async function rejectIfBillingLocked(groupId: string): Promise<NextResponse | nu
   );
 }
 
+const SUPPORT_ATTACHMENT_ENTITIES = new Set(['support_ticket', 'member_support_ticket']);
+
 export async function requireGroupMember(
   userId: string,
   groupId: string,
@@ -254,6 +256,28 @@ export async function requireGroupMemberOrSystemAdmin(
   const memberCheck = await requireGroupMember(userId, groupId);
   if (memberCheck instanceof NextResponse) return memberCheck;
   return { ...memberCheck, isSystemAdmin: false };
+}
+
+/**
+ * 첨부 조회·저장. 문의 첨부는 그룹 밖 시스템 관리자도 보고,
+ * 그 외 그룹 파일은 멤버이거나 승인된 대시보드 입장 권한이 있어야 한다.
+ */
+export async function requireAttachmentGroupAccess(
+  userId: string,
+  groupId: string,
+  entityType: string,
+): Promise<
+  | { role: MembershipRole; isOwner: boolean; isSystemAdmin: boolean }
+  | NextResponse
+> {
+  const memberCheck = await requireGroupMember(userId, groupId);
+  if (!(memberCheck instanceof NextResponse)) {
+    return { ...memberCheck, isSystemAdmin: await isSystemAdmin(userId) };
+  }
+  if (SUPPORT_ATTACHMENT_ENTITIES.has(entityType) && (await isSystemAdmin(userId))) {
+    return { role: 'ADMIN', isOwner: false, isSystemAdmin: true };
+  }
+  return memberCheck;
 }
 
 /**

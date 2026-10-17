@@ -12,6 +12,7 @@ import { resolveUserHasGroups } from '@/lib/family-auth-routing';
 import { checkUserSuspendedInGroup, loadUserGroupAccess, resolveSuspendRedirect, suspendedPath } from '@/lib/account-suspend-access';
 import {
   fetchAuthBootstrapWithCache,
+  refreshAuthBootstrapCache,
   bootstrapConfirmsOpenGroup,
   resolveAuthBootstrapSuspendRedirect,
   getCachedAuthBootstrap,
@@ -21,8 +22,11 @@ import { CURRENT_APP_ID } from '@/lib/apps';
 import { systemAdminButtonLabel } from '@/lib/system-admin-brand';
 import { normalizeGroupId } from '@/lib/validation';
 import {
+  clearGrantedDashboardOpen,
   parseOpenGroupParam,
+  readGrantedDashboardOpen,
   readStoredGroupId,
+  sameGroupId,
   writeStoredGroupId,
 } from '@/lib/group-id-resolve';
 import { applyOpenGroupIfValid } from '@/lib/route-guard-group-required';
@@ -420,6 +424,7 @@ export default function FamilyHub() {
   let groupLoading = false;
   let groupList: any[] = [];
   let groupMemberships: any[] = [];
+  let grantedGroupIds: string[] = [];
   let setCurrentGroupId: ((groupId: string | null) => void) | null = null;
   let refreshGroups: (() => Promise<void>) | null = null;
   let refreshMemberships: (() => Promise<void>) | null = null;
@@ -437,6 +442,7 @@ export default function FamilyHub() {
     groupLoading = groupContext.loading;
     groupList = groupContext.groups || [];
     groupMemberships = groupContext.memberships || [];
+    grantedGroupIds = groupContext.grantedGroupIds || [];
     setCurrentGroupId = groupContext.setCurrentGroupId;
     refreshGroups = groupContext.refreshGroups;
     refreshMemberships = groupContext.refreshMemberships;
@@ -458,7 +464,7 @@ export default function FamilyHub() {
   const isHighendTheme = groupUiThemeReady && uiTheme === 'highend_glass';
   const { album, albumRef } = useAlbum();
   const stableAlbum = useMemo(
-    () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))),
+    () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy') || p.data.startsWith('/api/media/file'))),
     [album]
   );
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
@@ -1022,7 +1028,7 @@ export default function FamilyHub() {
       if (isValidState) {
         const d = decrypted as Record<string, unknown>;
         const stableAlbum = (Array.isArray(d.album))
-          ? (d.album as Photo[]).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy')))
+          ? (d.album as Photo[]).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy') || p.data.startsWith('/api/media/file')))
           : [];
         // messages는 Supabase(family_chat_messages)가 소스 — localStorage hydrate가
         // SIGNED_IN/늦은 loadData로 빈 배열을 덮어쓰면 말풍선이 다시 사라진다.
@@ -1113,7 +1119,7 @@ export default function FamilyHub() {
           if (supabaseId && supabasePhotoIdsPrecomputed.has(supabaseId)) {
             return false; // Supabase에 이미 있으면 제외
           }
-          return p.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'));
+          return p.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy') || p.data.startsWith('/api/media/file'));
         });
         const mergedAlbumPrecomputed = [...supabasePhotos, ...localStorageOnlyPhotosPrecomputed];
 
@@ -1163,7 +1169,7 @@ export default function FamilyHub() {
         const stableOnlyPrecomputed = localStoragePhotosZero.filter(
           (p) =>
             p?.data &&
-            (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))
+            (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy') || p.data.startsWith('/api/media/file'))
         );
         setState((prev) => {
           if (groupIdForThisLoad !== dashboardCurrentGroupIdRef.current) return prev;
@@ -1416,16 +1422,28 @@ export default function FamilyHub() {
 
         const openGroup = parseOpenGroupParam() ?? '';
         const hasOpenGroup = Boolean(openGroup);
+        const grantedOpen = readGrantedDashboardOpen();
 
         const savedGroupId = readStoredGroupId();
 
         let isAdmin = false;
         let hasGroups = false;
 
-        const bootstrap =
+        let bootstrap =
           session.access_token
             ? await fetchAuthBootstrapWithCache(session.access_token, currentUserId)
             : null;
+        if (
+          bootstrap &&
+          hasOpenGroup &&
+          session.access_token &&
+          grantedOpen &&
+          sameGroupId(grantedOpen, openGroup) &&
+          !bootstrapConfirmsOpenGroup(bootstrap, openGroup)
+        ) {
+          const fresh = await refreshAuthBootstrapCache(session.access_token, currentUserId);
+          if (fresh) bootstrap = fresh;
+        }
 
         if (bootstrap) {
           if (needsAppEnrollment(bootstrap)) {
@@ -4184,7 +4202,7 @@ export default function FamilyHub() {
       return;
     }
     // 앨범은 AlbumContext에서 관리하므로 저장 시 context 기준으로 반영 (blob/data URL은 저장하지 않음 → Hydration 에러 방지)
-    const stableAlbum = (albumRef.current || []).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy')));
+    const stableAlbum = (albumRef.current || []).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy') || p.data.startsWith('/api/media/file')));
     const stateWithAlbum: AppState = { ...newState, album: stableAlbum };
     try {
       const storageKey = getStorageKey(userId, currentGroupId);
@@ -6954,6 +6972,12 @@ export default function FamilyHub() {
   }
 
   const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
+  const grantedDashboardOpen = readGrantedDashboardOpen();
+  const showLeaveGrantedDashboard =
+    isSystemAdmin &&
+    Boolean(currentGroupId) &&
+    (sameGroupId(grantedDashboardOpen, currentGroupId) ||
+      grantedGroupIds.some((id) => sameGroupId(id, currentGroupId)));
   const showAdminButton = isSystemAdmin || isGroupAdmin;
   const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
 
@@ -7557,6 +7581,27 @@ export default function FamilyHub() {
                 isKidsTheme ? 'translate-y-[11px]' : '',
               ].filter(Boolean).join(' ')}
             >
+              {showLeaveGrantedDashboard ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const leavingGrantedId = readGrantedDashboardOpen();
+                    clearGrantedDashboardOpen();
+                    const ownGroup = groupList.find(
+                      (group) =>
+                        !sameGroupId(group?.id, leavingGrantedId) &&
+                        !grantedGroupIds.some((id) => sameGroupId(id, group?.id)),
+                    );
+                    if (ownGroup?.id) {
+                      setCurrentGroupId?.(String(ownGroup.id));
+                    }
+                    router.push('/admin');
+                  }}
+                  className="relative z-30 inline-flex shrink-0 cursor-pointer items-center rounded-lg border-none bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-700 hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                >
+                  {dt('leave_granted_dashboard')}
+                </button>
+              ) : null}
               <NotificationCenter
                 groupId={currentGroupId}
                 userId={userId}

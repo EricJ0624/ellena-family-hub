@@ -3,6 +3,40 @@ import { normalizeGroupId } from '@/lib/validation';
 export { normalizeGroupId } from '@/lib/validation';
 
 export const CURRENT_GROUP_STORAGE_KEY = 'currentGroupId';
+const LEGACY_PENDING_OPEN_GROUP_KEY = 'pendingOpenGroup';
+const GRANTED_DASHBOARD_OPEN_KEY = 'grantedDashboardOpenGroup';
+
+/** 접근 요청 관리의 대시보드 열기에서만 호출한다. */
+export function markGrantedDashboardOpen(groupId: string | null | undefined): void {
+  if (typeof window === 'undefined') return;
+  const id = normalizeGroupId(groupId);
+  if (!id) return;
+  try {
+    window.sessionStorage.setItem(GRANTED_DASHBOARD_OPEN_KEY, id);
+  } catch {
+    // ignore
+  }
+}
+
+export function readGrantedDashboardOpen(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    window.sessionStorage.removeItem(LEGACY_PENDING_OPEN_GROUP_KEY);
+    return normalizeGroupId(window.sessionStorage.getItem(GRANTED_DASHBOARD_OPEN_KEY));
+  } catch {
+    return null;
+  }
+}
+
+export function clearGrantedDashboardOpen(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(GRANTED_DASHBOARD_OPEN_KEY);
+    window.sessionStorage.removeItem(LEGACY_PENDING_OPEN_GROUP_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 /** localStorage에서 정규화된 현재 그룹 ID */
 export function readStoredGroupId(): string | null {

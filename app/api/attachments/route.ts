@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
-import { requireAuthUser, requireGroupMemberOrSystemAdmin } from '@/lib/api-guards';
+import { requireAttachmentGroupAccess, requireAuthUser } from '@/lib/api-guards';
+import { withMediaFileUrls } from '@/lib/media-access-token';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { deleteS3IfUnreferenced } from '@/lib/storage-object-refs';
 
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '지원하지 않는 entityType 입니다.' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, groupId);
+    const memberCheck = await requireAttachmentGroupAccess(user.id, groupId, entityType);
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true });
 
     if (error) return NextResponse.json({ error: '첨부 조회에 실패했습니다.' }, { status: 500 });
-    return NextResponse.json({ success: true, data: data ?? [] });
+    return NextResponse.json({ success: true, data: (data ?? []).map((row) => withMediaFileUrls(row)) });
   } catch (error) {
     const message = error instanceof Error ? error.message : '첨부 조회 중 오류가 발생했습니다.';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
       .filter((id) => UUID_ANY.test(id));
     if (ids.length === 0) return NextResponse.json({ success: true, data: [] });
 
-    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, String(groupId));
+    const memberCheck = await requireAttachmentGroupAccess(user.id, String(groupId), String(entityType));
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: true });
 
     if (error) return NextResponse.json({ error: '첨부 조회에 실패했습니다.' }, { status: 500 });
-    return NextResponse.json({ success: true, data: data ?? [] });
+    return NextResponse.json({ success: true, data: (data ?? []).map((row) => withMediaFileUrls(row)) });
   } catch (error) {
     const message = error instanceof Error ? error.message : '첨부 일괄 조회 중 오류가 발생했습니다.';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -109,14 +110,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'groupId, attachmentId는 필수입니다.' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, String(groupId));
-    if (memberCheck instanceof NextResponse) return memberCheck;
-    const { role, isOwner, isSystemAdmin: actingSystemAdmin } = memberCheck;
-
     const supabase = getSupabaseServerClient();
     const { data: row, error: fetchError } = await supabase
       .from(DB_TABLES.ATTACHMENTS)
-      .select('id, group_id, uploader_id, s3_key, thumbnail_s3_key')
+      .select('id, group_id, uploader_id, entity_type, s3_key, thumbnail_s3_key')
       .eq('id', String(attachmentId))
       .eq('group_id', String(groupId))
       .is('deleted_at', null)
@@ -125,6 +122,10 @@ export async function DELETE(request: NextRequest) {
     if (fetchError || !row) {
       return NextResponse.json({ error: '첨부를 찾을 수 없습니다.' }, { status: 404 });
     }
+
+    const memberCheck = await requireAttachmentGroupAccess(user.id, String(groupId), String(row.entity_type || ''));
+    if (memberCheck instanceof NextResponse) return memberCheck;
+    const { role, isOwner, isSystemAdmin: actingSystemAdmin } = memberCheck;
 
     const canDelete =
       row.uploader_id === user.id || role === 'ADMIN' || isOwner || actingSystemAdmin;

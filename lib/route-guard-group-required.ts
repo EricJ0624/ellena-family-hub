@@ -15,6 +15,7 @@ import {
 } from '@/lib/group-id-resolve';
 import { AUTH_STORAGE_KEY, clearAuthStorage, supabase } from '@/lib/supabase';
 import { CURRENT_APP_ID } from '@/lib/apps';
+import { hasActiveDashboardGrant } from '@/lib/dashboard-access-grant';
 
 export type GroupRequiredGuardResult =
   | { ok: true }
@@ -67,7 +68,11 @@ export async function applyOpenGroupIfValid(
         .maybeSingle(),
     ]);
 
-    if ((!mRes.error && mRes.data) || (!oRes.error && oRes.data)) {
+    const granted =
+      (!mRes.error && mRes.data) ||
+      (!oRes.error && oRes.data) ||
+      (await hasActiveDashboardGrant(client, userId, openGroup));
+    if (granted) {
       try {
         setCurrentGroupId?.(openGroup);
       } catch {

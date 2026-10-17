@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { markGrantedDashboardOpen } from '@/lib/group-id-resolve';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { fetchAuthBootstrapWithCache, getCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
@@ -705,15 +706,18 @@ export default function AdminPage() {
   }, []);
 
   // 그룹 목록 로드
-  const loadGroups = useCallback(async () => {
+  const loadGroups = useCallback(async (options?: { skipLoadingGate?: boolean }) => {
+    const manageLoading = !options?.skipLoadingGate;
     try {
-      setLoadingData(true);
-      setError(null);
+      if (manageLoading) {
+        setLoadingData(true);
+        setError(null);
+      }
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         setError(at('error_auth'));
-        setLoadingData(false);
+        if (manageLoading) setLoadingData(false);
         return;
       }
 
@@ -735,7 +739,7 @@ export default function AdminPage() {
       if (!isSupabaseLockError(err)) setError(err.message || at('error_groups'));
       setGroups([]);
     } finally {
-      setLoadingData(false);
+      if (manageLoading) setLoadingData(false);
     }
   }, []);
 
@@ -3429,6 +3433,9 @@ export default function AdminPage() {
                       setShowNewAccessRequestModal(true);
                       setNewAccessRequestGroupId('');
                       setNewAccessRequestReason('');
+                      if (groups.length === 0) {
+                        void loadGroups({ skipLoadingGate: true });
+                      }
                     }}
                     className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                   >
@@ -3632,8 +3639,40 @@ export default function AdminPage() {
                           )}
                         </div>
                       )}
-                      {request.status === 'approved' && request.expires_at && new Date(request.expires_at) > new Date() && (
+                      {request.status === 'approved' && request.expires_at && new Date(request.expires_at) > new Date() && !request.revoked_at && (
                         <div className="mt-4 flex gap-2">
+                          {currentAdminUserId &&
+                            (request.requested_by.toLowerCase() === currentAdminUserId.toLowerCase() ||
+                              request.approved_by?.toLowerCase() === currentAdminUserId.toLowerCase()) && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const { data: { session } } = await supabase.auth.getSession();
+                                  if (session?.access_token) {
+                                    await fetch('/api/admin/audit/dashboard-access', {
+                                      method: 'POST',
+                                      headers: {
+                                        'Content-Type': 'application/json',
+                                        Authorization: `Bearer ${session.access_token}`,
+                                      },
+                                      body: JSON.stringify({
+                                        group_id: request.group_id,
+                                        access_request_id: request.id,
+                                      }),
+                                    });
+                                  }
+                                } catch {
+                                  // 기록 실패가 입장 자체를 막지 않는다.
+                                }
+                                markGrantedDashboardOpen(request.group_id);
+                                window.location.assign(`/dashboard?openGroup=${encodeURIComponent(request.group_id)}`);
+                              }}
+                              className="cursor-pointer rounded-md border-none bg-sky-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
+                            >
+                              {at('open_dashboard_btn')}
+                            </button>
+                          )}
                           <button
                             onClick={async () => {
                               if (!confirm(at('confirm_revoke_request'))) {
@@ -3743,6 +3782,7 @@ console.error(at('error_revoke_failed'), error);
                     <option value="user">{at('audit_type_user')}</option>
                     <option value="announcement">{at('audit_type_announcement')}</option>
                     <option value="dashboard_access_request">{at('audit_type_dashboard_access_request')}</option>
+                    <option value="dashboard_access">{at('audit_type_dashboard_access')}</option>
                     <option value="support_ticket">{at('audit_type_support_ticket')}</option>
                     <option value="member_support_ticket">{at('audit_type_member_support_ticket')}</option>
                     <option value="system_admin">{at('audit_type_system_admin')}</option>

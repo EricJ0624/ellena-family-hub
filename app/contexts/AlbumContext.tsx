@@ -9,6 +9,7 @@ import { getStorageKey, getAuthKey, CryptoService } from '@/lib/dashboard-storag
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { clearViewedAlbumPhotoUrls } from '@/lib/album-viewed-photo-urls';
 import { clampLocationOvalFocusY, parseAlbumFocusY } from '@/lib/album-photo-focus';
+import { signGroupAssetUrls } from '@/lib/media-display-client';
 
 export type Photo = {
   id: number | string;
@@ -226,6 +227,16 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
         focus_y: parseAlbumFocusY(p.focus_y),
       }));
 
+    const signedUrls = await signGroupAssetUrls(
+      groupIdForThisLoad,
+      supabasePhotos.map((photo) => photo.data),
+    );
+    if (isStale()) return;
+    const viewedPhotos = supabasePhotos.map((photo) => {
+      const signed = signedUrls.get(photo.data);
+      return signed ? { ...photo, data: signed } : photo;
+    });
+
     const supabaseIds = new Set(supabasePhotos.map((p) => String(p.id)));
     // blob/data URL은 merge하지 않음 → 뒤로가기 후 대시보드 Hydration 에러 방지
     const localOnly = localAlbum.filter((p) => {
@@ -239,8 +250,9 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       );
     });
     const merged = [...supabasePhotos, ...localOnly];
+    const viewed = [...viewedPhotos, ...localOnly];
     if (!isStale()) {
-      setAlbum((prev) => (sameAlbum(prev, merged) ? prev : merged));
+      setAlbum((prev) => (sameAlbum(prev, viewed) ? prev : viewed));
       if (!sameAlbum(localAlbum, merged)) {
         const key =
           sessionStorage.getItem(getAuthKey(userId)) ||

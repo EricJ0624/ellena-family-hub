@@ -20,6 +20,10 @@ export function forgetFamilyLogAttachments(cardId: string) {
   cache.delete(cardId);
 }
 
+export function clearFamilyLogAttachmentCache() {
+  cache.clear();
+}
+
 export async function ensureFamilyLogAttachments(cardId: string, groupId: string): Promise<FamilyLogAttachmentCache> {
   const cached = readFamilyLogAttachments(cardId);
   const patch: FamilyLogAttachmentCache = {};

@@ -6,6 +6,7 @@
  */
 
 import { getSupabaseServerClient } from './api-helpers';
+import { hasActiveDashboardGrant } from './dashboard-access-grant';
 import { systemAdminPrivilegeAllowed } from './system-admin-session';
 import { isValidUUID } from './validation';
 import { formatUnknownError, isAbortLikeError } from './supabase-error';
@@ -126,10 +127,10 @@ export async function checkPermission(
       // 멤버가 아니더라도 소유자인지 확인
       const isOwner = group.owner_id === userId;
       if (!isOwner) {
-        // 시스템 관리자: /admin 콘솔 등에서 그룹 관리 가능.
-        // 대시보드 그룹 목록/라우팅은 GroupContext·bootstrap의 앱·멤버십 필터로 계속 격리된다.
+        // 시스템 관리자의 그룹 데이터 접근은 승인된 대시보드 입장 권한이 있을 때만 연다.
+        // /admin 콘솔 관리는 requireGroupAdmin / requireSystemAdmin 이 따로 처리한다.
         const isAdmin = await isSystemAdmin(userId);
-        if (isAdmin) {
+        if (isAdmin && (await hasActiveDashboardGrant(supabase, userId, groupId))) {
           return {
             success: true,
             role: 'ADMIN',

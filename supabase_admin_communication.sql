@@ -440,14 +440,10 @@ BEGIN
     RETURN TRUE;
   END IF;
   
-  -- 3. 활성화된 접근 요청 확인
-  SELECT EXISTS (
-    SELECT 1 FROM public.dashboard_access_requests
-    WHERE group_id = group_id_param
-    AND status = 'approved'
-    AND expires_at > NOW()
-  ) INTO has_active_access;
-  
+  -- 3. 이 관리자에게 승인된 입장 권한만 인정
+  SELECT public.has_active_dashboard_grant(group_id_param, admin_id_param)
+  INTO has_active_access;
+
   RETURN has_active_access;
 END;
 $$;

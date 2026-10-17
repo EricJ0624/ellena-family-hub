@@ -8,6 +8,7 @@ import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap-server';
 import {
   findGroupById,
   getPinnedGroupId,
+  readGrantedDashboardOpen,
   readStoredGroupId,
   resolvePreferredGroupId,
   sameGroupId,
@@ -26,6 +27,7 @@ import {
   writeStoredUiTheme,
 } from '@/lib/preferences/ui-theme-cache';
 import { CURRENT_APP_ID } from '@/lib/apps';
+import { hasActiveDashboardGrant, listActiveGrantedGroupIds } from '@/lib/dashboard-access-grant';
 
 /** bootstrap(최대 24h) 스톡 ui_theme보다 테마 localStorage를 우선 반영 */
 function withCachedUiTheme<T extends { id: string; ui_theme?: unknown }>(
@@ -57,6 +59,8 @@ interface GroupContextType {
   isOwner: boolean;
   groups: Group[];
   memberships: Membership[];
+  /** 멤버·소유자가 아니고, 승인된 입장 권한으로만 들어온 그룹 */
+  grantedGroupIds: string[];
   loading: boolean;
   error: string | null;
   setCurrentGroupId: (groupId: string | null) => void;
@@ -107,6 +111,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
   const [isOwner, setIsOwner] = useState<boolean>(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [grantedGroupIds, setGrantedGroupIds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const prevUserIdRef = useRef<string | null>(null);
@@ -141,6 +146,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       return;
     }
 
+    const grantedOpenGroup = readGrantedDashboardOpen();
     const bootstrapHint = getCachedAuthBootstrap(userId);
     const bootstrapSeed = bootstrapHint ? seedFromBootstrapCache(userId, bootstrapHint, currentGroupId) : null;
     const silentRefresh = Boolean(bootstrapSeed);
@@ -148,11 +154,20 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     if (bootstrapSeed) {
       setGroups(bootstrapSeed.groups);
       setMemberships(bootstrapSeed.memberships);
-      if (bootstrapSeed.preferredGroupId) {
+      const grantedInCache = grantedOpenGroup
+        ? findGroupById(bootstrapSeed.groups, grantedOpenGroup)
+        : undefined;
+      if (grantedOpenGroup) {
+        if (grantedInCache) {
+          const preferred = normalizeGroupId(grantedInCache.id);
+          setCurrentGroupIdState(preferred);
+          setCurrentGroup(withCachedUiTheme(grantedInCache, userId));
+          writeStoredGroupId(preferred);
+        }
+      } else if (bootstrapSeed.preferredGroupId) {
         const preferred = normalizeGroupId(bootstrapSeed.preferredGroupId);
         setCurrentGroupIdState(preferred);
         const selected = findGroupById(bootstrapSeed.groups, preferred);
-        // bootstrap groupRows는 테마 변경 후에도 오래 남을 수 있음 → 테마 캐시로 patch
         if (selected) setCurrentGroup(withCachedUiTheme(selected, userId));
         writeStoredGroupId(preferred);
       }
@@ -196,7 +211,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       let allGroupIds = recomputeAllGroupIds();
 
-      const pinnedSaved = getPinnedGroupId();
+      const pinnedSaved = grantedOpenGroup ?? getPinnedGroupId();
 
       // bootstrap이 그룹 있음을 알려주면 빈 결과 재시도 대기를 줄인다.
       if (allGroupIds.length === 0) {
@@ -248,14 +263,38 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         }
       }
 
+      const grantGroupIds = await listActiveGrantedGroupIds(supabase, userId);
+      if (grantGroupIds.length > 0) {
+        allGroupIds = [...new Set([...allGroupIds, ...grantGroupIds])];
+      }
+      if (
+        grantedOpenGroup &&
+        !allGroupIds.some((id) => sameGroupId(id, grantedOpenGroup))
+      ) {
+        allGroupIds = [...allGroupIds, grantedOpenGroup];
+      }
+      const membershipIdSet = new Set((membershipData ?? []).map((row) => String(row.group_id).toLowerCase()));
+      const ownedIdSet = new Set((ownedGroupsData ?? []).map((row) => String(row.id).toLowerCase()));
+      const grantOnlyIds = [...new Set([...grantGroupIds, ...(grantedOpenGroup ? [grantedOpenGroup] : [])])].filter((id) => {
+        const key = id.toLowerCase();
+        return !membershipIdSet.has(key) && !ownedIdSet.has(key);
+      });
+      setGrantedGroupIds((prev) => {
+        const prevSig = prev.map((id) => id.toLowerCase()).sort().join(',');
+        const nextSig = grantOnlyIds.map((id) => id.toLowerCase()).sort().join(',');
+        return prevSig === nextSig ? prev : grantOnlyIds;
+      });
+
       if (allGroupIds.length === 0) {
         setGroups([]);
         setMemberships([]);
-        setCurrentGroupIdState(null);
-        setCurrentGroup(null);
-        setUserRole(null);
-        setIsOwner(false);
-        writeStoredGroupId(null);
+        if (!grantedOpenGroup) {
+          setCurrentGroupIdState(null);
+          setCurrentGroup(null);
+          setUserRole(null);
+          setIsOwner(false);
+          writeStoredGroupId(null);
+        }
         setLoading(false);
         return;
       }
@@ -278,19 +317,22 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       setMemberships(allGroupIds.map(groupId => {
         const membership = membershipData?.find(m => sameGroupId(m.group_id, groupId));
         const isOwner = ownedGroupIds.some((id) => sameGroupId(id, groupId));
+        const grantedVisit = grantOnlyIds.some((id) => sameGroupId(id, groupId));
         return {
           user_id: userId,
           group_id: normalizeGroupId(groupId) || groupId,
-          role: isOwner ? 'ADMIN' : (membership?.role as MembershipRole || 'MEMBER'),
+          role: isOwner ? 'ADMIN' : (membership?.role as MembershipRole || (grantedVisit ? 'ADMIN' : 'MEMBER')),
           joined_at: new Date().toISOString(),
           family_role: (membership as { family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null })?.family_role ?? null,
         };
       }));
 
-      const preferredGroupId = resolvePreferredGroupId(groupsData || [], {
-        currentGroupId,
-        pinnedGroupId: pinnedSaved,
-      });
+      const preferredGroupId = grantedOpenGroup
+        ? normalizeGroupId(grantedOpenGroup)
+        : resolvePreferredGroupId(groupsData || [], {
+            currentGroupId,
+            pinnedGroupId: getPinnedGroupId(),
+          });
 
       if (preferredGroupId) {
         setCurrentGroupIdState(preferredGroupId);
@@ -354,6 +396,11 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
           if (membershipData) {
             setUserRole(membershipData.role as MembershipRole);
+          } else if (
+            (await hasActiveDashboardGrant(supabase, userId, currentGroupId)) ||
+            sameGroupId(readGrantedDashboardOpen(), currentGroupId)
+          ) {
+            setUserRole('ADMIN');
           } else {
             setUserRole(null);
           }
@@ -420,9 +467,14 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     prevUserIdRef.current = userId;
 
     if (userId) {
-      const savedGroupId = readStoredGroupId();
-      if (savedGroupId) {
-        setCurrentGroupIdState(savedGroupId);
+      const grantedOpen = readGrantedDashboardOpen();
+      if (grantedOpen) {
+        setCurrentGroupIdState(grantedOpen);
+      } else {
+        const savedGroupId = readStoredGroupId();
+        if (savedGroupId) {
+          setCurrentGroupIdState(savedGroupId);
+        }
       }
       refreshGroups();
     }
@@ -475,6 +527,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     isOwner,
     groups,
     memberships,
+    grantedGroupIds,
     loading,
     error,
     setCurrentGroupId,

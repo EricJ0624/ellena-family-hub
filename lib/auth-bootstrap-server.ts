@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { classifyGroupAccess } from '@/lib/account-suspend-access';
+import { listActiveGrantedGroupIds } from '@/lib/dashboard-access-grant';
 import { isSystemAdmin } from '@/lib/permissions';
 import { normalizeGroupId } from '@/lib/validation';
 import { CURRENT_APP_ID } from '@/lib/apps';
@@ -163,6 +164,46 @@ function buildGroupSummaries(
   return { summaries, membershipRoles, ownedGroupIds };
 }
 
+async function appendGrantedGroups(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  userId: string,
+  summaries: BootstrapGroupSummary[],
+) {
+  const grantIds = await listActiveGrantedGroupIds(supabase, userId);
+  const known = new Set(summaries.map((group) => group.id.toLowerCase()));
+  const missing = grantIds
+    .map((id) => normalizeGroupId(id))
+    .filter((id): id is string => {
+      if (!id) return false;
+      return !known.has(id.toLowerCase());
+    });
+  if (missing.length === 0) return;
+
+  const { data, error } = await supabase
+    .from('groups')
+    .select('id, name, invite_code, display_name_pending')
+    .in('id', missing)
+    .eq('app_id', CURRENT_APP_ID);
+  if (error || !data) {
+    if (error) console.error('auth bootstrap 입장 권한 그룹 조회 오류:', error);
+    return;
+  }
+
+  for (const group of data) {
+    const id = normalizeGroupId(String(group.id));
+    if (!id || known.has(id.toLowerCase())) continue;
+    known.add(id.toLowerCase());
+    summaries.push({
+      id,
+      name: String(group.name ?? ''),
+      invite_code: String(group.invite_code ?? ''),
+      is_owner: false,
+      role: 'ADMIN',
+      display_name_pending: Boolean(group.display_name_pending),
+    });
+  }
+}
+
 /**
  * 로그인·온보딩·대시보드 진입에 필요한 그룹·정지·관리자 판정을 서버에서 한 번에 계산.
  */
@@ -205,6 +246,7 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
     (membershipsRes.data || []) as unknown as MembershipJoinRow[],
     (ownedRes.data || []) as OwnedGroupRow[],
   );
+  await appendGrantedGroups(supabase, userId, summaries);
   const groupIds = summaries.map((g) => g.id);
 
   if (groupIds.length === 0) {
