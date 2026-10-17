@@ -2,7 +2,7 @@ import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 import type { FamilyLogCard, FamilyLogKind } from './types';
 
 export const FAMILY_LOG_CARD_COLUMNS =
-  'id,group_id,title,kind,day_date,latitude,longitude,address,note,mood_tags,show_map,amount,currency,collage_style,created_at,updated_at';
+  'id,group_id,title,kind,day_date,latitude,longitude,address,note,mood_tags,show_map,amount,currency,collage_style,rating,is_revisit,created_at,updated_at';
 
 export const FAMILY_LOG_MOODS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'] as const;
 
@@ -19,6 +19,8 @@ export function normalizeFamilyLogCard(row: Record<string, unknown>): FamilyLogC
     ? row.mood_tags.filter((tag): tag is string => typeof tag === 'string' && MOODS.has(tag))
     : [];
   const style = row.collage_style === 'postal' || row.collage_style === 'film' ? row.collage_style : null;
+  const ratingRaw = Number(row.rating);
+  const rating = Number.isInteger(ratingRaw) && ratingRaw >= 1 && ratingRaw <= 5 ? ratingRaw : null;
   return {
     id: String(row.id),
     group_id: String(row.group_id),
@@ -34,6 +36,8 @@ export function normalizeFamilyLogCard(row: Record<string, unknown>): FamilyLogC
     amount: amountRaw != null && Number.isFinite(amountRaw) && amountRaw > 0 ? amountRaw : null,
     currency: typeof row.currency === 'string' ? row.currency : null,
     collage_style: style,
+    rating,
+    is_revisit: row.is_revisit === true,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
   };
@@ -58,6 +62,12 @@ export function parseFamilyLogCardPatch(body: Record<string, unknown>): {
   }
   const collage =
     body.collage_style === 'postal' || body.collage_style === 'film' ? body.collage_style : null;
+  let rating: number | null = null;
+  if (body.rating != null && body.rating !== '') {
+    const n = Number(body.rating);
+    if (!Number.isInteger(n) || n < 1 || n > 5) return { error: '별점은 1부터 5까지입니다.' };
+    rating = n;
+  }
 
   return {
     patch: {
@@ -68,6 +78,8 @@ export function parseFamilyLogCardPatch(body: Record<string, unknown>): {
       amount,
       currency: amount != null ? currencyRaw : null,
       collage_style: collage,
+      rating,
+      is_revisit: body.is_revisit === true,
       updated_at: new Date().toISOString(),
     },
   };

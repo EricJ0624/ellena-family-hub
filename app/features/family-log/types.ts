@@ -15,6 +15,8 @@ export type FamilyLogCard = {
   amount: number | null;
   currency: string | null;
   collage_style: 'film' | 'postal' | null;
+  rating: number | null;
+  is_revisit: boolean;
   created_at: string;
   updated_at: string;
 };

@@ -96,12 +96,46 @@ function chunkRows(photos: UploadedAttachment[], rowSizes: number[]): UploadedAt
   return rows;
 }
 
+function placePhoto(
+  attachment: UploadedAttachment,
+  className: string,
+  node: ReactNode,
+  onRemovePhoto?: (attachment: UploadedAttachment) => void,
+  removePhotoLabel?: string,
+) {
+  const positioned =
+    onRemovePhoto && !className.includes('absolute') && !className.includes('relative')
+      ? `${className} relative`
+      : className;
+  return (
+    <div key={attachment.id} className={positioned}>
+      {node}
+      {onRemovePhoto ? (
+        <button
+          type="button"
+          aria-label={removePhotoLabel || 'Remove photo'}
+          onClick={(event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            onRemovePhoto(attachment);
+          }}
+          className="absolute right-0.5 top-0.5 z-30 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-black/15 bg-white/95 text-sm font-bold leading-none text-red-700 shadow-sm"
+        >
+          ×
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function DiaryPhotoCollage({
   photos,
   style,
   photosLabel,
   onOpen,
   onSelectPhoto,
+  onRemovePhoto,
+  removePhotoLabel,
   photoFocus,
 }: {
   photos: UploadedAttachment[];
@@ -109,6 +143,8 @@ export function DiaryPhotoCollage({
   photosLabel: string;
   onOpen: () => void;
   onSelectPhoto?: (attachment: UploadedAttachment) => void;
+  onRemovePhoto?: (attachment: UploadedAttachment) => void;
+  removePhotoLabel?: string;
   photoFocus?: PhotoFocusMap;
 }) {
   const count = Math.min(Math.max(photos.length, 0), COLLAGE_SLOT_COUNT);
@@ -173,11 +209,15 @@ export function DiaryPhotoCollage({
   if (isScatteredCount(count)) {
     const slots = (isPostal ? POSTAL_SLOTS : FILM_SLOTS)[count];
     shellLayout = panoramaClass(count);
-    body = shown.map((attachment, index) => (
-      <div key={attachment.id} className={['absolute origin-center', slots[index] ?? ''].join(' ')}>
-        {interactive(attachment, frameFor(attachment))}
-      </div>
-    ));
+    body = shown.map((attachment, index) =>
+      placePhoto(
+        attachment,
+        ['absolute origin-center', slots[index] ?? ''].join(' '),
+        interactive(attachment, frameFor(attachment)),
+        onRemovePhoto,
+        removePhotoLabel,
+      ),
+    );
   } else if (isBalancedCount(count)) {
     const cellWidth = count === 4 ? 'w-[calc((100%-0.5rem)/2)]' : 'w-[calc((100%-1rem)/3)]';
     shellLayout = 'flex flex-col gap-2 py-2';
@@ -189,10 +229,12 @@ export function DiaryPhotoCollage({
           {row.map((attachment) => {
             const tilt = GRID_TILTS[index] ?? '';
             index += 1;
-            return (
-              <div key={attachment.id} className={['relative aspect-[3/2] min-w-0 origin-center', cellWidth, tilt].join(' ')}>
-                {interactive(attachment, frameFor(attachment))}
-              </div>
+            return placePhoto(
+              attachment,
+              ['relative aspect-[3/2] min-w-0 origin-center', cellWidth, tilt].join(' '),
+              interactive(attachment, frameFor(attachment)),
+              onRemovePhoto,
+              removePhotoLabel,
             );
           })}
         </div>
@@ -200,14 +242,15 @@ export function DiaryPhotoCollage({
     });
   } else {
     shellLayout = 'grid grid-cols-3 gap-2 py-2';
-    body = shown.map((attachment, index) => (
-      <div
-        key={attachment.id}
-        className={['aspect-[3/2] min-w-0 origin-center', GRID_TILTS[index] ?? ''].join(' ')}
-      >
-        {interactive(attachment, frameFor(attachment))}
-      </div>
-    ));
+    body = shown.map((attachment, index) =>
+      placePhoto(
+        attachment,
+        ['aspect-[3/2] min-w-0 origin-center', GRID_TILTS[index] ?? ''].join(' '),
+        interactive(attachment, frameFor(attachment)),
+        onRemovePhoto,
+        removePhotoLabel,
+      ),
+    );
   }
 
   const shellClass = [
@@ -216,9 +259,13 @@ export function DiaryPhotoCollage({
     onSelectPhoto ? '' : 'cursor-pointer',
   ].join(' ');
 
-  if (onSelectPhoto) {
+  if (onSelectPhoto || onRemovePhoto) {
     return (
-      <div className={shellClass} style={{ backgroundColor: 'transparent', backgroundImage: 'none' }}>
+      <div
+        className={shellClass}
+        style={{ backgroundColor: 'transparent', backgroundImage: 'none' }}
+        onClick={onRemovePhoto && !onSelectPhoto ? onOpen : undefined}
+      >
         {body}
       </div>
     );

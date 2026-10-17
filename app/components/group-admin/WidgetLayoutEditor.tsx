@@ -72,7 +72,6 @@ const PREVIEW_MODE_BASE_COLS: Record<0 | 1 | 2, number> = {
   2: LANDSCAPE_COLS,  // PC 24열 grid 기준
 };
 import type { GroupAdminTranslations } from '@/lib/translations/groupAdmin';
-import { WIDGET_PREVIEW_MAP } from './WidgetPreviewComponents';
 
 // ─── 위젯별 시각 메타 ────────────────────────────────────────────────────────
 
@@ -98,6 +97,33 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
   travel_quick_record: { icon: Navigation, bg: 'bg-emerald-600', fg: 'text-white' },
   family_log: { icon: BookOpen, bg: 'bg-amber-700', fg: 'text-white' },
 };
+
+/** 대시보드 위젯 탭 미리보기. 둥근 카드는 모서리를 투명 처리해 두었다. */
+const WIDGET_PREVIEW_IMAGE: Record<DashboardWidgetKey, string> = {
+  tasks: '/widget-previews/tasks.png',
+  calendar: '/widget-previews/calendar.png',
+  chat: '/widget-previews/chat.png',
+  location: '/widget-previews/location.png',
+  album: '/widget-previews/album.png',
+  travel: '/widget-previews/travel.png',
+  piggy: '/widget-previews/piggy.png',
+  games: '/widget-previews/games.png',
+  travel_diary: '/widget-previews/travel-diary.png',
+  travel_quick_record: '/widget-previews/travel-quick-record.png',
+  family_log: '/widget-previews/family-log.png',
+};
+
+/** 모서리가 둥근 카드. 칠판·책·나무 액자는 그림 실루엣을 유지한다. */
+const ROUNDED_PREVIEW_KEYS = new Set<DashboardWidgetKey>([
+  'calendar',
+  'chat',
+  'travel',
+  'piggy',
+  'games',
+  'travel_diary',
+  'travel_quick_record',
+  'family_log',
+]);
 
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -231,14 +257,13 @@ function SortableCard({
   const scaleBaseCols = isLandscape ? LANDSCAPE_COLS : PORTRAIT_COLS;
   const meta = WIDGET_CARD_META[cfg.widget_key];
   const Icon = meta.icon;
-  const PreviewContent = WIDGET_PREVIEW_MAP[cfg.widget_key];
+  const previewRounded = ROUNDED_PREVIEW_KEYS.has(cfg.widget_key);
 
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: cfg.widget_key,
     disabled: !editMode || isDragOverlay,
   });
 
-  const isTasks = cfg.widget_key === 'tasks';
   const clipPreview = !isDragOverlay;
   const gridItemStyle = buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH, {
     baseCols: scaleBaseCols,
@@ -332,15 +357,17 @@ function SortableCard({
             clipPreview ? 'min-h-0 overflow-hidden' : 'overflow-visible',
           ].join(' ')}
         >
-          {isTasks ? (
-            <div className="editor-tasks-preview-root min-h-0 min-w-0 w-full flex-1">
-              {PreviewContent()}
-            </div>
-          ) : (
-            <div className="widget-scale-root min-h-0 min-w-0 w-full flex-1">
-              {PreviewContent()}
-            </div>
-          )}
+          <div className="widget-scale-root flex min-h-0 min-w-0 w-full flex-1 items-center justify-center">
+            <img
+              src={WIDGET_PREVIEW_IMAGE[cfg.widget_key]}
+              alt=""
+              draggable={false}
+              className={[
+                'max-h-full max-w-full object-contain',
+                previewRounded ? 'rounded-[1.15rem]' : '',
+              ].join(' ')}
+            />
+          </div>
         </div>
       </div>
 

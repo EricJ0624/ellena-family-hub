@@ -7102,7 +7102,7 @@ export default function FamilyHub() {
           />
         );
       case 'family_log':
-        return <FamilyLogSection currentGroupId={currentGroupId} lang={lang} />;
+        return <FamilyLogSection currentGroupId={currentGroupId} lang={lang} uiTheme={uiTheme} />;
       case 'travel_diary':
         return (
           <TravelDiaryDashboardSection

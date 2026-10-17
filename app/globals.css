@@ -1652,6 +1652,7 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   --neo-face-games: #a3e635;
   --neo-face-travel-diary: #67e8f9;
   --neo-face-travel-quick-record: #86efac;
+  --neo-face-family-log: #fb7185;
 }
 
 .dark[data-ui-theme='default'] {
@@ -2383,6 +2384,11 @@ html[data-ui-theme='default'] body {
 :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .content-section,
 .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_quick_record'] .content-section {
   background-color: var(--neo-face-travel-quick-record) !important;
+  background-image: none !important;
+}
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='family_log'] .content-section,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='family_log'] .content-section {
+  background-color: var(--neo-face-family-log) !important;
   background-image: none !important;
 }
 

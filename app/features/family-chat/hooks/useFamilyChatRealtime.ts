@@ -80,10 +80,17 @@ export function useFamilyChatRealtime({
   const setupMessagesAndAttachmentsSubscription = useCallback(() => {
     if (typeof window === 'undefined') return;
 
-    if (subscriptionsRef.current.messages) {
-      supabase.removeChannel(subscriptionsRef.current.messages);
-      subscriptionsRef.current.messages = null;
-    }
+    const dropChannels = (topicPart: string) => {
+      const channels = typeof supabase.getChannels === 'function' ? supabase.getChannels() : [];
+      for (const ch of channels) {
+        if (typeof ch?.topic === 'string' && ch.topic.includes(topicPart)) {
+          void supabase.removeChannel(ch);
+        }
+      }
+    };
+
+    dropChannels(`${DB_TABLES.FAMILY_MESSAGES}_changes`);
+    subscriptionsRef.current.messages = null;
 
     const channelName = `${DB_TABLES.FAMILY_MESSAGES}_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`;
     familyChatDebug('메시지 subscription 설정', channelName);
@@ -278,11 +285,15 @@ export function useFamilyChatRealtime({
         }
         if (status === 'SUBSCRIBED') {
           familyChatDebug('Realtime 메시지 subscription 연결됨');
-          const activeChannels = supabase.getChannels();
-          const messageChannels = activeChannels.filter((ch: any) => ch.topic.includes(DB_TABLES.FAMILY_MESSAGES));
-          familyChatDebug('활성 채널 수', activeChannels.length, `${DB_TABLES.FAMILY_MESSAGES} 채널 수`, messageChannels.length);
-          if (messageChannels.length > 1) {
-            console.error('[FamilyChat] 메시지 Realtime 채널 중복:', messageChannels.map((ch: any) => ch.topic));
+          const extras = (typeof supabase.getChannels === 'function' ? supabase.getChannels() : []).filter(
+            (ch: { topic?: string }) =>
+              ch !== messagesSubscription &&
+              typeof ch?.topic === 'string' &&
+              ch.topic.includes(`${DB_TABLES.FAMILY_MESSAGES}_changes`),
+          );
+          if (extras.length > 0) {
+            familyChatDebug('이전 메시지 채널 정리', extras.length);
+            for (const ch of extras) void supabase.removeChannel(ch);
           }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           console.warn('[FamilyChat] Realtime 메시지 subscription 비정상:', status);
@@ -292,10 +303,8 @@ export function useFamilyChatRealtime({
     subscriptionsRef.current.messages = messagesSubscription;
 
     familyChatDebug('첨부 파일 subscription 설정');
-    if (subscriptionsRef.current.attachments) {
-      supabase.removeChannel(subscriptionsRef.current.attachments);
-      subscriptionsRef.current.attachments = null;
-    }
+    dropChannels(`${DB_TABLES.ATTACHMENTS}_changes`);
+    subscriptionsRef.current.attachments = null;
     const attachmentFilter = currentGroupId ? { filter: `group_id=eq.${currentGroupId}` } : {};
     const attachmentsSubscription = supabase
       .channel(`${DB_TABLES.ATTACHMENTS}_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)

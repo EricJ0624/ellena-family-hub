@@ -2,10 +2,17 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { LangCode } from '@/lib/language-fonts';
+import type { UiTheme } from '@/lib/ui-theme';
 import { useHorizontalPageSwipe } from '@/lib/hooks/useHorizontalPageSwipe';
 import { listAttachments } from '@/lib/feature-attachments-client';
+import {
+  forgetFamilyLogAttachments,
+  readFamilyLogAttachments,
+  writeFamilyLogAttachments,
+} from '../attachment-cache';
 import { familyLogAuthHeaders } from '../client-auth';
 import { FamilyLogCardEditor } from './FamilyLogCardEditor';
+import { FamilyLogCardView } from './FamilyLogCardView';
 import {
   familyLogCheckinFallback,
   familyLogRouteTitle,
@@ -22,6 +29,7 @@ type RoutePoint = { latitude: number; longitude: number; recorded_at: string };
 type Props = {
   currentGroupId: string | null;
   lang: LangCode;
+  uiTheme?: UiTheme;
 };
 
 function localDay(d = new Date()): string {
@@ -32,6 +40,41 @@ function localDay(d = new Date()): string {
 
 function localHm(d = new Date()): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function trackRoute(points: { current: RoutePoint[] }): number {
+  return navigator.geolocation.watchPosition(
+    (next) => {
+      points.current.push({
+        latitude: next.coords.latitude,
+        longitude: next.coords.longitude,
+        recorded_at: new Date().toISOString(),
+      });
+    },
+    () => undefined,
+    { enableHighAccuracy: true, maximumAge: 5000 },
+  );
+}
+
+function cardSignature(list: FamilyLogCard[]): string {
+  return list
+    .map((card) =>
+      [
+        card.id,
+        card.updated_at,
+        card.day_date,
+        card.title,
+        card.note ?? '',
+        card.mood_tags.join(''),
+        card.amount ?? '',
+        card.currency ?? '',
+        card.show_map ? '1' : '0',
+        card.collage_style ?? '',
+        card.rating ?? '',
+        card.is_revisit ? '1' : '0',
+      ].join('\u001f'),
+    )
+    .join('\u001e');
 }
 
 function getPosition(): Promise<GeolocationPosition> {
@@ -55,8 +98,16 @@ function matchesGrain(card: FamilyLogCard, grain: FamilyLogGrain, cursor: string
   return card.day_date.slice(0, 4) === cursor;
 }
 
-export function FamilyLogSection({ currentGroupId, lang }: Props) {
+function byCreatedAt(a: FamilyLogCard, b: FamilyLogCard, direction: 'asc' | 'desc'): number {
+  const cmp = a.created_at.localeCompare(b.created_at);
+  if (cmp !== 0) return direction === 'asc' ? cmp : -cmp;
+  return a.id.localeCompare(b.id);
+}
+
+export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
   const labels = getFamilyLogLabels(lang);
+  const illustrated = uiTheme !== 'default' && uiTheme !== 'highend_glass';
+  const isNeo = uiTheme === 'default';
   const [cards, setCards] = useState<FamilyLogCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -66,9 +117,8 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
   const [page, setPage] = useState(0);
   const [rows, setRows] = useState(2);
   const [recording, setRecording] = useState(false);
-  const [editing, setEditing] = useState<FamilyLogCard | null>(null);
-  const [covers, setCovers] = useState<Record<string, string>>({});
-  const [coverEpoch, setCoverEpoch] = useState(0);
+  const [viewing, setViewing] = useState<FamilyLogCard | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const areaRef = useRef<HTMLDivElement | null>(null);
   const watchRef = useRef<number | null>(null);
@@ -86,11 +136,7 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'load');
       const next = Array.isArray(json.data) ? (json.data as FamilyLogCard[]) : [];
-      setCards((prev) => {
-        const prevSig = prev.map((c) => `${c.id}:${c.title}:${c.updated_at}`).join('|');
-        const nextSig = next.map((c) => `${c.id}:${c.title}:${c.updated_at}`).join('|');
-        return prevSig === nextSig ? prev : next;
-      });
+      setCards((prev) => (cardSignature(prev) === cardSignature(next) ? prev : next));
     } catch {
       setError(labels.loadFailed);
     } finally {
@@ -130,10 +176,11 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
     return () => ro.disconnect();
   }, [currentGroupId]);
 
-  const visible = useMemo(
-    () => cards.filter((card) => matchesGrain(card, grain, cursor)),
-    [cards, grain, cursor],
-  );
+  const visible = useMemo(() => {
+    const filtered = cards.filter((card) => matchesGrain(card, grain, cursor));
+    const direction = grain === 'recent' ? 'desc' : 'asc';
+    return filtered.slice().sort((a, b) => byCreatedAt(a, b, direction));
+  }, [cards, grain, cursor]);
   const perPage = Math.max(1, rows) * 2;
   const pageCount = Math.max(1, Math.ceil(visible.length / perPage));
   const safePage = Math.min(page, pageCount - 1);
@@ -153,11 +200,31 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
   );
 
   const swipe = useHorizontalPageSwipe({
-    enabled: !editing && visible.length > perPage,
+    enabled: !viewing && visible.length > perPage,
     canPrev,
     canNext,
     onPage: goPage,
   });
+
+  const viewIndex = viewing ? visible.findIndex((card) => card.id === viewing.id) : -1;
+  const dropCard = useCallback((removedId: string) => {
+    forgetFamilyLogAttachments(removedId);
+    setCards((prev) => prev.filter((card) => card.id !== removedId));
+    setViewing(null);
+    setEditorOpen(false);
+  }, []);
+  const showNeighbor = useCallback(
+    (dir: 'next' | 'prev') => {
+      if (!viewing || editorOpen) return;
+      const index = visible.findIndex((card) => card.id === viewing.id);
+      const nextIndex = dir === 'next' ? index + 1 : index - 1;
+      const next = visible[nextIndex];
+      if (!next) return;
+      setViewing(next);
+      setPage(Math.floor(nextIndex / perPage));
+    },
+    [editorOpen, perPage, viewing, visible],
+  );
 
   const createCard = useCallback(
     async (body: Record<string, unknown>) => {
@@ -178,7 +245,8 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
         setCards((prev) => [created, ...prev.filter((card) => card.id !== created.id)]);
         setGrain('recent');
         setPage(0);
-        setEditing(created);
+        setViewing(created);
+        setEditorOpen(true);
         return true;
       } catch {
         setError(labels.saveFailed);
@@ -213,10 +281,6 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
   };
 
   const stopRoute = async () => {
-    if (watchRef.current != null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchRef.current);
-      watchRef.current = null;
-    }
     const points = pointsRef.current.slice();
     const startHm = startHmRef.current || localHm();
     const endHm = localHm();
@@ -231,9 +295,10 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
       route_points: points,
       title: familyLogRouteTitle(lang, startHm, endHm),
     });
-    if (!saved) {
-      setRecording(true);
-      return;
+    if (!saved) return;
+    if (watchRef.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchRef.current);
+      watchRef.current = null;
     }
     pointsRef.current = [];
     setRecording(false);
@@ -256,17 +321,7 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
       pointsRef.current = [point];
       startHmRef.current = localHm();
       startDayRef.current = localDay();
-      watchRef.current = navigator.geolocation.watchPosition(
-        (next) => {
-          pointsRef.current.push({
-            latitude: next.coords.latitude,
-            longitude: next.coords.longitude,
-            recorded_at: new Date().toISOString(),
-          });
-        },
-        () => undefined,
-        { enableHighAccuracy: true, maximumAge: 5000 },
-      );
+      watchRef.current = trackRoute(pointsRef);
       setRecording(true);
     } catch {
       setError(labels.locationFailed);
@@ -284,30 +339,33 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
 
   const pageIds = pageCards.map((card) => card.id).join('|');
   useEffect(() => {
-    if (!currentGroupId || pageCards.length === 0) return;
+    if (!currentGroupId || !pageIds) return;
+    const ids = pageIds.split('|');
+    const missing = ids.filter((id) => readFamilyLogAttachments(id)?.photos === undefined);
+    if (missing.length === 0) return;
     let cancelled = false;
     void listAttachments({
       groupId: currentGroupId,
       entityType: 'family_log_card',
-      entityIds: pageCards.map((card) => card.id),
+      entityIds: missing,
     })
       .then((rows) => {
         if (cancelled) return;
-        const next: Record<string, string> = {};
+        const grouped = new Map<string, typeof rows>();
+        for (const id of missing) grouped.set(id, []);
         for (const row of rows) {
-          if (!next[row.entity_id]) next[row.entity_id] = row.thumbnail_url || row.image_url;
+          const list = grouped.get(row.entity_id);
+          if (list) list.push(row);
         }
-        setCovers((prev) => {
-          const prevSig = Object.entries(prev).sort().join('|');
-          const nextSig = Object.entries(next).sort().join('|');
-          return prevSig === nextSig ? prev : next;
-        });
+        for (const [id, photos] of grouped) {
+          if (readFamilyLogAttachments(id)?.photos === undefined) writeFamilyLogAttachments(id, { photos });
+        }
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [currentGroupId, pageIds, coverEpoch]);
+  }, [currentGroupId, pageIds]);
 
   const grainButton = (key: FamilyLogGrain, text: string) => (
     <button
@@ -319,29 +377,75 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
         if (key === 'month') setCursor(localDay().slice(0, 7));
         if (key === 'year') setCursor(localDay().slice(0, 4));
       }}
-      className={`cursor-pointer rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-        grain === key
-          ? 'border-[#c4a574] bg-[#fff8ea] text-[#6b4e2e]'
-          : 'border-transparent bg-white/50 text-[#8a7355]'
+      className={`cursor-pointer border px-2 py-0.5 text-[11px] font-semibold ${
+        illustrated
+          ? grain === key
+            ? 'rounded-full border-[#c4a574] bg-[#fff8ea] text-[#6b4e2e]'
+            : 'rounded-full border-transparent bg-white/50 text-[#8a7355]'
+          : isNeo
+            ? grain === key
+              ? 'rounded-sm border-2 border-[var(--neo-ink)] bg-[var(--neo-ink)] text-[var(--neo-paper)]'
+              : 'rounded-sm border-2 border-[var(--neo-ink)] bg-white text-[var(--neo-ink)]'
+            : grain === key
+              ? 'rounded-full border-white/50 bg-white/20 text-white'
+              : 'rounded-full border-white/25 bg-transparent text-white/75'
       }`}
     >
       {text}
     </button>
   );
 
+  const pickerClass = (width: string) =>
+    illustrated
+      ? `${width} rounded-md border border-[#e4d3b0] bg-white/80 px-1 py-0.5 text-[11px] text-[#6b4e2e]`
+      : isNeo
+        ? `${width} rounded-sm border-2 border-[var(--neo-ink)] bg-white px-1 py-0.5 text-[11px] text-[var(--neo-ink)]`
+        : `${width} rounded-md border border-white/30 bg-white/10 px-1 py-0.5 text-[11px] text-white`;
+  const statusClass = illustrated
+    ? 'm-0 text-center text-sm text-[#8a7355]'
+    : isNeo
+      ? 'm-0 text-center text-sm font-bold text-[var(--neo-ink)]'
+      : 'm-0 text-center text-sm text-white/80';
+  const actionClass = illustrated
+    ? ''
+    : isNeo
+      ? 'min-w-0 flex-1 cursor-pointer rounded-sm border-2 border-[var(--neo-ink)] bg-white px-1.5 py-2 text-[11px] font-bold leading-tight text-[var(--neo-ink)] shadow-[2px_2px_0_0_var(--neo-ink)] disabled:cursor-not-allowed disabled:opacity-40'
+      : 'min-w-0 flex-1 cursor-pointer rounded-full border border-white/35 bg-white/10 px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:opacity-40';
+  const checkinClass = illustrated
+    ? 'min-w-0 flex-1 cursor-pointer rounded-full border-0 bg-[#7d9a6a] px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:bg-slate-300'
+    : actionClass;
+  const routeClass = illustrated
+    ? 'min-w-0 flex-1 cursor-pointer rounded-full border-0 bg-[#d08a4c] px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:bg-slate-300'
+    : actionClass;
+  const dailyClass = illustrated
+    ? 'min-w-0 flex-1 cursor-pointer rounded-full border-0 bg-[#c4a574] px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:bg-slate-300'
+    : actionClass;
+
   return (
-    <section className="family-log-widget flex h-full min-h-0 flex-col overflow-hidden bg-[#fbf6ec]">
-      <div className="shrink-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={BG_SRC}
-          alt={labels.widgetTitle}
-          draggable={false}
-          className="block h-auto w-full"
-        />
-      </div>
+    <section
+      className={
+        illustrated
+          ? 'family-log-widget flex h-full min-h-0 flex-col overflow-hidden bg-[#fbf6ec]'
+          : 'content-section family-log-widget'
+      }
+    >
+      {illustrated ? (
+        <div className="shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={BG_SRC}
+            alt={labels.widgetTitle}
+            draggable={false}
+            className="block h-auto w-full"
+          />
+        </div>
+      ) : (
+        <div className="section-header shrink-0">
+          <h3 className="section-title m-0">{labels.widgetTitle}</h3>
+        </div>
+      )}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between gap-2 px-3 pt-1">
+        <div className={`flex shrink-0 items-center justify-between gap-2 pt-1 ${illustrated ? 'px-3' : ''}`}>
           <div className="flex min-w-0 gap-1">
             {grainButton('recent', labels.recent)}
             {grainButton('day', labels.day)}
@@ -356,7 +460,7 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
                 setCursor(e.target.value);
                 setPage(0);
               }}
-              className="w-[9.2rem] rounded-md border border-[#e4d3b0] bg-white/80 px-1 py-0.5 text-[11px] text-[#6b4e2e]"
+              className={pickerClass('w-[9.2rem]')}
             />
           ) : null}
           {grain === 'month' ? (
@@ -367,7 +471,7 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
                 setCursor(e.target.value);
                 setPage(0);
               }}
-              className="w-[8.2rem] rounded-md border border-[#e4d3b0] bg-white/80 px-1 py-0.5 text-[11px] text-[#6b4e2e]"
+              className={pickerClass('w-[8.2rem]')}
             />
           ) : null}
           {grain === 'year' ? (
@@ -381,36 +485,91 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
                 setCursor(e.target.value.slice(0, 4));
                 setPage(0);
               }}
-              className="w-[5.2rem] rounded-md border border-[#e4d3b0] bg-white/80 px-1 py-0.5 text-[11px] text-[#6b4e2e]"
+              className={pickerClass('w-[5.2rem]')}
             />
           ) : null}
         </div>
 
-        <div ref={areaRef} className="relative min-h-0 flex-1 px-3 pt-2">
+        <div ref={areaRef} className={`relative min-h-0 flex-1 pt-2 ${illustrated ? 'px-3' : ''}`}>
           {!currentGroupId ? (
-            <p className="m-0 text-center text-sm text-[#8a7355]">{labels.selectGroup}</p>
+            <p className={statusClass}>{labels.selectGroup}</p>
           ) : loading && cards.length === 0 ? (
-            <p className="m-0 text-center text-sm text-[#8a7355]">{labels.loading}</p>
+            <p className={statusClass}>{labels.loading}</p>
           ) : pageCards.length === 0 ? (
-            <p className="m-0 text-center text-sm text-[#8a7355]">{labels.empty}</p>
+            <p className={statusClass}>{labels.empty}</p>
           ) : (
             <div className="grid h-full auto-rows-[88px] grid-cols-2 content-start gap-2" {...swipe}>
               {pageCards.map((card) => (
                 <button
                   key={card.id}
                   type="button"
-                  onClick={() => setEditing(card)}
-                  className="flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-2xl border-2 border-[#ead7b2] bg-[#fffaf0]/95 text-left shadow-sm"
+                  onClick={() => {
+                    setViewing(card);
+                    setEditorOpen(false);
+                  }}
+                  className={
+                    illustrated
+                      ? 'flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-2xl border-2 border-[#ead7b2] bg-[#fffaf0]/95 text-left shadow-sm'
+                      : isNeo
+                        ? 'flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-sm border-2 border-[var(--neo-ink)] bg-white text-left shadow-[3px_3px_0_0_var(--neo-ink)]'
+                        : 'glass-panel-soft flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-lg text-left text-foreground'
+                  }
                 >
-                  {covers[card.id] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={covers[card.id]} alt="" className="h-8 w-full object-cover" />
-                  ) : null}
-                  <span className="shrink-0 px-2 pt-1 text-[10px] font-medium text-[#a48458]">
-                    {card.day_date}
-                  </span>
-                  <span className="mt-0.5 line-clamp-2 px-2 pb-1 text-[13px] font-bold leading-snug text-[#5c4630]">
-                    {card.title}
+                  <span className="flex min-h-0 flex-1 flex-col justify-center gap-0.5 px-2 py-1">
+                    <span
+                      className={
+                        illustrated
+                          ? 'truncate text-[9px] font-medium leading-none text-[#a48458]'
+                          : isNeo
+                            ? 'truncate text-[9px] font-bold leading-none text-[var(--neo-ink)]/70'
+                            : 'truncate text-[9px] font-medium leading-none text-white/70'
+                      }
+                    >
+                      {card.day_date}
+                    </span>
+                    <span
+                      className={
+                        illustrated
+                          ? 'line-clamp-2 text-[12px] font-bold leading-tight text-[#5c4630]'
+                          : isNeo
+                            ? 'line-clamp-2 text-[12px] font-bold leading-tight text-[var(--neo-ink)]'
+                            : 'line-clamp-2 text-[12px] font-bold leading-tight text-white'
+                      }
+                    >
+                      {card.title}
+                    </span>
+                    {card.note ? (
+                      <span
+                        className={
+                          illustrated
+                            ? 'line-clamp-1 text-[10px] leading-tight text-[#8a7355]'
+                            : isNeo
+                              ? 'line-clamp-1 text-[10px] leading-tight text-[var(--neo-ink)]/80'
+                              : 'line-clamp-1 text-[10px] leading-tight text-white/75'
+                        }
+                      >
+                        {card.note}
+                      </span>
+                    ) : null}
+                    {card.mood_tags.length > 0 || (card.amount != null && card.amount > 0) ? (
+                      <span className="flex items-center gap-1 truncate text-[10px] leading-none">
+                        {card.mood_tags.length > 0 ? <span>{card.mood_tags.slice(0, 3).join('')}</span> : null}
+                        {card.amount != null && card.amount > 0 ? (
+                          <span
+                            className={
+                              illustrated
+                                ? 'font-semibold text-[#8a7355]'
+                                : isNeo
+                                  ? 'font-bold text-[var(--neo-ink)]'
+                                  : 'font-semibold text-white/80'
+                            }
+                          >
+                            {card.amount}
+                            {card.currency ? ` ${card.currency}` : ''}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : null}
                   </span>
                 </button>
               ))}
@@ -420,7 +579,15 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
         </div>
 
         {recording ? (
-          <p className="m-0 shrink-0 px-3 text-center text-[11px] font-semibold text-[#9a6230]">
+          <p
+            className={
+              illustrated
+                ? 'm-0 shrink-0 px-3 text-center text-[11px] font-semibold text-[#9a6230]'
+                : isNeo
+                  ? 'm-0 shrink-0 text-center text-[11px] font-bold text-[var(--neo-ink)]'
+                  : 'm-0 shrink-0 text-center text-[11px] font-semibold text-white'
+            }
+          >
             {labels.recording}
           </p>
         ) : null}
@@ -428,17 +595,25 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
           <p className="m-0 shrink-0 px-3 text-center text-[11px] text-red-700">{error}</p>
         ) : null}
         {pageCount > 1 ? (
-          <p className="m-0 shrink-0 text-center text-[10px] text-[#a48458]">
+          <p
+            className={
+              illustrated
+                ? 'm-0 shrink-0 text-center text-[10px] text-[#a48458]'
+                : isNeo
+                  ? 'm-0 shrink-0 text-center text-[10px] font-bold text-[var(--neo-ink)]'
+                  : 'm-0 shrink-0 text-center text-[10px] text-white/70'
+            }
+          >
             {safePage + 1} / {pageCount}
           </p>
         ) : null}
 
-        <div className="flex shrink-0 gap-1.5 px-3 pb-3 pt-1">
+        <div className={`flex shrink-0 gap-1.5 pt-1 ${illustrated ? 'px-3 pb-3' : ''}`}>
           <button
             type="button"
             onClick={() => void handleCheckIn()}
             disabled={!currentGroupId || busy || recording}
-            className="min-w-0 flex-1 cursor-pointer rounded-full border-0 bg-[#7d9a6a] px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            className={checkinClass}
           >
             {labels.checkin}
           </button>
@@ -446,7 +621,7 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
             type="button"
             onClick={() => void handleRoute()}
             disabled={!currentGroupId || busy}
-            className="min-w-0 flex-1 cursor-pointer rounded-full border-0 bg-[#d08a4c] px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            className={routeClass}
           >
             {recording ? labels.routeStop : labels.route}
           </button>
@@ -454,27 +629,44 @@ export function FamilyLogSection({ currentGroupId, lang }: Props) {
             type="button"
             onClick={() => void handleAddDaily()}
             disabled={!currentGroupId || busy || recording}
-            className="min-w-0 flex-1 cursor-pointer rounded-full border-0 bg-[#c4a574] px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            className={dailyClass}
           >
             {labels.addDaily}
           </button>
         </div>
       </div>
-      {editing && currentGroupId ? (
+      {viewing && !editorOpen && currentGroupId ? (
+        <FamilyLogCardView
+          key={viewing.id}
+          card={viewing}
+          groupId={currentGroupId}
+          labels={labels}
+          uiTheme={uiTheme}
+          onClose={() => setViewing(null)}
+          onEdit={() => setEditorOpen(true)}
+          canPrev={viewIndex > 0}
+          canNext={viewIndex >= 0 && viewIndex < visible.length - 1}
+          onNeighbor={showNeighbor}
+          onDeleted={() => dropCard(viewing.id)}
+        />
+      ) : null}
+      {viewing && editorOpen && currentGroupId ? (
         <FamilyLogCardEditor
-          card={editing}
+          key={viewing.id}
+          card={viewing}
           groupId={currentGroupId}
           lang={lang}
           labels={labels}
+          uiTheme={uiTheme}
           onClose={() => {
-            setEditing(null);
-            setCoverEpoch((n) => n + 1);
+            setEditorOpen(false);
           }}
           onSaved={(updated) => {
             setCards((prev) => prev.map((card) => (card.id === updated.id ? updated : card)));
-            setEditing(null);
-            setCoverEpoch((n) => n + 1);
+            setViewing(updated);
+            setEditorOpen(false);
           }}
+          onDeleted={() => dropCard(viewing.id)}
         />
       ) : null}
     </section>
