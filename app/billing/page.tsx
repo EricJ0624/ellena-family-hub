@@ -1,10 +1,12 @@
 'use client';
 
 import { FormEvent, Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { CURRENT_APP_ID, isAppId } from '@/lib/apps';
+import type { LangCode } from '@/lib/language-fonts';
 import { billingApiMessage, formatBillingTranslation, getBillingTranslation } from '@/lib/translations/billing';
 import { billingAppUserId, buildBillingProductId, type BillingQuotaTier } from '@/lib/billing-catalog';
 import { openBillingPurchase } from '@/lib/billing-purchase-client';
@@ -45,6 +47,133 @@ function isStorageIntent(intent: string | null): boolean {
   return intent === '20gb' || intent === '10gb' || intent === 'storage';
 }
 
+const ADMIN_TEST_SEAT_MAX = 8;
+
+type AdminTestBlock = 'beta_floor' | 'beta_account' | 'card' | null;
+
+type AdminTestRow = {
+  key: string;
+  seatCount: number;
+  quotaTier: BillingQuotaTier;
+  kind: 'official' | 'beta' | 'card';
+  blocked: AdminTestBlock;
+};
+
+function planPriceCents(seatCount: number, quotaTier: BillingQuotaTier): number {
+  return 100 + Math.max(0, seatCount - 2) * 100 + (quotaTier === '20gb' ? 100 : 0);
+}
+
+function buildAdminTestRows(): AdminTestRow[] {
+  const rows: AdminTestRow[] = [];
+  const tiers: BillingQuotaTier[] = ['5gb', '20gb'];
+  for (const quotaTier of tiers) {
+    for (let seatCount = 2; seatCount <= ADMIN_TEST_SEAT_MAX; seatCount += 1) {
+      rows.push({
+        key: `official-${seatCount}-${quotaTier}`,
+        seatCount,
+        quotaTier,
+        kind: 'official',
+        blocked: null,
+      });
+    }
+  }
+  rows.push(
+    {
+      key: 'beta-floor',
+      seatCount: 2,
+      quotaTier: '5gb',
+      kind: 'beta',
+      blocked: 'beta_floor',
+    },
+    {
+      key: 'beta-account',
+      seatCount: 0,
+      quotaTier: '5gb',
+      kind: 'beta',
+      blocked: 'beta_account',
+    },
+  );
+  rows.push({
+    key: 'card',
+    seatCount: 0,
+    quotaTier: '5gb',
+    kind: 'card',
+    blocked: 'card',
+  });
+  return rows;
+}
+
+const ADMIN_TEST_ROWS = buildAdminTestRows();
+
+function adminTestBlockedMessage(
+  blocked: AdminTestBlock,
+  bt: (key: Parameters<typeof getBillingTranslation>[1]) => string,
+): string {
+  if (blocked === 'beta_floor') return bt('test_blocked_beta_floor');
+  if (blocked === 'beta_account') return bt('test_blocked_beta_account');
+  if (blocked === 'card') return bt('test_blocked_card');
+  return bt('test_pick_required');
+}
+
+function AdminTestCatalog({
+  lang,
+  testKey,
+  onSelect,
+}: {
+  lang: LangCode;
+  testKey: string;
+  onSelect: (key: string) => void;
+}) {
+  const bt = (key: Parameters<typeof getBillingTranslation>[1]) => getBillingTranslation(lang, key);
+  const sections: Array<{ kind: AdminTestRow['kind']; title: string }> = [
+    { kind: 'official', title: bt('test_section_official') },
+    { kind: 'beta', title: bt('test_section_beta') },
+    { kind: 'card', title: bt('test_section_card') },
+  ];
+  return (
+    <div className="flex flex-col gap-4 text-sm text-slate-900">
+      <p className="font-medium">{bt('admin_test_product')}</p>
+      {sections.map((section) => (
+        <fieldset key={section.kind} className="flex flex-col gap-2">
+          <legend className="font-medium">{section.title}</legend>
+          {ADMIN_TEST_ROWS.filter((row) => row.kind === section.kind).map((row) => {
+            if (row.blocked) {
+              const reason = adminTestBlockedMessage(row.blocked, bt);
+              return (
+                <div key={row.key} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  {row.kind === 'beta' ? (
+                    <p className="text-red-700">{reason}</p>
+                  ) : (
+                    <>
+                      <p className="font-medium text-slate-900">{bt('test_card_row')}</p>
+                      <p className="mt-1 text-red-700">{reason}</p>
+                    </>
+                  )}
+                </div>
+              );
+            }
+            const people = formatBillingTranslation(lang, 'test_people', { count: row.seatCount });
+            const quota = row.quotaTier === '20gb' ? '20GB' : '5GB';
+            const price = formatUsd(planPriceCents(row.seatCount, row.quotaTier));
+            const label = formatBillingTranslation(lang, 'test_official_row', { people, quota, price });
+            return (
+              <label key={row.key} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="admin-test-product"
+                  checked={testKey === row.key}
+                  onChange={() => onSelect(row.key)}
+                />
+                {label}
+              </label>
+            );
+          })}
+        </fieldset>
+      ))}
+    </div>
+  );
+}
+
 function resolvePurchaseChoice(
   choice: PurchaseChoice,
   minimumFloor: boolean,
@@ -74,6 +203,7 @@ function BillingCheckout() {
   const [choice, setChoice] = useState<PurchaseChoice>(
     intent === 'seats' ? 'seats' : isStorageIntent(intent) ? '20gb' : '5gb',
   );
+  const [testKey, setTestKey] = useState('official-2-5gb');
   const [code, setCode] = useState('');
   const [shownCode, setShownCode] = useState('');
   const [notice, setNotice] = useState<PromoNotice | null>(null);
@@ -187,6 +317,12 @@ function BillingCheckout() {
         }
       }
 
+      const adminRow = isAdminTest ? ADMIN_TEST_ROWS.find((item) => item.key === testKey) : null;
+      if (isAdminTest && (!adminRow || adminRow.blocked)) {
+        setError(adminRow ? adminTestBlockedMessage(adminRow.blocked, bt) : bt('test_pick_required'));
+        return;
+      }
+
       const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_TEST_STORE_API_KEY?.trim() ?? '';
       if (!apiKey) {
         setMessage(bt('sdk_key_missing'));
@@ -213,8 +349,8 @@ function BillingCheckout() {
           : quotaTier;
       const productId = buildBillingProductId({
         appId: isAppId(groupState.appId) ? groupState.appId : CURRENT_APP_ID,
-        seatCount: isAdminTest ? 2 : seatCount,
-        quotaTier: isAdminTest ? '5gb' : quotaTier,
+        seatCount: adminRow ? adminRow.seatCount : seatCount,
+        quotaTier: adminRow ? adminRow.quotaTier : quotaTier,
         betaPrice: isAdminTest ? false : betaPrice,
       });
 
@@ -223,7 +359,7 @@ function BillingCheckout() {
         appUserId: billingAppUserId(CURRENT_APP_ID, user.id),
         groupId,
         productId,
-        quotaAction: isAdminTest ? '5gb' : quotaAction,
+        quotaAction: adminRow ? adminRow.quotaTier : quotaAction,
         customerEmail: user.email,
       });
       if (result === 'cancelled') {
@@ -248,10 +384,20 @@ function BillingCheckout() {
   const testStore = groupState?.virtualPayment !== false;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col gap-4 px-4 py-8 text-slate-900">
-      <h1 className="text-2xl font-bold">
-        {isAdminTest ? bt('title_test') : betaPeriodEnabled ? bt('title_virtual') : bt('title_paid')}
-      </h1>
+    <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col gap-4 bg-white px-4 py-8 text-slate-900">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-slate-900">
+          {isAdminTest ? bt('title_test') : betaPeriodEnabled ? bt('title_virtual') : bt('title_paid')}
+        </h1>
+        {isAdminTest ? (
+          <Link
+            href="/admin"
+            className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+          >
+            {bt('test_exit')}
+          </Link>
+        ) : null}
+      </div>
       <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6">
         {betaPeriodEnabled ? (
           isAdminTest ? (
@@ -290,7 +436,7 @@ function BillingCheckout() {
       </div>
 
       {isAdminTest ? (
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-800">
           {bt('admin_test_note')}
         </p>
       ) : null}
@@ -302,7 +448,7 @@ function BillingCheckout() {
 
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         {isAdminTest ? (
-          <p className="text-sm text-slate-700">{bt('admin_test_product')}</p>
+          <AdminTestCatalog lang={lang} testKey={testKey} onSelect={setTestKey} />
         ) : minimumFloor ? (
         <fieldset className="flex flex-col gap-2 text-sm">
           <legend className="font-medium">{bt('choice_legend')}</legend>
@@ -368,15 +514,15 @@ function BillingCheckout() {
           {busy ? bt('opening_sheet') : bt('open_sheet')}
         </button>
       </form>
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      {message ? <p className="text-sm text-slate-700">{message}</p> : null}
+      {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+      {message ? <p className="text-sm text-slate-800">{message}</p> : null}
     </main>
   );
 }
 
 function BillingFallback() {
   const { lang } = useLanguage();
-  return <main className="px-4 py-8 text-sm text-slate-600">{getBillingTranslation(lang, 'loading')}</main>;
+  return <main className="min-h-screen bg-white px-4 py-8 text-sm text-slate-800">{getBillingTranslation(lang, 'loading')}</main>;
 }
 
 export default function BillingPage() {

@@ -114,6 +114,7 @@ interface GroupInfo {
   storage_used_bytes?: number;
   billing_comp?: boolean;
   billing_comp_seats?: number | null;
+  quota_admin_set?: boolean;
   allowed_seats?: number;
 }
 
@@ -2507,8 +2508,43 @@ export default function AdminPage() {
                         {' · '}
                         {getBillingTranslation(adminLang, 'comp_seats')}: {group.allowed_seats ?? '-'}
                       </div>
-                        <div className="mb-3 text-sm text-slate-500">
-                          {at('storage')}: {formatBytes(usedBytes)} / {formatBytes(quotaBytes)} ({percent.toFixed(0)}%)
+                        <div className="mb-3 flex items-center justify-between gap-2 text-sm text-slate-500">
+                          <span className="min-w-0">
+                            {at('storage')}: {formatBytes(usedBytes)} / {formatBytes(quotaBytes)} ({percent.toFixed(0)}%)
+                          </span>
+                          {group.quota_admin_set === true && group.billing_comp !== true ? (
+                            <button
+                              type="button"
+                              className="shrink-0 cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-sky-700 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
+                              onClick={async () => {
+                                if (!confirm(at('confirm_follow_billing'))) return;
+                                try {
+                                  const { data: { session } } = await supabase.auth.getSession();
+                                  if (!session?.access_token) {
+                                    alert(at('error_auth'));
+                                    return;
+                                  }
+                                  const response = await fetch('/api/admin/group-storage', {
+                                    method: 'PATCH',
+                                    headers: {
+                                      Authorization: `Bearer ${session.access_token}`,
+                                      'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ groupId: group.id, releaseQuotaLock: true }),
+                                  });
+                                  const result = await response.json();
+                                  if (!response.ok) {
+                                    throw new Error(result.error || at('error_quota_change'));
+                                  }
+                                  await loadGroups();
+                                } catch (error: any) {
+                                  alert(error.message || at('error_quota_change'));
+                                }
+                              }}
+                            >
+                              {at('follow_billing')}
+                            </button>
+                          ) : null}
                         </div>
                         <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-slate-200">
                           <div style={{

@@ -57,6 +57,8 @@ export type AdminTranslations = {
   members_count: string;
   storage: string;
   set_quota: string;
+  follow_billing: string;
+  confirm_follow_billing: string;
   manage_btn: string;
   prompt_quota_gb: string;
   alert_invalid_gb: string;
@@ -281,6 +283,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: '멤버',
     storage: '용량',
     set_quota: '용량 설정',
+    follow_billing: '결제대로',
+    confirm_follow_billing: '이 그룹의 용량을 결제 기록으로 되돌릴까요?',
     manage_btn: '관리하기',
     prompt_quota_gb: '그룹 용량(GB)을 입력하세요.',
     alert_invalid_gb: '유효한 GB 값을 입력해주세요.',
@@ -501,6 +505,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: 'Members',
     storage: 'Storage',
     set_quota: 'Set quota',
+    follow_billing: 'As paid',
+    confirm_follow_billing: 'Restore this group’s storage to the paid amount?',
     manage_btn: 'Manage',
     prompt_quota_gb: 'Enter storage quota (GB).',
     alert_invalid_gb: 'Please enter a valid GB value.',
@@ -721,6 +727,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: 'メンバー',
     storage: '容量',
     set_quota: '容量設定',
+    follow_billing: '請求どおり',
+    confirm_follow_billing: 'このグループの容量を支払い記録に戻しますか？',
     manage_btn: '管理',
     prompt_quota_gb: 'グループ容量(GB)を入力してください。',
     alert_invalid_gb: '有効なGB値を入力してください。',
@@ -941,6 +949,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: '成员',
     storage: '容量',
     set_quota: '设置容量',
+    follow_billing: '按付款',
+    confirm_follow_billing: '要将此群组的容量恢复为付款记录吗？',
     manage_btn: '管理',
     prompt_quota_gb: '请输入群组容量(GB)。',
     alert_invalid_gb: '请输入有效的 GB 值。',
@@ -1161,6 +1171,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: '成員',
     storage: '容量',
     set_quota: '設定容量',
+    follow_billing: '按付款',
+    confirm_follow_billing: '要將此群組的容量恢復為付款紀錄嗎？',
     manage_btn: '管理',
     prompt_quota_gb: '請輸入群組容量(GB)。',
     alert_invalid_gb: '請輸入有效的 GB 值。',
@@ -1381,6 +1393,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: 'Miembros',
     storage: 'Almacenamiento',
     set_quota: 'Establecer cuota',
+    follow_billing: 'Según pago',
+    confirm_follow_billing: '¿Restaurar el almacenamiento de este grupo al importe pagado?',
     manage_btn: 'Administrar',
     prompt_quota_gb: 'Ingrese la cuota de almacenamiento (GB).',
     alert_invalid_gb: 'Introduzca un valor de GB válido.',
@@ -1601,6 +1615,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: 'Membres',
     storage: 'Stockage',
     set_quota: 'Définir un quota',
+    follow_billing: 'Selon paiement',
+    confirm_follow_billing: 'Rétablir le stockage de ce groupe selon le paiement ?',
     manage_btn: 'Gérer',
     prompt_quota_gb: 'Saisissez le quota de stockage (Go).',
     alert_invalid_gb: 'Veuillez saisir une valeur en Go valide.',
@@ -1821,6 +1837,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: 'Mitglieder',
     storage: 'Lagerung',
     set_quota: 'Kontingent festlegen',
+    follow_billing: 'Wie bezahlt',
+    confirm_follow_billing: 'Den Speicher dieser Gruppe auf den bezahlten Wert zurücksetzen?',
     manage_btn: 'Verwalten',
     prompt_quota_gb: 'Geben Sie das Speicherkontingent (GB) ein.',
     alert_invalid_gb: 'Bitte geben Sie einen gültigen GB-Wert ein.',
@@ -2041,6 +2059,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: 'Membri',
     storage: 'Magazzinaggio',
     set_quota: 'Imposta la quota',
+    follow_billing: 'Come pagato',
+    confirm_follow_billing: 'Ripristinare lo spazio di questo gruppo in base al pagamento?',
     manage_btn: 'Maneggio',
     prompt_quota_gb: 'Inserisci la quota di archiviazione (GB).',
     alert_invalid_gb: 'Inserisci un valore GB valido.',
@@ -2261,6 +2281,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     members_count: 'Membros',
     storage: 'Armazenamento',
     set_quota: 'Definir cota',
+    follow_billing: 'Conforme pago',
+    confirm_follow_billing: 'Restaurar o armazenamento deste grupo para o valor pago?',
     manage_btn: 'Gerenciar',
     prompt_quota_gb: 'Digite a cota de armazenamento (GB).',
     alert_invalid_gb: 'Digite um valor de GB válido.',

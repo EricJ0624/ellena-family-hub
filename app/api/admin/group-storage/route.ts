@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const [{ data: overrides }, { data: plans }, { data: subscriptions }] = await Promise.all([
       supabase
         .from('billing_group_overrides')
-        .select('group_id, billing_comp, comp_seats')
+        .select('group_id, billing_comp, comp_seats, quota_admin_set')
         .in('group_id', groupIds),
       supabase
         .from('billing_plans')
@@ -111,6 +111,7 @@ export async function GET(request: NextRequest) {
           storage_used_bytes: usedBytes,
           billing_comp: override?.billing_comp === true,
           billing_comp_seats: compSeats,
+          quota_admin_set: override?.quota_admin_set === true,
         };
       })
     );
@@ -164,6 +165,20 @@ async function restoreUnmanagedQuota(groupId: string) {
   if (error) console.error('관리 해제 용량 복원 오류:', error);
 }
 
+async function clearBillingOverride(groupId: string): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
+    .from('billing_group_overrides')
+    .delete()
+    .eq('group_id', groupId);
+  if (error) {
+    console.error('그룹 결제 설정 해제 오류:', error);
+    return false;
+  }
+  await restoreUnmanagedQuota(groupId);
+  return true;
+}
+
 export async function PATCH(request: NextRequest) {
   try {
     const authResult = await requireAuthUser(request);
@@ -174,7 +189,7 @@ export async function PATCH(request: NextRequest) {
     if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
-    const { groupId, storageQuotaBytes, storageQuotaGb, billingComp, billingCompSeats } = body;
+    const { groupId, storageQuotaBytes, storageQuotaGb, billingComp, billingCompSeats, releaseQuotaLock } = body;
 
     if (!groupId) {
       return NextResponse.json(
@@ -184,6 +199,20 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = getSupabaseServerClient();
+    if (releaseQuotaLock === true) {
+      const existing = await getBillingGroupOverride(groupId);
+      if (existing.billingComp) {
+        return NextResponse.json(
+          { error: '결제 없이 사용 중인 그룹은 그 스위치를 끄면 결제 용량으로 돌아갑니다.' },
+          { status: 400 },
+        );
+      }
+      if (existing.quotaAdminSet && !(await clearBillingOverride(groupId))) {
+        return NextResponse.json({ error: '용량 잠금을 풀지 못했습니다.' }, { status: 500 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
     const nextComp = billingComp === true;
     const seats = Number(billingCompSeats);
     if (nextComp && (!Number.isInteger(seats) || seats < 1)) {
@@ -191,15 +220,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (billingComp === false) {
-      const { error: deleteError } = await supabase
-        .from('billing_group_overrides')
-        .delete()
-        .eq('group_id', groupId);
-      if (deleteError) {
-        console.error('결제 면제 해제 오류:', deleteError);
+      if (!(await clearBillingOverride(groupId))) {
         return NextResponse.json({ error: '결제 면제를 해제하지 못했습니다.' }, { status: 500 });
       }
-      await restoreUnmanagedQuota(groupId);
       return NextResponse.json({ success: true });
     }
 
