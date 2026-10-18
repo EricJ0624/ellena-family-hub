@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from './api-helpers';
+import { hasActiveDashboardGrant } from './dashboard-access-grant';
 import { checkPermission, isSystemAdmin } from './permissions';
 import { GROUP_SUSPENDED_CODE } from './account-suspend-access';
 import { CURRENT_APP_ID } from './apps';
@@ -119,6 +120,22 @@ export async function assertGroupBelongsToCurrentApp(
  * if (permCheck instanceof NextResponse) return permCheck;
  * const { role, isOwner } = permCheck;
  */
+async function systemAdminOwnsOrAdminsGroup(userId: string, groupId: string): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+  const [{ data: owned }, { data: adminRow }] = await Promise.all([
+    supabase.from('groups').select('id').eq('id', groupId).eq('owner_id', userId).maybeSingle(),
+    supabase
+      .from('memberships')
+      .select('group_id')
+      .eq('group_id', groupId)
+      .eq('user_id', userId)
+      .eq('role', 'ADMIN')
+      .maybeSingle(),
+  ]);
+  if (owned || adminRow) return true;
+  return hasActiveDashboardGrant(supabase, userId, groupId);
+}
+
 export async function requireGroupAdmin(
   userId: string,
   groupId: string
@@ -126,11 +143,17 @@ export async function requireGroupAdmin(
   | { role: MembershipRole; isOwner: boolean }
   | NextResponse
 > {
-  // 시스템 관리자: /admin 콘솔에서 전 앱 그룹 관리 허용.
-  // 대시보드·일반 멤버 API(requireGroupMember)의 앱 격리는 유지한다.
+  // 시스템 관리자는 그 그룹의 소유자·관리자이거나, 승인된 대시보드 입장일 때만 통과.
+  // 그 경우에는 기존처럼 앱 격리를 건너뛰어 본인 관리 그룹의 콘솔 동작을 유지한다.
   const sysAdmin = await isSystemAdmin(userId);
   if (sysAdmin) {
-    return { role: 'ADMIN', isOwner: false };
+    if (await systemAdminOwnsOrAdminsGroup(userId, groupId)) {
+      return { role: 'ADMIN', isOwner: false };
+    }
+    return NextResponse.json(
+      { error: '그룹 관리자 권한이 필요합니다.' },
+      { status: 403 }
+    );
   }
 
   const appCheck = await assertGroupBelongsToCurrentApp(groupId);
@@ -182,6 +205,12 @@ async function betaPeriodEnabledForCurrentApp(): Promise<boolean> {
 async function rejectIfBillingLocked(groupId: string): Promise<NextResponse | null> {
   if (await betaPeriodEnabledForCurrentApp()) return null;
   const supabase = getSupabaseServerClient();
+  const { data: override } = await supabase
+    .from('billing_group_overrides')
+    .select('billing_comp')
+    .eq('group_id', groupId)
+    .maybeSingle();
+  if (override?.billing_comp === true) return null;
   const { data: subscription, error } = await supabase
     .from('billing_subscriptions')
     .select('status')
@@ -235,27 +264,6 @@ export async function requireGroupMember(
     role: permissionResult.role,
     isOwner: permissionResult.isOwner,
   };
-}
-
-/**
- * 그룹 멤버 또는 시스템 관리자.
- * 문의(support) 첨부처럼 시스템 관리자가 그룹 미소속·타 앱 그룹일 때 조회·업로드에 사용.
- */
-export async function requireGroupMemberOrSystemAdmin(
-  userId: string,
-  groupId: string
-): Promise<
-  | { role: MembershipRole; isOwner: boolean; isSystemAdmin: boolean }
-  | NextResponse
-> {
-  const sysAdmin = await isSystemAdmin(userId);
-  if (sysAdmin) {
-    return { role: 'ADMIN', isOwner: false, isSystemAdmin: true };
-  }
-
-  const memberCheck = await requireGroupMember(userId, groupId);
-  if (memberCheck instanceof NextResponse) return memberCheck;
-  return { ...memberCheck, isSystemAdmin: false };
 }
 
 /**

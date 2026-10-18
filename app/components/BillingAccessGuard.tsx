@@ -37,8 +37,9 @@ export function BillingAccessGuard({ children }: { children: React.ReactNode }) 
           betaPeriodEnabled?: boolean;
           hasActiveSubscription?: boolean;
           isSystemAdmin?: boolean;
+          billingComp?: boolean;
         };
-        if (json.betaPeriodEnabled !== false || json.isSystemAdmin || json.hasActiveSubscription) return;
+        if (json.betaPeriodEnabled !== false || json.isSystemAdmin || json.hasActiveSubscription || json.billingComp) return;
         if (cancelled) return;
         setBlocked(true);
         router.replace(`/billing?groupId=${encodeURIComponent(currentGroupId)}&reason=subscription-required`);
@@ -55,6 +56,14 @@ export function BillingAccessGuard({ children }: { children: React.ReactNode }) 
         () => { void check(); },
       )
       .subscribe();
+    const grantChannel = supabase
+      .channel(`billing-access-grant:${currentGroupId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'billing_group_overrides', filter: `group_id=eq.${currentGroupId}` },
+        () => { void check(); },
+      )
+      .subscribe();
     const subscriptionChannel = supabase
       .channel(`billing-access-sub:${currentGroupId}`)
       .on(
@@ -66,6 +75,7 @@ export function BillingAccessGuard({ children }: { children: React.ReactNode }) 
     return () => {
       cancelled = true;
       void supabase.removeChannel(planChannel);
+      void supabase.removeChannel(grantChannel);
       void supabase.removeChannel(subscriptionChannel);
     };
   }, [needsCheck, currentGroupId, pathname, router]);

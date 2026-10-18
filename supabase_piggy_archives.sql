@@ -59,13 +59,17 @@ alter table piggy_wallet_transactions_archive enable row level security;
 alter table piggy_bank_transactions_archive enable row level security;
 
 -- INSERT/UPDATE/DELETE는 서버(service role)만 수행하므로 정책 없음.
--- SELECT: 시스템 관리자만 (is_system_admin 함수가 있으면 사용)
+-- SELECT: 시스템 관리자는 본인이 관리자이거나 승인된 대시보드 입장인 그룹만 직접 조회.
+-- 관리 화면은 service role API를 쓰므로 이 정책과 별개로 동작한다.
 do $$
 begin
   if exists (select 1 from pg_proc p join pg_namespace n on p.pronamespace = n.oid where n.nspname = 'public' and p.proname = 'is_system_admin') then
-    execute 'create policy "piggy_snapshots_select_system_admin" on piggy_deleted_account_snapshots for select using (public.is_system_admin(auth.uid()));';
-    execute 'create policy "piggy_wallet_archive_select_system_admin" on piggy_wallet_transactions_archive for select using (public.is_system_admin(auth.uid()));';
-    execute 'create policy "piggy_bank_archive_select_system_admin" on piggy_bank_transactions_archive for select using (public.is_system_admin(auth.uid()));';
+    execute 'drop policy if exists "piggy_snapshots_select_system_admin" on piggy_deleted_account_snapshots';
+    execute 'create policy "piggy_snapshots_select_system_admin" on piggy_deleted_account_snapshots for select using (public.is_system_admin(auth.uid()) AND public.is_group_admin(group_id, auth.uid()))';
+    execute 'drop policy if exists "piggy_wallet_archive_select_system_admin" on piggy_wallet_transactions_archive';
+    execute 'create policy "piggy_wallet_archive_select_system_admin" on piggy_wallet_transactions_archive for select using (public.is_system_admin(auth.uid()) AND public.is_group_admin(group_id, auth.uid()))';
+    execute 'drop policy if exists "piggy_bank_archive_select_system_admin" on piggy_bank_transactions_archive';
+    execute 'create policy "piggy_bank_archive_select_system_admin" on piggy_bank_transactions_archive for select using (public.is_system_admin(auth.uid()) AND public.is_group_admin(group_id, auth.uid()))';
   else
     -- is_system_admin 없으면 authenticated 사용자 중 서버만 접근하므로 deny all로 두고 API로만 접근
     execute 'create policy "piggy_snapshots_select_deny" on piggy_deleted_account_snapshots for select using (false);';

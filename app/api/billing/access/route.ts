@@ -21,9 +21,16 @@ export async function GET(request: NextRequest) {
 
   const groupId = request.nextUrl.searchParams.get('groupId')?.trim() ?? '';
   let hasActiveSubscription = false;
+  let billingComp = false;
   if (groupId) {
     const memberCheck = await requireGroupMember(authResult.user.id, groupId, { skipBillingLock: true });
     if (!(memberCheck instanceof NextResponse)) {
+      const { data: override } = await supabase
+        .from('billing_group_overrides')
+        .select('billing_comp')
+        .eq('group_id', groupId)
+        .maybeSingle();
+      billingComp = override?.billing_comp === true;
       const { data: subscription } = await supabase
         .from('billing_subscriptions')
         .select('status')
@@ -38,6 +45,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     betaPeriodEnabled,
     hasActiveSubscription,
+    billingComp,
     isSystemAdmin: admin,
   });
 }

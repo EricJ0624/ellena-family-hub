@@ -144,12 +144,19 @@ async function makeThumbnail(file: File): Promise<Blob> {
   });
 }
 
-async function getUploadUrl(groupId: string, fileName: string, mimeType: string, fileSize: number, isThumbnail: boolean) {
+async function getUploadUrl(
+  groupId: string,
+  fileName: string,
+  mimeType: string,
+  fileSize: number,
+  isThumbnail: boolean,
+  entityType: FeatureEntityType,
+) {
   const headers = await getAuthHeaders();
   const res = await fetch('/api/attachments/get-upload-url', {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ groupId, fileName, mimeType, fileSize, isThumbnail }),
+    body: JSON.stringify({ groupId, fileName, mimeType, fileSize, isThumbnail, entityType }),
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || '업로드 URL 생성 실패');
@@ -182,7 +189,7 @@ export async function uploadFeatureAttachment(params: {
   onProgress?.(10);
   if (signal?.aborted) throw new DOMException('cancelled', 'AbortError');
 
-  const originalMeta = await getUploadUrl(groupId, file.name, file.type, file.size, false);
+  const originalMeta = await getUploadUrl(groupId, file.name, file.type, file.size, false, entityType);
   const putOriginal = await fetch(originalMeta.presignedUrl, {
     method: 'PUT',
     headers: { 'Content-Type': file.type },
@@ -197,7 +204,7 @@ export async function uploadFeatureAttachment(params: {
   let thumbnailUrl: string | undefined;
   try {
     const thumbnailBlob = await makeThumbnail(file);
-    const thumbnailMeta = await getUploadUrl(groupId, `${file.name}.thumb.webp`, 'image/webp', thumbnailBlob.size, true);
+    const thumbnailMeta = await getUploadUrl(groupId, `${file.name}.thumb.webp`, 'image/webp', thumbnailBlob.size, true, entityType);
     const putThumb = await fetch(thumbnailMeta.presignedUrl, {
       method: 'PUT',
       headers: { 'Content-Type': 'image/webp' },

@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import type { AppId } from '@/lib/apps';
 import { getAppBetaQualification } from '@/lib/beta-testers';
+import { getBillingGroupOverride } from '@/lib/billing-group-override';
 import { getGroupStorageQuotaBytes } from '@/lib/storage-quota';
 import {
   parseBillingAppUserId,
@@ -207,7 +208,8 @@ export async function applyRevenueCatWebhook(body: RevenueCatWebhookBody): Promi
     return { status: 500, result: 'subscription_write_failed' };
   }
 
-  if (applying && requestedAction !== 'keep') {
+  const adminOverride = await getBillingGroupOverride(groupId);
+  if (applying && requestedAction !== 'keep' && !adminOverride.quotaAdminSet) {
     const { error: quotaError } = await supabase
       .from('groups')
       .update({ storage_quota_bytes: quotaBytes })
@@ -221,7 +223,7 @@ export async function applyRevenueCatWebhook(body: RevenueCatWebhookBody): Promi
 
   if (reverting) {
     const beta = await getAppBetaQualification(product.appId, parsedUser.userId);
-    if (beta.qualified) {
+    if (beta.qualified && !adminOverride.quotaAdminSet) {
       const { error: quotaError } = await supabase
         .from('groups')
         .update({ storage_quota_bytes: plan.beta_free_quota_bytes })

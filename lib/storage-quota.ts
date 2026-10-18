@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { isAppId } from '@/lib/apps';
+import { getBillingGroupOverride } from '@/lib/billing-group-override';
 import { getAppBetaQualification } from '@/lib/beta-testers';
 import { DB_TABLES } from '@/lib/db-table-names';
 
@@ -21,6 +22,9 @@ export async function getGroupStorageQuotaBytes(groupId: string): Promise<number
   const storedQuota = data.storage_quota_bytes ?? DEFAULT_GROUP_STORAGE_QUOTA_BYTES;
   const appId = data.app_id;
   if (!isAppId(appId)) return storedQuota;
+
+  const override = await getBillingGroupOverride(groupId);
+  if (override.quotaAdminSet) return storedQuota;
 
   const { data: subscription } = await supabase
     .from('billing_subscriptions')
@@ -51,10 +55,22 @@ export async function groupAllowsOriginalUpload(groupId: string): Promise<boolea
   const supabase = getSupabaseServerClient();
   const { data: group } = await supabase
     .from('groups')
-    .select('app_id')
+    .select('app_id, storage_quota_bytes')
     .eq('id', groupId)
     .maybeSingle();
   if (!group || !isAppId(group.app_id)) return false;
+
+  const { data: plan } = await supabase
+    .from('billing_plans')
+    .select('upgraded_quota_bytes')
+    .eq('app_id', group.app_id)
+    .maybeSingle();
+  if (!plan?.upgraded_quota_bytes) return false;
+
+  const override = await getBillingGroupOverride(groupId);
+  if (override.quotaAdminSet) {
+    return (group.storage_quota_bytes ?? 0) >= plan.upgraded_quota_bytes;
+  }
 
   const { data: subscription } = await supabase
     .from('billing_subscriptions')
@@ -63,13 +79,6 @@ export async function groupAllowsOriginalUpload(groupId: string): Promise<boolea
     .eq('group_id', groupId)
     .maybeSingle();
   if (subscription?.status !== 'active' || !subscription.quota_bytes) return false;
-
-  const { data: plan } = await supabase
-    .from('billing_plans')
-    .select('upgraded_quota_bytes')
-    .eq('app_id', group.app_id)
-    .maybeSingle();
-  if (!plan?.upgraded_quota_bytes) return false;
   return subscription.quota_bytes >= plan.upgraded_quota_bytes;
 }
 

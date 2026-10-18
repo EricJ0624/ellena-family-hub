@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { isAppId } from '@/lib/apps';
 import { getAppBetaQualification } from '@/lib/beta-testers';
+import { getBillingGroupOverride } from '@/lib/billing-group-override';
 import { getGroupStorageQuotaBytes, groupAllowsOriginalUpload } from '@/lib/storage-quota';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '그룹을 찾을 수 없습니다.', code: 'group_missing' }, { status: 404 });
   }
 
-  const [{ count }, { data: plan }, { data: subscription }, quotaBytes, originalUploadEnabled] =
+  const [{ count }, { data: plan }, { data: subscription }, quotaBytes, originalUploadEnabled, override] =
     await Promise.all([
       supabase
         .from('memberships')
@@ -48,16 +49,19 @@ export async function GET(request: NextRequest) {
         .maybeSingle(),
       getGroupStorageQuotaBytes(groupId),
       groupAllowsOriginalUpload(groupId),
+      getBillingGroupOverride(groupId),
     ]);
 
   const beta = await getAppBetaQualification(group.app_id, group.owner_id);
   const betaPeriodEnabled = plan?.beta_period_enabled !== false;
   const allowedSeats =
-    subscription?.status === 'active'
-      ? subscription.seat_count
-      : betaPeriodEnabled
-        ? plan?.beta_free_seats ?? plan?.included_seats ?? 2
-        : 1;
+    override.billingComp && override.compSeats
+      ? override.compSeats
+      : subscription?.status === 'active'
+        ? subscription.seat_count
+        : betaPeriodEnabled
+          ? plan?.beta_free_seats ?? plan?.included_seats ?? 2
+          : 1;
 
   return NextResponse.json({
     appId: group.app_id,

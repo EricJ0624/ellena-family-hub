@@ -62,6 +62,7 @@ import { getGroupSelectorLabel, getGroupDisplayNameRaw } from '@/lib/group-displ
 import { FeatureUsageSection } from '@/app/components/admin/FeatureUsageSection';
 import { SignupSettingsSection } from '@/app/components/admin/SignupSettingsSection';
 import { BetaStatusSection } from '@/app/components/admin/BetaStatusSection';
+import { AdminGroupBillingGrant } from '@/app/components/admin/AdminGroupBillingGrant';
 import { getBillingTranslation } from '@/lib/translations/billing';
 import { AdminModerationInbox } from '@/app/components/admin/AdminModerationInbox';
 import { AdminSuspendModals, type AdminSuspendTarget } from '@/app/components/admin/AdminSuspendModals';
@@ -106,12 +107,14 @@ interface GroupInfo {
   name: string;
   app_id?: string | null;
   owner_id?: string;
-  invite_code?: string | null;
   owner_email: string | null;
   member_count: number;
   created_at: string;
   storage_quota_bytes?: number;
   storage_used_bytes?: number;
+  billing_comp?: boolean;
+  billing_comp_seats?: number | null;
+  allowed_seats?: number;
 }
 
 interface SystemStats {
@@ -138,7 +141,6 @@ interface GroupDetailInfo {
   owner_id: string;
   owner_email: string | null;
   created_at: string;
-  invite_code: string | null;
 }
 
 interface MemberInfo {
@@ -438,11 +440,8 @@ export default function AdminPage() {
       : 'Select only the languages you need and paste translated text.';
 
   const formatBytes = (bytes: number | null | undefined): string => {
-    if (!bytes || bytes <= 0) return '0GB';
-    const gb = bytes / 1024 / 1024 / 1024;
-    if (gb >= 1) return `${gb.toFixed(2)}GB`;
-    const mb = bytes / 1024 / 1024;
-    return `${mb.toFixed(2)}MB`;
+    if (!bytes || bytes <= 0) return '0.00GB';
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`;
   };
 
   const getStoragePercent = (used: number | null | undefined, quota: number | null | undefined): number => {
@@ -743,11 +742,32 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 시스템 관리자 콘솔: 전 앱 그룹을 관리 대상으로 사용 (대시보드 그룹 접속 격리와 별개)
+  const filterToManageableGroups = useCallback(async (allGroups: GroupInfo[], userId: string) => {
+    const { data: adminMemberships, error: memberError } = await supabase
+      .from('memberships')
+      .select('group_id')
+      .eq('user_id', userId)
+      .eq('role', 'ADMIN');
+    if (memberError) console.error('관리 그룹 멤버십 조회 오류:', memberError);
+    const allowed = new Set<string>();
+    const userKey = userId.toLowerCase();
+    for (const group of allGroups) {
+      if (group.owner_id && group.owner_id.toLowerCase() === userKey) {
+        allowed.add(group.id.toLowerCase());
+      }
+    }
+    for (const row of adminMemberships ?? []) {
+      if (row.group_id) allowed.add(String(row.group_id).toLowerCase());
+    }
+    return allGroups.filter((group) => allowed.has(group.id.toLowerCase()));
+  }, []);
+
+  // 그룹 관리 탭: 이 계정이 소유자이거나 ADMIN인 그룹만
   const loadManageableGroups = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
+      const userId = session?.user?.id;
+      if (!session?.access_token || !userId) {
         setManageableGroups([]);
         return;
       }
@@ -762,12 +782,13 @@ export default function AdminPage() {
       if (!response.ok) {
         throw new Error(result.error || at('error_groups'));
       }
-      setManageableGroups(result.data || []);
+      const allGroups: GroupInfo[] = result.data || [];
+      setManageableGroups(await filterToManageableGroups(allGroups, userId));
     } catch (err: any) {
       console.error('관리 가능한 그룹 로드 오류:', err);
       setManageableGroups([]);
     }
-  }, []);
+  }, [filterToManageableGroups]);
 
   // 선택된 그룹 정보 로드 (시스템 관리자: service role API로 전 앱 허용 — 클라이언트 RLS 우회)
   const loadSelectedGroup = useCallback(async (groupId: string) => {
@@ -780,11 +801,7 @@ export default function AdminPage() {
         return;
       }
 
-      const fromCache =
-        groups.find((g) => g.id === groupId) ||
-        manageableGroups.find((g) => g.id === groupId);
-
-      let groupRow = fromCache;
+      let groupRow = manageableGroups.find((g) => sameGroupId(g.id, groupId));
       if (!groupRow?.owner_id) {
         const response = await fetch('/api/admin/group-storage', {
           method: 'GET',
@@ -795,8 +812,10 @@ export default function AdminPage() {
           throw new Error(result.error || at('error_groups'));
         }
         const list: GroupInfo[] = result.data || [];
-        setManageableGroups(list);
-        groupRow = list.find((g) => g.id === groupId);
+        const userId = session.user?.id;
+        const manageable = userId ? await filterToManageableGroups(list, userId) : [];
+        setManageableGroups(manageable);
+        groupRow = manageable.find((g) => sameGroupId(g.id, groupId));
       }
 
       if (!groupRow || !groupRow.owner_id) {
@@ -812,7 +831,6 @@ export default function AdminPage() {
         owner_id: groupRow.owner_id,
         owner_email: groupRow.owner_email,
         created_at: groupRow.created_at,
-        invite_code: groupRow.invite_code ?? null,
       });
       setError(null);
 
@@ -830,7 +848,7 @@ export default function AdminPage() {
       setSelectedGroup(null);
       setSelectedGroupId(null);
     }
-  }, []);
+  }, [filterToManageableGroups, manageableGroups]);
 
   // 그룹 선택 변경
   useEffect(() => {
@@ -1381,6 +1399,11 @@ export default function AdminPage() {
     [memberGroups],
   );
 
+  const canManageListedGroup = useCallback(
+    (groupId: string) => manageableGroups.some((group) => sameGroupId(group.id, groupId)),
+    [manageableGroups],
+  );
+
   const filteredManageableGroups = useMemo(() => {
     return manageableGroups.filter((group) => {
       if (appFilter !== 'all' && appFilter !== 'global' && group.app_id !== appFilter) return false;
@@ -1452,9 +1475,9 @@ export default function AdminPage() {
     [filteredSupportTickets]
   );
 
-  // 그룹 관리 탭으로 전환 (시스템 관리자: 전 앱 그룹)
+  // 그룹 관리 탭으로 전환 (소유자 또는 ADMIN만)
   const handleSelectGroupForAdmin = async (groupId: string) => {
-    const exists = groups.some((g) => g.id === groupId) || manageableGroups.some((mg) => mg.id === groupId);
+    const exists = manageableGroups.some((mg) => sameGroupId(mg.id, groupId));
     if (!exists) {
       alert(at('error_no_permission'));
       return;
@@ -2479,6 +2502,8 @@ export default function AdminPage() {
                       </div>
                       <div className="mb-2 text-sm text-slate-500">
                         {at('members_count')}: {group.member_count}
+                        {' · '}
+                        {getBillingTranslation(adminLang, 'comp_seats')}: {group.allowed_seats ?? '-'}
                       </div>
                         <div className="mb-3 text-sm text-slate-500">
                           {at('storage')}: {formatBytes(usedBytes)} / {formatBytes(quotaBytes)} ({percent.toFixed(0)}%)
@@ -2494,11 +2519,20 @@ export default function AdminPage() {
                       <div className="mb-4 text-xs text-slate-400">
                         {at('created_at')}: {new Date(group.created_at).toLocaleDateString(adminLocale)}
                       </div>
+                      <AdminGroupBillingGrant
+                        key={`${group.id}:${group.billing_comp ? '1' : '0'}:${group.billing_comp_seats ?? ''}:${quotaBytes}`}
+                        lang={adminLang}
+                        groupId={group.id}
+                        billingComp={group.billing_comp === true}
+                        compSeats={group.billing_comp_seats ?? null}
+                        quotaBytes={quotaBytes}
+                        onSaved={() => { void loadGroups({ skipLoadingGate: true }); }}
+                      />
                       <div className="flex flex-wrap gap-2">
                           <button
                             className="flex-[1_1_120px] cursor-pointer rounded-lg border-none bg-sky-100 px-3 py-2 text-[13px] font-semibold text-sky-700 transition-colors hover:bg-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
                             onClick={async () => {
-                              const currentGb = quotaBytes ? (quotaBytes / 1024 / 1024 / 1024).toFixed(2) : '5';
+                              const currentGb = quotaBytes ? (quotaBytes / 1024 / 1024 / 1024).toFixed(2) : '5.00';
                               const input = prompt(at('prompt_quota_gb'), currentGb);
                               if (!input) return;
                               const nextGb = Number(input);
@@ -2506,6 +2540,7 @@ export default function AdminPage() {
                                 alert(at('alert_invalid_gb'));
                                 return;
                               }
+                              const keepBytes = quotaBytes > 0 && nextGb.toFixed(2) === currentGb;
 
                               try {
                                 const { data: { session } } = await supabase.auth.getSession();
@@ -2520,10 +2555,11 @@ export default function AdminPage() {
                                     'Authorization': `Bearer ${session.access_token}`,
                                     'Content-Type': 'application/json',
                                   },
-                                  body: JSON.stringify({
-                                    groupId: group.id,
-                                    storageQuotaGb: nextGb,
-                                  }),
+                                  body: JSON.stringify(
+                                    keepBytes
+                                      ? { groupId: group.id, storageQuotaBytes: quotaBytes }
+                                      : { groupId: group.id, storageQuotaGb: nextGb },
+                                  ),
                                 });
 
                                 const result = await response.json();
@@ -2539,7 +2575,7 @@ export default function AdminPage() {
                           >
                             {at('set_quota')}
                           </button>
-                        {isMemberOfListedGroup(group.id) ? (
+                        {canManageListedGroup(group.id) ? (
                         <button
                             className="flex-1 cursor-pointer rounded-lg border-none bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                             onClick={() => handleSelectGroupForAdmin(group.id)}

@@ -1307,7 +1307,7 @@ export function TravelPlannerContent() {
       setFormDestination('');
       setFormStartDate('');
       setFormEndDate('');
-      setFormTripCurrency('KRW');
+      setFormTripCurrency(await resolveDefaultTripCurrency());
       setShowTripForm(false);
       if (created?.id) {
         setSelectedTrip(created);

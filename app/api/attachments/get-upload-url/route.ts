@@ -6,7 +6,7 @@ import {
   generateS3KeyWithGroup,
   getS3ClientInstance,
 } from '@/lib/api-helpers';
-import { requireAuthUser, requireGroupMemberOrSystemAdmin } from '@/lib/api-guards';
+import { requireAttachmentGroupAccess, requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { fileName, mimeType, fileSize, groupId, isThumbnail } = body ?? {};
+    const { fileName, mimeType, fileSize, groupId, isThumbnail, entityType } = body ?? {};
     const mimeNorm = normalizeClientMime(String(mimeType || ''));
 
     if (!fileName || !mimeNorm || !groupId) {
@@ -44,7 +44,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '파일 크기가 20MB를 초과합니다. (최대 20MB)' }, { status: 400 });
     }
 
-    const memberCheck = await requireGroupMemberOrSystemAdmin(user.id, String(groupId));
+    const entity = String(entityType || '');
+    const memberCheck = entity
+      ? await requireAttachmentGroupAccess(user.id, String(groupId), entity)
+      : await requireGroupMember(user.id, String(groupId));
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
