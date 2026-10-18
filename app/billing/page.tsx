@@ -35,10 +35,26 @@ type GroupBillingState = {
   virtualPayment: boolean;
 };
 
-type PurchaseChoice = 'seats' | '5gb' | '20gb';
+type PurchaseChoice = 'seats' | '5gb' | '20gb' | 'floor3' | 'floor20';
 
 function formatUsd(cents: number): string {
   return `USD ${(cents / 100).toFixed(2)}`;
+}
+
+function resolvePurchaseChoice(
+  choice: PurchaseChoice,
+  minimumFloor: boolean,
+  intent: string | null,
+): PurchaseChoice {
+  if (!minimumFloor) {
+    if (choice === 'floor20') return '20gb';
+    if (choice === 'floor3') return '5gb';
+    return choice;
+  }
+  if (choice === 'floor3') return 'floor3';
+  if (choice === 'floor20' || choice === '20gb') return 'floor20';
+  if (intent === '20gb' || intent === '10gb' || intent === 'storage') return 'floor20';
+  return 'floor3';
 }
 
 function BillingCheckout() {
@@ -66,6 +82,12 @@ function BillingCheckout() {
 
   const betaPeriodEnabled = groupState?.betaPeriodEnabled !== false;
   const needsPromo = !isAdminTest && groupState?.betaOwner === true;
+  const minimumFloor = needsPromo
+    && groupState?.betaPeriodEnabled === false
+    && (groupState?.memberCount ?? 0) <= 2
+    && (groupState?.allowedSeats ?? 0) <= 2
+    && (groupState?.quotaBytes ?? 0) < TWENTY_GB;
+  const selectedChoice = resolvePurchaseChoice(choice, minimumFloor, intent);
 
   useEffect(() => {
     if (!groupId) return;
@@ -169,17 +191,23 @@ function BillingCheckout() {
       }
 
       const betaPrice = needsPromo;
-      const seatCount = choice === 'seats'
-        ? Math.max(groupState.memberCount, groupState.allowedSeats) + 1
-        : Math.max(groupState.allowedSeats, groupState.memberCount, 2);
-      const quotaTier: BillingQuotaTier = choice === '20gb'
+      const seatCount = selectedChoice === 'floor20'
+        ? 2
+        : selectedChoice === 'floor3'
+          ? 3
+          : selectedChoice === 'seats'
+            ? Math.max(groupState.memberCount, groupState.allowedSeats) + 1
+            : Math.max(groupState.allowedSeats, groupState.memberCount, 2);
+      const quotaTier: BillingQuotaTier = selectedChoice === 'floor20' || selectedChoice === '20gb'
         ? '20gb'
-        : choice === 'seats' && groupState.quotaBytes >= TWENTY_GB
+        : selectedChoice === 'seats' && groupState.quotaBytes >= TWENTY_GB
           ? '20gb'
           : '5gb';
-      const quotaAction = choice === 'seats' && groupState.quotaBytes < FIVE_GB
-        ? 'keep'
-        : quotaTier;
+      const quotaAction = selectedChoice === 'floor3' || selectedChoice === 'floor20'
+        ? quotaTier
+        : selectedChoice === 'seats' && groupState.quotaBytes < FIVE_GB
+          ? 'keep'
+          : quotaTier;
       const productId = buildBillingProductId({
         appId: isAppId(groupState.appId) ? groupState.appId : CURRENT_APP_ID,
         seatCount: isAdminTest ? 2 : seatCount,
@@ -248,7 +276,9 @@ function BillingCheckout() {
             <p>{bt('half_vs_full')}</p>
           </>
         )}
-        <p>{formatBillingTranslation(lang, 'example', { base: baseExample, beta: betaExample })}</p>
+        {minimumFloor ? null : (
+          <p>{formatBillingTranslation(lang, 'example', { base: baseExample, beta: betaExample })}</p>
+        )}
         {needsPromo ? <p>{bt('enter_promo')}</p> : null}
         <p>{bt('server_confirms')}</p>
         {reason === 'subscription-required' ? (
@@ -270,19 +300,34 @@ function BillingCheckout() {
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         {isAdminTest ? (
           <p className="text-sm text-slate-700">{bt('admin_test_product')}</p>
+        ) : minimumFloor ? (
+        <fieldset className="flex flex-col gap-2 text-sm">
+          <legend className="font-medium">{bt('choice_legend')}</legend>
+          <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 leading-6">
+            {bt('floor_minimum_notice')}
+          </p>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="choice" checked={selectedChoice === 'floor3'} onChange={() => setChoice('floor3')} />
+            {bt('floor_choice_3_5gb')}
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="choice" checked={selectedChoice === 'floor20'} onChange={() => setChoice('floor20')} />
+            {bt('floor_choice_2_20gb')}
+          </label>
+        </fieldset>
         ) : (
         <fieldset className="flex flex-col gap-2 text-sm">
           <legend className="font-medium">{bt('choice_legend')}</legend>
           <label className="flex items-center gap-2">
-            <input type="radio" name="choice" checked={choice === 'seats'} onChange={() => setChoice('seats')} />
+            <input type="radio" name="choice" checked={selectedChoice === 'seats'} onChange={() => setChoice('seats')} />
             {bt('choice_seat')}
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" name="choice" checked={choice === '5gb'} onChange={() => setChoice('5gb')} />
+            <input type="radio" name="choice" checked={selectedChoice === '5gb'} onChange={() => setChoice('5gb')} />
             {bt('choice_5gb')}
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" name="choice" checked={choice === '20gb'} onChange={() => setChoice('20gb')} />
+            <input type="radio" name="choice" checked={selectedChoice === '20gb'} onChange={() => setChoice('20gb')} />
             {bt('choice_20gb')}
           </label>
         </fieldset>
