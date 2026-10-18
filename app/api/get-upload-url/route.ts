@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const requestsOriginal = upload_mode === 'original' || isRawFileExtension(extension);
     if (requestsOriginal && !(await groupAllowsOriginalUpload(groupId))) {
       return NextResponse.json(
-        { error: '원본 업로드는 10GB 구독에서만 가능합니다.' },
+        { error: '원본 업로드는 20GB 구독에서만 가능합니다.' },
         { status: 403 },
       );
     }

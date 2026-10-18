@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.billing_plans (
     CHECK (app_id IN ('hearth_family', 'hearth_couple', 'hearth_biker', 'hearth_camper')),
   included_seats integer NOT NULL DEFAULT 2 CHECK (included_seats >= 1),
   base_quota_bytes bigint NOT NULL DEFAULT 5368709120 CHECK (base_quota_bytes > 0),
-  upgraded_quota_bytes bigint NOT NULL DEFAULT 10737418240 CHECK (upgraded_quota_bytes > base_quota_bytes),
+  upgraded_quota_bytes bigint NOT NULL DEFAULT 21474836480 CHECK (upgraded_quota_bytes > base_quota_bytes),
   beta_free_seats integer NOT NULL DEFAULT 2 CHECK (beta_free_seats >= 1),
   beta_free_quota_bytes bigint NOT NULL DEFAULT 524288000 CHECK (beta_free_quota_bytes > 0),
   base_price_cents integer NOT NULL DEFAULT 100 CHECK (base_price_cents >= 0),
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.billing_plans (
 );
 
 COMMENT ON TABLE public.billing_plans IS
-  '앱별 월 구독 요금. 기본 2명·5GB, 추가 인원, 10GB 추가, 베타 할인율. 다른 앱은 이 행만 바꾼다.';
+  '앱별 월 구독 요금. 기본 2명·5GB, 추가 인원, 20GB 추가, 베타 할인율. 다른 앱은 이 행만 바꾼다.';
 
 INSERT INTO public.billing_plans (app_id)
 VALUES

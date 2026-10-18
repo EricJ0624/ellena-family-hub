@@ -11,7 +11,7 @@ import { openBillingPurchase } from '@/lib/billing-purchase-client';
 import { supabase } from '@/lib/supabase';
 
 const FIVE_GB = 5 * 1024 * 1024 * 1024;
-const TEN_GB = 10 * 1024 * 1024 * 1024;
+const TWENTY_GB = 20 * 1024 * 1024 * 1024;
 
 type PromoNotice = {
   virtualPayment: boolean;
@@ -35,7 +35,7 @@ type GroupBillingState = {
   virtualPayment: boolean;
 };
 
-type PurchaseChoice = 'seats' | '5gb' | '10gb';
+type PurchaseChoice = 'seats' | '5gb' | '20gb';
 
 function formatUsd(cents: number): string {
   return `USD ${(cents / 100).toFixed(2)}`;
@@ -52,7 +52,7 @@ function BillingCheckout() {
   const isAdminTest = mode === 'new-user-test';
   const intent = searchParams.get('intent');
   const [choice, setChoice] = useState<PurchaseChoice>(
-    intent === 'seats' ? 'seats' : intent === '10gb' ? '10gb' : '5gb',
+    intent === 'seats' ? 'seats' : intent === '20gb' || intent === '10gb' || intent === 'storage' ? '20gb' : '5gb',
   );
   const [code, setCode] = useState('');
   const [shownCode, setShownCode] = useState('');
@@ -172,10 +172,10 @@ function BillingCheckout() {
       const seatCount = choice === 'seats'
         ? Math.max(groupState.memberCount, groupState.allowedSeats) + 1
         : Math.max(groupState.allowedSeats, groupState.memberCount, 2);
-      const quotaTier: BillingQuotaTier = choice === '10gb'
-        ? '10gb'
-        : choice === 'seats' && groupState.quotaBytes >= TEN_GB
-          ? '10gb'
+      const quotaTier: BillingQuotaTier = choice === '20gb'
+        ? '20gb'
+        : choice === 'seats' && groupState.quotaBytes >= TWENTY_GB
+          ? '20gb'
           : '5gb';
       const quotaAction = choice === 'seats' && groupState.quotaBytes < FIVE_GB
         ? 'keep'
@@ -282,8 +282,8 @@ function BillingCheckout() {
             {bt('choice_5gb')}
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" name="choice" checked={choice === '10gb'} onChange={() => setChoice('10gb')} />
-            {bt('choice_10gb')}
+            <input type="radio" name="choice" checked={choice === '20gb'} onChange={() => setChoice('20gb')} />
+            {bt('choice_20gb')}
           </label>
         </fieldset>
         )}

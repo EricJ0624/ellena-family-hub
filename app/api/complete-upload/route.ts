@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     if (upload_mode === 'original' && !(await groupAllowsOriginalUpload(groupId))) {
       await deleteFromS3(s3Key);
       return NextResponse.json(
-        { error: '원본 업로드는 10GB 구독에서만 가능합니다.' },
+        { error: '원본 업로드는 20GB 구독에서만 가능합니다.' },
         { status: 403 },
       );
     }

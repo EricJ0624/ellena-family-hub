@@ -149,8 +149,8 @@ export async function applyRevenueCatWebhook(body: RevenueCatWebhookBody): Promi
 
   const requestedAction = attributeValue(event?.subscriber_attributes, 'quota_action');
   let quotaBytes = quotaBytesForTier(product.quotaTier, plan);
-  if (requestedAction === '5gb' || requestedAction === '10gb') {
-    quotaBytes = quotaBytesForTier(requestedAction, plan);
+  if (requestedAction === '5gb' || requestedAction === '10gb' || requestedAction === '20gb') {
+    quotaBytes = quotaBytesForTier(requestedAction === '5gb' ? '5gb' : '20gb', plan);
   } else if (requestedAction === 'keep') {
     quotaBytes = await getGroupStorageQuotaBytes(groupId);
   }
@@ -244,7 +244,7 @@ function quotaBytesForTier(
   tier: BillingQuotaTier,
   plan: { base_quota_bytes: number; upgraded_quota_bytes: number },
 ): number {
-  return tier === '10gb' ? plan.upgraded_quota_bytes : plan.base_quota_bytes;
+  return tier === '20gb' ? plan.upgraded_quota_bytes : plan.base_quota_bytes;
 }
 
 async function rememberEvent(appId: AppId, eventId: string, eventType: string): Promise<void> {

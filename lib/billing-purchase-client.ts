@@ -5,7 +5,7 @@ export async function openBillingPurchase(input: {
   appUserId: string;
   groupId: string;
   productId: string;
-  quotaAction: 'keep' | '5gb' | '10gb';
+  quotaAction: 'keep' | '5gb' | '20gb';
   customerEmail?: string;
 }): Promise<BillingPurchaseResult> {
   const { Purchases, ErrorCode } = await import('@revenuecat/purchases-js');

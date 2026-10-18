@@ -497,7 +497,7 @@ function MemoriesPageContent() {
     const isRawFile = isRawFileExtension(ext);
     const effectiveMode = isRawFile ? 'original' as const : uploadMode;
     if (effectiveMode === 'original' && !originalUploadEnabled) {
-      alert(getBillingTranslation(lang, 'original_10gb_only'));
+      alert(getBillingTranslation(lang, 'original_20gb_only'));
       e.target.value = '';
       return;
     }
@@ -677,8 +677,8 @@ function MemoriesPageContent() {
         failureReason = 'S3 버킷 CORS 설정이 필요합니다.\n\nS3 버킷의 CORS 설정을 확인하거나 관리자에게 문의하세요.';
       } else if (errorMessage.includes('타임아웃') || errorMessage.toLowerCase().includes('timeout')) {
         failureReason = '파일이 너무 크거나 네트워크 연결이 불안정합니다.';
-      } else if (errorMessage.includes('10GB') || errorMessage.includes('ORIGINAL_UPLOAD')) {
-        failureReason = getBillingTranslation(lang, 'original_10gb_only');
+      } else if (errorMessage.includes('20GB') || errorMessage.includes('10GB') || errorMessage.includes('ORIGINAL_UPLOAD')) {
+        failureReason = getBillingTranslation(lang, 'original_20gb_only');
       } else {
         failureReason = errorMessage;
       }
@@ -773,7 +773,7 @@ function MemoriesPageContent() {
                 href={`/billing?groupId=${encodeURIComponent(currentGroupId)}&intent=storage`}
                 className="text-[calc(12px*var(--hs))] text-white underline"
               >
-                {getBillingTranslation(lang, 'pay_10gb')}
+                {getBillingTranslation(lang, 'pay_20gb')}
               </a>
             ) : null}
           </div>

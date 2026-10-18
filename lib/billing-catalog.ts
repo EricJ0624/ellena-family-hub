@@ -1,7 +1,7 @@
 import type { AppId } from '@/lib/apps';
 import { isAppId } from '@/lib/apps';
 
-export type BillingQuotaTier = '5gb' | '10gb';
+export type BillingQuotaTier = '5gb' | '20gb';
 
 export type ParsedBillingProduct = {
   appId: AppId;
@@ -12,16 +12,16 @@ export type ParsedBillingProduct = {
 };
 
 const PRODUCT_PATTERN =
-  /^(hearth_family|hearth_couple|hearth_biker|hearth_camper)_seats_(\d+)_(5gb|10gb)(_beta)?$/;
+  /^(hearth_family|hearth_couple|hearth_biker|hearth_camper)_seats_(\d+)_(5gb|10gb|20gb)(_beta)?$/;
 
 export function parseBillingProductId(productId: string): ParsedBillingProduct | null {
   const match = PRODUCT_PATTERN.exec(productId.trim());
   if (!match) return null;
   const appId = match[1];
   const seatCount = Number(match[2]);
-  const quotaTier = match[3];
+  const rawTier = match[3];
   if (!isAppId(appId) || !Number.isInteger(seatCount) || seatCount < 1) return null;
-  if (quotaTier !== '5gb' && quotaTier !== '10gb') return null;
+  const quotaTier: BillingQuotaTier = rawTier === '5gb' ? '5gb' : '20gb';
   return {
     appId,
     seatCount,
