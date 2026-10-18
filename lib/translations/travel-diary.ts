@@ -9,6 +9,8 @@ export type TravelDiaryTranslations = {
   open_diary: string;
   start_trip_diary: string;
   start_trip_failed: string;
+  add_diary: string;
+  add_diary_failed: string;
   diary_page_title: string;
   back: string;
   trip_required: string;
@@ -81,6 +83,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: '다이어리 열기',
     start_trip_diary: '이 여행 다이어리 시작',
     start_trip_failed: '다이어리 시작에 실패했습니다.',
+    add_diary: '다이어리 추가',
+    add_diary_failed: '다이어리 추가에 실패했습니다.',
     diary_page_title: '여행 다이어리',
     back: '돌아가기',
     trip_required: '여행을 선택해 주세요.',
@@ -152,6 +156,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: 'Open diary',
     start_trip_diary: 'Start diary for this trip',
     start_trip_failed: 'Failed to start diary.',
+    add_diary: 'Add diary',
+    add_diary_failed: 'Failed to add diary.',
     diary_page_title: 'Trip diary',
     back: 'Back',
     trip_required: 'Select a trip.',
@@ -223,6 +229,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: 'ダイアリーを開く',
     start_trip_diary: 'この旅行のダイアリーを開始',
     start_trip_failed: '開始に失敗しました。',
+    add_diary: 'ダイアリーを追加',
+    add_diary_failed: 'ダイアリーの追加に失敗しました。',
     diary_page_title: '旅行ダイアリー',
     back: '戻る',
     trip_required: '旅行を選択してください。',
@@ -293,6 +301,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: '打开日记',
     start_trip_diary: '开始此旅行的日记',
     start_trip_failed: '无法开始日记。',
+    add_diary: '添加日记',
+    add_diary_failed: '添加日记失败。',
     diary_page_title: '旅行日记',
     back: '返回',
     trip_required: '请选择旅行。',
@@ -363,6 +373,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: '開啟日記',
     start_trip_diary: '開始此旅行的日記',
     start_trip_failed: '無法開始日記。',
+    add_diary: '新增日記',
+    add_diary_failed: '新增日記失敗。',
     diary_page_title: '旅行日記',
     back: '返回',
     trip_required: '請選擇旅行。',
@@ -433,6 +445,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: 'diario abierto',
     start_trip_diary: 'Iniciar diario para este viaje',
     start_trip_failed: 'No se pudo iniciar el diario.',
+    add_diary: 'Añadir diario',
+    add_diary_failed: 'No se pudo añadir el diario.',
     diary_page_title: 'diario de viaje',
     back: 'Atrás',
     trip_required: 'Selecciona un viaje.',
@@ -504,6 +518,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: 'Journal ouvert',
     start_trip_diary: 'Début du journal pour ce voyage',
     start_trip_failed: 'Échec du démarrage du journal.',
+    add_diary: 'Ajouter un journal',
+    add_diary_failed: 'Impossible d’ajouter le journal.',
     diary_page_title: 'Carnet de voyage',
     back: 'Dos',
     trip_required: 'Sélectionnez un voyage.',
@@ -575,6 +591,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: 'Offenes Tagebuch',
     start_trip_diary: 'Beginnen Sie mit dem Tagebuch für diese Reise',
     start_trip_failed: 'Das Tagebuch konnte nicht gestartet werden.',
+    add_diary: 'Tagebuch hinzufügen',
+    add_diary_failed: 'Tagebuch konnte nicht hinzugefügt werden.',
     diary_page_title: 'Reisetagebuch',
     back: 'Zurück',
     trip_required: 'Wählen Sie eine Reise aus.',
@@ -646,6 +664,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: 'Diario aperto',
     start_trip_diary: 'Inizia il diario per questo viaggio',
     start_trip_failed: 'Impossibile avviare il diario.',
+    add_diary: 'Aggiungi diario',
+    add_diary_failed: 'Impossibile aggiungere il diario.',
     diary_page_title: 'Diario di viaggio',
     back: 'Indietro',
     trip_required: 'Seleziona un viaggio.',
@@ -717,6 +737,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     open_diary: 'Abrir diário',
     start_trip_diary: 'Iniciar diário desta viagem',
     start_trip_failed: 'Falha ao iniciar o diário.',
+    add_diary: 'Adicionar diário',
+    add_diary_failed: 'Falha ao adicionar o diário.',
     diary_page_title: 'Diário de viagem',
     back: 'Voltar',
     trip_required: 'Selecione uma viagem.',

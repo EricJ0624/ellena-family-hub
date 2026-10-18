@@ -32,9 +32,44 @@ export async function PATCH(
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+    const { data: existing, error: existingError } = await supabase
+      .from('family_log_cards')
+      .select('kind')
+      .eq('id', id)
+      .eq('group_id', groupId)
+      .maybeSingle();
+    if (existingError) {
+      console.error('PATCH family-log card lookup:', existingError);
+      return NextResponse.json({ error: '기록을 저장하지 못했습니다.' }, { status: 500 });
+    }
+    if (!existing) {
+      return NextResponse.json({ error: '기록을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const patch: Record<string, unknown> = { ...parsed.patch };
+    if (existing.kind === 'route') {
+      if (body.clear_place === true) {
+        patch.place_latitude = null;
+        patch.place_longitude = null;
+      } else if (body.place_latitude != null && body.place_longitude != null) {
+        const placeLat = Number(body.place_latitude);
+        const placeLng = Number(body.place_longitude);
+        if (
+          !Number.isFinite(placeLat) ||
+          !Number.isFinite(placeLng) ||
+          Math.abs(placeLat) > 90 ||
+          Math.abs(placeLng) > 180
+        ) {
+          return NextResponse.json({ error: '위치 좌표가 올바르지 않습니다.' }, { status: 400 });
+        }
+        patch.place_latitude = placeLat;
+        patch.place_longitude = placeLng;
+      }
+    }
+
     const { data, error } = await supabase
       .from('family_log_cards')
-      .update(parsed.patch)
+      .update(patch)
       .eq('id', id)
       .eq('group_id', groupId)
       .select(FAMILY_LOG_CARD_COLUMNS)

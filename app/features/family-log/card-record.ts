@@ -1,8 +1,40 @@
 import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
-import type { FamilyLogCard, FamilyLogKind } from './types';
+import type { FamilyLogCard, FamilyLogKind, FamilyLogRoutePoint } from './types';
 
 export const FAMILY_LOG_CARD_COLUMNS =
-  'id,group_id,title,kind,day_date,latitude,longitude,address,note,mood_tags,show_map,amount,currency,collage_style,rating,is_revisit,created_at,updated_at';
+  'id,group_id,title,kind,day_date,latitude,longitude,place_latitude,place_longitude,route_points,address,note,mood_tags,show_map,amount,currency,collage_style,rating,is_revisit,created_at,updated_at';
+
+function finiteCoord(value: unknown, limit: number): number | null {
+  if (value == null || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || Math.abs(n) > limit) return null;
+  return n;
+}
+
+function parseFamilyLogRoutePoints(raw: unknown): FamilyLogRoutePoint[] {
+  if (!Array.isArray(raw)) return [];
+  const points: FamilyLogRoutePoint[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const latitude = finiteCoord(row.latitude, 90);
+    const longitude = finiteCoord(row.longitude, 180);
+    if (latitude == null || longitude == null) continue;
+    points.push({ latitude, longitude });
+  }
+  return points;
+}
+
+/** Route line for a route card. Falls back to the saved start pin when no track was stored. */
+export function routePointsForCard(
+  card: Pick<FamilyLogCard, 'route_points' | 'latitude' | 'longitude'>,
+): FamilyLogRoutePoint[] {
+  if (card.route_points.length > 0) return card.route_points;
+  if (card.latitude != null && card.longitude != null) {
+    return [{ latitude: card.latitude, longitude: card.longitude }];
+  }
+  return [];
+}
 
 export const FAMILY_LOG_MOODS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'] as const;
 
@@ -27,8 +59,11 @@ export function normalizeFamilyLogCard(row: Record<string, unknown>): FamilyLogC
     title: String(row.title ?? ''),
     kind: asKind(row.kind) ?? 'note',
     day_date: String(row.day_date ?? '').slice(0, 10),
-    latitude: row.latitude == null ? null : Number(row.latitude),
-    longitude: row.longitude == null ? null : Number(row.longitude),
+    latitude: finiteCoord(row.latitude, 90),
+    longitude: finiteCoord(row.longitude, 180),
+    place_latitude: finiteCoord(row.place_latitude, 90),
+    place_longitude: finiteCoord(row.place_longitude, 180),
+    route_points: parseFamilyLogRoutePoints(row.route_points),
     address: typeof row.address === 'string' ? row.address : null,
     note: typeof row.note === 'string' ? row.note : null,
     mood_tags: moods,

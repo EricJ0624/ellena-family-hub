@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { Pencil, Star, Trash2 } from 'lucide-react';
 import { DiaryPhotoCollage } from '@/app/features/travel-diary/components/DiaryPhotoCollage';
 import { DiaryPlaceMapPreview } from '@/app/features/travel-diary/components/DiaryPlaceMapPreview';
+import { FamilyLogRouteMap } from './FamilyLogRouteMap';
 import { type UploadedAttachment } from '@/lib/feature-attachments-client';
 import {
   diaryBodyClass,
@@ -15,6 +16,7 @@ import {
 } from '@/lib/modules/travel-planner/diary-entry-theme';
 import { canShowDiaryPlaceMap } from '@/lib/modules/travel-planner/google-maps-embed';
 import { readFamilyLogAttachments, ensureFamilyLogAttachments } from '../attachment-cache';
+import { routePointsForCard } from '../card-record';
 import { deleteFamilyLogCard } from '../client-auth';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { FamilyLogLabels } from '../labels';
@@ -63,13 +65,17 @@ export function FamilyLogCardView({
     canNext,
     onPage: (dir) => onNeighbor?.(dir),
   });
+  const isRoute = card.kind === 'route';
   const place = {
     title: card.title,
     address: card.address,
-    latitude: card.latitude,
-    longitude: card.longitude,
+    latitude: isRoute ? card.place_latitude : card.latitude,
+    longitude: isRoute ? card.place_longitude : card.longitude,
   };
-  const displayMap = card.show_map !== false && canShowDiaryPlaceMap(place);
+  const routePoints = isRoute ? routePointsForCard(card) : [];
+  const showPlaceMap = card.show_map !== false && canShowDiaryPlaceMap(place);
+  const showRouteMap = card.show_map !== false && routePoints.length > 0;
+  const displayMap = showPlaceMap || showRouteMap;
   const hasAmount = card.amount != null && card.amount > 0;
   const note = card.note?.trim() ?? '';
 
@@ -180,7 +186,7 @@ export function FamilyLogCardView({
             </p>
           ) : null}
 
-          {card.mood_tags.length > 0 || displayMap || card.rating != null || card.is_revisit ? (
+          {card.mood_tags.length > 0 || (!isRoute && showPlaceMap) || card.rating != null || card.is_revisit ? (
             <div className={`flex items-stretch gap-2${note ? ' mt-2' : ' mt-3'}`}>
               <div className="flex w-max max-w-[58%] shrink-0 flex-col justify-center gap-1.5">
                 {card.mood_tags.length > 0 ? (
@@ -211,7 +217,24 @@ export function FamilyLogCardView({
                   </span>
                 ) : null}
               </div>
-              {displayMap ? <DiaryPlaceMapPreview place={place} /> : null}
+              {!isRoute && showPlaceMap ? <DiaryPlaceMapPreview place={place} /> : null}
+            </div>
+          ) : null}
+
+          {isRoute && (showPlaceMap || showRouteMap) ? (
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {showPlaceMap ? (
+                <div className="min-w-0">
+                  <p className="m-0 mb-1 text-xs font-medium text-slate-500">{labels.placeMap}</p>
+                  <DiaryPlaceMapPreview place={place} />
+                </div>
+              ) : null}
+              {showRouteMap ? (
+                <div className="min-w-0">
+                  <p className="m-0 mb-1 text-xs font-medium text-slate-500">{labels.routeMap}</p>
+                  <FamilyLogRouteMap points={routePoints} />
+                </div>
+              ) : null}
             </div>
           ) : null}
 

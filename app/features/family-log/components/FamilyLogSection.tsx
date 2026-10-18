@@ -12,6 +12,7 @@ import {
   writeFamilyLogAttachments,
 } from '../attachment-cache';
 import { familyLogAuthHeaders } from '../client-auth';
+import { readDevicePosition } from '../device-position';
 import { FamilyLogCardEditor } from './FamilyLogCardEditor';
 import { FamilyLogCardView } from './FamilyLogCardView';
 import {
@@ -70,26 +71,15 @@ function cardSignature(list: FamilyLogCard[]): string {
         card.amount ?? '',
         card.currency ?? '',
         card.show_map ? '1' : '0',
+        card.place_latitude ?? '',
+        card.place_longitude ?? '',
+        card.route_points.length,
         card.collage_style ?? '',
         card.rating ?? '',
         card.is_revisit ? '1' : '0',
       ].join('\u001f'),
     )
     .join('\u001e');
-}
-
-function getPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('geo'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 20000,
-      maximumAge: 5000,
-    });
-  });
 }
 
 function matchesGrain(card: FamilyLogCard, grain: FamilyLogGrain, cursor: string): boolean {
@@ -285,7 +275,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const pos = await getPosition();
+      const pos = await readDevicePosition();
       const hm = localHm();
       setBusy(false);
       await createCard({
@@ -334,7 +324,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
     }
     setError(null);
     try {
-      const pos = await getPosition();
+      const pos = await readDevicePosition();
       const point: RoutePoint = {
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
@@ -348,15 +338,6 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
     } catch {
       setError(labels.locationFailed);
     }
-  };
-
-  const handleAddDaily = async () => {
-    if (!currentGroupId || busy || recording) return;
-    await createCard({
-      kind: 'note',
-      day_date: localDay(),
-      title: labels.addDailyTitle,
-    });
   };
 
   const pageIds = pageCards.map((card) => card.id).join('|');
@@ -438,9 +419,6 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
     : actionClass;
   const routeClass = illustrated
     ? 'min-w-0 flex-1 cursor-pointer rounded-full border-0 bg-[#d08a4c] px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:bg-slate-300'
-    : actionClass;
-  const dailyClass = illustrated
-    ? 'min-w-0 flex-1 cursor-pointer rounded-full border-0 bg-[#c4a574] px-1.5 py-2 text-[11px] font-bold leading-tight text-white disabled:cursor-not-allowed disabled:bg-slate-300'
     : actionClass;
 
   return (
@@ -646,14 +624,6 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
             className={routeClass}
           >
             {recording ? labels.routeStop : labels.route}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleAddDaily()}
-            disabled={!currentGroupId || busy || recording}
-            className={dailyClass}
-          >
-            {labels.addDaily}
           </button>
         </div>
       </div>

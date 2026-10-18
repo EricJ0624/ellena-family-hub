@@ -7,6 +7,7 @@ import { SearchableSelect } from '@/app/components/SearchableSelect';
 import { FamilyAlbumPickerModal } from '@/app/features/travel-diary/components/FamilyAlbumPickerModal';
 import { DiaryPhotoCollage } from '@/app/features/travel-diary/components/DiaryPhotoCollage';
 import { DiaryPlaceMapPreview } from '@/app/features/travel-diary/components/DiaryPlaceMapPreview';
+import { FamilyLogRouteMap } from './FamilyLogRouteMap';
 import {
   deleteAttachment,
   getAttachmentsForEntity,
@@ -18,8 +19,9 @@ import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies
 import type { LangCode } from '@/lib/language-fonts';
 import type { UiTheme } from '@/lib/ui-theme';
 import { readFamilyLogAttachments, ensureFamilyLogAttachments, writeFamilyLogAttachments } from '../attachment-cache';
-import { FAMILY_LOG_MOODS } from '../card-record';
+import { FAMILY_LOG_MOODS, routePointsForCard } from '../card-record';
 import { deleteFamilyLogCard, familyLogAuthHeaders } from '../client-auth';
+import { readDevicePosition } from '../device-position';
 import type { FamilyLogLabels } from '../labels';
 import type { FamilyLogCard } from '../types';
 
@@ -63,6 +65,10 @@ export function FamilyLogCardEditor({
   const [amount, setAmount] = useState(card.amount != null ? String(card.amount) : '');
   const [currency, setCurrency] = useState(card.currency ?? '');
   const [showMap, setShowMap] = useState(card.show_map !== false);
+  const [placeLat, setPlaceLat] = useState<number | null>(card.place_latitude);
+  const [placeLng, setPlaceLng] = useState<number | null>(card.place_longitude);
+  const [placeTouched, setPlaceTouched] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [collageStyle, setCollageStyle] = useState<'film' | 'postal'>(
     card.collage_style === 'postal' ? 'postal' : 'film',
   );
@@ -212,6 +218,11 @@ export function FamilyLogCardEditor({
           amount: hasAmount ? amountNumber : null,
           currency: hasAmount ? currency : '',
           show_map: showMap,
+          ...(card.kind === 'route' && placeTouched
+            ? placeLat != null && placeLng != null
+              ? { place_latitude: placeLat, place_longitude: placeLng }
+              : { clear_place: true }
+            : {}),
           collage_style: collageStyle,
           rating: rating === '' ? null : rating,
           is_revisit: revisit,
@@ -254,12 +265,39 @@ export function FamilyLogCardEditor({
         : active
           ? 'cursor-pointer rounded-lg border border-violet-400 bg-violet-100 px-3 py-1.5 text-xs font-medium text-violet-800'
           : 'cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700';
-  const canPlaceMap = canShowDiaryPlaceMap({
-    title: card.title,
-    address: card.address,
-    latitude: card.latitude,
-    longitude: card.longitude,
-  });
+  const isRoute = card.kind === 'route';
+  const canPlaceMap =
+    !isRoute &&
+    canShowDiaryPlaceMap({
+      title: card.title,
+      address: card.address,
+      latitude: card.latitude,
+      longitude: card.longitude,
+    });
+  const routePoints = isRoute ? routePointsForCard(card) : [];
+  const showRouteMap = showMap && routePoints.length > 0;
+  const showAddedPlace =
+    isRoute &&
+    showMap &&
+    placeLat != null &&
+    placeLng != null &&
+    canShowDiaryPlaceMap({ title, latitude: placeLat, longitude: placeLng });
+  const addMyPlace = async () => {
+    if (locating || saving) return;
+    setLocating(true);
+    setError(null);
+    try {
+      const pos = await readDevicePosition();
+      setPlaceLat(pos.coords.latitude);
+      setPlaceLng(pos.coords.longitude);
+      setPlaceTouched(true);
+      setShowMap(true);
+    } catch {
+      setError(labels.locationFailed);
+    } finally {
+      setLocating(false);
+    }
+  };
   const hasExpenseDraft = amount.trim() !== '' && Number.isFinite(Number(amount)) && Number(amount) > 0;
   const actionClass =
     tone === 'neo'
@@ -375,7 +413,23 @@ export function FamilyLogCardEditor({
               </div>
             ) : null}
           </div>
-          {canPlaceMap ? (
+          {isRoute && (showAddedPlace || showRouteMap) ? (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {showAddedPlace ? (
+                <div className="min-w-0">
+                  <p className={`m-0 mb-1 ${labelClass}`}>{labels.placeMap}</p>
+                  <DiaryPlaceMapPreview place={{ title, latitude: placeLat, longitude: placeLng }} />
+                </div>
+              ) : null}
+              {showRouteMap ? (
+                <div className="min-w-0">
+                  <p className={`m-0 mb-1 ${labelClass}`}>{labels.routeMap}</p>
+                  <FamilyLogRouteMap points={routePoints} />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {isRoute || canPlaceMap ? (
             <div>
               <p className={`m-0 ${labelClass}`}>{labels.mapLabel}</p>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -385,6 +439,30 @@ export function FamilyLogCardEditor({
                 <button type="button" onClick={() => setShowMap(false)} className={choiceClass(!showMap)}>
                   {labels.mapRemove}
                 </button>
+                {isRoute ? (
+                  placeLat != null && placeLng != null ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlaceLat(null);
+                        setPlaceLng(null);
+                        setPlaceTouched(true);
+                      }}
+                      className={choiceClass(false)}
+                    >
+                      {labels.removePlace}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={locating || saving}
+                      onClick={() => void addMyPlace()}
+                      className={choiceClass(false)}
+                    >
+                      {locating ? labels.loading : labels.addPlace}
+                    </button>
+                  )
+                ) : null}
               </div>
             </div>
           ) : null}

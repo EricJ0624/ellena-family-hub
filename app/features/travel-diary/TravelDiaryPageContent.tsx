@@ -53,6 +53,7 @@ export function TravelDiaryPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tripIdParam = searchParams.get('tripId');
+  const openAdd = searchParams.get('openAdd') === '1' && !tripIdParam;
   const { currentGroupId, currentGroup, uiTheme } = useGroup();
   const { lang } = useLanguage();
   const isFamilyTheme = uiTheme === 'kids_friendly';
@@ -83,6 +84,12 @@ export function TravelDiaryPageContent() {
   const [addEnd, setAddEnd] = useState('');
   const [addingItinerary, setAddingItinerary] = useState(false);
   const addingItineraryRef = useRef(false);
+  const [diaryTitle, setDiaryTitle] = useState('');
+  const [diaryDestination, setDiaryDestination] = useState('');
+  const [diaryStart, setDiaryStart] = useState('');
+  const [diaryEnd, setDiaryEnd] = useState('');
+  const [creatingDiary, setCreatingDiary] = useState(false);
+  const creatingDiaryRef = useRef(false);
   const [entryPhotos, setEntryPhotos] = useState<Map<string, UploadedAttachment[]> | null>(null);
   const shownTripRef = useRef<string | null>(null);
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
@@ -677,15 +684,155 @@ export function TravelDiaryPageContent() {
     );
   }
 
+  const submitCreateDiary = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!currentGroupId || creatingDiaryRef.current) return;
+    const title = diaryTitle.trim();
+    const start = diaryStart.trim().slice(0, 10);
+    const end = diaryEnd.trim().slice(0, 10);
+    if (!title || !start || !end) {
+      alert(getTravelTranslation(lang, 'alert_trip_required'));
+      return;
+    }
+    if (new Date(end) < new Date(start)) {
+      alert(getTravelTranslation(lang, 'alert_end_after_start'));
+      return;
+    }
+    creatingDiaryRef.current = true;
+    setCreatingDiary(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) throw new Error('auth');
+      const res = await fetch(`${API}/trips`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          title,
+          destination: diaryDestination.trim() || undefined,
+          start_date: start,
+          end_date: end,
+          diary_enabled: true,
+          planner_hidden: true,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || t('add_diary_failed'));
+      const createdId = json.data?.id as string | undefined;
+      if (!createdId) throw new Error(t('add_diary_failed'));
+      router.replace(`/travel/diary?tripId=${encodeURIComponent(createdId)}`);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : t('add_diary_failed'));
+    } finally {
+      creatingDiaryRef.current = false;
+      setCreatingDiary(false);
+    }
+  };
+
   if (!tripIdParam) {
     return (
       <div
         className={[
-          'flex min-h-screen items-center justify-center p-6',
-          isDarkPage ? 'bg-app-shell-inner text-slate-300' : 'bg-gradient-to-b from-slate-50 to-sky-50/50 text-slate-500',
+          'min-h-screen p-4 sm:p-6',
+          isDarkPage
+            ? 'bg-app-shell-inner text-slate-50'
+            : 'bg-gradient-to-b from-slate-50 via-white to-sky-50/40 text-slate-800',
         ].join(' ')}
       >
-        {t('trip_required')}
+        <div className="mx-auto max-w-2xl">
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            className={[
+              'mb-4 inline-flex cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent text-sm font-medium',
+              isDarkPage ? 'text-slate-300 hover:text-white' : 'text-slate-500 hover:text-slate-800',
+            ].join(' ')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {t('back')}
+          </button>
+          {openAdd && currentGroupId ? (
+            <form
+              onSubmit={(event) => void submitCreateDiary(event)}
+              className={[
+                'rounded-xl border p-4',
+                isDarkPage ? 'border-white/15 bg-white/5' : 'border-slate-200 bg-white',
+              ].join(' ')}
+            >
+              <h1 className={['m-0 text-lg font-bold', isDarkPage ? 'text-white' : 'text-slate-800'].join(' ')}>
+                {t('add_diary')}
+              </h1>
+              <label className={['mt-4 block text-xs font-medium', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+                {getTravelTranslation(lang, 'label_title')}
+                <input
+                  type="text"
+                  required
+                  maxLength={200}
+                  value={diaryTitle}
+                  onChange={(event) => setDiaryTitle(event.target.value)}
+                  placeholder={getTravelTranslation(lang, 'placeholder_trip_title')}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                />
+              </label>
+              <label className={['mt-3 block text-xs font-medium', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+                {getTravelTranslation(lang, 'label_destination')}
+                <input
+                  type="text"
+                  maxLength={200}
+                  value={diaryDestination}
+                  onChange={(event) => setDiaryDestination(event.target.value)}
+                  placeholder={getTravelTranslation(lang, 'placeholder_destination')}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                />
+              </label>
+              <label className={['mt-3 block text-xs font-medium', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+                {getTravelTranslation(lang, 'label_start_date')}
+                <input
+                  type="date"
+                  required
+                  value={diaryStart}
+                  onChange={(event) => setDiaryStart(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                />
+              </label>
+              <label className={['mt-3 block text-xs font-medium', isDarkPage ? 'text-slate-300' : 'text-slate-600'].join(' ')}>
+                {getTravelTranslation(lang, 'label_end_date')}
+                <input
+                  type="date"
+                  required
+                  value={diaryEnd}
+                  onChange={(event) => setDiaryEnd(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                />
+              </label>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={creatingDiary}
+                  onClick={() => router.push('/dashboard')}
+                  className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-60"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingDiary}
+                  className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                >
+                  {creatingDiary ? t('loading') : t('save')}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p className={['text-sm', isDarkPage ? 'text-slate-300' : 'text-slate-500'].join(' ')}>
+              {currentGroupId ? t('trip_required') : t('select_group')}
+            </p>
+          )}
+        </div>
       </div>
     );
   }

@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
       end_date,
       currency: bodyCurrency,
       diary_enabled: bodyDiaryEnabled,
+      planner_hidden: bodyPlannerHidden,
     } = body as {
       groupId?: string;
       title?: string;
@@ -68,6 +69,8 @@ export async function POST(request: NextRequest) {
       end_date?: string;
       currency?: string;
       diary_enabled?: boolean;
+      /** 다이어리 위젯에서 만든 여행만. diary_enabled와 함께일 때만 적용 */
+      planner_hidden?: boolean;
     };
 
     if (!groupId || !title || !start_date || !end_date) {
@@ -115,6 +118,8 @@ export async function POST(request: NextRequest) {
     }
 
     const enableDiary = bodyDiaryEnabled === true;
+    const hideFromPlanner = enableDiary && bodyPlannerHidden === true;
+    const nowIso = new Date().toISOString();
 
     const { data, error } = await supabase
       .from('travel_trips')
@@ -130,6 +135,9 @@ export async function POST(request: NextRequest) {
         status_source: 'auto',
         diary_enabled: enableDiary,
         ...(enableDiary ? { diary_invite_status: 'accepted' } : {}),
+        ...(hideFromPlanner
+          ? { planner_hidden_at: nowIso, planner_hidden_by: user.id }
+          : {}),
         emergency_contacts: buildEmergencyContactsFromDestination(
           dest,
           [String(title).trim()],
@@ -157,21 +165,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    try {
-      const members = await getGroupMemberUserIds(groupId, supabase);
-      await notifyFamily({
-        groupId,
-        actorUserId: user.id,
-        recipientUserIds: members,
-        widgetKey: 'travel',
-        eventType: 'TRAVEL_TRIP_CREATED',
-        title: '✈️ 새 여행',
-        body: `새 여행이 등록되었습니다: ${String(title).trim().slice(0, 40)}`,
-        url: '/travel',
-        entityId: data?.id ? String(data.id) : null,
-      });
-    } catch (notifyError) {
-      console.warn('travel trip create notify:', notifyError);
+    if (!hideFromPlanner) {
+      try {
+        const members = await getGroupMemberUserIds(groupId, supabase);
+        await notifyFamily({
+          groupId,
+          actorUserId: user.id,
+          recipientUserIds: members,
+          widgetKey: 'travel',
+          eventType: 'TRAVEL_TRIP_CREATED',
+          title: '✈️ 새 여행',
+          body: `새 여행이 등록되었습니다: ${String(title).trim().slice(0, 40)}`,
+          url: '/travel',
+          entityId: data?.id ? String(data.id) : null,
+        });
+      } catch (notifyError) {
+        console.warn('travel trip create notify:', notifyError);
+      }
     }
 
     return NextResponse.json({ success: true, data });

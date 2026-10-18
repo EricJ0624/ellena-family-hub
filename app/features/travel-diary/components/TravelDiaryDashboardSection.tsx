@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import type { TravelTrip } from '@/app/features/travel-planner/types';
 import type { UiTheme } from '@/lib/ui-theme';
 import { canUserOptInDiaryForTrip } from '@/lib/modules/travel-planner/diary-eligibility';
@@ -19,6 +20,7 @@ type Props = {
   currentGroupId: string | null;
   onOpenTrip: (tripId: string) => void;
   onStartTrip: (tripId: string) => Promise<void>;
+  onAddDiary: () => void;
   uiTheme?: UiTheme;
   translations: {
     section_title: string;
@@ -27,6 +29,7 @@ type Props = {
     empty_pick_trip: string;
     open_diary: string;
     start_trip_diary: string;
+    add_diary: string;
   };
 };
 
@@ -297,12 +300,14 @@ function DiaryKidsScrapbookSection({
   loading,
   currentGroupId,
   onActivate,
+  onAddDiary,
   translations: t,
 }: {
   trips: TravelTrip[];
   loading: boolean;
   currentGroupId: string | null;
   onActivate: (trip: TravelTrip) => void;
+  onAddDiary: () => void;
   translations: Props['translations'];
 }) {
   const spreadCount = Math.max(1, Math.ceil(trips.length / TRIPS_PER_SPREAD));
@@ -371,6 +376,17 @@ function DiaryKidsScrapbookSection({
     >
       <DiaryPolaroidFromViewedAlbum />
 
+      {currentGroupId ? (
+        <button
+          type="button"
+          onClick={onAddDiary}
+          className="pointer-events-auto absolute top-[3%] right-[7%] z-20 inline-flex max-w-[42%] cursor-pointer items-center gap-1 rounded-full border border-[#6b4630]/35 bg-white/90 px-2 py-1 text-[0.68rem] font-bold leading-none text-[#6b4630] shadow-sm"
+        >
+          <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{t.add_diary}</span>
+        </button>
+      ) : null}
+
       <div className="diary-book-stage">
         <div className="diary-book-cover">
           <h3 className="diary-book-title travel-kids-widget-title m-0 inline-flex items-center gap-1.5 normal-case">
@@ -424,6 +440,7 @@ export function TravelDiaryDashboardSection({
   currentGroupId,
   onOpenTrip,
   onStartTrip,
+  onAddDiary,
   uiTheme,
   translations: t,
 }: Props) {
@@ -449,6 +466,7 @@ export function TravelDiaryDashboardSection({
         loading={loading}
         currentGroupId={currentGroupId}
         onActivate={handleTripActivate}
+        onAddDiary={onAddDiary}
         translations={t}
       />
     );
@@ -502,11 +520,21 @@ export function TravelDiaryDashboardSection({
 
   return (
     <section className="content-section">
-      <div className="section-header">
-        <h3 className="section-title m-0 inline-flex min-w-0 items-center gap-1.5">
+      <div className="section-header flex-wrap gap-x-[2.5cqmin] gap-y-[1.5cqmin]">
+        <h3 className="section-title m-0 inline-flex min-w-0 flex-1 items-center gap-1.5">
           <span aria-hidden>📔</span>
           {t.section_title}
         </h3>
+        {currentGroupId ? (
+          <button
+            type="button"
+            onClick={onAddDiary}
+            className="inline-flex cursor-pointer items-center justify-center gap-[1cqmin] rounded-full border-none bg-[#9333ea] px-[2.5cqmin] py-[1.5cqmin] text-[4.5cqmin] font-bold text-white"
+          >
+            <Plus className="h-[4.5cqmin] w-[4.5cqmin]" aria-hidden />
+            {t.add_diary}
+          </button>
+        ) : null}
       </div>
       <div className="section-body">{bodyContent}</div>
     </section>

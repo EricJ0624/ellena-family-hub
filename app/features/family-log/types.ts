@@ -1,5 +1,10 @@
 export type FamilyLogKind = 'checkin' | 'route' | 'note';
 
+export type FamilyLogRoutePoint = {
+  latitude: number;
+  longitude: number;
+};
+
 export type FamilyLogCard = {
   id: string;
   group_id: string;
@@ -8,6 +13,9 @@ export type FamilyLogCard = {
   day_date: string;
   latitude: number | null;
   longitude: number | null;
+  place_latitude: number | null;
+  place_longitude: number | null;
+  route_points: FamilyLogRoutePoint[];
   address: string | null;
   note: string | null;
   mood_tags: string[];

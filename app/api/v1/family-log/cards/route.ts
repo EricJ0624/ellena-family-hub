@@ -65,8 +65,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const groupId = typeof body.groupId === 'string' ? body.groupId.trim() : '';
-    const kind =
-      body.kind === 'route' ? 'route' : body.kind === 'checkin' ? 'checkin' : body.kind === 'note' ? 'note' : '';
+    const kind = body.kind === 'route' ? 'route' : body.kind === 'checkin' ? 'checkin' : '';
     const dayDate =
       typeof body.day_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day_date)
         ? body.day_date
@@ -99,7 +98,7 @@ export async function POST(request: NextRequest) {
       requestedTitle ||
       (kind === 'checkin' && address ? address : '') ||
       fallbackTitle ||
-      (kind === 'note' ? '새 일상' : buildFieldRecordTitle(kind, timeHm, endHm));
+      buildFieldRecordTitle(kind, timeHm, endHm);
 
     const routePoints = Array.isArray(body.route_points) ? body.route_points : null;
 
