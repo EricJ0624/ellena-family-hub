@@ -83,7 +83,6 @@ function BillingCheckout() {
   const betaPeriodEnabled = groupState?.betaPeriodEnabled !== false;
   const needsPromo = !isAdminTest && groupState?.betaOwner === true;
   const minimumFloor = needsPromo
-    && groupState?.betaPeriodEnabled === false
     && (groupState?.memberCount ?? 0) <= 2
     && (groupState?.allowedSeats ?? 0) <= 2
     && (groupState?.quotaBytes ?? 0) < TWENTY_GB;
