@@ -440,8 +440,10 @@ export default function AdminPage() {
       : 'Select only the languages you need and paste translated text.';
 
   const formatBytes = (bytes: number | null | undefined): string => {
-    if (!bytes || bytes <= 0) return '0.00GB';
-    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`;
+    const gb = 1024 * 1024 * 1024;
+    if (!bytes || bytes <= 0) return '0.00MB';
+    if (bytes < gb) return `${(bytes / 1024 / 1024).toFixed(2)}MB`;
+    return `${(bytes / gb).toFixed(2)}GB`;
   };
 
   const getStoragePercent = (used: number | null | undefined, quota: number | null | undefined): number => {
@@ -2687,7 +2689,7 @@ export default function AdminPage() {
                         <option value="">{at('select_group_option')}</option>
                         {filteredManageableGroups.map((group) => (
                           <option key={group.id} value={group.id}>
-                            [{getAppIdLabel(group.app_id)}] {getGroupSelectorLabel(group, ct('app_title'))} ({fat('count_suffix', { count: group.member_count })})
+                            [{getAppIdLabel(group.app_id)}] {getGroupSelectorLabel(group, ct('app_title'))} ({fat('member_count_suffix', { count: group.member_count })})
                           </option>
                         ))}
                       </select>

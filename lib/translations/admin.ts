@@ -184,6 +184,7 @@ export type AdminTranslations = {
   joined_at: string;
   groups_count_header: string;
   count_suffix: string;
+  member_count_suffix: string;
   role_system_admin_badge: string;
   role_regular_user: string;
   revoke_admin_btn: string;
@@ -407,6 +408,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: '가입일',
     groups_count_header: '그룹 수',
     count_suffix: '${count}개',
+    member_count_suffix: '${count}명',
     role_system_admin_badge: '시스템 관리자',
     role_regular_user: '일반 사용자',
     revoke_admin_btn: '권한 해제',
@@ -626,6 +628,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: 'Joined',
     groups_count_header: 'Groups',
     count_suffix: '${count}',
+    member_count_suffix: '${count} people',
     role_system_admin_badge: 'System admin',
     role_regular_user: 'Regular user',
     revoke_admin_btn: 'Revoke admin',
@@ -845,6 +848,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: '登録日',
     groups_count_header: 'グループ数',
     count_suffix: '${count}件',
+    member_count_suffix: '${count}人',
     role_system_admin_badge: 'システム管理者',
     role_regular_user: '一般ユーザー',
     revoke_admin_btn: '権限解除',
@@ -1064,6 +1068,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: '注册日',
     groups_count_header: '群组数',
     count_suffix: '${count}个',
+    member_count_suffix: '${count}人',
     role_system_admin_badge: '系统管理员',
     role_regular_user: '普通用户',
     revoke_admin_btn: '解除权限',
@@ -1283,6 +1288,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: '註冊日',
     groups_count_header: '群組數',
     count_suffix: '${count}個',
+    member_count_suffix: '${count}人',
     role_system_admin_badge: '系統管理員',
     role_regular_user: '一般使用者',
     revoke_admin_btn: '解除權限',
@@ -1502,6 +1508,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: 'Registro',
     groups_count_header: 'Grupos',
     count_suffix: '${count}',
+    member_count_suffix: '${count} personas',
     role_system_admin_badge: 'Administrador del sistema',
     role_regular_user: 'Usuario regular',
     revoke_admin_btn: 'Revocar admin',
@@ -1721,6 +1728,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: 'Inscription',
     groups_count_header: 'Groupes',
     count_suffix: '${count}',
+    member_count_suffix: '${count} personnes',
     role_system_admin_badge: 'Administrateur système',
     role_regular_user: 'Utilisateur standard',
     revoke_admin_btn: 'Révoquer admin',
@@ -1940,6 +1948,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: 'Beitritt',
     groups_count_header: 'Gruppen',
     count_suffix: '${count}',
+    member_count_suffix: '${count} Personen',
     role_system_admin_badge: 'Systemadministrator',
     role_regular_user: 'Normaler Benutzer',
     revoke_admin_btn: 'Admin entziehen',
@@ -2159,6 +2168,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: 'Iscrizione',
     groups_count_header: 'Gruppi',
     count_suffix: '${count}',
+    member_count_suffix: '${count} persone',
     role_system_admin_badge: 'Amministratore di sistema',
     role_regular_user: 'Utente normale',
     revoke_admin_btn: 'Revoca admin',
@@ -2378,6 +2388,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     joined_at: 'Entrou em',
     groups_count_header: 'Grupos',
     count_suffix: '${count}',
+    member_count_suffix: '${count} pessoas',
     role_system_admin_badge: 'Administrador do sistema',
     role_regular_user: 'Usuário comum',
     revoke_admin_btn: 'Revogar admin',
