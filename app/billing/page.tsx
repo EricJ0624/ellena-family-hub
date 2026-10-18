@@ -6,7 +6,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { CURRENT_APP_ID, isAppId } from '@/lib/apps';
 import { billingApiMessage, formatBillingTranslation, getBillingTranslation } from '@/lib/translations/billing';
-import { buildBillingProductId, type BillingQuotaTier } from '@/lib/billing-catalog';
+import { billingAppUserId, buildBillingProductId, type BillingQuotaTier } from '@/lib/billing-catalog';
 import { openBillingPurchase } from '@/lib/billing-purchase-client';
 import { supabase } from '@/lib/supabase';
 
@@ -41,6 +41,10 @@ function formatUsd(cents: number): string {
   return `USD ${(cents / 100).toFixed(2)}`;
 }
 
+function isStorageIntent(intent: string | null): boolean {
+  return intent === '20gb' || intent === '10gb' || intent === 'storage';
+}
+
 function resolvePurchaseChoice(
   choice: PurchaseChoice,
   minimumFloor: boolean,
@@ -53,7 +57,7 @@ function resolvePurchaseChoice(
   }
   if (choice === 'floor3') return 'floor3';
   if (choice === 'floor20' || choice === '20gb') return 'floor20';
-  if (intent === '20gb' || intent === '10gb' || intent === 'storage') return 'floor20';
+  if (isStorageIntent(intent)) return 'floor20';
   return 'floor3';
 }
 
@@ -68,7 +72,7 @@ function BillingCheckout() {
   const isAdminTest = mode === 'new-user-test';
   const intent = searchParams.get('intent');
   const [choice, setChoice] = useState<PurchaseChoice>(
-    intent === 'seats' ? 'seats' : intent === '20gb' || intent === '10gb' || intent === 'storage' ? '20gb' : '5gb',
+    intent === 'seats' ? 'seats' : isStorageIntent(intent) ? '20gb' : '5gb',
   );
   const [code, setCode] = useState('');
   const [shownCode, setShownCode] = useState('');
@@ -153,7 +157,7 @@ function BillingCheckout() {
       setError(bt('owner_only'));
       return;
     }
-    if (needsPromo && code.trim().toUpperCase() !== shownCode.trim().toUpperCase()) {
+    if (needsPromo && (!shownCode || code.trim().toUpperCase() !== shownCode.trim().toUpperCase())) {
       setError(bt('promo_mismatch'));
       return;
     }
@@ -216,7 +220,7 @@ function BillingCheckout() {
 
       const result = await openBillingPurchase({
         apiKey,
-        appUserId: `${CURRENT_APP_ID}:${user.id}`,
+        appUserId: billingAppUserId(CURRENT_APP_ID, user.id),
         groupId,
         productId,
         quotaAction: isAdminTest ? '5gb' : quotaAction,

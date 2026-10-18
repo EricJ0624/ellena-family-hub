@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '그룹을 찾을 수 없습니다.', code: 'group_missing' }, { status: 404 });
   }
 
-  const [{ count }, { data: plan }, { data: subscription }, quotaBytes, originalUploadEnabled, override] =
+  const [memberResult, planResult, subscriptionResult, quotaBytes, originalUploadEnabled, override] =
     await Promise.all([
       supabase
         .from('memberships')
@@ -51,6 +51,13 @@ export async function GET(request: NextRequest) {
       groupAllowsOriginalUpload(groupId),
       getBillingGroupOverride(groupId),
     ]);
+  if (memberResult.error || planResult.error || subscriptionResult.error) {
+    console.error('그룹 결제 상태 조회 오류:', memberResult.error ?? planResult.error ?? subscriptionResult.error);
+    return NextResponse.json({ error: '결제 상태를 불러오지 못했습니다.' }, { status: 500 });
+  }
+  const count = memberResult.count;
+  const plan = planResult.data;
+  const subscription = subscriptionResult.data;
 
   const beta = await getAppBetaQualification(group.app_id, group.owner_id);
   const betaPeriodEnabled = plan?.beta_period_enabled !== false;

@@ -22,10 +22,11 @@ export async function openBillingPurchase(input: {
   });
 
   const offerings = await purchases.getOfferings();
-  const packages = [
-    ...Object.values(offerings.all),
-    ...(offerings.current ? [offerings.current] : []),
-  ].flatMap((offering) => offering.availablePackages);
+  const offeringList = Object.values(offerings.all);
+  if (offerings.current && !offeringList.includes(offerings.current)) {
+    offeringList.push(offerings.current);
+  }
+  const packages = offeringList.flatMap((offering) => offering.availablePackages);
   const selected = packages.find(
     (pkg) => pkg.product.identifier === input.productId || pkg.identifier === input.productId,
   );
