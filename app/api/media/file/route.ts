@@ -51,9 +51,15 @@ export async function GET(request: NextRequest) {
       console.error('CloudFront 서명 설정이 절반만 있습니다. 키 ID와 개인키가 모두 있어야 합니다.');
       return NextResponse.json({ error: '파일을 불러오지 못했습니다.' }, { status: 500 });
     }
-    const location = signer
-      ? signCloudFrontUrl(unsignedUrl, Number(exp), signer.keyPairId, signer.privateKeyPem)
-      : unsignedUrl;
+    let location = unsignedUrl;
+    if (signer) {
+      try {
+        location = signCloudFrontUrl(unsignedUrl, Number(exp), signer.keyPairId, signer.privateKeyPem);
+      } catch (error) {
+        console.error('CloudFront 서명 주소 발급 오류:', error);
+        return NextResponse.json({ error: '파일을 불러오지 못했습니다.' }, { status: 500 });
+      }
+    }
     const redirect = NextResponse.redirect(location, 302);
     redirect.headers.set('Cache-Control', privateCacheControl(exp));
     return redirect;
