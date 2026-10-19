@@ -2,6 +2,13 @@ import { createHmac, timingSafeEqual } from 'crypto';
 
 const TTL_SECONDS = 60 * 60 * 2;
 
+/** 같은 파일은 한동안 같은 주소를 쓰게 만료 시각을 맞춘다. */
+export function mediaUrlExpiry(nowSeconds = Math.floor(Date.now() / 1000)): number {
+  const windowEnd = Math.floor(nowSeconds / TTL_SECONDS) * TTL_SECONDS + TTL_SECONDS;
+  if (windowEnd - nowSeconds < 10 * 60) return windowEnd + TTL_SECONDS;
+  return windowEnd;
+}
+
 function mediaSecret(): string {
   const value = process.env.MEDIA_URL_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!value) throw new Error('미디어 주소 서명이 설정되지 않았습니다.');
@@ -13,7 +20,7 @@ function signPayload(payload: string): string {
 }
 
 export function issueMediaFileUrl(s3Key: string): string {
-  const exp = Math.floor(Date.now() / 1000) + TTL_SECONDS;
+  const exp = mediaUrlExpiry();
   const key = Buffer.from(s3Key, 'utf8').toString('base64url');
   const payload = `${key}.${exp}`;
   const sig = signPayload(payload);
