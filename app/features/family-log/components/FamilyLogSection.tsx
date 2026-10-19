@@ -25,6 +25,13 @@ import type { FamilyLogCard, FamilyLogGrain } from '../types';
 const BG_SRC = '/family-log/family-log-title.png';
 const CARD_PX = 88;
 const GAP_PX = 8;
+/** 대시보드를 나갔다 와도 같은 그룹 카드는 다시 받기 전에 그대로 둔다. */
+const cardMemory = new Map<string, FamilyLogCard[]>();
+
+function rememberFamilyLogCards(groupId: string | null, next: FamilyLogCard[]) {
+  if (!groupId) return;
+  cardMemory.set(groupId, next);
+}
 
 type RoutePoint = { latitude: number; longitude: number; recorded_at: string };
 
@@ -103,7 +110,9 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
   const labels = getFamilyLogLabels(lang);
   const illustrated = uiTheme !== 'default' && uiTheme !== 'highend_glass';
   const isNeo = uiTheme === 'default';
-  const [cards, setCards] = useState<FamilyLogCard[]>([]);
+  const [cards, setCards] = useState<FamilyLogCard[]>(() =>
+    currentGroupId ? (cardMemory.get(currentGroupId) ?? []) : [],
+  );
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +134,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
   const startDayRef = useRef('');
 
   const loadCards = useCallback(async (groupId: string) => {
-    setLoading(true);
+    if (!(cardMemory.get(groupId)?.length)) setLoading(true);
     setError(null);
     try {
       const headers = await familyLogAuthHeaders();
@@ -136,6 +145,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
       if (groupIdRef.current !== groupId) return;
       if (!res.ok) throw new Error(json.error || 'load');
       const next = Array.isArray(json.data) ? (json.data as FamilyLogCard[]) : [];
+      rememberFamilyLogCards(groupId, next);
       setCards((prev) => (cardSignature(prev) === cardSignature(next) ? prev : next));
     } catch {
       if (groupIdRef.current !== groupId) return;
@@ -146,10 +156,15 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
   }, [labels.loadFailed]);
 
   useEffect(() => {
-    const groupChanged = prevGroupRef.current !== currentGroupId;
+    const previousGroupId = prevGroupRef.current;
     prevGroupRef.current = currentGroupId;
-    if (groupChanged) {
-      setCards([]);
+    // 그룹 id가 잠깐 비거나 첫 마운트인 경우는 전환이 아니다. 전환으로 보면 사진 캐시가 지워진다.
+    const switchedGroup =
+      typeof previousGroupId === 'string' &&
+      typeof currentGroupId === 'string' &&
+      previousGroupId !== currentGroupId;
+    if (switchedGroup) {
+      setCards(currentGroupId ? (cardMemory.get(currentGroupId) ?? []) : []);
       setViewing(null);
       setEditorOpen(false);
       setPage(0);
@@ -160,6 +175,11 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
       }
       pointsRef.current = [];
       setRecording(false);
+    } else if (currentGroupId) {
+      const remembered = cardMemory.get(currentGroupId);
+      if (remembered && remembered.length > 0) {
+        setCards((prev) => (prev.length > 0 ? prev : remembered));
+      }
     }
     if (!currentGroupId) {
       setLoading(false);
@@ -225,7 +245,11 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
   const viewIndex = viewing ? visible.findIndex((card) => card.id === viewing.id) : -1;
   const dropCard = useCallback((removedId: string) => {
     forgetFamilyLogAttachments(removedId);
-    setCards((prev) => prev.filter((card) => card.id !== removedId));
+    setCards((prev) => {
+      const next = prev.filter((card) => card.id !== removedId);
+      rememberFamilyLogCards(groupIdRef.current, next);
+      return next;
+    });
     setViewing(null);
     setEditorOpen(false);
   }, []);
@@ -258,7 +282,11 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
         if (!res.ok) throw new Error(json.error || 'save');
         const created = json.data as FamilyLogCard | undefined;
         if (!created?.id) return false;
-        setCards((prev) => [created, ...prev.filter((card) => card.id !== created.id)]);
+        setCards((prev) => {
+          const next = [created, ...prev.filter((card) => card.id !== created.id)];
+          rememberFamilyLogCards(currentGroupId, next);
+          return next;
+        });
         setGrain('recent');
         setPage(0);
         setViewing(created);
@@ -658,7 +686,11 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
             setEditorOpen(false);
           }}
           onSaved={(updated) => {
-            setCards((prev) => prev.map((card) => (card.id === updated.id ? updated : card)));
+            setCards((prev) => {
+              const next = prev.map((card) => (card.id === updated.id ? updated : card));
+              rememberFamilyLogCards(currentGroupId, next);
+              return next;
+            });
             setViewing(updated);
             setEditorOpen(false);
           }}

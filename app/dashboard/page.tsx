@@ -3,7 +3,7 @@
 // 동적 렌더링 강제 (GroupProvider 의존성 때문에)
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, startTransition } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, useSyncExternalStore, startTransition } from 'react';
 import { createPortal } from 'react-dom';
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
@@ -133,6 +133,13 @@ import {
   readDashboardContentSnapshot,
   writeDashboardContentSnapshot,
 } from '@/lib/dashboard-content-snapshot';
+import {
+  clearDashboardVisitMemory,
+  getDashboardVisitServerSnapshot,
+  readDashboardVisitMemory,
+  subscribeDashboardVisitMemory,
+  writeDashboardVisitMemory,
+} from '@/lib/dashboard-visit-memory';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import {
   resolveWidgetGridPlacement,
@@ -616,6 +623,13 @@ export default function FamilyHub() {
   const isAuthenticatedRef = useRef(false);
   const [masterKey, setMasterKey] = useState('');
   const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
+  /** 같은 탭에서 사진·일기 화면을 다녀올 때 인증 응답 전에도 마지막 대시보드를 그린다. 서버 렌더는 null. */
+  const rememberedVisit = useSyncExternalStore(
+    subscribeDashboardVisitMemory,
+    () => readDashboardVisitMemory(currentGroupId),
+    getDashboardVisitServerSnapshot,
+  );
+  const resumeDashboard = rememberedVisit != null;
   /** postgres_changes 콜백은 구독 시점 클로저를 쓰므로, 본인 판별·그룹 필터는 항상 최신 값 사용 */
   const dashboardUserIdRef = useRef<string>('');
   const dashboardCurrentGroupIdRef = useRef<string | null>(null);
@@ -658,7 +672,7 @@ export default function FamilyHub() {
   piggyMemberPiggiesRef.current = piggyMemberPiggies;
   const { trips: travelTrips, loading: travelTripsLoading, reload: reloadTravelTrips } = useTravelTrips({
     currentGroupId,
-    isAuthenticated,
+    isAuthenticated: isAuthenticated || resumeDashboard,
     errorMessage: dt('piggy_travel_fetch_failed'),
   });
   const {
@@ -1351,6 +1365,36 @@ export default function FamilyHub() {
   useEffect(() => {
     isAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated]);
+
+  // 사진·일기에서 돌아오면 인증 왕복 전에 마지막 사용자를 되살린다. checkAuth 결과(리다이렉트 포함)는 그대로다.
+  useLayoutEffect(() => {
+    if (!rememberedVisit) return;
+    setUserId((prev) => prev || rememberedVisit.userId);
+    dashboardUserIdRef.current = dashboardUserIdRef.current || rememberedVisit.userId;
+    setUserName((prev) => prev || rememberedVisit.userName);
+    setFamilyId((prev) => prev || rememberedVisit.familyId);
+    setIsSystemAdmin((prev) => prev || rememberedVisit.isSystemAdmin);
+    setAdminStatusResolved(true);
+    setIsAuthenticated(true);
+    isAuthenticatedRef.current = true;
+    setIsMounted(true);
+    if (!currentGroupId) return;
+    const cached = readWidgetConfigCache(currentGroupId);
+    if (!cached || cached.length === 0) return;
+    setWidgetConfigs((prev) => (prev.length > 0 ? prev : cached));
+    setWidgetConfigsStatus((prev) => (prev === 'error' ? prev : 'ready'));
+  }, [rememberedVisit, currentGroupId]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userId || !currentGroupId || !adminStatusResolved) return;
+    writeDashboardVisitMemory({
+      groupId: currentGroupId,
+      userId,
+      userName,
+      familyId,
+      isSystemAdmin,
+    });
+  }, [isAuthenticated, userId, currentGroupId, userName, familyId, isSystemAdmin, adminStatusResolved]);
 
   // 2. Auth Check on Load
   useEffect(() => {
@@ -3351,18 +3395,20 @@ export default function FamilyHub() {
   }, [hasAcceptedShare, mapLoaded]);
 
   // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
+  // 인증 state가 비어 있어도, 같은 탭에서 돌아온 사용자 키로 스냅샷을 읽는다.
+  const paintUserId = userId || rememberedVisit?.userId || '';
   const getCurrentKey = useCallback(() => {
-    const authKey = getAuthKey(userId);
+    const authKey = getAuthKey(paintUserId);
     return masterKey || sessionStorage.getItem(authKey) ||
       process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-  }, [userId, masterKey]);
+  }, [paintUserId, masterKey]);
 
   // 페인트 전에 같은 그룹 일정·할 일을 깐다. 그룹이 바뀌기 전에는 서버가 채운 값을 스냅샷으로 덮지 않는다.
   // 그룹 id가 잠깐 비었다가 같은 값으로 돌아와도 ref를 지우지 않는다. 지우면 빈 로컬 목록이 서버 목록을 덮는다.
   useLayoutEffect(() => {
-    if (!userId || !currentGroupId) return;
+    if (!paintUserId || !currentGroupId) return;
     if (contentGroupRef.current === currentGroupId) return;
-    const snap = readDashboardContentSnapshot(userId, currentGroupId, getCurrentKey());
+    const snap = readDashboardContentSnapshot(paintUserId, currentGroupId, getCurrentKey());
     const nextTodos = snap?.todos ?? [];
     const nextEvents = snap?.events ?? [];
     const nextAlbum = snap?.album ?? [];
@@ -3390,7 +3436,7 @@ export default function FamilyHub() {
       }
       return { ...prev, todos: nextTodos, events: nextEvents, album: nextAlbum, messages: nextMessages };
     });
-  }, [userId, currentGroupId, getCurrentKey]);
+  }, [paintUserId, currentGroupId, getCurrentKey]);
 
   // 5. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
@@ -6183,6 +6229,7 @@ export default function FamilyHub() {
           subscriptionsRef.current.locationRequests = null;
         }
         
+        clearDashboardVisitMemory();
         // Supabase 세션 종료
         const { error } = await supabase.auth.signOut();
         if (error) {
@@ -6539,10 +6586,12 @@ export default function FamilyHub() {
       return;
     }
 
-    // 캐시가 있으면 즉시 그리드 표시(WiFi에서도 빈 화면·미표시를 줄임)
+    // 캐시가 있으면 즉시 그리드 표시. 이미 같은 내용이면 배열을 갈아끼우지 않는다.
     const cached = readWidgetConfigCache(currentGroupId);
     if (cached) {
-      setWidgetConfigs(cached);
+      setWidgetConfigs((prev) =>
+        widgetConfigsSignature(prev) === widgetConfigsSignature(cached) ? prev : cached,
+      );
       setWidgetConfigsStatus('ready');
     } else {
       setWidgetConfigsStatus('loading');
@@ -6964,10 +7013,11 @@ export default function FamilyHub() {
 
   // --- [RENDER] ---
 
-  if (!isMounted) return null; // Hydration mismatch 방지
+  // 첫 방문은 기존처럼 인증 후에만 그린다. 같은 탭에서 돌아온 경우만 마지막 화면을 유지한다.
+  if (!isMounted && !resumeDashboard) return null;
 
   // Supabase 세션이 없으면 로그인 페이지로 리다이렉트 (렌더링 전 처리)
-  if (!isAuthenticated && isMounted) {
+  if (!isAuthenticated && isMounted && !resumeDashboard) {
     return null; // useEffect에서 리다이렉트 처리 중
   }
 

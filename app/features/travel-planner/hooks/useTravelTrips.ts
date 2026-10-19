@@ -45,11 +45,13 @@ export function useTravelTrips({
   }, [currentGroupId]);
 
   const loadTrips = useCallback(async () => {
-    if (!isAuthenticated || !currentGroupId) {
+    if (!currentGroupId) {
       setTrips([]);
       tripsRef.current = [];
       return;
     }
+    // 인증 전에는 비우지 않는다. 같은 그룹 목록은 useLayoutEffect가 tripMemory로 이미 깐다.
+    if (!isAuthenticated) return;
     
     try {
       // 기존 데이터가 없을 때만 로딩 스피너 표시 — 재조회 시 기존 목록이 공백이 되는 것 방지
