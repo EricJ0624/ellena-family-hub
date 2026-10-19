@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2 } from 'lucide-react';
 import { SearchableSelect } from '@/app/components/SearchableSelect';
@@ -8,6 +8,15 @@ import { FamilyAlbumPickerModal } from '@/app/features/travel-diary/components/F
 import { DiaryPhotoCollage } from '@/app/features/travel-diary/components/DiaryPhotoCollage';
 import { DiaryPlaceMapPreview } from '@/app/features/travel-diary/components/DiaryPlaceMapPreview';
 import { FamilyLogRouteMap } from './FamilyLogRouteMap';
+import { FamilyLogPhotoFocus } from './FamilyLogPhotoFocus';
+import { FamilyLogPhotoGallery } from './FamilyLogPhotoGallery';
+import {
+  emptyFamilyLogSlots,
+  placeNewFamilyLogPhotos,
+  resolveFamilyLogSlots,
+  type FamilyLogPhotoFocus as PhotoFocusMap,
+  type FamilyLogSlotIds,
+} from '../collage';
 import {
   deleteAttachment,
   getAttachmentsForEntity,
@@ -72,6 +81,16 @@ export function FamilyLogCardEditor({
   const [collageStyle, setCollageStyle] = useState<'film' | 'postal'>(
     card.collage_style === 'postal' ? 'postal' : 'film',
   );
+  const slotsCustomized = useRef(card.collage_attachment_ids != null);
+  const prevPhotoIds = useRef<Set<string>>(new Set());
+  const slotsSyncedFor = useRef<string | null>(null);
+  const [attachmentsReadyFor, setAttachmentsReadyFor] = useState<string | null>(null);
+  const [slotIds, setSlotIds] = useState<FamilyLogSlotIds>(
+    card.collage_attachment_ids ?? emptyFamilyLogSlots(),
+  );
+  const [photoFocus, setPhotoFocus] = useState<PhotoFocusMap>(card.photo_focus ?? {});
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [focusPhoto, setFocusPhoto] = useState<UploadedAttachment | null>(null);
   const [rating, setRating] = useState<number | ''>(
     card.rating != null && card.rating >= 1 && card.rating <= 5 ? card.rating : '',
   );
@@ -98,19 +117,54 @@ export function FamilyLogCardEditor({
   );
 
   useEffect(() => {
+    slotsCustomized.current = card.collage_attachment_ids != null;
+    prevPhotoIds.current = new Set();
+    slotsSyncedFor.current = null;
+    setAttachmentsReadyFor(null);
+    setPhotoFocus(card.photo_focus ?? {});
+    setSlotIds(card.collage_attachment_ids ?? emptyFamilyLogSlots());
+    setGalleryOpen(false);
+    setFocusPhoto(null);
+  }, [card.id]);
+
+  useEffect(() => {
+    if (attachmentsReadyFor !== card.id) return;
+    const ids = photos.map((photo) => photo.id);
+    if (slotsSyncedFor.current !== card.id) {
+      slotsSyncedFor.current = card.id;
+      prevPhotoIds.current = new Set(ids);
+      setSlotIds(resolveFamilyLogSlots(ids, card.collage_attachment_ids));
+      return;
+    }
+    const previous = prevPhotoIds.current;
+    setSlotIds((current) => {
+      const basis = slotsCustomized.current ? current : card.collage_attachment_ids;
+      const resolved = resolveFamilyLogSlots(ids, basis);
+      return placeNewFamilyLogPhotos(resolved, previous, ids);
+    });
+    prevPhotoIds.current = new Set(ids);
+  }, [photos, attachmentsReadyFor, card.id, card.collage_attachment_ids]);
+
+  useEffect(() => {
     const cached = readFamilyLogAttachments(card.id);
     setPhotos(cached?.photos ?? []);
     setReceipts(cached?.receipts ?? []);
-    if (cached?.photos && cached?.receipts) return;
+    if (cached?.photos && cached?.receipts) {
+      setAttachmentsReadyFor(card.id);
+      return;
+    }
     let cancelled = false;
     void ensureFamilyLogAttachments(card.id, groupId)
       .then((next) => {
         if (cancelled) return;
         setPhotos(next.photos ?? []);
         setReceipts(next.receipts ?? []);
+        setAttachmentsReadyFor(card.id);
       })
       .catch(() => {
-        if (!cancelled) setError(labels.loadFailed);
+        if (cancelled) return;
+        setAttachmentsReadyFor(card.id);
+        setError(labels.loadFailed);
       });
     return () => {
       cancelled = true;
@@ -195,6 +249,7 @@ export function FamilyLogCardEditor({
   };
 
   const save = async () => {
+    if (focusPhoto) return;
     const nextTitle = title.trim();
     if (!nextTitle) return;
     const amountNumber = Number(amount);
@@ -224,6 +279,8 @@ export function FamilyLogCardEditor({
               : { clear_place: true }
             : {}),
           collage_style: collageStyle,
+          collage_attachment_ids: slotIds,
+          photo_focus: photoFocus,
           rating: rating === '' ? null : rating,
           is_revisit: revisit,
         }),
@@ -338,13 +395,20 @@ export function FamilyLogCardEditor({
             {card.day_date}
           </p>
           <DiaryPhotoCollage
-            photos={photos}
+            photos={slotIds
+              .map((id) => (id ? photos.find((photo) => photo.id === id) ?? null : null))
+              .filter((photo): photo is UploadedAttachment => Boolean(photo))}
             style={collageStyle}
             photosLabel={labels.photos}
+            photoFocus={photoFocus}
             removePhotoLabel={labels.delete}
             onOpen={() => {
               if (photoUploading || receiptUploading || removing || saving || deleting) return;
-              document.getElementById(`family-log-photos-${card.id}`)?.click();
+              if (photos.length === 0) {
+                document.getElementById(`family-log-photos-${card.id}`)?.click();
+                return;
+              }
+              setGalleryOpen(true);
             }}
             onRemovePhoto={(photo) => {
               if (photoUploading || receiptUploading || removing || saving || deleting) return;
@@ -584,13 +648,15 @@ export function FamilyLogCardEditor({
           <button
             type="button"
             onClick={() => void save()}
-            disabled={photoUploading || receiptUploading || removing || saving || deleting}
+            disabled={photoUploading || receiptUploading || removing || saving || deleting || Boolean(focusPhoto)}
             title={
               photoUploading || receiptUploading
                 ? labels.saveDisabledUploading
-                : saving || removing
-                  ? labels.saveDisabledSaving
-                  : undefined
+                : focusPhoto
+                  ? labels.saveDisabledPhotoFocus
+                  : saving || removing
+                    ? labels.saveDisabledSaving
+                    : undefined
             }
             className={
               tone === 'neo'
@@ -644,6 +710,45 @@ export function FamilyLogCardEditor({
           add: labels.photosAlbumAdd,
         }}
         onConfirm={linkAlbum}
+      />
+      <FamilyLogPhotoGallery
+        open={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+        attachments={photos}
+        slotIds={slotIds}
+        photoFocus={photoFocus}
+        editable
+        adjustLabel={labels.photosAdjust}
+        onAdjustFocus={(attachment) => {
+          setGalleryOpen(false);
+          setFocusPhoto(attachment);
+        }}
+        labels={{
+          photosLabel: labels.photos,
+          closeLabel: labels.close,
+          slotsLabel: labels.photosSlots,
+          slotsHint: labels.photosSlotsHint,
+          slotRemove: labels.photosSlotRemove,
+        }}
+        onSlotIdsChange={(next) => {
+          slotsCustomized.current = true;
+          setSlotIds(next);
+        }}
+      />
+      <FamilyLogPhotoFocus
+        open={Boolean(focusPhoto)}
+        imageUrl={focusPhoto?.image_url || focusPhoto?.thumbnail_url || ''}
+        initialY={focusPhoto ? photoFocus[focusPhoto.id]?.y ?? 50 : 50}
+        title={labels.photoFocusTitle}
+        hint={labels.photoFocusHint}
+        confirmLabel={labels.photoFocusConfirm}
+        skipLabel={labels.photoFocusSkip}
+        onConfirm={(y) => {
+          if (!focusPhoto) return;
+          setPhotoFocus((prev) => ({ ...prev, [focusPhoto.id]: { y } }));
+          setFocusPhoto(null);
+        }}
+        onSkip={() => setFocusPhoto(null)}
       />
     </div>
   );

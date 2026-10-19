@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useHorizontalPageSwipe, type PageSwipeDir } from '@/lib/hooks/useHorizontalPageSwipe';
 import { createPortal } from 'react-dom';
 import { Pencil, Star, Trash2 } from 'lucide-react';
 import { DiaryPhotoCollage } from '@/app/features/travel-diary/components/DiaryPhotoCollage';
+import { FamilyLogPhotoGallery } from './FamilyLogPhotoGallery';
+import { resolveFamilyLogSlots } from '../collage';
 import { DiaryPlaceMapPreview } from '@/app/features/travel-diary/components/DiaryPlaceMapPreview';
 import { FamilyLogRouteMap } from './FamilyLogRouteMap';
 import { type UploadedAttachment } from '@/lib/feature-attachments-client';
@@ -53,6 +55,8 @@ export function FamilyLogCardView({
   };
   const cachedOnOpen = readFamilyLogAttachments(card.id);
   const [photos, setPhotos] = useState<UploadedAttachment[]>(cachedOnOpen?.photos ?? []);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryZoomId, setGalleryZoomId] = useState<string | null>(null);
   const [receipts, setReceipts] = useState<UploadedAttachment[]>(cachedOnOpen?.receipts ?? []);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,11 +82,22 @@ export function FamilyLogCardView({
   const displayMap = showPlaceMap || showRouteMap;
   const hasAmount = card.amount != null && card.amount > 0;
   const note = card.note?.trim() ?? '';
+  const visiblePhotos = useMemo(() => {
+    const slots = resolveFamilyLogSlots(
+      photos.map((photo) => photo.id),
+      card.collage_attachment_ids,
+    );
+    return slots
+      .map((id) => (id ? photos.find((photo) => photo.id === id) ?? null : null))
+      .filter((photo): photo is UploadedAttachment => Boolean(photo));
+  }, [photos, card.collage_attachment_ids]);
 
   useEffect(() => {
     const cached = readFamilyLogAttachments(card.id);
     setPhotos(cached?.photos ?? []);
     setReceipts(cached?.receipts ?? []);
+    setGalleryOpen(false);
+    setGalleryZoomId(null);
     setScale(1);
     setError(null);
     if (cached?.photos && cached?.receipts) return;
@@ -173,10 +188,22 @@ export function FamilyLogCardView({
 
           {photos.length > 0 ? (
             <DiaryPhotoCollage
-              photos={photos}
+              photos={visiblePhotos}
               style={card.collage_style === 'postal' ? 'postal' : 'film'}
               photosLabel={labels.photos}
-              onOpen={() => undefined}
+              photoFocus={card.photo_focus}
+              onOpen={() => {
+                setGalleryZoomId(null);
+                setGalleryOpen(true);
+              }}
+              onSelectPhoto={
+                visiblePhotos.length > 0
+                  ? (photo) => {
+                      setGalleryZoomId(photo.id);
+                      setGalleryOpen(true);
+                    }
+                  : undefined
+              }
             />
           ) : null}
 
@@ -296,5 +323,33 @@ export function FamilyLogCardView({
   );
 
   if (typeof document === 'undefined') return null;
-  return createPortal(node, document.body);
+  return createPortal(
+    <>
+      {node}
+      <FamilyLogPhotoGallery
+        open={galleryOpen}
+        onClose={() => {
+          setGalleryOpen(false);
+          setGalleryZoomId(null);
+        }}
+        attachments={photos}
+        initialZoomId={galleryZoomId}
+        slotIds={resolveFamilyLogSlots(
+          photos.map((photo) => photo.id),
+          card.collage_attachment_ids,
+        )}
+        photoFocus={card.photo_focus}
+        editable={false}
+        labels={{
+          photosLabel: labels.photos,
+          closeLabel: labels.close,
+          slotsLabel: labels.photosSlots,
+          slotsHint: labels.photosSlotsHint,
+          slotRemove: labels.photosSlotRemove,
+        }}
+        onSlotIdsChange={() => undefined}
+      />
+    </>,
+    document.body,
+  );
 }

@@ -75,6 +75,10 @@ function cardSignature(list: FamilyLogCard[]): string {
         card.place_longitude ?? '',
         card.route_points.length,
         card.collage_style ?? '',
+        (card.collage_attachment_ids ?? []).join(','),
+        Object.entries(card.photo_focus ?? {})
+          .map(([id, focus]) => `${id}:${focus.y}`)
+          .join(','),
         card.rating ?? '',
         card.is_revisit ? '1' : '0',
       ].join('\u001f'),

@@ -1,8 +1,9 @@
 import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
+import { parseFamilyLogPhotoFocus, parseFamilyLogSlots } from './collage';
 import type { FamilyLogCard, FamilyLogKind, FamilyLogRoutePoint } from './types';
 
 export const FAMILY_LOG_CARD_COLUMNS =
-  'id,group_id,title,kind,day_date,latitude,longitude,place_latitude,place_longitude,route_points,address,note,mood_tags,show_map,amount,currency,collage_style,rating,is_revisit,created_at,updated_at';
+  'id,group_id,title,kind,day_date,latitude,longitude,place_latitude,place_longitude,route_points,address,note,mood_tags,show_map,amount,currency,collage_style,collage_attachment_ids,photo_focus,rating,is_revisit,created_at,updated_at';
 
 function finiteCoord(value: unknown, limit: number): number | null {
   if (value == null || value === '') return null;
@@ -71,6 +72,8 @@ export function normalizeFamilyLogCard(row: Record<string, unknown>): FamilyLogC
     amount: amountRaw != null && Number.isFinite(amountRaw) && amountRaw > 0 ? amountRaw : null,
     currency: typeof row.currency === 'string' ? row.currency : null,
     collage_style: style,
+    collage_attachment_ids: parseFamilyLogSlots(row.collage_attachment_ids),
+    photo_focus: parseFamilyLogPhotoFocus(row.photo_focus),
     rating,
     is_revisit: row.is_revisit === true,
     created_at: String(row.created_at ?? ''),
@@ -97,6 +100,12 @@ export function parseFamilyLogCardPatch(body: Record<string, unknown>): {
   }
   const collage =
     body.collage_style === 'postal' || body.collage_style === 'film' ? body.collage_style : null;
+  const slots =
+    body.collage_attachment_ids === undefined
+      ? undefined
+      : parseFamilyLogSlots(body.collage_attachment_ids);
+  const focus =
+    body.photo_focus === undefined ? undefined : parseFamilyLogPhotoFocus(body.photo_focus);
   let rating: number | null = null;
   if (body.rating != null && body.rating !== '') {
     const n = Number(body.rating);
@@ -113,6 +122,8 @@ export function parseFamilyLogCardPatch(body: Record<string, unknown>): {
       amount,
       currency: amount != null ? currencyRaw : null,
       collage_style: collage,
+      ...(slots !== undefined ? { collage_attachment_ids: slots } : {}),
+      ...(focus !== undefined ? { photo_focus: focus } : {}),
       rating,
       is_revisit: body.is_revisit === true,
       updated_at: new Date().toISOString(),

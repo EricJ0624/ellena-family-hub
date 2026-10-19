@@ -1,3 +1,5 @@
+import type { FamilyLogPhotoFocus, FamilyLogSlotIds } from './collage';
+
 export type FamilyLogKind = 'checkin' | 'route' | 'note';
 
 export type FamilyLogRoutePoint = {
@@ -23,6 +25,8 @@ export type FamilyLogCard = {
   amount: number | null;
   currency: string | null;
   collage_style: 'film' | 'postal' | null;
+  collage_attachment_ids: FamilyLogSlotIds | null;
+  photo_focus: FamilyLogPhotoFocus;
   rating: number | null;
   is_revisit: boolean;
   created_at: string;
