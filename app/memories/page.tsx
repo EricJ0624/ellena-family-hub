@@ -769,7 +769,7 @@ function MemoriesPageContent() {
             {!originalUploadEnabled && currentGroupId ? (
               <a
                 href={`/billing?groupId=${encodeURIComponent(currentGroupId)}&intent=storage`}
-                className="text-[calc(12px*var(--hs))] text-white underline"
+                className="hidden text-[calc(12px*var(--hs))] text-white underline sm:inline"
               >
                 {getBillingTranslation(lang, 'pay_20gb')}
               </a>
@@ -791,6 +791,14 @@ function MemoriesPageContent() {
           onChange={handleFileSelect}
         />
       </header>
+      {!originalUploadEnabled && currentGroupId ? (
+        <a
+          href={`/billing?groupId=${encodeURIComponent(currentGroupId)}&intent=storage`}
+          className="mx-auto block w-full bg-amber-800 px-4 py-3 text-center text-sm font-semibold text-white underline sm:hidden"
+        >
+          {getBillingTranslation(lang, 'pay_20gb')}
+        </a>
+      ) : null}
 
       <main
         className={`mx-auto box-border w-full min-w-0 overflow-x-clip p-4 max-w-[min(${mainMaxWidth}px,100%)]`}
