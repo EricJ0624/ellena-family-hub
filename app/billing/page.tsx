@@ -1,8 +1,7 @@
 'use client';
 
 import { FormEvent, Suspense, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { CURRENT_APP_ID, isAppId } from '@/lib/apps';
@@ -10,6 +9,7 @@ import type { LangCode } from '@/lib/language-fonts';
 import { billingApiMessage, formatBillingTranslation, getBillingTranslation } from '@/lib/translations/billing';
 import { billingAppUserId, buildBillingProductId, type BillingQuotaTier } from '@/lib/billing-catalog';
 import { openBillingPurchase } from '@/lib/billing-purchase-client';
+import { clearDashboardScrollMemory } from '@/lib/dashboard-scroll-memory';
 import { supabase } from '@/lib/supabase';
 
 const FIVE_GB = 5 * 1024 * 1024 * 1024;
@@ -193,6 +193,7 @@ function resolvePurchaseChoice(
 function BillingCheckout() {
   const { lang } = useLanguage();
   const bt = (key: Parameters<typeof getBillingTranslation>[1]) => getBillingTranslation(lang, key);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { currentGroupId } = useGroup();
   const groupId = searchParams.get('groupId')?.trim() || currentGroupId || '';
@@ -270,6 +271,23 @@ function BillingCheckout() {
       void supabase.removeChannel(channel);
     };
   }, [groupId]);
+
+  const leaveBilling = () => {
+    if (isAdminTest) {
+      router.push('/admin');
+      return;
+    }
+    if (isStorageIntent(intent)) {
+      clearDashboardScrollMemory();
+      router.push('/dashboard?focus=album');
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push('/dashboard');
+  };
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -370,7 +388,7 @@ function BillingCheckout() {
         setError(formatBillingTranslation(lang, 'product_missing', { productId }));
         return;
       }
-      setMessage(bt('sheet_done'));
+      leaveBilling();
     } catch (purchaseError) {
       const text = purchaseError instanceof Error ? purchaseError.message : bt('sheet_failed');
       setError(text);
@@ -389,14 +407,13 @@ function BillingCheckout() {
         <h1 className="text-2xl font-bold text-slate-900">
           {isAdminTest ? bt('title_test') : betaPeriodEnabled ? bt('title_virtual') : bt('title_paid')}
         </h1>
-        {isAdminTest ? (
-          <Link
-            href="/admin"
-            className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
-          >
-            {bt('test_exit')}
-          </Link>
-        ) : null}
+        <button
+          type="button"
+          onClick={leaveBilling}
+          className="shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+        >
+          {bt('test_exit')}
+        </button>
       </div>
       <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6">
         {betaPeriodEnabled ? (

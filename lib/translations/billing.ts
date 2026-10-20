@@ -74,7 +74,6 @@ export type BillingTranslations = {
   sdk_key_missing: string;
   sheet_cancelled: string;
   product_missing: string;
-  sheet_done: string;
   sheet_failed: string;
   original_20gb_only: string;
   pay_20gb: string;
@@ -167,7 +166,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: '코드 확인까지 끝났습니다. 용량과 인원은 결제 시트가 성공하고 서버가 확인한 뒤에만 바뀝니다. 테스트 스토어 키가 없으면 시트가 열리지 않습니다.',
     sheet_cancelled: '결제 시트를 닫았습니다. 인원과 용량은 그대로입니다.',
     product_missing: 'Test Store 현재 오퍼링에 상품 ${productId}가 없습니다. 용량과 인원은 바뀌지 않았습니다.',
-    sheet_done: '결제 시트는 끝났습니다. 인원과 용량은 서버가 웹훅으로 확인한 뒤에만 바뀝니다.',
     sheet_failed: '결제 시트를 열지 못했습니다.',
     original_20gb_only: '원본 업로드는 20GB 구독에서만 가능합니다.',
     pay_20gb: '20GB 가상결제',
@@ -258,7 +256,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: 'The code is confirmed. Seats and storage change only after the payment sheet succeeds and the server confirms it. The sheet does not open without a test store key.',
     sheet_cancelled: 'The payment sheet was closed. Seats and storage are unchanged.',
     product_missing: 'Product ${productId} is not in the current Test Store offering. Seats and storage were not changed.',
-    sheet_done: 'The payment sheet is finished. Seats and storage change only after the server confirms the webhook.',
     sheet_failed: 'Could not open the payment sheet.',
     original_20gb_only: 'Original uploads are available only on the 20GB subscription.',
     pay_20gb: '20GB virtual payment',
@@ -349,7 +346,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: 'コードの確認は完了しました。人数と容量は決済シート成功後、サーバー確認でのみ変わります。テストストアのキーがないとシートは開きません。',
     sheet_cancelled: '決済シートを閉じました。人数と容量はそのままです。',
     product_missing: 'Test Storeの現在のオファリングに商品 ${productId} がありません。人数と容量は変わっていません。',
-    sheet_done: '決済シートは終了しました。人数と容量はサーバーがウェブフックを確認したあとにだけ変わります。',
     sheet_failed: '決済シートを開けませんでした。',
     original_20gb_only: 'オリジナルのアップロードは20GBサブスクリプションでのみ可能です。',
     pay_20gb: '20GB仮想決済',
@@ -440,7 +436,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: '折扣码已确认。人数和容量只在付款窗口成功且服务器确认后改变。没有测试商店密钥时不会打开窗口。',
     sheet_cancelled: '已关闭付款窗口。人数和容量未变。',
     product_missing: '当前 Test Store 方案中没有商品 ${productId}。人数和容量未变。',
-    sheet_done: '付款窗口已结束。人数和容量只在服务器确认 webhook 后改变。',
     sheet_failed: '无法打开付款窗口。',
     original_20gb_only: '只有 20GB 订阅可以上传原图。',
     pay_20gb: '20GB 虚拟付款',
@@ -531,7 +526,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: '折扣碼已確認。人數和容量只在付款視窗成功且伺服器確認後改變。沒有測試商店金鑰時不會開啟視窗。',
     sheet_cancelled: '已關閉付款視窗。人數和容量未變。',
     product_missing: '目前 Test Store 方案中沒有商品 ${productId}。人數和容量未變。',
-    sheet_done: '付款視窗已結束。人數和容量只在伺服器確認 webhook 後改變。',
     sheet_failed: '無法開啟付款視窗。',
     original_20gb_only: '只有 20GB 訂閱可以上傳原圖。',
     pay_20gb: '20GB 虛擬付款',
@@ -622,7 +616,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: 'El código está confirmado. Las plazas y el almacenamiento cambian solo tras el éxito de la hoja y la confirmación del servidor. Sin la clave de la tienda de prueba, la hoja no se abre.',
     sheet_cancelled: 'Se cerró la hoja de pago. Las plazas y el almacenamiento no cambian.',
     product_missing: 'El producto ${productId} no está en la oferta actual de Test Store. Las plazas y el almacenamiento no cambiaron.',
-    sheet_done: 'La hoja de pago ha terminado. Las plazas y el almacenamiento cambian solo cuando el servidor confirma el webhook.',
     sheet_failed: 'No se pudo abrir la hoja de pago.',
     original_20gb_only: 'La subida de originales solo está disponible con la suscripción de 20 GB.',
     pay_20gb: 'Pago virtual de 20 GB',
@@ -713,7 +706,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: 'Le code est confirmé. Les places et le stockage ne changent qu’après la réussite de la feuille et la confirmation du serveur. Sans clé de boutique de test, la feuille ne s’ouvre pas.',
     sheet_cancelled: 'La feuille de paiement a été fermée. Les places et le stockage sont inchangés.',
     product_missing: 'Le produit ${productId} n’est pas dans l’offre Test Store actuelle. Les places et le stockage n’ont pas changé.',
-    sheet_done: 'La feuille de paiement est terminée. Les places et le stockage ne changent qu’après la confirmation du webhook par le serveur.',
     sheet_failed: 'Impossible d’ouvrir la feuille de paiement.',
     original_20gb_only: 'L’envoi des originaux n’est possible qu’avec l’abonnement 20 Go.',
     pay_20gb: 'Paiement virtuel 20 Go',
@@ -804,7 +796,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: 'Der Code ist bestätigt. Plätze und Speicher ändern sich erst nach Erfolg des Fensters und Serverbestätigung. Ohne Test-Store-Schlüssel öffnet sich das Fenster nicht.',
     sheet_cancelled: 'Das Zahlungsfenster wurde geschlossen. Plätze und Speicher bleiben unverändert.',
     product_missing: 'Produkt ${productId} ist nicht im aktuellen Test-Store-Angebot. Plätze und Speicher wurden nicht geändert.',
-    sheet_done: 'Das Zahlungsfenster ist beendet. Plätze und Speicher ändern sich erst, wenn der Server den Webhook bestätigt.',
     sheet_failed: 'Zahlungsfenster konnte nicht geöffnet werden.',
     original_20gb_only: 'Original-Uploads sind nur mit dem 20-GB-Abo möglich.',
     pay_20gb: 'Virtuelle 20-GB-Zahlung',
@@ -895,7 +886,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: 'Il codice è confermato. Posti e spazio cambiano solo dopo il successo del foglio e la conferma del server. Senza la chiave dello store di prova il foglio non si apre.',
     sheet_cancelled: 'Il foglio di pagamento è stato chiuso. Posti e spazio restano invariati.',
     product_missing: 'Il prodotto ${productId} non è nell’offerta Test Store attuale. Posti e spazio non sono cambiati.',
-    sheet_done: 'Il foglio di pagamento è terminato. Posti e spazio cambiano solo dopo la conferma del webhook da parte del server.',
     sheet_failed: 'Impossibile aprire il foglio di pagamento.',
     original_20gb_only: 'Il caricamento degli originali è disponibile solo con l’abbonamento da 20 GB.',
     pay_20gb: 'Pagamento virtuale da 20 GB',
@@ -986,7 +976,6 @@ const t: Record<LangCode, BillingTranslations> = {
     sdk_key_missing: 'O código está confirmado. Os lugares e o armazenamento só mudam após o sucesso da folha e a confirmação do servidor. Sem a chave da loja de teste, a folha não abre.',
     sheet_cancelled: 'A folha de pagamento foi fechada. Os lugares e o armazenamento mantêm-se.',
     product_missing: 'O produto ${productId} não está na oferta atual da Test Store. Os lugares e o armazenamento não mudaram.',
-    sheet_done: 'A folha de pagamento terminou. Os lugares e o armazenamento só mudam depois de o servidor confirmar o webhook.',
     sheet_failed: 'Não foi possível abrir a folha de pagamento.',
     original_20gb_only: 'O envio de originais só está disponível na subscrição de 20 GB.',
     pay_20gb: 'Pagamento virtual de 20 GB',

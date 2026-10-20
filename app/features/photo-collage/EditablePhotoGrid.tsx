@@ -5,20 +5,48 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  pointerWithin,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
+  type Modifier,
 } from '@dnd-kit/core';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { isPortraitDimensions, loadImageNaturalSize } from '@/lib/modules/travel-planner/diary-collage';
-import { nextSlotsAfterDrag, readGalleryDragData, type GalleryDragData } from './gallery-drag';
+import { nextSlotsAfterDrag, pickSlotDropId, readGalleryDragData, type GalleryDragData } from './gallery-drag';
 
-const HOLD_MS = 240;
-const HOLD_TOLERANCE_PX = 8;
+const HOLD_MS = 120;
+const HOLD_TOLERANCE_PX = 16;
+const SLOT_DROP_SLOP_PX = 24;
+
+const liftDragPreview: Modifier = ({ transform }) => ({
+  ...transform,
+  x: transform.x - 8,
+  y: transform.y - 72,
+});
+
+const slotCollision: CollisionDetection = ({ droppableContainers, droppableRects, pointerCoordinates }) => {
+  if (!pointerCoordinates) return [];
+  const rects = [];
+  for (const container of droppableContainers) {
+    const id = String(container.id);
+    if (!id.startsWith('slot-')) continue;
+    const rect = droppableRects.get(container.id);
+    if (!rect) continue;
+    rects.push({
+      id,
+      top: rect.top,
+      left: rect.left,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+    });
+  }
+  const id = pickSlotDropId(pointerCoordinates, rects, SLOT_DROP_SLOP_PX);
+  return id ? [{ id }] : [];
+};
 
 function photoSrc(attachment: UploadedAttachment): string {
   return attachment.thumbnail_url || attachment.image_url || '';
@@ -62,9 +90,11 @@ function DragHandle({ dragId, data, label }: { dragId: string; data: GalleryDrag
       {...listeners}
       aria-label={label}
       onClick={(event) => event.stopPropagation()}
-      className="absolute bottom-1 left-1 z-[2] flex h-6 w-6 cursor-grab items-center justify-center rounded-full border-0 bg-zinc-900/75 text-[10px] leading-none text-white active:cursor-grabbing"
+      className="absolute bottom-0 left-0 z-[2] flex h-11 w-11 touch-none cursor-grab items-end justify-start border-0 bg-transparent p-1 active:cursor-grabbing"
     >
-      ::
+      <span className="pointer-events-none flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900/75 text-[10px] leading-none text-white">
+        ::
+      </span>
     </button>
   );
 }
@@ -241,7 +271,8 @@ export function EditablePhotoGrid<T extends (string | null)[]>({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={pointerWithin}
+      collisionDetection={slotCollision}
+      autoScroll={false}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveSrc(null)}
@@ -286,7 +317,7 @@ export function EditablePhotoGrid<T extends (string | null)[]>({
           );
         })}
       </div>
-      <DragOverlay>
+      <DragOverlay modifiers={[liftDragPreview]}>
         {activeSrc ? <img src={activeSrc} alt="" className="h-24 w-32 rounded-md object-cover shadow-lg" /> : null}
       </DragOverlay>
     </DndContext>

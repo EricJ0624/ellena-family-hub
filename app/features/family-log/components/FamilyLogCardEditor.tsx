@@ -487,7 +487,6 @@ export function FamilyLogCardEditor({
             style={collageStyle}
             photosLabel={labels.photos}
             photoFocus={photoFocus}
-            removePhotoLabel={labels.delete}
             onOpen={() => {
               if (photoUploading || receiptUploading || removing || saving || deleting) return;
               if (photos.length === 0) {
@@ -495,11 +494,6 @@ export function FamilyLogCardEditor({
                 return;
               }
               setGalleryOpen(true);
-            }}
-            onRemovePhoto={(photo) => {
-              if (photoUploading || receiptUploading || removing || saving || deleting) return;
-              if (!window.confirm(labels.deletePhotoConfirm)) return;
-              void removeFile(photo, 'family_log_card');
             }}
           />
           <input

@@ -7138,9 +7138,18 @@ export default function FamilyHub() {
             trips={travelTrips}
             loading={travelTripsLoading}
             currentGroupId={currentGroupId}
-            onTripClick={(tripId) => router.push(`/travel?tripId=${tripId}`)}
-            onAddClick={() => router.push('/travel?openAdd=1')}
-            onImportClick={() => router.push('/travel/import')}
+            onTripClick={(tripId) => {
+              rememberDashboardScroll();
+              router.push(`/travel?tripId=${tripId}`);
+            }}
+            onAddClick={() => {
+              rememberDashboardScroll();
+              router.push('/travel?openAdd=1');
+            }}
+            onImportClick={() => {
+              rememberDashboardScroll();
+              router.push('/travel/import');
+            }}
             uiTheme={uiTheme}
             translations={{
               section_title: tt('title'),
@@ -7225,14 +7234,23 @@ export default function FamilyHub() {
             pendingAccountRequests={pendingAccountRequests}
             piggyLabel={piggyLabel}
             formatAmount={formatDashboardPiggy}
-            onGoClick={() => router.push('/piggy-bank')}
-            onManageClick={() => router.push('/piggy-bank')}
+            onGoClick={() => {
+              rememberDashboardScroll();
+              router.push('/piggy-bank');
+            }}
+            onManageClick={() => {
+              rememberDashboardScroll();
+              router.push('/piggy-bank');
+            }}
             onAddPiggy={handleDashboardAddPiggy}
             onDeletePiggy={handleDashboardDeletePiggy}
             onApproveRequest={handleApproveAccountRequest}
             onRejectRequest={handleRejectAccountRequest}
             onRequestAccount={handlePiggyRequestAccount}
-            onMemberClick={(targetUserId) => router.push(`/piggy-bank?child_id=${targetUserId}`)}
+            onMemberClick={(targetUserId) => {
+              rememberDashboardScroll();
+              router.push(`/piggy-bank?child_id=${targetUserId}`);
+            }}
             translations={{
               section_title_admin: dt('piggy_section_admin_title'),
               section_title_user: dt('piggy_card_title'),

@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { GlassSafeModal } from '@/app/components/GlassSafeModal';
+import {
+  GlassSafeModal,
+  photoGalleryFrameClassName,
+  photoGalleryPanelClassName,
+} from '@/app/components/GlassSafeModal';
 import { EditablePhotoGrid } from '@/app/features/photo-collage/EditablePhotoGrid';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import {
@@ -97,7 +101,12 @@ export function DiaryPhotoGalleryModal({
 
   return (
     <>
-      <GlassSafeModal open={open} onClose={dismissZoomOrGallery} maxWidthClass="max-w-3xl">
+      <GlassSafeModal
+        open={open}
+        onClose={dismissZoomOrGallery}
+        frameClassName={photoGalleryFrameClassName}
+        panelClassName={photoGalleryPanelClassName}
+      >
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-slate-800">{labels.photosLabel}</p>
           <button

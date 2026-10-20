@@ -96,34 +96,10 @@ function chunkRows(photos: UploadedAttachment[], rowSizes: number[]): UploadedAt
   return rows;
 }
 
-function placePhoto(
-  attachment: UploadedAttachment,
-  className: string,
-  node: ReactNode,
-  onRemovePhoto?: (attachment: UploadedAttachment) => void,
-  removePhotoLabel?: string,
-) {
-  const positioned =
-    onRemovePhoto && !className.includes('absolute') && !className.includes('relative')
-      ? `${className} relative`
-      : className;
+function placePhoto(attachment: UploadedAttachment, className: string, node: ReactNode) {
   return (
-    <div key={attachment.id} className={positioned}>
+    <div key={attachment.id} className={className}>
       {node}
-      {onRemovePhoto ? (
-        <button
-          type="button"
-          aria-label={removePhotoLabel || 'Remove photo'}
-          onClick={(event) => {
-            event.stopPropagation();
-            event.preventDefault();
-            onRemovePhoto(attachment);
-          }}
-          className="absolute right-0.5 top-0.5 z-30 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-black/15 bg-white/95 text-sm font-bold leading-none text-red-700 shadow-sm"
-        >
-          ×
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -134,8 +110,6 @@ export function DiaryPhotoCollage({
   photosLabel,
   onOpen,
   onSelectPhoto,
-  onRemovePhoto,
-  removePhotoLabel,
   photoFocus,
 }: {
   photos: UploadedAttachment[];
@@ -143,8 +117,6 @@ export function DiaryPhotoCollage({
   photosLabel: string;
   onOpen: () => void;
   onSelectPhoto?: (attachment: UploadedAttachment) => void;
-  onRemovePhoto?: (attachment: UploadedAttachment) => void;
-  removePhotoLabel?: string;
   photoFocus?: PhotoFocusMap;
 }) {
   const count = Math.min(Math.max(photos.length, 0), COLLAGE_SLOT_COUNT);
@@ -214,8 +186,6 @@ export function DiaryPhotoCollage({
         attachment,
         ['absolute origin-center', slots[index] ?? ''].join(' '),
         interactive(attachment, frameFor(attachment)),
-        onRemovePhoto,
-        removePhotoLabel,
       ),
     );
   } else if (isBalancedCount(count)) {
@@ -233,8 +203,6 @@ export function DiaryPhotoCollage({
               attachment,
               ['relative aspect-[3/2] min-w-0 origin-center', cellWidth, tilt].join(' '),
               interactive(attachment, frameFor(attachment)),
-              onRemovePhoto,
-              removePhotoLabel,
             );
           })}
         </div>
@@ -247,8 +215,6 @@ export function DiaryPhotoCollage({
         attachment,
         ['aspect-[3/2] min-w-0 origin-center', GRID_TILTS[index] ?? ''].join(' '),
         interactive(attachment, frameFor(attachment)),
-        onRemovePhoto,
-        removePhotoLabel,
       ),
     );
   }
@@ -259,13 +225,9 @@ export function DiaryPhotoCollage({
     onSelectPhoto ? '' : 'cursor-pointer',
   ].join(' ');
 
-  if (onSelectPhoto || onRemovePhoto) {
+  if (onSelectPhoto) {
     return (
-      <div
-        className={shellClass}
-        style={{ backgroundColor: 'transparent', backgroundImage: 'none' }}
-        onClick={onRemovePhoto && !onSelectPhoto ? onOpen : undefined}
-      >
+      <div className={shellClass} style={{ backgroundColor: 'transparent', backgroundImage: 'none' }}>
         {body}
       </div>
     );

@@ -15,6 +15,12 @@ export function writeMainContentScroll(top: number) {
   if (el) el.scrollTop = top;
 }
 
+/** 앨범 위젯으로 돌아갈 때, 이전에 남은 일기 스크롤이 그 위치를 덮지 않게 한다. */
+export function clearDashboardScrollMemory() {
+  if (typeof document === 'undefined') return;
+  sessionStorage.removeItem(SCROLL_KEY);
+}
+
 /** 일기 화면으로 나가기 직전, 대시보드 스크롤 위치를 남긴다. */
 export function rememberDashboardScroll() {
   if (typeof document === 'undefined') return;

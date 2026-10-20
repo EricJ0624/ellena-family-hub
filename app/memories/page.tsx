@@ -20,6 +20,7 @@ import {
 } from '@/lib/photo-upload-utils';
 import { supabase } from '@/lib/supabase';
 import { getBillingTranslation } from '@/lib/translations/billing';
+import { clearDashboardScrollMemory } from '@/lib/dashboard-scroll-memory';
 import * as exifr from 'exifr';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
 
@@ -448,11 +449,8 @@ function MemoriesPageContent() {
   }, [searchParams, album, viewMode, groupedByDate, router]);
 
   const handleBack = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push('/dashboard');
+    clearDashboardScrollMemory();
+    router.push('/dashboard?focus=album');
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
