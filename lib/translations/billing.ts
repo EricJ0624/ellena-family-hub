@@ -75,6 +75,8 @@ export type BillingTranslations = {
   sheet_cancelled: string;
   product_missing: string;
   sheet_failed: string;
+  payment_succeeded: string;
+  payment_ok: string;
   original_20gb_only: string;
   pay_20gb: string;
   seat_required: string;
@@ -167,6 +169,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: '결제 시트를 닫았습니다. 인원과 용량은 그대로입니다.',
     product_missing: 'Test Store 현재 오퍼링에 상품 ${productId}가 없습니다. 용량과 인원은 바뀌지 않았습니다.',
     sheet_failed: '결제 시트를 열지 못했습니다.',
+    payment_succeeded: '결제가 성공했습니다.',
+    payment_ok: '확인',
     original_20gb_only: '원본 업로드는 20GB 구독에서만 가능합니다.',
     pay_20gb: '20GB 가상결제',
     seat_required: '기본 2명을 넘기려면 가상결제로 인원을 추가해야 합니다.',
@@ -257,6 +261,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: 'The payment sheet was closed. Seats and storage are unchanged.',
     product_missing: 'Product ${productId} is not in the current Test Store offering. Seats and storage were not changed.',
     sheet_failed: 'Could not open the payment sheet.',
+    payment_succeeded: 'Payment succeeded.',
+    payment_ok: 'OK',
     original_20gb_only: 'Original uploads are available only on the 20GB subscription.',
     pay_20gb: '20GB virtual payment',
     seat_required: 'Adding more than the included 2 people requires a virtual payment for an extra seat.',
@@ -347,6 +353,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: '決済シートを閉じました。人数と容量はそのままです。',
     product_missing: 'Test Storeの現在のオファリングに商品 ${productId} がありません。人数と容量は変わっていません。',
     sheet_failed: '決済シートを開けませんでした。',
+    payment_succeeded: '決済が成功しました。',
+    payment_ok: '確認',
     original_20gb_only: 'オリジナルのアップロードは20GBサブスクリプションでのみ可能です。',
     pay_20gb: '20GB仮想決済',
     seat_required: '基本の2人を超えるには、仮想決済で人数を追加する必要があります。',
@@ -437,6 +445,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: '已关闭付款窗口。人数和容量未变。',
     product_missing: '当前 Test Store 方案中没有商品 ${productId}。人数和容量未变。',
     sheet_failed: '无法打开付款窗口。',
+    payment_succeeded: '付款已成功。',
+    payment_ok: '确认',
     original_20gb_only: '只有 20GB 订阅可以上传原图。',
     pay_20gb: '20GB 虚拟付款',
     seat_required: '超过基本 2 人时，需要通过虚拟付款增加人数。',
@@ -527,6 +537,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: '已關閉付款視窗。人數和容量未變。',
     product_missing: '目前 Test Store 方案中沒有商品 ${productId}。人數和容量未變。',
     sheet_failed: '無法開啟付款視窗。',
+    payment_succeeded: '付款已成功。',
+    payment_ok: '確認',
     original_20gb_only: '只有 20GB 訂閱可以上傳原圖。',
     pay_20gb: '20GB 虛擬付款',
     seat_required: '超過基本 2 人時，需要透過虛擬付款增加人數。',
@@ -617,6 +629,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: 'Se cerró la hoja de pago. Las plazas y el almacenamiento no cambian.',
     product_missing: 'El producto ${productId} no está en la oferta actual de Test Store. Las plazas y el almacenamiento no cambiaron.',
     sheet_failed: 'No se pudo abrir la hoja de pago.',
+    payment_succeeded: 'El pago se ha realizado.',
+    payment_ok: 'Confirmar',
     original_20gb_only: 'La subida de originales solo está disponible con la suscripción de 20 GB.',
     pay_20gb: 'Pago virtual de 20 GB',
     seat_required: 'Para superar las 2 personas incluidas hace falta un pago virtual por una plaza extra.',
@@ -707,6 +721,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: 'La feuille de paiement a été fermée. Les places et le stockage sont inchangés.',
     product_missing: 'Le produit ${productId} n’est pas dans l’offre Test Store actuelle. Les places et le stockage n’ont pas changé.',
     sheet_failed: 'Impossible d’ouvrir la feuille de paiement.',
+    payment_succeeded: 'Le paiement a réussi.',
+    payment_ok: 'Confirmer',
     original_20gb_only: 'L’envoi des originaux n’est possible qu’avec l’abonnement 20 Go.',
     pay_20gb: 'Paiement virtuel 20 Go',
     seat_required: 'Au-delà des 2 personnes incluses, un paiement virtuel est nécessaire pour ajouter une place.',
@@ -797,6 +813,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: 'Das Zahlungsfenster wurde geschlossen. Plätze und Speicher bleiben unverändert.',
     product_missing: 'Produkt ${productId} ist nicht im aktuellen Test-Store-Angebot. Plätze und Speicher wurden nicht geändert.',
     sheet_failed: 'Zahlungsfenster konnte nicht geöffnet werden.',
+    payment_succeeded: 'Die Zahlung war erfolgreich.',
+    payment_ok: 'Bestätigen',
     original_20gb_only: 'Original-Uploads sind nur mit dem 20-GB-Abo möglich.',
     pay_20gb: 'Virtuelle 20-GB-Zahlung',
     seat_required: 'Über die enthaltenen 2 Personen hinaus ist eine virtuelle Zahlung für einen weiteren Platz nötig.',
@@ -887,6 +905,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: 'Il foglio di pagamento è stato chiuso. Posti e spazio restano invariati.',
     product_missing: 'Il prodotto ${productId} non è nell’offerta Test Store attuale. Posti e spazio non sono cambiati.',
     sheet_failed: 'Impossibile aprire il foglio di pagamento.',
+    payment_succeeded: 'Il pagamento è riuscito.',
+    payment_ok: 'Conferma',
     original_20gb_only: 'Il caricamento degli originali è disponibile solo con l’abbonamento da 20 GB.',
     pay_20gb: 'Pagamento virtuale da 20 GB',
     seat_required: 'Oltre le 2 persone incluse serve un pagamento virtuale per aggiungere un posto.',
@@ -977,6 +997,8 @@ const t: Record<LangCode, BillingTranslations> = {
     sheet_cancelled: 'A folha de pagamento foi fechada. Os lugares e o armazenamento mantêm-se.',
     product_missing: 'O produto ${productId} não está na oferta atual da Test Store. Os lugares e o armazenamento não mudaram.',
     sheet_failed: 'Não foi possível abrir a folha de pagamento.',
+    payment_succeeded: 'O pagamento foi concluído.',
+    payment_ok: 'Confirmar',
     original_20gb_only: 'O envio de originais só está disponível na subscrição de 20 GB.',
     pay_20gb: 'Pagamento virtual de 20 GB',
     seat_required: 'Para ultrapassar as 2 pessoas incluídas é preciso um pagamento virtual por um lugar extra.',

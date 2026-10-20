@@ -212,6 +212,7 @@ function BillingCheckout() {
   const [understood, setUnderstood] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [paid, setPaid] = useState(false);
   const [error, setError] = useState('');
   const [billingRefresh, setBillingRefresh] = useState(0);
 
@@ -293,6 +294,7 @@ function BillingCheckout() {
     event.preventDefault();
     setError('');
     setMessage('');
+    setPaid(false);
     if (!understood) {
       setError(bt('confirm_required'));
       return;
@@ -388,7 +390,8 @@ function BillingCheckout() {
         setError(formatBillingTranslation(lang, 'product_missing', { productId }));
         return;
       }
-      leaveBilling();
+      setPaid(true);
+      setMessage(bt('payment_succeeded'));
     } catch (purchaseError) {
       const text = purchaseError instanceof Error ? purchaseError.message : bt('sheet_failed');
       setError(text);
@@ -533,6 +536,15 @@ function BillingCheckout() {
       </form>
       {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
       {message ? <p className="text-sm text-slate-800">{message}</p> : null}
+      {paid ? (
+        <button
+          type="button"
+          onClick={leaveBilling}
+          className="cursor-pointer rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+        >
+          {bt('payment_ok')}
+        </button>
+      ) : null}
     </main>
   );
 }
