@@ -19,7 +19,11 @@ import {
   isRawFileExtension,
 } from '@/lib/photo-upload-utils';
 import { supabase } from '@/lib/supabase';
-import { getBillingTranslation } from '@/lib/translations/billing';
+import {
+  isStorageLimitMessage,
+  presentOriginalUploadLimit,
+  presentStorageLimit,
+} from '@/lib/billing-limit-prompt';
 import { clearDashboardScrollMemory } from '@/lib/dashboard-scroll-memory';
 import * as exifr from 'exifr';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
@@ -495,7 +499,7 @@ function MemoriesPageContent() {
     const isRawFile = isRawFileExtension(ext);
     const effectiveMode = isRawFile ? 'original' as const : uploadMode;
     if (effectiveMode === 'original' && !originalUploadEnabled) {
-      alert(getBillingTranslation(lang, 'original_20gb_only'));
+      void presentOriginalUploadLimit(lang, currentGroupId);
       e.target.value = '';
       return;
     }
@@ -664,6 +668,16 @@ function MemoriesPageContent() {
       console.error('사진 업로드 실패:', uploadErr);
       deletePhoto(photoId);
       uploadCompleted = true;
+      if (currentGroupId && isStorageLimitMessage(errorMessage)) {
+        void presentStorageLimit(lang, currentGroupId);
+        e.target.value = '';
+        return;
+      }
+      if (currentGroupId && errorMessage.includes('20GB')) {
+        void presentOriginalUploadLimit(lang, currentGroupId);
+        e.target.value = '';
+        return;
+      }
       const fileSizeDisplay = uploadFileSize >= 1024 * 1024
         ? `${(uploadFileSize / 1024 / 1024).toFixed(2)}MB`
         : `${(uploadFileSize / 1024).toFixed(2)}KB`;
@@ -675,8 +689,6 @@ function MemoriesPageContent() {
         failureReason = 'S3 버킷 CORS 설정이 필요합니다.\n\nS3 버킷의 CORS 설정을 확인하거나 관리자에게 문의하세요.';
       } else if (errorMessage.includes('타임아웃') || errorMessage.toLowerCase().includes('timeout')) {
         failureReason = '파일이 너무 크거나 네트워크 연결이 불안정합니다.';
-      } else if (errorMessage.includes('20GB')) {
-        failureReason = getBillingTranslation(lang, 'original_20gb_only');
       } else {
         failureReason = errorMessage;
       }
@@ -766,14 +778,6 @@ function MemoriesPageContent() {
               />
               {uploadModeOriginalLabel}
             </label>
-            {!originalUploadEnabled && currentGroupId ? (
-              <a
-                href={`/billing?groupId=${encodeURIComponent(currentGroupId)}&intent=storage`}
-                className="hidden text-[calc(12px*var(--hs))] text-white underline sm:inline"
-              >
-                {getBillingTranslation(lang, 'pay_20gb')}
-              </a>
-            ) : null}
           </div>
         </div>
         <label
@@ -791,14 +795,6 @@ function MemoriesPageContent() {
           onChange={handleFileSelect}
         />
       </header>
-      {!originalUploadEnabled && currentGroupId ? (
-        <a
-          href={`/billing?groupId=${encodeURIComponent(currentGroupId)}&intent=storage`}
-          className="mx-auto block w-full bg-amber-800 px-4 py-3 text-center text-sm font-semibold text-white underline sm:hidden"
-        >
-          {getBillingTranslation(lang, 'pay_20gb')}
-        </a>
-      ) : null}
 
       <main
         className={`mx-auto box-border w-full min-w-0 overflow-x-clip p-4 max-w-[min(${mainMaxWidth}px,100%)]`}

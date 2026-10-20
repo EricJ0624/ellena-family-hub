@@ -32,6 +32,7 @@ import {
 } from '@/lib/notifications/dashboard-focus';
 import { LANG_CODES, type LangCode } from '@/lib/language-fonts';
 import { billingApiMessage } from '@/lib/translations/billing';
+import { isSeatLimitPayload, presentSeatLimit } from '@/lib/billing-limit-prompt';
 
 interface NotificationCenterProps {
   groupId: string | null;
@@ -298,6 +299,10 @@ export default function NotificationCenter({ groupId, userId, lang, onOpenChatRo
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (isSeatLimitPayload(json)) {
+          await presentSeatLimit(billingLang, groupId);
+          return;
+        }
         alert(billingApiMessage(billingLang, json, '승인에 실패했습니다.'));
         return;
       }

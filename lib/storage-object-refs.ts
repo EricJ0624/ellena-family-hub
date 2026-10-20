@@ -41,17 +41,29 @@ async function countLiveS3KeyRefs(
   return (album.count ?? 0) + (att.count ?? 0) + (thumb.count ?? 0);
 }
 
+export type S3ReleaseResult = 'removed' | 'shared' | 'failed' | 'empty';
+
+/** 다른 행이 쓰면 파일을 남긴다. 삭제가 실패하면 failed로 구분해 다시 시도할 수 있다. */
+export async function releaseS3Key(
+  supabase: ServerClient,
+  groupId: string,
+  s3Key: string | null | undefined,
+  opts?: { ignoreAlbumId?: string; ignoreAttachmentId?: string },
+): Promise<S3ReleaseResult> {
+  const key = String(s3Key || '').trim();
+  if (!key) return 'empty';
+  const refs = await countLiveS3KeyRefs(supabase, groupId, key, opts);
+  if (refs > 0) return 'shared';
+  return (await deleteFromS3(key)) ? 'removed' : 'failed';
+}
+
 export async function deleteS3IfUnreferenced(
   supabase: ServerClient,
   groupId: string,
   s3Key: string | null | undefined,
   opts?: { ignoreAlbumId?: string; ignoreAttachmentId?: string },
 ): Promise<boolean> {
-  const key = String(s3Key || '').trim();
-  if (!key) return false;
-  const refs = await countLiveS3KeyRefs(supabase, groupId, key, opts);
-  if (refs > 0) return false;
-  return deleteFromS3(key);
+  return (await releaseS3Key(supabase, groupId, s3Key, opts)) === 'removed';
 }
 
 /** Diary upload: one S3 object, also visible in family album. Skip duplicates. */

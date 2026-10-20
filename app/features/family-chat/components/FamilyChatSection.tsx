@@ -65,6 +65,7 @@ interface FamilyChatSectionProps {
     chat_camera_btn: string;
     chat_attach_btn_aria: string;
     chat_remove_attachment_aria: string;
+    chat_attachment_expired: string;
     chat_quick_add_task: string;
     chat_quick_add_calendar: string;
     chat_task_added_ok: string;
@@ -517,6 +518,15 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                           </div>
                         ))}
                       {rows.map((att) => (
+                        att.image_url === 'expired' ? (
+                          <div
+                            key={att.id}
+                            className="chat-attachment-cell flex items-center justify-center rounded-lg bg-slate-100 px-1 text-center text-slate-500"
+                            style={{ height: '20cqmin', fontSize: '2.6cqmin' }}
+                          >
+                            {t.chat_attachment_expired}
+                          </div>
+                        ) : (
                         <div key={att.id} className="chat-attachment-cell relative">
                           <a
                             href={att.image_url}
@@ -546,6 +556,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                             </button>
                           )}
                         </div>
+                        )
                       ))}
                     </div>
                   );

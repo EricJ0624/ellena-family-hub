@@ -103,6 +103,7 @@ export type DashboardTranslations = {
   chat_camera_btn: string;
   chat_attach_btn_aria: string;
   chat_remove_attachment_aria: string;
+  chat_attachment_expired: string;
   /** 채팅 메시지 → 할 일 빠른 추가 버튼 */
   chat_quick_add_task: string;
   /** 채팅 메시지 → 캘린더 일정 빠른 추가 버튼 */
@@ -435,6 +436,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: '카메라',
     chat_attach_btn_aria: '사진 첨부',
     chat_remove_attachment_aria: '첨부 삭제',
+    chat_attachment_expired: '기간이 지나 삭제된 사진',
     chat_quick_add_task: '할 일 추가',
     chat_quick_add_calendar: '일정 추가',
     chat_task_added_ok: '✅ 추가됨',
@@ -741,6 +743,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Camera',
     chat_attach_btn_aria: 'Attach photo',
     chat_remove_attachment_aria: 'Remove attachment',
+    chat_attachment_expired: 'This photo expired',
     chat_quick_add_task: 'Add as task',
     chat_quick_add_calendar: 'Add as event',
     chat_task_added_ok: '✅ Added',
@@ -1047,6 +1050,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'カメラ',
     chat_attach_btn_aria: '写真を添付',
     chat_remove_attachment_aria: '添付を削除',
+    chat_attachment_expired: '期限が過ぎて削除された写真',
     chat_quick_add_task: 'タスクに追加',
     chat_quick_add_calendar: '予定に追加',
     chat_task_added_ok: '✅ 追加しました',
@@ -1353,6 +1357,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: '相机',
     chat_attach_btn_aria: '添加照片',
     chat_remove_attachment_aria: '删除附件',
+    chat_attachment_expired: '已过期并删除的照片',
     chat_quick_add_task: '添加为任务',
     chat_quick_add_calendar: '添加为日程',
     chat_task_added_ok: '✅ 已添加',
@@ -1656,6 +1661,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: '相機',
     chat_attach_btn_aria: '新增照片',
     chat_remove_attachment_aria: '移除附件',
+    chat_attachment_expired: '已過期並刪除的照片',
     chat_quick_add_task: '新增為任務',
     chat_quick_add_calendar: '新增為行程',
     chat_task_added_ok: '✅ 已新增',
@@ -1959,6 +1965,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Cámara',
     chat_attach_btn_aria: 'Adjuntar foto',
     chat_remove_attachment_aria: 'Quitar archivo adjunto',
+    chat_attachment_expired: 'Foto eliminada por vencimiento',
     chat_quick_add_task: 'Agregar tarea',
     chat_quick_add_calendar: 'Agregar evento',
     chat_task_added_ok: '✅ Agregado',
@@ -2261,6 +2268,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Caméra',
     chat_attach_btn_aria: 'Joindre une photo',
     chat_remove_attachment_aria: 'Supprimer la pièce jointe',
+    chat_attachment_expired: 'Photo supprimée après expiration',
     chat_quick_add_task: 'Ajouter comme tâche',
     chat_quick_add_calendar: 'Ajouter comme événement',
     chat_task_added_ok: '✅ Ajouté',
@@ -2563,6 +2571,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Kamera',
     chat_attach_btn_aria: 'Foto anhängen',
     chat_remove_attachment_aria: 'Anhang entfernen',
+    chat_attachment_expired: 'Foto nach Ablauf gelöscht',
     chat_quick_add_task: 'Als Aufgabe hinzufügen',
     chat_quick_add_calendar: 'Als Termin hinzufügen',
     chat_task_added_ok: '✅ Hinzugefügt',
@@ -2865,6 +2874,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Telecamera',
     chat_attach_btn_aria: 'Allega foto',
     chat_remove_attachment_aria: 'Rimuovi l\'allegato',
+    chat_attachment_expired: 'Foto eliminata per scadenza',
     chat_quick_add_task: 'Aggiungi come attività',
     chat_quick_add_calendar: 'Aggiungi come evento',
     chat_task_added_ok: '✅ Aggiunto',
@@ -3167,6 +3177,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_camera_btn: 'Câmera',
     chat_attach_btn_aria: 'Anexar foto',
     chat_remove_attachment_aria: 'Remover anexo',
+    chat_attachment_expired: 'Foto excluída após o prazo',
     chat_quick_add_task: 'Adicionar como tarefa',
     chat_quick_add_calendar: 'Adicionar como evento',
     chat_task_added_ok: '✅ Adicionado',

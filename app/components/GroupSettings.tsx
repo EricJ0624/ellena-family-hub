@@ -29,6 +29,8 @@ import { writeStoredUiTheme } from '@/lib/preferences/ui-theme-cache';
 import { refreshAuthBootstrapCache } from '@/lib/auth-bootstrap';
 import { GROUP_EMAIL_INVITE_ERROR } from '@/lib/group-email-invite';
 import { GROUP_SHORT_INVITE_ERROR } from '@/lib/group-short-invite';
+import { billingLimitHref, pauseEmailInviteForSeatLimit } from '@/lib/billing-limit-prompt';
+import { getBillingTranslation } from '@/lib/translations/billing';
 
 interface GroupSettingsProps {
   onClose: () => void;
@@ -317,6 +319,10 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       const token = session?.access_token;
       if (!token) {
         setError(gst('session_error'));
+        return;
+      }
+
+      if (await pauseEmailInviteForSeatLimit(lang, currentGroupId)) {
         return;
       }
 
@@ -855,6 +861,23 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
             </tbody>
           </table>
         </div>
+
+        {isOwner && currentGroupId ? (
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={billingLimitHref(currentGroupId, 'seats')}
+              className="inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-800 no-underline hover:bg-indigo-100"
+            >
+              {getBillingTranslation(lang, 'pay_seats_link')}
+            </a>
+            <a
+              href={billingLimitHref(currentGroupId, 'storage')}
+              className="inline-flex items-center rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 no-underline hover:bg-amber-100"
+            >
+              {getBillingTranslation(lang, 'pay_storage_link')}
+            </a>
+          </div>
+        ) : null}
 
         {/* 에러 메시지 */}
         {error && (

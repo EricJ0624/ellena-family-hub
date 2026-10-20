@@ -148,11 +148,15 @@ export async function applyRevenueCatWebhook(body: RevenueCatWebhookBody): Promi
   }
 
   const requestedAction = attributeValue(event?.subscriber_attributes, 'quota_action');
-  let quotaBytes = quotaBytesForTier(product.quotaTier, plan);
-  if (requestedAction === '5gb' || requestedAction === '10gb' || requestedAction === '20gb') {
-    quotaBytes = quotaBytesForTier(requestedAction === '5gb' ? '5gb' : '20gb', plan);
-  } else if (requestedAction === 'keep') {
+  const productQuotaBytes = quotaBytesForTier(product.quotaTier, plan);
+  let quotaBytes = productQuotaBytes;
+  if (requestedAction === 'keep') {
     quotaBytes = await getGroupStorageQuotaBytes(groupId);
+  } else if (requestedAction === '5gb' || requestedAction === '10gb' || requestedAction === '20gb') {
+    const requestedBytes = quotaBytesForTier(requestedAction === '5gb' ? '5gb' : '20gb', plan);
+    if (requestedBytes <= productQuotaBytes) {
+      quotaBytes = requestedBytes;
+    }
   }
 
   const status = reverting

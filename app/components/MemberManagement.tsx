@@ -17,6 +17,7 @@ import type { MembershipRole, FamilyRole } from '@/types/db';
 import GroupSettings from './GroupSettings';
 import { intlLocaleForLang } from '@/lib/language-fonts';
 import { syncAfterAdminJoinResolve } from '@/lib/notifications/join-request-client';
+import { isSeatLimitPayload, presentSeatLimit } from '@/lib/billing-limit-prompt';
 
 interface MemberInfo {
   user_id: string;
@@ -256,6 +257,10 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose, forceAdmin
         );
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
+          if (isSeatLimitPayload(json) && currentGroupId) {
+            await presentSeatLimit(lang, currentGroupId);
+            return;
+          }
           alert(typeof json.error === 'string' ? json.error : mmt('pending_join_failed'));
           return;
         }

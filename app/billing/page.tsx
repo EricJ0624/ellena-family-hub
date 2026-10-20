@@ -200,6 +200,8 @@ function BillingCheckout() {
   const mode = searchParams.get('mode') ?? '';
   const reason = searchParams.get('reason') ?? '';
   const isAdminTest = mode === 'new-user-test';
+  const [adminTestAllowed, setAdminTestAllowed] = useState(false);
+  const showAdminTest = isAdminTest && adminTestAllowed;
   const intent = searchParams.get('intent');
   const [choice, setChoice] = useState<PurchaseChoice>(
     intent === 'seats' ? 'seats' : isStorageIntent(intent) ? '20gb' : '5gb',
@@ -217,12 +219,34 @@ function BillingCheckout() {
   const [billingRefresh, setBillingRefresh] = useState(0);
 
   const betaPeriodEnabled = groupState?.betaPeriodEnabled !== false;
-  const needsPromo = !isAdminTest && groupState?.betaOwner === true;
+  const needsPromo = !showAdminTest && groupState?.betaOwner === true;
   const minimumFloor = needsPromo
     && (groupState?.memberCount ?? 0) <= 2
     && (groupState?.allowedSeats ?? 0) <= 2
     && (groupState?.quotaBytes ?? 0) < TWENTY_GB;
   const selectedChoice = resolvePurchaseChoice(choice, minimumFloor, intent);
+
+  useEffect(() => {
+    if (!isAdminTest) {
+      setAdminTestAllowed(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id || cancelled) {
+        if (!cancelled) setAdminTestAllowed(false);
+        return;
+      }
+      const { data, error } = await supabase.rpc('is_system_admin', {
+        user_id_param: session.user.id,
+      });
+      if (!cancelled) setAdminTestAllowed(!error && data === true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdminTest]);
 
   useEffect(() => {
     if (!groupId) return;
@@ -242,7 +266,7 @@ function BillingCheckout() {
         return;
       }
       setGroupState(stateJson);
-      if (isAdminTest || stateJson.betaOwner !== true) return;
+      if (showAdminTest || stateJson.betaOwner !== true) return;
       const promoRes = await fetch(`/api/billing/promo?groupId=${encodeURIComponent(groupId)}`, { headers });
       const promoJson = await promoRes.json();
       if (cancelled) return;
@@ -256,7 +280,7 @@ function BillingCheckout() {
     return () => {
       cancelled = true;
     };
-  }, [groupId, isAdminTest, billingRefresh, lang]);
+  }, [groupId, showAdminTest, billingRefresh, lang]);
 
   useEffect(() => {
     if (!groupId) return;
@@ -274,7 +298,7 @@ function BillingCheckout() {
   }, [groupId]);
 
   const leaveBilling = () => {
-    if (isAdminTest) {
+    if (showAdminTest) {
       router.push('/admin');
       return;
     }
@@ -337,8 +361,8 @@ function BillingCheckout() {
         }
       }
 
-      const adminRow = isAdminTest ? ADMIN_TEST_ROWS.find((item) => item.key === testKey) : null;
-      if (isAdminTest && (!adminRow || adminRow.blocked)) {
+      const adminRow = showAdminTest ? ADMIN_TEST_ROWS.find((item) => item.key === testKey) : null;
+      if (showAdminTest && (!adminRow || adminRow.blocked)) {
         setError(adminRow ? adminTestBlockedMessage(adminRow.blocked, bt) : bt('test_pick_required'));
         return;
       }
@@ -371,7 +395,7 @@ function BillingCheckout() {
         appId: isAppId(groupState.appId) ? groupState.appId : CURRENT_APP_ID,
         seatCount: adminRow ? adminRow.seatCount : seatCount,
         quotaTier: adminRow ? adminRow.quotaTier : quotaTier,
-        betaPrice: isAdminTest ? false : betaPrice,
+        betaPrice: showAdminTest ? false : betaPrice,
       });
 
       const result = await openBillingPurchase({
@@ -408,7 +432,7 @@ function BillingCheckout() {
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col gap-4 bg-white px-4 py-8 text-slate-900">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-slate-900">
-          {isAdminTest ? bt('title_test') : betaPeriodEnabled ? bt('title_virtual') : bt('title_paid')}
+          {showAdminTest ? bt('title_test') : betaPeriodEnabled ? bt('title_virtual') : bt('title_paid')}
         </h1>
         <button
           type="button"
@@ -420,7 +444,7 @@ function BillingCheckout() {
       </div>
       <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6">
         {betaPeriodEnabled ? (
-          isAdminTest ? (
+          showAdminTest ? (
             <>
               <p>{bt('admin_no_charge')}</p>
               <p>{bt('bug_test')}</p>
@@ -455,7 +479,7 @@ function BillingCheckout() {
         ) : null}
       </div>
 
-      {isAdminTest ? (
+      {showAdminTest ? (
         <p className="text-sm text-slate-800">
           {bt('admin_test_note')}
         </p>
@@ -467,7 +491,7 @@ function BillingCheckout() {
       ) : null}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        {isAdminTest ? (
+        {showAdminTest ? (
           <AdminTestCatalog lang={lang} testKey={testKey} onSelect={setTestKey} />
         ) : minimumFloor ? (
         <fieldset className="flex flex-col gap-2 text-sm">

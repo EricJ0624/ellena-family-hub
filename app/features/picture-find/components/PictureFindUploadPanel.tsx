@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { PictureFindDiffMode, PictureFindScene } from '@/lib/picture-find/types';
 import { createPictureFindSceneFromUpload } from '@/lib/picture-find/upload-scene';
 import type { PictureFindTranslations } from '@/lib/translations/picture-find';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { isStorageLimitMessage, presentStorageLimit } from '@/lib/billing-limit-prompt';
 
 export type PictureFindUploadPanelProps = {
   groupId: string | null;
@@ -13,6 +15,7 @@ export type PictureFindUploadPanelProps = {
 };
 
 export function PictureFindUploadPanel({ groupId, t, onCreated, onCancel }: PictureFindUploadPanelProps) {
+  const { lang } = useLanguage();
   const [title, setTitle] = useState('');
   const [diffMode, setDiffMode] = useState<PictureFindDiffMode>('auto');
   const [originalFile, setOriginalFile] = useState<File | null>(null);
@@ -82,7 +85,12 @@ export function PictureFindUploadPanel({ groupId, t, onCreated, onCancel }: Pict
       });
       onCreated(scene);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t.upload_need_original);
+      const message = e instanceof Error ? e.message : t.upload_need_original;
+      if (groupId && isStorageLimitMessage(message)) {
+        await presentStorageLimit(lang, groupId);
+        return;
+      }
+      setError(message);
     } finally {
       setUploading(false);
     }

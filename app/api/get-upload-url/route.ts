@@ -38,9 +38,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 용량 제한: 모두 20MB 통일
+    // 용량 제한: 모두 20MB 통일. 크기가 없으면 한도 검사를 건너뛰지 않는다.
     const MAX_FILE_SIZE = 20 * 1024 * 1024;
-    if (fileSize && fileSize > MAX_FILE_SIZE) {
+    if (typeof fileSize !== 'number' || fileSize <= 0) {
+      return NextResponse.json(
+        { error: '파일 크기가 필요합니다.' },
+        { status: 400 },
+      );
+    }
+    if (fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: `파일이 너무 큽니다. (최대 20MB)` },
         { status: 413 }
@@ -48,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { quotaBytes, usedBytes } = await getGroupStorageStats(groupId);
-    if (fileSize && usedBytes + fileSize > quotaBytes) {
+    if (usedBytes + fileSize > quotaBytes) {
       return NextResponse.json(
         {
           error: '그룹 저장 용량을 초과했습니다.',

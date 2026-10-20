@@ -8,6 +8,7 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { syncAfterAdminJoinResolve } from '@/lib/notifications/join-request-client';
+import { isSeatLimitPayload, presentSeatLimit } from '@/lib/billing-limit-prompt';
 
 type PendingJoin = {
   id: string;
@@ -182,6 +183,10 @@ export default function GroupJoinRequestModalHost({ groupId, enabled }: Props) {
       );
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (isSeatLimitPayload(json)) {
+          await presentSeatLimit(lang, groupId);
+          return;
+        }
         alert(typeof json.error === 'string' ? json.error : mmt('pending_join_failed'));
         return;
       }

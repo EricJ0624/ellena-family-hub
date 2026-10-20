@@ -561,6 +561,7 @@ export default function FamilyHub() {
     chat_camera_btn: getDashboardTranslation(lang, 'chat_camera_btn'),
     chat_attach_btn_aria: getDashboardTranslation(lang, 'chat_attach_btn_aria'),
     chat_remove_attachment_aria: getDashboardTranslation(lang, 'chat_remove_attachment_aria'),
+    chat_attachment_expired: getDashboardTranslation(lang, 'chat_attachment_expired'),
     chat_quick_add_task: getDashboardTranslation(lang, 'chat_quick_add_task'),
     chat_quick_add_calendar: getDashboardTranslation(lang, 'chat_quick_add_calendar'),
     chat_task_added_ok: getDashboardTranslation(lang, 'chat_task_added_ok'),

@@ -4,6 +4,7 @@ import { requireAttachmentGroupAccess, requireAuthUser } from '@/lib/api-guards'
 import { withMediaFileUrls } from '@/lib/media-access-token';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { deleteS3IfUnreferenced } from '@/lib/storage-object-refs';
+import { expireOldChatAttachments } from '@/lib/chat-attachment-expiry';
 
 const ALLOWED_ENTITY_TYPES = new Set([
   'chat_message',
@@ -41,6 +42,9 @@ export async function GET(request: NextRequest) {
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+    if (entityType === 'chat_message') {
+      await expireOldChatAttachments(supabase, groupId);
+    }
     const { data, error } = await supabase
       .from(DB_TABLES.ATTACHMENTS)
       .select('*')
@@ -81,6 +85,9 @@ export async function POST(request: NextRequest) {
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+    if (String(entityType) === 'chat_message') {
+      await expireOldChatAttachments(supabase, String(groupId));
+    }
     const { data, error } = await supabase
       .from(DB_TABLES.ATTACHMENTS)
       .select('*')
@@ -133,7 +140,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '첨부를 삭제할 권한이 없습니다.' }, { status: 403 });
     }
 
-    if (row.s3_key) {
+    if (row.s3_key && row.s3_key !== 'expired') {
       await deleteS3IfUnreferenced(supabase, String(groupId), row.s3_key, {
         ignoreAttachmentId: String(attachmentId),
       });

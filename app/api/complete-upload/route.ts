@@ -53,7 +53,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const incomingSize = originalSize || 0;
+    const incomingSize = typeof originalSize === 'number' ? originalSize : 0;
+    if (incomingSize <= 0) {
+      await deleteFromS3(s3Key);
+      return NextResponse.json({ error: '파일 크기가 필요합니다.' }, { status: 400 });
+    }
     if (incomingSize > MAX_FILE_SIZE) {
       await deleteFromS3(s3Key);
       return NextResponse.json(
@@ -62,18 +66,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (incomingSize) {
-      const { quotaBytes, usedBytes } = await getGroupStorageStats(groupId);
-      if (usedBytes + incomingSize > quotaBytes) {
-        await deleteFromS3(s3Key);
-        return NextResponse.json(
-          {
-            error: '그룹 저장 용량을 초과했습니다.',
-            details: `현재 사용량 ${(usedBytes / 1024 / 1024 / 1024).toFixed(2)}GB / 한도 ${(quotaBytes / 1024 / 1024 / 1024).toFixed(2)}GB`,
-          },
-          { status: 413 }
-        );
-      }
+    const { quotaBytes, usedBytes } = await getGroupStorageStats(groupId);
+    if (usedBytes + incomingSize > quotaBytes) {
+      await deleteFromS3(s3Key);
+      return NextResponse.json(
+        {
+          error: '그룹 저장 용량을 초과했습니다.',
+          details: `현재 사용량 ${(usedBytes / 1024 / 1024 / 1024).toFixed(2)}GB / 한도 ${(quotaBytes / 1024 / 1024 / 1024).toFixed(2)}GB`,
+        },
+        { status: 413 }
+      );
     }
 
     const mode = upload_mode === 'original' ? 'original' : 'normal';
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
         image_url: imageUrl,
         s3_original_url: s3Url,
         file_type: fileType,
-        original_file_size: originalSize || null,
+        original_file_size: incomingSize,
         s3_key: s3Key,
         mime_type: mimeType,
         original_filename: fileName,
@@ -103,12 +105,11 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error('Supabase 저장 오류:', dbError);
-      return NextResponse.json({
-        success: true,
-        warning: '파일 업로드는 성공했지만 데이터베이스 저장에 실패했습니다.',
-        s3Url,
-        s3Key,
-      });
+      await deleteFromS3(s3Key);
+      return NextResponse.json(
+        { error: '사진 정보를 저장하지 못했습니다.' },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({
