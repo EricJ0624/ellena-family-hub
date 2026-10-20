@@ -125,6 +125,7 @@ import {
   type WidgetConfigDraft,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, readWidgetConfigCache } from '@/lib/widgets/widget-configs';
+import { rememberDashboardScroll, restoreDashboardScroll } from '@/lib/dashboard-scroll-memory';
 import {
   focusWidgetFromLocation,
   scrollDashboardWidgetIntoView,
@@ -688,6 +689,7 @@ export default function FamilyHub() {
       const updated = await acceptDiaryInvite();
       const openId = updated?.id ?? tripId;
       if (openId) {
+        rememberDashboardScroll();
         router.push(`/travel/diary?tripId=${encodeURIComponent(openId)}`);
       }
       void reloadTravelTrips();
@@ -735,6 +737,7 @@ export default function FamilyHub() {
           throw new Error((json as { error?: string }).error || tdy('start_trip_failed'));
         }
         dispatchWidgetConfigsUpdated();
+        rememberDashboardScroll();
         router.push(`/travel/diary?tripId=${encodeURIComponent(tripId)}`);
         void reloadTravelTrips();
       } catch (error) {
@@ -6644,6 +6647,11 @@ export default function FamilyHub() {
   }, [currentGroupId, groupIsOwner, isAuthenticated, widgetConfigsReloadToken]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+    restoreDashboardScroll();
+  }, [isAuthenticated, currentGroupId]);
+
+  useEffect(() => {
     if (!currentGroupId || !isAuthenticated) return;
 
     const reloadWidgetConfigs = async () => {
@@ -7170,9 +7178,10 @@ export default function FamilyHub() {
               cancel: tt('field_pick_cancel'),
             }}
             onFieldSaved={reloadTravelTrips}
-            onOpenTripDiary={(tid) =>
-              router.push(`/travel/diary?tripId=${encodeURIComponent(tid)}`)
-            }
+            onOpenTripDiary={(tid) => {
+              rememberDashboardScroll();
+              router.push(`/travel/diary?tripId=${encodeURIComponent(tid)}`);
+            }}
           />
         );
       case 'family_log':
@@ -7183,9 +7192,15 @@ export default function FamilyHub() {
             trips={travelTrips}
             loading={travelTripsLoading}
             currentGroupId={currentGroupId}
-            onOpenTrip={(tripId) => router.push(`/travel/diary?tripId=${tripId}`)}
+            onOpenTrip={(tripId) => {
+              rememberDashboardScroll();
+              router.push(`/travel/diary?tripId=${tripId}`);
+            }}
             onStartTrip={handleStartTripDiary}
-            onAddDiary={() => router.push('/travel/diary?openAdd=1')}
+            onAddDiary={() => {
+              rememberDashboardScroll();
+              router.push('/travel/diary?openAdd=1');
+            }}
             uiTheme={uiTheme}
             translations={{
               section_title: tdy('section_title'),

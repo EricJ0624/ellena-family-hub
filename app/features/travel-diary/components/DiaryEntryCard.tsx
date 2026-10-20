@@ -16,10 +16,10 @@ import {
   validateAttachmentFile,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
+import { findExistingAlbumItemId } from '@/lib/family-album-match';
+import { portraitAttachments } from '@/lib/portrait-attachments';
 import {
   emptyCollageSlots,
-  isPortraitDimensions,
-  loadImageNaturalSize,
   mergePhotoFocus,
   parseCollageStyle,
   parsePhotoFocus,
@@ -29,7 +29,6 @@ import {
   type DiaryCollageStyle,
   type PhotoFocusMap,
 } from '@/lib/modules/travel-planner/diary-collage';
-import { DB_TABLES } from '@/lib/db-table-names';
 import { supabase } from '@/lib/supabase';
 import { parseShowMap } from '@/lib/modules/travel-planner/diary-types';
 import { canShowDiaryPlaceMap } from '@/lib/modules/travel-planner/google-maps-embed';
@@ -78,6 +77,8 @@ type Labels = {
   photos_slots_label: string;
   photos_slots_hint: string;
   photos_slot_remove: string;
+  photos_drag: string;
+  photos_delete_confirm: string;
   photos_style_label: string;
   photos_style_film: string;
   photos_style_postal: string;
@@ -202,11 +203,6 @@ type PendingReceipt = {
   previewUrl: string;
 };
 
-function isGenericLibraryFilename(name: string): boolean {
-  const base = name.trim().toLowerCase();
-  return /^(image|img|photo|picture|사진)(\s*\(\d+\))?\.(jpe?g|png|webp|heic|heif)$/.test(base);
-}
-
 function revokePendingReceipts(items: PendingReceipt[]) {
   for (const item of items) {
     try {
@@ -279,6 +275,8 @@ export function DiaryEntryCard({
   const focusQueueRef = useRef<UploadedAttachment[]>([]);
   const manualFocusRef = useRef<UploadedAttachment | null>(null);
   const attachmentLoadGen = useRef(0);
+  const syncedPhotoEntryRef = useRef<string | null>(null);
+  const removedPhotoIdsRef = useRef<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
   const receiptFileRef = useRef<HTMLInputElement>(null);
   const pendingReceiptsRef = useRef<PendingReceipt[]>([]);
@@ -370,12 +368,24 @@ export function DiaryEntryCard({
   }, [photoFocus]);
 
   useEffect(() => {
-    attachmentLoadGen.current += 1;
-    if (!entryPhotos || !entryId) {
+    if (!entryId) {
+      syncedPhotoEntryRef.current = null;
+      removedPhotoIdsRef.current = new Set();
       setAttachments([]);
       return;
     }
-    setAttachments(entryPhotos.get(entryId) ?? []);
+    if (!entryPhotos) return;
+    const switched = syncedPhotoEntryRef.current !== entryId;
+    if (switched) removedPhotoIdsRef.current = new Set();
+    syncedPhotoEntryRef.current = entryId;
+    const removed = removedPhotoIdsRef.current;
+    const fromParent = (entryPhotos.get(entryId) ?? []).filter((item) => !removed.has(item.id));
+    setAttachments((prev) => {
+      if (switched) return fromParent;
+      const parentIds = new Set(fromParent.map((item) => item.id));
+      if (prev.some((item) => !parentIds.has(item.id))) return prev;
+      return fromParent;
+    });
   }, [entryId, entryPhotos]);
 
   useEffect(() => {
@@ -693,18 +703,7 @@ export function DiaryEntryCard({
   ) => {
     const knownFocus = photoFocusRef.current;
     const candidates = rows.filter((row) => !previousIds.has(row.id) && !knownFocus[row.id]);
-    if (candidates.length === 0) return;
-    const portraits: UploadedAttachment[] = [];
-    for (const row of candidates) {
-      const src = row.image_url || row.thumbnail_url;
-      if (!src) continue;
-      try {
-        const size = await loadImageNaturalSize(src);
-        if (isPortraitDimensions(size.width, size.height)) portraits.push(row);
-      } catch {
-        /* ignore load errors */
-      }
-    }
+    const portraits = await portraitAttachments(candidates);
     if (portraits.length === 0) return;
     const seen = new Set(focusQueueRef.current.map((item) => item.id));
     const next = [...focusQueueRef.current];
@@ -725,8 +724,9 @@ export function DiaryEntryCard({
       entityId: targetId,
     });
     if (gen !== attachmentLoadGen.current) return;
-    setAttachments(rows);
-    const ids = rows.map((row) => row.id);
+    const visibleRows = rows.filter((row) => !removedPhotoIdsRef.current.has(row.id));
+    setAttachments(visibleRows);
+    const ids = visibleRows.map((row) => row.id);
     const localNext = placeNewAttachmentsInEmptySlots(slotIdsRef.current, before, ids);
     const localChanged = localNext.some((id, index) => id !== slotIdsRef.current[index]);
     if (localChanged) {
@@ -740,7 +740,33 @@ export function DiaryEntryCard({
       const savedChanged = savedNext.some((id, index) => id !== savedResolved[index]);
       if (savedChanged) await persistCollage(savedNext, undefined, targetId);
     }
-    await enqueuePortraitFocus(rows, before);
+    await enqueuePortraitFocus(visibleRows, before);
+  };
+
+  const removeDiaryPhoto = async (attachment: UploadedAttachment) => {
+    if (!window.confirm(labels.photos_delete_confirm)) return;
+    try {
+      await deleteAttachment(groupId, attachment.id);
+    } catch {
+      alert(labels.upload_failed);
+      return;
+    }
+    removedPhotoIdsRef.current.add(attachment.id);
+    setAttachments((prev) => prev.filter((item) => item.id !== attachment.id));
+    const nextSlots = slotIdsRef.current.map((id) => (id === attachment.id ? null : id));
+    slotsCustomized.current = true;
+    slotIdsRef.current = nextSlots;
+    setSlotIds(nextSlots);
+    const nextFocus = { ...photoFocusRef.current };
+    delete nextFocus[attachment.id];
+    photoFocusRef.current = nextFocus;
+    setPhotoFocus(nextFocus);
+    focusQueueRef.current = focusQueueRef.current.filter((item) => item.id !== attachment.id);
+    setFocusQueue(focusQueueRef.current);
+    if (manualFocusRef.current?.id === attachment.id) {
+      manualFocusRef.current = null;
+      setManualFocus(null);
+    }
   };
 
   const finishFocusCurrent = () => {
@@ -767,31 +793,6 @@ export function DiaryEntryCard({
     if (entryId) return entryId;
     const result = await handleSave({ stayInEdit: true });
     return result?.entryId ?? null;
-  };
-
-  const findExistingAlbumItemId = async (file: File, contentSha256: string): Promise<string | null> => {
-    const hashMarker = `sha256:${contentSha256}`;
-    const { data: byHash } = await supabase
-      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
-      .select('id')
-      .eq('group_id', groupId)
-      .eq('description', hashMarker)
-      .limit(1)
-      .maybeSingle();
-    const hashId = (byHash as { id?: string } | null)?.id;
-    if (hashId) return String(hashId);
-
-    if (!file.name || file.size <= 0 || isGenericLibraryFilename(file.name)) return null;
-    const { data: byFile } = await supabase
-      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
-      .select('id')
-      .eq('group_id', groupId)
-      .eq('original_filename', file.name)
-      .eq('original_file_size', file.size)
-      .limit(1)
-      .maybeSingle();
-    const fileId = (byFile as { id?: string } | null)?.id;
-    return fileId ? String(fileId) : null;
   };
 
   const linkAlbumItems = async (targetId: string, albumItemIds: string[], previousIds: Set<string>) => {
@@ -834,7 +835,7 @@ export function DiaryEntryCard({
         hashes.set(file, hash);
         let existingId: string | null = null;
         try {
-          existingId = await findExistingAlbumItemId(file, hash);
+          existingId = await findExistingAlbumItemId(groupId, file, hash);
         } catch {
           existingId = null;
         }
@@ -1454,7 +1455,10 @@ export function DiaryEntryCard({
           slotsLabel: labels.photos_slots_label,
           slotsHint: labels.photos_slots_hint,
           slotRemove: labels.photos_slot_remove,
+          dragLabel: labels.photos_drag,
+          deleteLabel: labels.photos_delete_confirm,
         }}
+        onDeletePhoto={isView ? undefined : (attachment) => void removeDiaryPhoto(attachment)}
         onSlotIdsChange={handleSlotIdsChange}
       />
 

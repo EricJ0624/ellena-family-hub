@@ -45,6 +45,8 @@ export type TravelDiaryTranslations = {
   photos_slots_label: string;
   photos_slots_hint: string;
   photos_slot_remove: string;
+  photos_drag: string;
+  photos_delete_confirm: string;
   photos_style_label: string;
   photos_style_film: string;
   photos_style_postal: string;
@@ -119,6 +121,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: '다이어리에 보이는 사진',
     photos_slots_hint: '테두리 안 9장만 카드에 보여요. 사진을 끌어다 넣거나, 고른 뒤 칸을 누르세요.',
     photos_slot_remove: '이 칸에서 빼기',
+    photos_drag: '사진 옮기기',
+    photos_delete_confirm: '이 사진을 삭제할까요?',
     photos_style_label: '사진 스타일',
     photos_style_film: '필름 조각',
     photos_style_postal: '우편 앨범',
@@ -192,6 +196,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: 'Photos on the card',
     photos_slots_hint: 'Only the 9 bordered photos appear on the card. Drag a photo in, or tap a photo then a slot.',
     photos_slot_remove: 'Remove from slot',
+    photos_drag: 'Move photo',
+    photos_delete_confirm: 'Delete this photo?',
     photos_style_label: 'Photo style',
     photos_style_film: 'Film strips',
     photos_style_postal: 'Postal album',
@@ -265,6 +271,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: 'カードに表示する写真',
     photos_slots_hint: '枠の中の9枚だけがカードに表示されます。ドラッグするか、写真を選んで枠をタップしてください。',
     photos_slot_remove: '枠から外す',
+    photos_drag: '写真を移動',
+    photos_delete_confirm: 'この写真を削除しますか？',
     photos_style_label: '写真スタイル',
     photos_style_film: 'フィルム',
     photos_style_postal: '郵便アルバム',
@@ -337,6 +345,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: '卡片上显示的照片',
     photos_slots_hint: '只有边框内的 9 张会显示在卡片上。拖入照片，或先点选照片再点格子。',
     photos_slot_remove: '从格子中移除',
+    photos_drag: '移动照片',
+    photos_delete_confirm: '要删除这张照片吗？',
     photos_style_label: '照片样式',
     photos_style_film: '胶片',
     photos_style_postal: '邮册',
@@ -409,6 +419,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: '卡片上顯示的照片',
     photos_slots_hint: '只有邊框內的 9 張會顯示在卡片上。拖入照片，或先點選照片再點格子。',
     photos_slot_remove: '從格子中移除',
+    photos_drag: '移動照片',
+    photos_delete_confirm: '要刪除這張照片嗎？',
     photos_style_label: '照片樣式',
     photos_style_film: '膠片',
     photos_style_postal: '郵冊',
@@ -481,6 +493,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: 'Fotos en la tarjeta',
     photos_slots_hint: 'Solo las 9 fotos del recuadro aparecen en la tarjeta. Arrastra una foto o tócala y luego un hueco.',
     photos_slot_remove: 'Quitar del hueco',
+    photos_drag: 'Mover foto',
+    photos_delete_confirm: '¿Eliminar esta foto?',
     photos_style_label: 'Estilo de fotos',
     photos_style_film: 'Tiras de film',
     photos_style_postal: 'Álbum postal',
@@ -554,6 +568,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: 'Photos sur la carte',
     photos_slots_hint: 'Seules les 9 photos encadrées apparaissent sur la carte. Glissez une photo, ou touchez une photo puis un emplacement.',
     photos_slot_remove: 'Retirer de l’emplacement',
+    photos_drag: 'Déplacer la photo',
+    photos_delete_confirm: 'Supprimer cette photo ?',
     photos_style_label: 'Style des photos',
     photos_style_film: 'Pellicule',
     photos_style_postal: 'Album postal',
@@ -627,6 +643,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: 'Fotos auf der Karte',
     photos_slots_hint: 'Nur die 9 umrandeten Fotos erscheinen auf der Karte. Ziehen Sie ein Foto hinein oder tippen Sie Foto und dann ein Feld.',
     photos_slot_remove: 'Aus dem Feld nehmen',
+    photos_drag: 'Foto verschieben',
+    photos_delete_confirm: 'Dieses Foto löschen?',
     photos_style_label: 'Fotostil',
     photos_style_film: 'Filmstreifen',
     photos_style_postal: 'Postalbum',
@@ -700,6 +718,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: 'Foto sulla scheda',
     photos_slots_hint: 'Solo le 9 foto nel riquadro appaiono sulla scheda. Trascina una foto oppure tocca una foto e poi uno spazio.',
     photos_slot_remove: 'Rimuovi dallo spazio',
+    photos_drag: 'Sposta foto',
+    photos_delete_confirm: 'Eliminare questa foto?',
     photos_style_label: 'Stile foto',
     photos_style_film: 'Pellicola',
     photos_style_postal: 'Album postale',
@@ -773,6 +793,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_slots_label: 'Fotos no cartão',
     photos_slots_hint: 'Só as 9 fotos da moldura aparecem no cartão. Arraste uma foto ou toque numa foto e depois num espaço.',
     photos_slot_remove: 'Remover do espaço',
+    photos_drag: 'Mover foto',
+    photos_delete_confirm: 'Excluir esta foto?',
     photos_style_label: 'Estilo das fotos',
     photos_style_film: 'Filme',
     photos_style_postal: 'Álbum postal',

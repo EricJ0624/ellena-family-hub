@@ -346,6 +346,7 @@ export function FamilyLogCardView({
           slotsLabel: labels.photosSlots,
           slotsHint: labels.photosSlotsHint,
           slotRemove: labels.photosSlotRemove,
+          dragLabel: labels.dragPhoto,
         }}
         onSlotIdsChange={() => undefined}
       />

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { readMainContentScroll, writeMainContentScroll } from '@/lib/dashboard-scroll-memory';
 import type { LangCode } from '@/lib/language-fonts';
 import type { UiTheme } from '@/lib/ui-theme';
 import { useHorizontalPageSwipe } from '@/lib/hooks/useHorizontalPageSwipe';
@@ -125,6 +126,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
   const [editorOpen, setEditorOpen] = useState(false);
 
   const areaRef = useRef<HTMLDivElement | null>(null);
+  const dashboardScrollRef = useRef<number | null>(null);
   const groupIdRef = useRef(currentGroupId);
   const prevGroupRef = useRef<string | null | undefined>(undefined);
   groupIdRef.current = currentGroupId;
@@ -167,6 +169,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
       setCards(currentGroupId ? (cardMemory.get(currentGroupId) ?? []) : []);
       setViewing(null);
       setEditorOpen(false);
+      releaseDashboardScroll();
       setPage(0);
       clearFamilyLogAttachmentCache();
       if (watchRef.current != null && typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -242,6 +245,23 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
     onPage: goPage,
   });
 
+  const holdDashboardScroll = () => {
+    if (dashboardScrollRef.current != null) return;
+    dashboardScrollRef.current = readMainContentScroll();
+  };
+  const releaseDashboardScroll = () => {
+    const top = dashboardScrollRef.current;
+    dashboardScrollRef.current = null;
+    if (top == null) return;
+    const apply = (tries = 0) => {
+      if (readMainContentScroll() != null) {
+        writeMainContentScroll(top);
+        return;
+      }
+      if (tries < 6) requestAnimationFrame(() => apply(tries + 1));
+    };
+    apply();
+  };
   const viewIndex = viewing ? visible.findIndex((card) => card.id === viewing.id) : -1;
   const dropCard = useCallback((removedId: string) => {
     forgetFamilyLogAttachments(removedId);
@@ -252,6 +272,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
     });
     setViewing(null);
     setEditorOpen(false);
+    releaseDashboardScroll();
   }, []);
   const showNeighbor = useCallback(
     (dir: 'next' | 'prev') => {
@@ -289,6 +310,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
         });
         setGrain('recent');
         setPage(0);
+        holdDashboardScroll();
         setViewing(created);
         setEditorOpen(true);
         return true;
@@ -536,6 +558,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
                   key={card.id}
                   type="button"
                   onClick={() => {
+                    holdDashboardScroll();
                     setViewing(card);
                     setEditorOpen(false);
                   }}
@@ -666,7 +689,10 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
           groupId={currentGroupId}
           labels={labels}
           uiTheme={uiTheme}
-          onClose={() => setViewing(null)}
+          onClose={() => {
+            setViewing(null);
+            releaseDashboardScroll();
+          }}
           onEdit={() => setEditorOpen(true)}
           canPrev={viewIndex > 0}
           canNext={viewIndex >= 0 && viewIndex < visible.length - 1}

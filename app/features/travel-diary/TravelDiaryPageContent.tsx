@@ -646,6 +646,8 @@ export function TravelDiaryPageContent() {
           photos_slots_label: t('photos_slots_label'),
           photos_slots_hint: t('photos_slots_hint'),
           photos_slot_remove: t('photos_slot_remove'),
+          photos_drag: t('photos_drag'),
+          photos_delete_confirm: t('photos_delete_confirm'),
           photos_style_label: t('photos_style_label'),
           photos_style_film: t('photos_style_film'),
           photos_style_postal: t('photos_style_postal'),

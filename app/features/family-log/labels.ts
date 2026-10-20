@@ -53,6 +53,7 @@ export type FamilyLogLabels = {
   photosSlots: string;
   photosSlotsHint: string;
   photosSlotRemove: string;
+  dragPhoto: string;
   photosAdjust: string;
   photoFocusTitle: string;
   photoFocusHint: string;
@@ -116,6 +117,7 @@ const ko: FamilyLogLabels = {
   photosSlots: '카드에 보이는 사진',
   photosSlotsHint: '테두리 안 9장만 카드에 보여요. 사진을 끌어다 넣거나, 고른 뒤 칸을 누르세요.',
   photosSlotRemove: '이 칸에서 빼기',
+  dragPhoto: '사진 옮기기',
   photosAdjust: '세로 맞춤',
   photoFocusTitle: '사진 위치 맞추기',
   photoFocusHint: '세로 사진입니다. 프레임 안에서 위아래로 끌어 얼굴이 잘 보이게 맞춰 주세요.',
@@ -179,6 +181,7 @@ const en: FamilyLogLabels = {
   photosSlots: 'Photos on the card',
   photosSlotsHint: 'Only the 9 photos inside the frame show on the card. Drag one in, or pick one and tap a slot.',
   photosSlotRemove: 'Remove from this slot',
+  dragPhoto: 'Move photo',
   photosAdjust: 'Fit portrait',
   photoFocusTitle: 'Adjust photo crop',
   photoFocusHint: 'Portrait photo. Drag up or down inside the frame so faces stay visible.',
@@ -220,6 +223,7 @@ const ja: FamilyLogLabels = {
   photosSlots: 'カードに出る写真',
   photosSlotsHint: '枠の中の9枚だけがカードに出ます。ドラッグするか、選んでから枠を押してください。',
   photosSlotRemove: 'この枠から外す',
+  dragPhoto: '写真を移動',
   photosAdjust: '縦位置',
   photoFocusTitle: '写真の位置を合わせる',
   photoFocusHint: '縦写真です。枠の中を上下にドラッグして顔が見えるように合わせてください。',
@@ -283,6 +287,7 @@ const zhCN: FamilyLogLabels = {
   photosSlots: '卡片上的照片',
   photosSlotsHint: '只有框内 9 张会显示在卡片上。拖进去，或先选中再点格子。',
   photosSlotRemove: '从这一格移出',
+  dragPhoto: '移动照片',
   photosAdjust: '竖向对齐',
   photoFocusTitle: '调整照片位置',
   photoFocusHint: '竖向照片。在框内上下拖动，让脸部保持可见。',
@@ -345,6 +350,7 @@ const zhTW: FamilyLogLabels = {
   photosSlots: '卡片上的照片',
   photosSlotsHint: '只有框內 9 張會顯示在卡片上。拖進去，或先選取再點格子。',
   photosSlotRemove: '從這一格移出',
+  dragPhoto: '移動照片',
   photosAdjust: '直向對齊',
   photoFocusTitle: '調整照片位置',
   photoFocusHint: '直向照片。在框內上下拖曳，讓臉部保持可見。',
@@ -404,6 +410,7 @@ const es: FamilyLogLabels = {
   photosSlots: 'Fotos de la tarjeta',
   photosSlotsHint: 'Solo las 9 fotos del marco salen en la tarjeta. Arrastra una o elige y toca un hueco.',
   photosSlotRemove: 'Quitar de este hueco',
+  dragPhoto: 'Mover foto',
   photosAdjust: 'Ajustar vertical',
   photoFocusTitle: 'Ajustar recorte',
   photoFocusHint: 'Foto vertical. Arrastra arriba o abajo en el marco para ver las caras.',
@@ -467,6 +474,7 @@ const fr: FamilyLogLabels = {
   photosSlots: 'Photos de la carte',
   photosSlotsHint: 'Seules les 9 photos du cadre apparaissent. Glissez-en une, ou choisissez puis touchez une case.',
   photosSlotRemove: 'Retirer de cette case',
+  dragPhoto: 'Déplacer la photo',
   photosAdjust: 'Ajuster le portrait',
   photoFocusTitle: 'Ajuster le cadrage',
   photoFocusHint: 'Photo portrait. Faites glisser dans le cadre pour garder les visages visibles.',
@@ -530,6 +538,7 @@ const de: FamilyLogLabels = {
   photosSlots: 'Fotos auf der Karte',
   photosSlotsHint: 'Nur die 9 Fotos im Rahmen erscheinen. Ziehen Sie eines hinein oder wählen Sie es und tippen Sie ein Feld.',
   photosSlotRemove: 'Aus diesem Feld nehmen',
+  dragPhoto: 'Foto verschieben',
   photosAdjust: 'Hochformat',
   photoFocusTitle: 'Ausschnitt anpassen',
   photoFocusHint: 'Hochformat. Ziehen Sie im Rahmen, damit Gesichter sichtbar bleiben.',
@@ -593,6 +602,7 @@ const it: FamilyLogLabels = {
   photosSlots: 'Foto sulla scheda',
   photosSlotsHint: 'Solo le 9 foto nel riquadro compaiono. Trascinane una, oppure sceglila e tocca uno spazio.',
   photosSlotRemove: 'Togli da questo spazio',
+  dragPhoto: 'Sposta foto',
   photosAdjust: 'Adatta verticale',
   photoFocusTitle: 'Regola il ritaglio',
   photoFocusHint: 'Foto verticale. Trascina nel riquadro per tenere i volti visibili.',
@@ -656,6 +666,7 @@ const pt: FamilyLogLabels = {
   photosSlots: 'Fotos no cartão',
   photosSlotsHint: 'Só as 9 fotos da moldura aparecem. Arraste uma, ou escolha e toque num espaço.',
   photosSlotRemove: 'Tirar deste espaço',
+  dragPhoto: 'Mover foto',
   photosAdjust: 'Ajustar vertical',
   photoFocusTitle: 'Ajustar recorte',
   photoFocusHint: 'Foto vertical. Arraste no quadro para manter os rostos visíveis.',

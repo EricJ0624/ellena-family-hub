@@ -20,9 +20,13 @@ import {
 import {
   deleteAttachment,
   getAttachmentsForEntity,
+  sha256HexOfFile,
   uploadFeatureAttachments,
+  validateAttachmentFile,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
+import { findExistingAlbumItemId } from '@/lib/family-album-match';
+import { portraitAttachments } from '@/lib/portrait-attachments';
 import { canShowDiaryPlaceMap } from '@/lib/modules/travel-planner/google-maps-embed';
 import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
 import type { LangCode } from '@/lib/language-fonts';
@@ -89,8 +93,11 @@ export function FamilyLogCardEditor({
     card.collage_attachment_ids ?? emptyFamilyLogSlots(),
   );
   const [photoFocus, setPhotoFocus] = useState<PhotoFocusMap>(card.photo_focus ?? {});
+  const photoFocusRef = useRef(photoFocus);
+  photoFocusRef.current = photoFocus;
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [focusPhoto, setFocusPhoto] = useState<UploadedAttachment | null>(null);
+  const [focusQueue, setFocusQueue] = useState<UploadedAttachment[]>([]);
   const [rating, setRating] = useState<number | ''>(
     card.rating != null && card.rating >= 1 && card.rating <= 5 ? card.rating : '',
   );
@@ -125,6 +132,7 @@ export function FamilyLogCardEditor({
     setSlotIds(card.collage_attachment_ids ?? emptyFamilyLogSlots());
     setGalleryOpen(false);
     setFocusPhoto(null);
+    setFocusQueue([]);
   }, [card.id]);
 
   useEffect(() => {
@@ -171,54 +179,125 @@ export function FamilyLogCardEditor({
     };
   }, [card.id, groupId, labels.loadFailed]);
 
+  const queueNewPortraits = async (rows: UploadedAttachment[], previousIds: Set<string>) => {
+    const known = photoFocusRef.current;
+    const fresh = rows.filter((row) => !previousIds.has(row.id) && !known[row.id]);
+    const portraits = await portraitAttachments(fresh);
+    if (portraits.length === 0) return;
+    setFocusQueue((prev) => {
+      const seen = new Set(prev.map((item) => item.id));
+      const next = [...prev];
+      for (const item of portraits) {
+        if (!seen.has(item.id)) next.push(item);
+      }
+      return next.length === prev.length ? prev : next;
+    });
+  };
+
   const upload = async (files: FileList | null, entityType: 'family_log_card' | 'family_log_receipt') => {
     const list = files ? Array.from(files) : [];
     if (list.length === 0) return;
     const setUploading = entityType === 'family_log_card' ? setPhotoUploading : setReceiptUploading;
     setUploading(true);
     setError(null);
+    let linked = false;
+    const before = new Set(photos.map((item) => item.id));
     try {
-      await uploadFeatureAttachments({
-        groupId,
-        featureType: 'family_log',
-        entityType,
-        entityId: card.id,
-        files: list,
-      });
-      const rows = await getAttachmentsForEntity({ groupId, entityType, entityId: card.id });
-      if (entityType === 'family_log_card') {
-        writeFamilyLogAttachments(card.id, { photos: rows });
-        setPhotos(rows);
-      } else {
+      if (entityType === 'family_log_receipt') {
+        await uploadFeatureAttachments({
+          groupId,
+          featureType: 'family_log',
+          entityType,
+          entityId: card.id,
+          files: list,
+        });
+        const rows = await getAttachmentsForEntity({ groupId, entityType, entityId: card.id });
         writeFamilyLogAttachments(card.id, { receipts: rows });
         setReceipts(rows);
+        return;
       }
+      const toUpload = list.filter((file) => validateAttachmentFile(file) === null);
+      if (toUpload.length === 0) {
+        setError(labels.uploadFailed);
+        return;
+      }
+      const albumIds: string[] = [];
+      const fresh: File[] = [];
+      const hashes = new Map<File, string>();
+      for (const file of toUpload) {
+        const hash = await sha256HexOfFile(file);
+        hashes.set(file, hash);
+        let existingId: string | null = null;
+        try {
+          existingId = await findExistingAlbumItemId(groupId, file, hash);
+        } catch {
+          existingId = null;
+        }
+        if (existingId) albumIds.push(existingId);
+        else fresh.push(file);
+      }
+      const uniqueAlbumIds = [...new Set(albumIds)];
+      if (uniqueAlbumIds.length > 0) {
+        await postAlbumPhotos(uniqueAlbumIds);
+        linked = true;
+      }
+      let freshFailed = false;
+      if (fresh.length > 0) {
+        const jobs = await uploadFeatureAttachments({
+          groupId,
+          featureType: 'family_log',
+          entityType: 'family_log_card',
+          entityId: card.id,
+          files: fresh,
+          contentSha256ForFile: (file) => hashes.get(file),
+        });
+        freshFailed = jobs.some((job) => job.status === 'failed');
+      }
+      await reloadCardPhotos(before);
+      if (freshFailed) setError(labels.uploadFailed);
     } catch {
+      if (linked) {
+        try {
+          await reloadCardPhotos(before);
+        } catch {
+          /* 이미 연결된 사진만 다시 읽는다 */
+        }
+      }
       setError(labels.uploadFailed);
     } finally {
       setUploading(false);
     }
   };
 
+  const reloadCardPhotos = async (previousIds: Set<string>) => {
+    const rows = await getAttachmentsForEntity({
+      groupId,
+      entityType: 'family_log_card',
+      entityId: card.id,
+    });
+    writeFamilyLogAttachments(card.id, { photos: rows });
+    setPhotos(rows);
+    await queueNewPortraits(rows, previousIds);
+  };
+
+  const postAlbumPhotos = async (albumItemIds: string[]) => {
+    const headers = await familyLogAuthHeaders();
+    const res = await fetch(`/api/v1/family-log/cards/${card.id}/from-album`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId, albumItemIds }),
+    });
+    if (!res.ok) throw new Error('album');
+  };
+
   const linkAlbum = async (albumItemIds: string[]) => {
     if (albumItemIds.length === 0) return;
     setPhotoUploading(true);
     setError(null);
+    const before = new Set(photos.map((item) => item.id));
     try {
-      const headers = await familyLogAuthHeaders();
-      const res = await fetch(`/api/v1/family-log/cards/${card.id}/from-album`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, albumItemIds }),
-      });
-      if (!res.ok) throw new Error('album');
-      const rows = await getAttachmentsForEntity({
-        groupId,
-        entityType: 'family_log_card',
-        entityId: card.id,
-      });
-      writeFamilyLogAttachments(card.id, { photos: rows });
-      setPhotos(rows);
+      await postAlbumPhotos(albumItemIds);
+      await reloadCardPhotos(before);
     } catch {
       setError(labels.uploadFailed);
     } finally {
@@ -226,7 +305,10 @@ export function FamilyLogCardEditor({
     }
   };
 
-  const removeFile = async (attachment: UploadedAttachment, entityType: 'family_log_card' | 'family_log_receipt') => {
+  const removeFile = async (
+    attachment: UploadedAttachment,
+    entityType: 'family_log_card' | 'family_log_receipt',
+  ): Promise<boolean> => {
     setRemoving(true);
     setError(null);
     try {
@@ -241,15 +323,19 @@ export function FamilyLogCardEditor({
         writeFamilyLogAttachments(card.id, { receipts: next });
         setReceipts(next);
       }
+      return true;
     } catch {
       setError(labels.uploadFailed);
+      return false;
     } finally {
       setRemoving(false);
     }
   };
 
+  const activeFocus = focusPhoto ?? focusQueue[0] ?? null;
+
   const save = async () => {
-    if (focusPhoto) return;
+    if (activeFocus) return;
     const nextTitle = title.trim();
     if (!nextTitle) return;
     const amountNumber = Number(amount);
@@ -648,11 +734,11 @@ export function FamilyLogCardEditor({
           <button
             type="button"
             onClick={() => void save()}
-            disabled={photoUploading || receiptUploading || removing || saving || deleting || Boolean(focusPhoto)}
+            disabled={photoUploading || receiptUploading || removing || saving || deleting || Boolean(activeFocus)}
             title={
               photoUploading || receiptUploading
                 ? labels.saveDisabledUploading
-                : focusPhoto
+                : activeFocus
                   ? labels.saveDisabledPhotoFocus
                   : saving || removing
                     ? labels.saveDisabledSaving
@@ -729,6 +815,25 @@ export function FamilyLogCardEditor({
           slotsLabel: labels.photosSlots,
           slotsHint: labels.photosSlotsHint,
           slotRemove: labels.photosSlotRemove,
+          dragLabel: labels.dragPhoto,
+          deleteLabel: labels.deletePhotoConfirm,
+        }}
+        onDeletePhoto={(attachment) => {
+          if (!window.confirm(labels.deletePhotoConfirm)) return;
+          void (async () => {
+            const removed = await removeFile(attachment, 'family_log_card');
+            if (!removed) return;
+            slotsCustomized.current = true;
+            setSlotIds((prev) => prev.map((id) => (id === attachment.id ? null : id)));
+            setPhotoFocus((prev) => {
+              if (!prev[attachment.id]) return prev;
+              const next = { ...prev };
+              delete next[attachment.id];
+              return next;
+            });
+            setFocusQueue((prev) => prev.filter((item) => item.id !== attachment.id));
+            if (focusPhoto?.id === attachment.id) setFocusPhoto(null);
+          })();
         }}
         onSlotIdsChange={(next) => {
           slotsCustomized.current = true;
@@ -736,19 +841,26 @@ export function FamilyLogCardEditor({
         }}
       />
       <FamilyLogPhotoFocus
-        open={Boolean(focusPhoto)}
-        imageUrl={focusPhoto?.image_url || focusPhoto?.thumbnail_url || ''}
-        initialY={focusPhoto ? photoFocus[focusPhoto.id]?.y ?? 50 : 50}
+        open={Boolean(activeFocus)}
+        imageUrl={activeFocus?.image_url || activeFocus?.thumbnail_url || ''}
+        initialY={activeFocus ? photoFocus[activeFocus.id]?.y ?? 50 : 50}
         title={labels.photoFocusTitle}
         hint={labels.photoFocusHint}
         confirmLabel={labels.photoFocusConfirm}
         skipLabel={labels.photoFocusSkip}
         onConfirm={(y) => {
-          if (!focusPhoto) return;
-          setPhotoFocus((prev) => ({ ...prev, [focusPhoto.id]: { y } }));
-          setFocusPhoto(null);
+          if (!activeFocus) return;
+          const doneId = activeFocus.id;
+          setPhotoFocus((prev) => ({ ...prev, [doneId]: { y } }));
+          setFocusPhoto((current) => (current?.id === doneId ? null : current));
+          setFocusQueue((prev) => prev.filter((item) => item.id !== doneId));
         }}
-        onSkip={() => setFocusPhoto(null)}
+        onSkip={() => {
+          if (!activeFocus) return;
+          const doneId = activeFocus.id;
+          setFocusPhoto((current) => (current?.id === doneId ? null : current));
+          setFocusQueue((prev) => prev.filter((item) => item.id !== doneId));
+        }}
       />
     </div>
   );

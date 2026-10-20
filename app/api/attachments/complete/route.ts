@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '첨부 저장에 실패했습니다.' }, { status: 500 });
     }
 
-    if (String(entityType) === 'travel_diary_entry') {
+    if (String(entityType) === 'travel_diary_entry' || String(entityType) === 'family_log_card') {
       await ensureFamilyAlbumItemForDiaryPhoto(supabase, {
         groupId: String(groupId),
         userId: user.id,
