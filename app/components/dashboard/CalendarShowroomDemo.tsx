@@ -6,28 +6,19 @@ import { Calendar, Plus, X } from 'lucide-react';
 import { kidsStickerFromTitles } from '@/app/features/family-calendar/kids-decorations';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
+import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/memberManagement';
 import { getWidgetShowroomTranslation } from '@/lib/translations/widgetShowroom';
 import { intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 
 const RING = 'ring-2 ring-violet-500 ring-offset-2';
 const DEMO_YEAR = 2026;
-const DEMO_MONTH = 9;
-const DEMO_DAY = 21;
-const TODAY = 4;
-const LEADING_BLANKS = 4;
-
-const BOARD_DECOS = [
-  { src: '/family-calendar/emojis/star.png', className: 'left-[42%] top-1 h-5 w-5' },
-  { src: '/family-calendar/emojis/firework.png', className: 'right-10 top-1 h-6 w-6 -rotate-6' },
-  { src: '/family-calendar/emojis/earth.png', className: 'right-1 top-2 h-6 w-6' },
-  { src: '/family-calendar/emojis/family.png', className: 'right-1 top-[7.5rem] h-6 w-6' },
-  { src: '/family-calendar/emojis/firework-2.png', className: 'left-0 top-[8.5rem] h-7 w-7 -rotate-12' },
-  { src: '/family-calendar/emojis/dog.png', className: 'left-0 top-[12.5rem] h-7 w-7' },
-  { src: '/family-calendar/emojis/rainbow.png', className: 'right-0 top-[11rem] h-7 w-7' },
-  { src: '/family-calendar/emojis/star.png', className: 'right-1 top-[15rem] h-5 w-5' },
-  { src: '/family-calendar/emojis/house.png', className: 'bottom-2 left-[38%] h-6 w-6' },
-  { src: '/family-calendar/emojis/planet.png', className: 'bottom-2 right-2 h-6 w-6' },
-];
+const DEMO_MONTH = 11;
+const DEMO_DAY = 25;
+/** 2026-12-01은 화요일 */
+const LEADING_BLANKS = 2;
+const DECEMBER_BG = '/family-calendar/backgrounds/calendar-dec-bg.png?v=2';
+const DECEMBER_WASH =
+  'linear-gradient(180deg, rgba(226,238,250,0.97) 0%, rgba(196,220,242,0.94) 38%, rgba(176,208,236,0.9) 70%, rgba(214,230,246,0.96) 100%)';
 
 const FORM_DECOS = [
   { src: '/family-calendar/add-emojis/cloud.png', className: 'left-1/2 top-1 h-8 w-8 -translate-x-1/2' },
@@ -43,7 +34,15 @@ const FORM_DECOS = [
   { src: '/family-calendar/add-emojis/ghost-2.png', className: 'bottom-2 right-1 h-7 w-7' },
 ];
 
-function TypedTitle({ text, placeholder }: { text: string; placeholder: string }) {
+function TypedField({
+  text,
+  placeholder,
+  multiline = false,
+}: {
+  text: string;
+  placeholder: string;
+  multiline?: boolean;
+}) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -53,15 +52,16 @@ function TypedTitle({ text, placeholder }: { text: string; placeholder: string }
     return () => window.clearInterval(id);
   }, [text]);
 
-  return (
-    <input
-      readOnly
-      tabIndex={-1}
-      className="w-full rounded-2xl bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none"
-      value={text.slice(0, count)}
-      placeholder={placeholder}
-    />
-  );
+  const value = text.slice(0, count);
+  const className = `w-full rounded-2xl bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none ${
+    multiline ? 'h-16 resize-none' : ''
+  }`;
+
+  if (multiline) {
+    return <textarea readOnly tabIndex={-1} className={className} value={value} placeholder={placeholder} />;
+  }
+
+  return <input readOnly tabIndex={-1} className={className} value={value} placeholder={placeholder} />;
 }
 
 function ConfettiBurst() {
@@ -93,69 +93,21 @@ function ConfettiBurst() {
   );
 }
 
-function MiniMonth({
-  weekDays,
-  monthLabel,
-  pickerHint,
-}: {
-  weekDays: string[];
-  monthLabel: string;
-  pickerHint: string;
-}) {
-  const cells = [
-    ...Array.from({ length: LEADING_BLANKS }, () => 0),
-    ...Array.from({ length: 31 }, (_, i) => i + 1),
-  ];
-
-  return (
-    <div className="absolute left-1/2 top-[4.6rem] z-30 w-[13.5rem] -translate-x-1/2 rounded-xl border border-violet-100 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-2 shadow-xl">
-      <div className="mb-1 flex items-center justify-between px-1 text-violet-700">
-        <span className="text-xs font-bold">‹</span>
-        <span className="text-[11px] font-bold">
-          {monthLabel}
-          <span className="ml-1 font-normal text-violet-400">{pickerHint}</span>
-        </span>
-        <span className="text-xs font-bold">›</span>
-      </div>
-      <div className="grid grid-cols-7 text-center text-[9px] font-semibold text-violet-400">
-        {weekDays.map((day) => (
-          <span key={day}>{day}</span>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 text-center text-[11px] font-semibold text-slate-700">
-        {cells.map((day, index) => (
-          <span key={index} className="flex h-5 items-center justify-center">
-            {day === 0 ? null : (
-              <span
-                className={
-                  day === DEMO_DAY
-                    ? 'flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-white'
-                    : day === TODAY
-                      ? 'flex h-5 w-5 items-center justify-center rounded-full ring-1 ring-violet-400'
-                      : ''
-                }
-              >
-                {day}
-              </span>
-            )}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /**
  * 달력 쇼룸 미리보기. 일정 저장·수정·삭제는 하지 않고, 영상 순서만 보여 준다.
+ * 12월 25일 → 빈 목록 → 제목 → 설명 → 매년 반복 → 스티커.
  */
 export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: number }) {
   const dt = (key: Parameters<typeof getDashboardTranslation>[1]) => getDashboardTranslation(lang, key);
   const title = getWidgetShowroomTranslation(lang, 'demo_calendar_event');
+  const note = getWidgetShowroomTranslation(lang, 'demo_calendar_desc');
   const locale = intlLocaleForLang(lang);
   const scene = step >= 2 && step <= 4 ? 'form' : 'board';
   const selected = step >= 1;
   const showEvent = step >= 5;
-  const sticker = kidsStickerFromTitles([title], `${DEMO_YEAR}-10-${DEMO_DAY}`);
+  const yearly = step >= 4;
+  const sticker = kidsStickerFromTitles([title], `${DEMO_YEAR}-12-${DEMO_DAY}`);
+  const registeredAt = new Date(2026, 9, 21, 11, 42, 58).toLocaleString(locale);
   const weekDays = [
     dt('calendar_weekday_0'),
     dt('calendar_weekday_1'),
@@ -174,10 +126,7 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
     month: 'long',
     day: 'numeric',
   });
-  const pickerMonth = dt('event_picker_year_month')
-    .replace('{year}', String(DEMO_YEAR))
-    .replace('{month}', String(DEMO_MONTH + 1));
-  const dateStr = `${DEMO_YEAR}-10-${String(DEMO_DAY).padStart(2, '0')}`;
+  const dateStr = `${DEMO_YEAR}-12-${String(DEMO_DAY).padStart(2, '0')}`;
   const cells = [
     ...Array.from({ length: LEADING_BLANKS }, () => 0),
     ...Array.from({ length: 31 }, (_, i) => i + 1),
@@ -210,7 +159,7 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
               </p>
               <h3 className="mb-3 mt-1 text-center text-2xl font-bold text-violet-700">{dt('event_add_title')}</h3>
               <div className="mb-3 grid grid-cols-2 gap-2">
-                <div className={step === 2 ? `rounded-2xl ${RING}` : ''}>
+                <div>
                   <p className="mb-1 text-[11px] font-bold text-violet-600">{dt('event_start_date')}</p>
                   <div className="flex items-center rounded-2xl bg-white px-1 py-1.5 text-xs font-semibold text-violet-700 shadow-sm">
                     <span className="px-1">−</span>
@@ -230,26 +179,33 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                   </div>
                 </div>
               </div>
-              {step === 2 ? (
-                <MiniMonth weekDays={weekDays} monthLabel={pickerMonth} pickerHint={dt('event_picker_start')} />
-              ) : null}
               <label className="mb-1 block text-xs font-bold text-slate-700">{dt('event_title_label')}</label>
-              <div className={step === 3 ? `mb-3 rounded-2xl ${RING}` : 'mb-3'}>
-                {step === 3 ? (
-                  <TypedTitle text={title} placeholder={dt('event_title_placeholder')} />
+              <div className={step === 2 ? `mb-3 rounded-2xl ${RING}` : 'mb-3'}>
+                {step === 2 ? (
+                  <TypedField text={title} placeholder={dt('event_title_placeholder')} />
                 ) : (
                   <input
                     readOnly
                     tabIndex={-1}
                     className="w-full rounded-2xl bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none"
-                    value={step > 3 ? title : ''}
+                    value={step > 2 ? title : ''}
                     placeholder={dt('event_title_placeholder')}
                   />
                 )}
               </div>
               <label className="mb-1 block text-xs font-bold text-slate-700">{dt('event_desc_label')}</label>
-              <div className="mb-3 h-16 rounded-2xl bg-white px-3 py-2 text-sm text-slate-400 shadow-sm">
-                {dt('event_desc_placeholder')}
+              <div className={step === 3 ? `mb-3 rounded-2xl ${RING}` : 'mb-3'}>
+                {step === 3 ? (
+                  <TypedField text={note} placeholder={dt('event_desc_placeholder')} multiline />
+                ) : (
+                  <textarea
+                    readOnly
+                    tabIndex={-1}
+                    className="h-16 w-full resize-none rounded-2xl bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none"
+                    value={step > 3 ? note : ''}
+                    placeholder={dt('event_desc_placeholder')}
+                  />
+                )}
               </div>
               <p className="mb-1 text-xs font-bold text-slate-700">{dt('event_repeat_label')}</p>
               <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-slate-700">
@@ -260,7 +216,7 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                     ['yearly', dt('event_repeat_yearly')],
                   ] as const
                 ).map(([value, label]) => {
-                  const checked = (step >= 4 ? 'yearly' : 'none') === value;
+                  const checked = (yearly ? 'yearly' : 'none') === value;
                   return (
                     <span
                       key={value}
@@ -302,19 +258,16 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
             className="relative"
           >
             <div
-              className="relative overflow-hidden rounded-[1.75rem] px-3 pb-3 pt-3 shadow-lg"
+              className="relative overflow-hidden rounded-[1.75rem] px-4 pb-3 pt-3 shadow-lg"
               style={{
-                background:
-                  'linear-gradient(180deg, rgba(237,233,254,0.96) 0%, rgba(221,214,254,0.9) 42%, rgba(252,231,243,0.82) 100%)',
+                backgroundColor: 'transparent',
+                backgroundImage: `url('${DECEMBER_BG}'), ${DECEMBER_WASH}`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                backgroundSize: '100% 100%',
               }}
             >
               {showEvent ? <ConfettiBurst /> : null}
-              <div className="pointer-events-none absolute inset-0" aria-hidden>
-                {BOARD_DECOS.map((item) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={item.src + item.className} src={item.src} alt="" className={`absolute object-contain ${item.className}`} />
-                ))}
-              </div>
               <div className="relative z-[1]">
                 <div className="mb-2 flex items-center gap-1.5 px-1">
                   <span className="text-base" aria-hidden>
@@ -322,12 +275,12 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                   </span>
                   <h3 className="m-0 text-base font-extrabold tracking-wide text-violet-800">{dt('section_title_calendar')}</h3>
                 </div>
-                <div className="mb-2 flex items-center justify-between rounded-full bg-white/90 px-2 py-1 shadow-sm">
-                  <span className="px-2 text-sm font-extrabold text-violet-400">‹</span>
+                <div className="mx-auto mb-2 flex w-[70%] items-center justify-between px-1 py-1">
+                  <span className="px-1 text-sm font-extrabold text-violet-700">‹</span>
                   <span className="bg-gradient-to-r from-violet-800 via-sky-800 to-amber-700 bg-clip-text text-sm font-extrabold text-transparent">
                     {monthLabel}
                   </span>
-                  <span className="px-2 text-sm font-extrabold text-violet-400">›</span>
+                  <span className="px-1 text-sm font-extrabold text-violet-700">›</span>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-center">
                   {weekDays.map((day, index) => (
@@ -342,8 +295,7 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                   ))}
                   {cells.map((day, index) => {
                     if (day === 0) return <span key={`blank-${index}`} className="h-8" />;
-                    const isToday = day === TODAY;
-                    const isSelected = selected && day === DEMO_DAY;
+                    const isSelected = selected && day === DEMO_DAY && !showEvent;
                     const withSticker = showEvent && day === DEMO_DAY;
                     return (
                       <span
@@ -353,9 +305,7 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                             ? 'relative bg-transparent'
                             : isSelected
                               ? 'bg-violet-600 font-bold text-white shadow-md'
-                              : isToday
-                                ? 'bg-amber-400 font-bold text-white shadow-sm'
-                                : 'bg-white/85 text-slate-700 shadow-sm'
+                              : 'bg-white/85 text-slate-700 shadow-sm'
                         } ${step === 0 && day === DEMO_DAY ? RING : ''}`}
                       >
                         {withSticker ? (
@@ -403,8 +353,11 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                         <p className="m-0 text-sm font-bold text-slate-900">{title}</p>
                         <p className="m-0 mt-1 text-xs font-medium text-violet-600">{dt('event_repeat_yearly')}</p>
                         <p className="m-0 mt-0.5 text-xs text-slate-500">
-                          {dt('event_author')}: {getCommonTranslation(lang, 'me')}
+                          {dt('event_author')}: {getCommonTranslation(lang, 'me')} {getFamilyRoleEmoji('dad')}{' '}
+                          {getFamilyRoleLabel(lang, 'dad')}
                         </p>
+                        <p className="m-0 mt-0.5 text-xs text-slate-600">{note}</p>
+                        <p className="m-0 mt-1 text-[10px] text-slate-400">등록: {registeredAt}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-center gap-1 text-xs">
                         <span className="text-violet-600" aria-hidden>
@@ -417,7 +370,10 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                     </div>
                   </div>
                 ) : (
-                  <p className="m-0 py-6 text-center text-xs text-slate-500">{dt('event_no_events')}</p>
+                  <div className="py-5 text-center">
+                    <p className="m-0 text-xs text-slate-500">{dt('event_no_events')}</p>
+                    <p className="m-0 mt-1 text-[11px] text-slate-400">{dt('event_add_hint')}</p>
+                  </div>
                 )}
               </div>
             ) : null}

@@ -49,6 +49,7 @@ export type WidgetShowroomTranslations = {
   howto_calendar_5: string;
   howto_calendar_6: string;
   demo_calendar_event: string;
+  demo_calendar_desc: string;
   howto_chat_1: string;
   howto_chat_2: string;
   howto_chat_3: string;
@@ -117,13 +118,14 @@ const ko: WidgetShowroomTranslations = {
   howto_tasks_5: '내가 할게요를 누르면 담당이 정해져요.',
   howto_tasks_6: '끝나면 체크하고 취소선이 그어져요.',
   howto_tasks_7: '삭제할지 물어본 뒤, 취소하면 할 일은 남아요.',
-  howto_calendar_1: '달력에서 날짜를 눌러요.',
+  howto_calendar_1: '12월 달력에서 25일을 눌러요.',
   howto_calendar_2: '그 날 일정이 없으면 빈 목록이 열려요.',
-  howto_calendar_3: '일정 추가에서 시작 날짜를 확인해요.',
-  howto_calendar_4: '제목을 적어요.',
+  howto_calendar_3: '제목에 생일을 적어요.',
+  howto_calendar_4: '설명도 함께 적어요.',
   howto_calendar_5: '매년 반복을 고르고 추가해요.',
-  howto_calendar_6: '생일 스티커와 일정이 달력에 올라와요.',
-  demo_calendar_event: '동생 생일',
+  howto_calendar_6: '생일 스티커와 일정 카드가 올라와요.',
+  demo_calendar_event: '엄마 생일',
+  demo_calendar_desc: '축하 드려요 ~',
   howto_chat_1: '가족 채팅으로 바로 대화해요.',
   howto_chat_2: '사진·파일을 붙여 보낼 수 있어요.',
   howto_chat_3: '중요한 말은 채팅에 남겨 두세요.',
@@ -192,13 +194,14 @@ const en: WidgetShowroomTranslations = {
   howto_tasks_5: 'Tap I’ll do it to claim the task.',
   howto_tasks_6: 'Check it off and a line goes through the words.',
   howto_tasks_7: 'Delete asks first. Cancel keeps the task.',
-  howto_calendar_1: 'Tap a date on the calendar.',
+  howto_calendar_1: 'Tap the 25th on the December calendar.',
   howto_calendar_2: 'An empty list opens when that day has no events.',
-  howto_calendar_3: 'Check the start date in Add Event.',
-  howto_calendar_4: 'Type the title.',
+  howto_calendar_3: 'Type the birthday title.',
+  howto_calendar_4: 'Add a short note too.',
   howto_calendar_5: 'Choose yearly, then tap Add.',
-  howto_calendar_6: 'A birthday sticker and the event appear.',
-  demo_calendar_event: 'Birthday',
+  howto_calendar_6: 'A birthday sticker and the event card appear.',
+  demo_calendar_event: "Mom's birthday",
+  demo_calendar_desc: 'Congratulations ~',
   howto_chat_1: 'Chat with your family instantly.',
   howto_chat_2: 'Send photos and files too.',
   howto_chat_3: 'Keep important notes in the chat.',
@@ -268,8 +271,8 @@ const CALENDAR_HOWTO_KEYS = [
   'howto_calendar_6',
 ] as const satisfies readonly (keyof WidgetShowroomTranslations)[];
 
-/** 영상 기준 달력 쇼룸: 날짜 → 빈 목록 → 날짜 확인 → 제목 → 매년 반복 → 스티커 */
-export const CALENDAR_SHOWROOM_STEP_MS = [1800, 2000, 2400, 3200, 2200, 3400] as const;
+/** 영상 기준 달력 쇼룸: 25일 → 빈 목록 → 제목 → 설명 → 매년 반복 → 스티커 */
+export const CALENDAR_SHOWROOM_STEP_MS = [1800, 2000, 3200, 3200, 2200, 3600] as const;
 
 const HOWTO_KEYS: Record<
   Exclude<DashboardWidgetKey, 'tasks' | 'calendar'>,
