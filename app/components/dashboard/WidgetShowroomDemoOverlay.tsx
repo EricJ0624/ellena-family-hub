@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import {
@@ -14,8 +14,11 @@ import {
   CALENDAR_SHOWROOM_STEP_MS,
   getWidgetShowroomHowtoSteps,
   getWidgetShowroomTranslation,
+  hasNativeShowroomCopy,
   TASKS_SHOWROOM_STEP_MS,
 } from '@/lib/translations/widgetShowroom';
+import { supabase } from '@/lib/supabase';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import type { LangCode } from '@/lib/language-fonts';
 import type { DashboardWidgetKey } from '@/lib/widgets/types';
 
@@ -28,6 +31,12 @@ type Props = {
   onClose: () => void;
   /** 관리자 확인 화면에서만 넘긴다. 없으면 기존 닫기 문구. */
   closeLabel?: string;
+  /**
+   * 가족 쇼룸에서만 켠다. 한국어는 항상 코드 연출이다.
+   * 박스가 꺼진 언어는 영어 코드 연출을 유지한다.
+   * 박스가 켜진 언어는 그 언어 영상, 그 언어 코드 연출, 영어 영상, 영어 코드 연출 순이다.
+   */
+  usePublishedVideo?: boolean;
 };
 
 /**
@@ -40,17 +49,22 @@ export function WidgetShowroomDemoOverlay({
   widgetLabel,
   onClose,
   closeLabel,
+  usePublishedVideo = false,
 }: Props) {
   const Preview = WIDGET_PREVIEW_MAP[widgetKey];
-  const steps = useMemo(
-    () => getWidgetShowroomHowtoSteps(lang, widgetKey),
-    [lang, widgetKey],
-  );
   const [step, setStep] = useState(0);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [scriptLang, setScriptLang] = useState<LangCode>(lang);
+  const englishVideoUrl = useRef<string | null>(null);
+  const steps = useMemo(
+    () => getWidgetShowroomHowtoSteps(scriptLang, widgetKey),
+    [scriptLang, widgetKey],
+  );
   const isScripted = widgetKey === 'tasks' || widgetKey === 'calendar';
+  const showVideo = publishedUrl !== null;
 
   useEffect(() => {
-    if (steps.length === 0) return;
+    if (showVideo || steps.length === 0) return;
     let current = 0;
     let timer = 0;
     const durations =
@@ -68,7 +82,51 @@ export function WidgetShowroomDemoOverlay({
     };
     tick();
     return () => window.clearTimeout(timer);
-  }, [widgetKey, steps]);
+  }, [showVideo, widgetKey, steps]);
+
+  useEffect(() => {
+    setPublishedUrl(null);
+    setScriptLang(lang);
+    englishVideoUrl.current = null;
+    if (!usePublishedVideo || lang === 'ko') return;
+    let cancelled = false;
+    const urlFor = (videos: { widgetKey?: string; url?: string }[] | undefined) =>
+      videos?.find((video) => video.widgetKey === widgetKey && video.url)?.url;
+    const loadPublished = async () => {
+      try {
+        const session = await waitForSupabaseSession(supabase);
+        if (!session?.access_token || cancelled) return;
+        const response = await fetch(
+          `/api/showroom-published-videos?lang=${encodeURIComponent(lang)}`,
+          { headers: { Authorization: `Bearer ${session.access_token}` } },
+        );
+        if (!response.ok || cancelled) return;
+        const result = (await response.json().catch(() => ({}))) as {
+          videos?: { widgetKey?: string; url?: string }[];
+          fallbackVideos?: { widgetKey?: string; url?: string }[];
+          nativeCopy?: boolean;
+        };
+        if (cancelled) return;
+        const ownUrl = urlFor(result.videos);
+        const englishUrl = result.nativeCopy === false ? urlFor(result.fallbackVideos) : undefined;
+        englishVideoUrl.current = englishUrl && englishUrl !== ownUrl ? englishUrl : null;
+        if (ownUrl || englishUrl) {
+          setPublishedUrl(ownUrl || englishUrl || null);
+          return;
+        }
+        if (result.nativeCopy === false) {
+          setScriptLang('en');
+          setStep(0);
+        }
+      } catch {
+        // 조회가 실패하면 기존 코드 연출을 유지한다.
+      }
+    };
+    void loadPublished();
+    return () => {
+      cancelled = true;
+    };
+  }, [usePublishedVideo, lang, widgetKey]);
 
   const t = (key: 'demo_close' | 'demo_playing' | 'preview') =>
     getWidgetShowroomTranslation(lang, key);
@@ -104,13 +162,38 @@ export function WidgetShowroomDemoOverlay({
         </div>
 
         <div className="relative min-h-0 flex-1 overflow-hidden bg-slate-50 p-3">
+          {showVideo ? (
+            <video
+              key={publishedUrl}
+              src={publishedUrl ?? undefined}
+              controls
+              autoPlay
+              playsInline
+              className="max-h-full w-full bg-slate-950"
+              onError={() => {
+                const englishUrl = englishVideoUrl.current;
+                if (englishUrl && englishUrl !== publishedUrl) {
+                  englishVideoUrl.current = null;
+                  setPublishedUrl(englishUrl);
+                  return;
+                }
+                setPublishedUrl(null);
+                if (!hasNativeShowroomCopy(lang)) {
+                  setScriptLang('en');
+                  setStep(0);
+                }
+              }}
+            />
+          ) : null}
+          {showVideo ? null : (
+          <>
           <WidgetPreviewSurfaceProvider surface="showroom">
             <div className="pointer-events-none h-full min-h-0 select-none [&_.content-section]:shadow-none">
               <ShowroomPreviewFit>
                 {widgetKey === 'tasks' ? (
-                  <TasksShowroomDemo lang={lang} step={step} />
+                  <TasksShowroomDemo lang={scriptLang} step={step} />
                 ) : widgetKey === 'calendar' ? (
-                  <CalendarShowroomDemo lang={lang} step={step} />
+                  <CalendarShowroomDemo lang={scriptLang} step={step} />
                 ) : (
                   <motion.div
                     key={`${widgetKey}-${step}`}
@@ -139,9 +222,13 @@ export function WidgetShowroomDemoOverlay({
               transition={{ duration: 1.8, ease: 'easeInOut' }}
             />
           )}
+          </>
+          )}
         </div>
 
         <div className="shrink-0 border-t border-slate-100 px-4 py-3">
+          {showVideo ? null : (
+          <>
           <div className="mb-2 flex gap-1.5">
             {steps.map((_, i) => (
               <span
@@ -166,6 +253,8 @@ export function WidgetShowroomDemoOverlay({
               {steps[step]}
             </motion.p>
           </AnimatePresence>
+          </>
+          )}
           <button
             type="button"
             onClick={onClose}

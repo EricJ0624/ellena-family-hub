@@ -322,6 +322,7 @@ export default function WidgetShowroomHost({
             lang={lang}
             widgetKey={currentKey}
             widgetLabel={widgetLabels[currentKey]}
+            usePublishedVideo
             onClose={() => setDemoOpen(false)}
           />
         ) : null}

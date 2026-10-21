@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Clapperboard, Loader2, Trash2, Upload } from 'lucide-react';
 import { WidgetShowroomDemoOverlay } from '@/app/components/dashboard/WidgetShowroomDemoOverlay';
 import { supabase } from '@/lib/supabase';
@@ -21,7 +21,7 @@ type PlayMode = 'built-in' | 'file';
 const COPY = {
   ko: {
     title: '쇼룸 애니메이션',
-    body: '언어를 고르면 지금 연출과 직접 올린 영상을 비교할 수 있습니다. 이 화면은 대시보드로 이동하지 않고, 가족 쇼룸 동작도 바꾸지 않습니다.',
+    body: '언어를 고르면 지금 연출과 직접 올린 영상을 비교할 수 있습니다. 체크한 언어만 가족 쇼룸 재생이 바뀌고, 이 화면은 대시보드로 이동하지 않습니다.',
     lang: '확인할 언어',
     builtin: '지금 연출 보기',
     watch: '올린 영상 보기',
@@ -38,10 +38,14 @@ const COPY = {
     deleteFailed: '영상을 삭제하지 못했습니다.',
     fallback: '한국어·영어 외 언어의 지금 연출 문구는 영어로 보입니다.',
     fileHint: 'mp4 또는 webm, 20MB 이하. 시작부터 끝까지 한 파일입니다.',
+    publish: '이 언어 사용자에게 이 언어 연출을 보여 주기',
+    publishHint: '영상이 있으면 영상을, 코드 연출이 있으면 연출을, 둘 다 없으면 영어 영상 또는 영어 연출을 보여 줍니다.',
+    koreanAlways: '한국어 사용자는 항상 한국어 연출을 봅니다.',
+    publishFailed: '언어 공개 설정을 저장하지 못했습니다.',
   },
   en: {
     title: 'Showroom animations',
-    body: 'Pick a language to compare the current animation with an uploaded video. This screen does not open a dashboard or change the family showroom.',
+    body: 'Pick a language to compare the current animation with an uploaded video. Only a checked language changes family showroom playback. This screen does not open a dashboard.',
     lang: 'Language',
     builtin: 'Play current animation',
     watch: 'Play uploaded video',
@@ -58,6 +62,10 @@ const COPY = {
     deleteFailed: 'Could not delete the video.',
     fallback: 'Current animations for languages other than Korean and English use English copy.',
     fileHint: 'One mp4 or webm file, up to 20MB, from start to finish.',
+    publish: 'Show this language to people using it',
+    publishHint: 'Uses that language’s video, then its animation, then an English video or the English animation.',
+    koreanAlways: 'Korean users always see the Korean animation.',
+    publishFailed: 'Could not save the language setting.',
   },
 } as const;
 
@@ -70,9 +78,14 @@ export function ShowroomAnimationAdmin({ adminLang }: { adminLang: LangCode }) {
   const [previewLang, setPreviewLang] = useState<LangCode>(adminLang);
   const labels = useMemo(() => showroomWidgetLabels(previewLang), [previewLang]);
   const [videos, setVideos] = useState<SavedVideo[]>([]);
+  const [publishedLangs, setPublishedLangs] = useState<LangCode[]>([]);
+  const publishedLangsRef = useRef<LangCode[]>([]);
+  const publishingRef = useRef(false);
+  publishedLangsRef.current = publishedLangs;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
   const [playing, setPlaying] = useState<{ key: DashboardWidgetKey; mode: PlayMode } | null>(null);
 
   const load = useCallback(async () => {
@@ -87,12 +100,22 @@ export function ShowroomAnimationAdmin({ adminLang }: { adminLang: LangCode }) {
       const response = await fetch('/api/admin/showroom-previews', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const result = (await response.json().catch(() => ({}))) as { videos?: SavedVideo[]; error?: string };
+      const result = (await response.json().catch(() => ({}))) as {
+        videos?: SavedVideo[];
+        publishedLangs?: LangCode[];
+        error?: string;
+      };
       if (!response.ok) {
         setError(result.error ?? text.loadFailed);
         setVideos([]);
+        setPublishedLangs([]);
       } else {
         setVideos(Array.isArray(result.videos) ? result.videos : []);
+        setPublishedLangs(
+          Array.isArray(result.publishedLangs)
+            ? result.publishedLangs.filter((code) => code !== 'ko')
+            : [],
+        );
       }
     } catch {
       setError(text.loadFailed);
@@ -118,6 +141,45 @@ export function ShowroomAnimationAdmin({ adminLang }: { adminLang: LangCode }) {
     const session = await waitForSupabaseSession(supabase);
     if (!session?.access_token) return null;
     return { Authorization: `Bearer ${session.access_token}` };
+  };
+
+  const setLanguagePublished = async (lang: LangCode, published: boolean) => {
+    if (lang === 'ko' || publishingRef.current) return;
+    publishingRef.current = true;
+    setError(null);
+    setPublishing(true);
+    const previous = publishedLangsRef.current;
+    setPublishedLangs(
+      published
+        ? previous.includes(lang)
+          ? previous
+          : [...previous, lang]
+        : previous.filter((code) => code !== lang),
+    );
+    try {
+      const headers = await authHeader();
+      if (!headers) {
+        setPublishedLangs(previous);
+        setError(text.session);
+        return;
+      }
+      const response = await fetch('/api/admin/showroom-previews', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lang, published }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setPublishedLangs(previous);
+        setError(result.error ?? text.publishFailed);
+      }
+    } catch {
+      setPublishedLangs(previous);
+      setError(text.publishFailed);
+    } finally {
+      publishingRef.current = false;
+      setPublishing(false);
+    }
   };
 
   const saveFile = async (key: DashboardWidgetKey, file: File) => {
@@ -184,20 +246,39 @@ export function ShowroomAnimationAdmin({ adminLang }: { adminLang: LangCode }) {
       <p className="mt-1 text-xs text-slate-500">{text.fallback}</p>
       <p className="mt-1 text-xs text-slate-400">{text.fileHint}</p>
 
-      <label className="mt-4 flex max-w-xs flex-col gap-1 text-sm font-medium text-slate-700">
-        {text.lang}
-        <select
-          value={previewLang}
-          onChange={(event) => setPreviewLang(event.target.value as LangCode)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-        >
-          {LANG_OPTIONS.map((option) => (
-            <option key={option.code} value={option.code}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="mt-4 flex flex-wrap items-end gap-4">
+        <label className="flex max-w-xs flex-col gap-1 text-sm font-medium text-slate-700">
+          {text.lang}
+          <select
+            value={previewLang}
+            onChange={(event) => setPreviewLang(event.target.value as LangCode)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          >
+            {LANG_OPTIONS.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {previewLang === 'ko' ? (
+          <p className="mb-2 text-sm text-slate-600">{text.koreanAlways}</p>
+        ) : (
+          <label className="mb-2 inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={publishedLangs.includes(previewLang)}
+              disabled={publishing}
+              onChange={(event) => void setLanguagePublished(previewLang, event.target.checked)}
+              className="h-4 w-4 accent-violet-600"
+            />
+            {text.publish}
+          </label>
+        )}
+        {previewLang === 'ko' ? null : (
+          <p className="mb-2 max-w-xl text-xs text-slate-500">{text.publishHint}</p>
+        )}
+      </div>
 
       {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
       {loading ? (

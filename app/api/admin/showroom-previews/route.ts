@@ -79,6 +79,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '미리보기 영상을 불러오지 못했습니다.' }, { status: 500 });
     }
 
+    const { data: publications, error: publicationError } = await supabase
+      .from('showroom_preview_lang_publications')
+      .select('lang, published')
+      .eq('published', true);
+    if (publicationError) {
+      console.error('쇼룸 언어 공개 조회 오류:', publicationError);
+      return NextResponse.json({ error: '미리보기 영상을 불러오지 못했습니다.' }, { status: 500 });
+    }
+
     const rows = (data ?? []) as PreviewRow[];
     const videos = await Promise.all(
       rows.map(async (row) => {
@@ -94,7 +103,11 @@ export async function GET(request: NextRequest) {
       }),
     );
 
-    return NextResponse.json({ videos });
+    const publishedLangs = ((publications ?? []) as { lang: string }[])
+      .map((row) => row.lang)
+      .filter((lang) => isValidLang(lang) && lang !== 'ko');
+
+    return NextResponse.json({ videos, publishedLangs });
   } catch (error) {
     console.error('쇼룸 미리보기 조회 실패:', error);
     return NextResponse.json({ error: '미리보기 영상을 불러오지 못했습니다.' }, { status: 500 });
@@ -238,5 +251,46 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('쇼룸 미리보기 삭제 실패:', error);
     return NextResponse.json({ error: '영상을 삭제하지 못했습니다.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await guard(request);
+    if (user instanceof NextResponse) return user;
+
+    const body = (await request.json().catch(() => null)) as { lang?: unknown; published?: unknown } | null;
+    const lang = typeof body?.lang === 'string' ? body.lang : '';
+    const published = body?.published;
+    if (!isValidLang(lang) || lang === 'ko' || typeof published !== 'boolean') {
+      return NextResponse.json({ error: '공개할 언어가 올바르지 않습니다.' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseServerClient();
+    const { error } = await supabase.from('showroom_preview_lang_publications').upsert({
+      lang,
+      published,
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error('쇼룸 언어 공개 저장 오류:', error);
+      return NextResponse.json({ error: '언어 공개 설정을 저장하지 못했습니다.' }, { status: 500 });
+    }
+
+    const meta = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'showroom_preview_publish',
+      resourceType: 'showroom_preview_lang',
+      resourceId: lang,
+      details: { lang, published },
+      ...meta,
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('쇼룸 언어 공개 저장 실패:', error);
+    return NextResponse.json({ error: '언어 공개 설정을 저장하지 못했습니다.' }, { status: 500 });
   }
 }

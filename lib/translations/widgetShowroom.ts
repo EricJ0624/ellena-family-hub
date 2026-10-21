@@ -235,6 +235,13 @@ const widgetShowroom = Object.fromEntries(
   LANG_CODES.map((code) => [code, code === 'ko' ? ko : en]),
 ) as Record<LangCode, WidgetShowroomTranslations>;
 
+/** 쇼룸 문장을 그 언어로 가지고 있는 코드. 나머지는 영어 문장으로 채운다. */
+const NATIVE_SHOWROOM_LANGS = new Set<LangCode>(['ko', 'en']);
+
+export function hasNativeShowroomCopy(lang: LangCode): boolean {
+  return NATIVE_SHOWROOM_LANGS.has(lang);
+}
+
 const BLURB_KEY: Record<DashboardWidgetKey, keyof WidgetShowroomTranslations> = {
   tasks: 'blurb_tasks',
   calendar: 'blurb_calendar',
