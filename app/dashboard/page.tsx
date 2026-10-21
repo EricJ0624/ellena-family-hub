@@ -487,8 +487,6 @@ export default function FamilyHub() {
   /** 캘린더 번역 객체 — lang이 바뀔 때만 새 참조 생성 (React.memo 안정성) */
   const calendarTranslations = useMemo(() => ({
     section_title_calendar: getDashboardTranslation(lang, 'section_title_calendar'),
-    calendar_prev_month: getDashboardTranslation(lang, 'calendar_prev_month'),
-    calendar_next_month: getDashboardTranslation(lang, 'calendar_next_month'),
     calendar_sun: getDashboardTranslation(lang, 'calendar_weekday_0'),
     calendar_mon: getDashboardTranslation(lang, 'calendar_weekday_1'),
     calendar_tue: getDashboardTranslation(lang, 'calendar_weekday_2'),

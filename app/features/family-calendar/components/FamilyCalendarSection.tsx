@@ -5,6 +5,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, memo, useRef, startTransition } from 'react';
+import { flushSync } from 'react-dom';
 import { Calendar, CalendarDays, Plus, X } from 'lucide-react';
 import type { FamilyEvent } from '../types';
 import { useFamilyCalendar } from '../hooks/useFamilyCalendar';
@@ -58,7 +59,6 @@ const CALENDAR_SKINS = {
     sectionBg: 'linear-gradient(180deg, rgba(237,233,254,0.92) 0%, rgba(221,214,254,0.85) 30%, rgba(252,231,243,0.75) 70%, rgba(254,215,170,0.5) 100%)',
     titleColor: '#5b21b6',
     navBg: 'rgba(255,255,255,0.9)',
-    navBtn: '#7c3aed',
     navTitle: 'linear-gradient(90deg, #5b4b82 0%, #4a6d8c 28%, #4a7a6e 52%, #7a6a3d 76%, #7a5360 100%)',
     addBg: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
     cellIdle: 'rgba(255,255,255,0.8)',
@@ -72,7 +72,6 @@ const CALENDAR_SKINS = {
     sectionBg: 'transparent',
     titleColor: '#ffffff',
     navBg: 'rgba(255,255,255,0.16)',
-    navBtn: '#a5f3fc',
     navTitle: 'linear-gradient(90deg, #67e8f9 0%, #f9a8d4 100%)',
     addBg: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)',
     cellIdle: 'rgba(255,255,255,0.14)',
@@ -86,7 +85,6 @@ const CALENDAR_SKINS = {
     sectionBg: 'linear-gradient(180deg, #faf5ff 0%, #f8fafc 40%, #e0f2fe 100%)',
     titleColor: '#334155',
     navBg: 'rgba(255,255,255,0.92)',
-    navBtn: '#6366f1',
     navTitle: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
     addBg: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
     cellIdle: '#fff',
@@ -103,6 +101,31 @@ function calendarSkin(theme: UiTheme) {
 }
 
 type CalendarSkin = (typeof CALENDAR_SKINS)[keyof typeof CALENDAR_SKINS];
+
+const MONTH_SLIDE_MS = 180;
+
+function monthExitPx(width: number, toNext: boolean) {
+  return (toNext ? -1 : 1) * Math.min(width * 0.34, 72);
+}
+
+function whenTransformEnds(el: HTMLElement, onDone: () => void) {
+  let finished = false;
+  let timer = 0;
+  const done = () => {
+    if (finished) return;
+    finished = true;
+    el.removeEventListener('transitionend', onEnd);
+    window.clearTimeout(timer);
+    onDone();
+  };
+  const onEnd = (event: TransitionEvent) => {
+    if (event.propertyName !== 'transform' || event.target !== el) return;
+    done();
+  };
+  el.addEventListener('transitionend', onEnd);
+  timer = window.setTimeout(done, MONTH_SLIDE_MS + 60);
+}
+
 type CalendarGridCell =
   | { type: 'empty' }
   | { type: 'day'; date: Date; day: number; isToday: boolean; eventCount: number; kidsSticker: string | null };
@@ -115,8 +138,6 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   skin,
   weekDays,
   sectionTitle,
-  prevLabel,
-  nextLabel,
   addLabel,
   monthTitle,
   onPrevMonth,
@@ -131,8 +152,6 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   skin: CalendarSkin;
   weekDays: string[];
   sectionTitle: string;
-  prevLabel: string;
-  nextLabel: string;
   addLabel: string;
   monthTitle: string;
   onPrevMonth: () => void;
@@ -150,6 +169,145 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   const monthWash = monthBg ? (KIDS_MONTH_WASH[calendarGrid.month] ?? skin.sectionBg) : skin.sectionBg;
   const monthPadL = '4cqmin';
   const monthPadR = '4.5cqmin';
+  const monthSlideGap = monthBg && calendarGrid.month === 0 ? '0.8cqmin' : '2.2cqmin';
+  const slideRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    axis: 'none' | 'x';
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+  const animatingRef = useRef(false);
+  const slideGenRef = useRef(0);
+
+  const releaseSlideLock = () => {
+    animatingRef.current = false;
+  };
+
+  const settleMonthSlide = (dir: -1 | 1) => {
+    const el = slideRef.current;
+    if (!el) {
+      releaseSlideLock();
+      return;
+    }
+    const px = dir * Math.min(56, el.offsetWidth * 0.28);
+    el.style.transition = 'none';
+    el.style.transform = `translate3d(${px}px,0,0)`;
+    el.getBoundingClientRect();
+    el.style.transition = `transform ${MONTH_SLIDE_MS}ms ease-out`;
+    el.style.transform = 'translate3d(0,0,0)';
+    whenTransformEnds(el, releaseSlideLock);
+  };
+
+  const runMonthSlide = (px: number, mode: 'snap' | 'next' | 'prev') => {
+    const el = slideRef.current;
+    if (!el) {
+      if (mode === 'next') onNextMonth();
+      else if (mode === 'prev') onPrevMonth();
+      releaseSlideLock();
+      return;
+    }
+    const gen = ++slideGenRef.current;
+    animatingRef.current = true;
+    el.style.transition = `transform ${MONTH_SLIDE_MS}ms ease-out`;
+    el.style.transform = `translate3d(${px}px,0,0)`;
+    whenTransformEnds(el, () => {
+      if (slideGenRef.current !== gen) return;
+      slideGenRef.current += 1;
+      if (mode === 'snap') {
+        el.style.transition = 'none';
+        el.style.transform = 'translate3d(0,0,0)';
+        releaseSlideLock();
+        return;
+      }
+      flushSync(() => {
+        if (mode === 'next') onNextMonth();
+        else onPrevMonth();
+      });
+      settleMonthSlide(mode === 'next' ? 1 : -1);
+    });
+  };
+
+  const onSlidePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (animatingRef.current) {
+      suppressClickRef.current = true;
+      return;
+    }
+    suppressClickRef.current = false;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      axis: 'none',
+    };
+  };
+
+  const onSlidePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || animatingRef.current) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (drag.axis === 'none') {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        dragRef.current = null;
+        suppressClickRef.current = true;
+        return;
+      }
+      drag.axis = 'x';
+      suppressClickRef.current = true;
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        /* 포인터가 이미 놓인 경우 */
+      }
+    }
+    const width = event.currentTarget.offsetWidth || 1;
+    const limit = width * 0.42;
+    const shifted = Math.abs(dx) <= limit ? dx : Math.sign(dx) * (limit + (Math.abs(dx) - limit) * 0.2);
+    const el = slideRef.current;
+    if (!el) return;
+    el.style.transition = 'none';
+    el.style.transform = `translate3d(${shifted}px,0,0)`;
+  };
+
+  const onSlidePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    if (drag.axis !== 'x') return;
+    const dx = event.clientX - drag.startX;
+    const width = event.currentTarget.offsetWidth || 1;
+    const threshold = Math.max(28, Math.min(56, width * 0.2));
+    if (Math.abs(dx) < threshold) {
+      runMonthSlide(0, 'snap');
+      return;
+    }
+    const toNext = dx < 0;
+    runMonthSlide(monthExitPx(width, toNext), toNext ? 'next' : 'prev');
+  };
+
+  const onSlidePointerLeave = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    onSlidePointerUp(event);
+  };
+
+  const onSlideClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!suppressClickRef.current) return;
+    suppressClickRef.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const onMonthKeyDown = (event: React.KeyboardEvent<HTMLHeadingElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    if (animatingRef.current) return;
+    const toNext = event.key === 'ArrowRight';
+    runMonthSlide(monthExitPx(slideRef.current?.offsetWidth || 160, toNext), toNext ? 'next' : 'prev');
+  };
 
   return (
     <div className="calendar-widget-cq-frame">
@@ -187,60 +345,49 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         <div className="section-body calendar-section-body" style={{ gap: monthBg && calendarGrid.month === 0 ? '1cqmin' : '2.2cqmin' }}>
           <div
             className="calendar-month-block min-h-0"
-            style={{ gap: monthBg && calendarGrid.month === 0 ? '0.8cqmin' : '2.2cqmin', flex: '1 1 0%', minHeight: 0 }}
+            style={{ flex: '1 1 0%', minHeight: 0 }}
           >
             <div
-              className={`relative z-[5] ${monthBg ? 'mx-auto w-[54%] max-w-[68%] self-center' : ''}`}
+              ref={slideRef}
+              className="relative z-[5] flex min-h-0 w-full flex-1 touch-pan-y select-none flex-col"
+              style={{ gap: monthSlideGap }}
+              onPointerDown={onSlidePointerDown}
+              onPointerMove={onSlidePointerMove}
+              onPointerUp={onSlidePointerUp}
+              onPointerCancel={onSlidePointerUp}
+              onPointerLeave={onSlidePointerLeave}
+              onClickCapture={onSlideClickCapture}
+            >
+            <div
+              className={`relative z-[5] flex items-center justify-center ${monthBg ? 'mx-auto w-[54%] max-w-[68%] self-center' : ''}`}
               style={{
-                display: 'flex',
-                alignItems: 'center',
                 background: monthBg ? 'transparent' : skin.navBg,
                 borderRadius: '999px',
                 padding: monthBg ? '1.15cqmin 1.7cqmin' : '1.4cqmin 1.8cqmin',
                 boxShadow: monthBg ? 'none' : '0 2px 10px rgba(15,23,42,0.12)',
               }}
             >
-              <button
-                type="button"
-                onClick={onPrevMonth}
-                aria-label={prevLabel}
-                className="flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: skin.navBtn, fontSize: monthBg ? '5.4cqmin' : '5.5cqmin', fontWeight: 800, padding: monthBg ? '0 1.2cqmin' : '0 1.5cqmin', lineHeight: 1 }}
+              <h4
+                tabIndex={0}
+                aria-keyshortcuts="ArrowLeft ArrowRight"
+                onKeyDown={onMonthKeyDown}
+                className="relative z-[1] m-0 whitespace-nowrap text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                style={{
+                  fontSize: monthBg ? '5.3cqmin' : '5.5cqmin',
+                  fontWeight: 800,
+                  backgroundImage: skin.navTitle,
+                  backgroundColor: 'transparent',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
               >
-                ‹
-              </button>
-              <div className="relative flex min-w-0 flex-1 items-center justify-center">
-                <h4
-                  className="relative z-[1] whitespace-nowrap"
-                  style={{
-                    flex: monthBg ? '0 0 auto' : 1,
-                    textAlign: 'center',
-                    margin: 0,
-                    fontSize: monthBg ? '5.3cqmin' : '5.5cqmin',
-                    fontWeight: 800,
-                    backgroundImage: skin.navTitle,
-                    backgroundColor: 'transparent',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
-                  {monthTitle.split('\uE000').map((part, index) => (
-                    <span key={index} className={index > 0 ? 'ml-[0.7em]' : undefined}>
-                      {part}
-                    </span>
-                  ))}
-                </h4>
-              </div>
-              <button
-                type="button"
-                onClick={onNextMonth}
-                aria-label={nextLabel}
-                className="flex shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: skin.navBtn, fontSize: monthBg ? '5.4cqmin' : '5.5cqmin', fontWeight: 800, padding: monthBg ? '0 1.2cqmin' : '0 1.5cqmin', lineHeight: 1 }}
-              >
-                ›
-              </button>
+                {monthTitle.split('\uE000').map((part, index) => (
+                  <span key={index} className={index > 0 ? 'ml-[0.7em]' : undefined}>
+                    {part}
+                  </span>
+                ))}
+              </h4>
             </div>
             <div
               className="calendar-grid-wrap relative z-[5]"
@@ -371,6 +518,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                 })}
               </div>
             </div>
+            </div>
           </div>
           <div
             className="relative z-[2] w-full"
@@ -446,8 +594,6 @@ interface FamilyCalendarSectionProps {
   openFromChatRef?: React.MutableRefObject<((titlePrefill: string) => void) | undefined>;
   translations: {
     section_title_calendar: string;
-    calendar_prev_month: string;
-    calendar_next_month: string;
     calendar_sun: string;
     calendar_mon: string;
     calendar_tue: string;
@@ -850,8 +996,6 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           skin={skin}
           weekDays={weekDays}
           sectionTitle={t.section_title_calendar}
-          prevLabel={t.calendar_prev_month}
-          nextLabel={t.calendar_next_month}
           addLabel={t.event_add_title}
           monthTitle={monthTitle}
           onPrevMonth={handlePrevMonth}
