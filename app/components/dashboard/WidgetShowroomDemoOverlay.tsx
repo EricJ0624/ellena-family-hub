@@ -26,6 +26,8 @@ type Props = {
   widgetKey: DashboardWidgetKey;
   widgetLabel: string;
   onClose: () => void;
+  /** 관리자 확인 화면에서만 넘긴다. 없으면 기존 닫기 문구. */
+  closeLabel?: string;
 };
 
 /**
@@ -37,6 +39,7 @@ export function WidgetShowroomDemoOverlay({
   widgetKey,
   widgetLabel,
   onClose,
+  closeLabel,
 }: Props) {
   const Preview = WIDGET_PREVIEW_MAP[widgetKey];
   const steps = useMemo(
@@ -94,7 +97,7 @@ export function WidgetShowroomDemoOverlay({
             type="button"
             onClick={onClose}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-            aria-label={t('demo_close')}
+            aria-label={closeLabel ?? t('demo_close')}
           >
             <X className="h-4 w-4" aria-hidden />
           </button>
@@ -168,7 +171,7 @@ export function WidgetShowroomDemoOverlay({
             onClick={onClose}
             className="mt-3 w-full rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
           >
-            {t('demo_close')}
+            {closeLabel ?? t('demo_close')}
           </button>
         </div>
       </motion.div>

@@ -38,7 +38,8 @@ import {
   FileText,
   Download,
   PiggyBank,
-  Ban
+  Ban,
+  Clapperboard
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
@@ -59,6 +60,7 @@ import {
   uploadSupportTicketFiles,
 } from '@/app/components/support/SupportTicketAttachments';
 import { getGroupSelectorLabel, getGroupDisplayNameRaw } from '@/lib/group-display-name';
+import { ShowroomAnimationAdmin } from '@/app/components/admin/ShowroomAnimationAdmin';
 import { FeatureUsageSection } from '@/app/components/admin/FeatureUsageSection';
 import { SignupSettingsSection } from '@/app/components/admin/SignupSettingsSection';
 import { BetaStatusSection } from '@/app/components/admin/BetaStatusSection';
@@ -291,7 +293,7 @@ export default function AdminPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [currentAdminUserId, setCurrentAdminUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'member-inquiries' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'member-inquiries' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log' | 'showroom-animations'>('dashboard');
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
   const [manageableGroups, setManageableGroups] = useState<GroupInfo[]>([]); // 관리 가능한 그룹만 (소유자 또는 ADMIN인 그룹)
@@ -924,6 +926,9 @@ export default function AdminPage() {
       loadAccessRequests();
     } else if (activeTab === 'audit-log') {
       loadAuditLogs(1);
+    } else if (activeTab === 'showroom-animations') {
+      setLoadingData(false);
+      setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAuthorized, selectedGroupId]);
@@ -1750,6 +1755,17 @@ export default function AdminPage() {
             )}
           </button>
           <button
+            onClick={() => setActiveTab('showroom-animations')}
+            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
+              activeTab === 'showroom-animations'
+                ? 'border-purple-600 font-semibold text-purple-600'
+                : 'border-transparent font-medium text-slate-500'
+            }`}
+          >
+            <Clapperboard className="mr-2 inline h-[18px] w-[18px] align-middle" />
+            {adminLang === 'ko' ? '쇼룸 애니메이션' : 'Showroom animations'}
+          </button>
+          <button
             onClick={() => setActiveTab('audit-log')}
             className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 ${
               activeTab === 'audit-log'
@@ -1781,6 +1797,10 @@ export default function AdminPage() {
           </div>
         ) : (
           <>
+            {activeTab === 'showroom-animations' && isAuthorized ? (
+              <ShowroomAnimationAdmin adminLang={adminLang} />
+            ) : null}
+
             {/* 대시보드 탭 */}
             {activeTab === 'dashboard' && stats && (
               <div>
