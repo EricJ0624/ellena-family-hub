@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback, memo, useRef, startTransition } from 'react';
+import React, { useState, useMemo, useCallback, useLayoutEffect, memo, useRef, startTransition } from 'react';
 import { flushSync } from 'react-dom';
 import { Calendar, CalendarDays, Plus, X } from 'lucide-react';
 import type { FamilyEvent } from '../types';
@@ -102,13 +102,9 @@ function calendarSkin(theme: UiTheme) {
 
 type CalendarSkin = (typeof CALENDAR_SKINS)[keyof typeof CALENDAR_SKINS];
 
-const MONTH_SLIDE_MS = 180;
+const MONTH_SLIDE_MS = 280;
 
-function monthExitPx(width: number, toNext: boolean) {
-  return (toNext ? -1 : 1) * Math.min(width * 0.34, 72);
-}
-
-function whenTransformEnds(el: HTMLElement, onDone: () => void) {
+function whenTransformEnds(el: HTMLElement, ms: number, onDone: () => void) {
   let finished = false;
   let timer = 0;
   const done = () => {
@@ -123,15 +119,22 @@ function whenTransformEnds(el: HTMLElement, onDone: () => void) {
     done();
   };
   el.addEventListener('transitionend', onEnd);
-  timer = window.setTimeout(done, MONTH_SLIDE_MS + 60);
+  timer = window.setTimeout(done, ms + 50);
 }
 
 type CalendarGridCell =
   | { type: 'empty' }
   | { type: 'day'; date: Date; day: number; isToday: boolean; eventCount: number; kidsSticker: string | null };
 
+type CalendarMonthPage = {
+  cells: CalendarGridCell[];
+  year: number;
+  month: number;
+  weekRows: number;
+};
+
 const CalendarMonthGrid = memo(function CalendarMonthGrid({
-  calendarGrid,
+  calendarPages,
   selectedDate,
   isKidsTheme,
   uiTheme,
@@ -139,13 +142,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   weekDays,
   sectionTitle,
   addLabel,
-  monthTitle,
+  monthTitles,
   onPrevMonth,
   onNextMonth,
   onSelectDate,
   onAdd,
 }: {
-  calendarGrid: { cells: CalendarGridCell[]; year: number; month: number; weekRows: number };
+  calendarPages: CalendarMonthPage[];
   selectedDate: Date | null;
   isKidsTheme: boolean;
   uiTheme: UiTheme;
@@ -153,12 +156,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   weekDays: string[];
   sectionTitle: string;
   addLabel: string;
-  monthTitle: string;
+  monthTitles: string[];
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSelectDate: (date: Date) => void;
   onAdd: () => void;
 }) {
+  const calendarGrid = calendarPages[1] ?? { cells: [], year: 0, month: 0, weekRows: 4 };
   const [rocketTick, setRocketTick] = useState(0);
   const handleAddClick = () => {
     if (isKidsTheme) setRocketTick((tick) => tick + 1);
@@ -169,8 +173,8 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   const monthWash = monthBg ? (KIDS_MONTH_WASH[calendarGrid.month] ?? skin.sectionBg) : skin.sectionBg;
   const monthPadL = '4cqmin';
   const monthPadR = '4.5cqmin';
-  const monthSlideGap = monthBg && calendarGrid.month === 0 ? '0.8cqmin' : '2.2cqmin';
-  const slideRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -179,54 +183,80 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   } | null>(null);
   const suppressClickRef = useRef(false);
   const animatingRef = useRef(false);
-  const slideGenRef = useRef(0);
+  const offsetRef = useRef(0);
 
-  const releaseSlideLock = () => {
-    animatingRef.current = false;
+  const pageWidth = () => viewportRef.current?.clientWidth ?? 0;
+
+  const alignTrack = (resetPosition: boolean) => {
+    const viewport = viewportRef.current;
+    const track = trackRef.current;
+    if (!viewport || !track) return;
+    const width = viewport.clientWidth;
+    if (width <= 0) return;
+    track.style.width = `${width * 3}px`;
+    Array.from(track.children).forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+      node.style.flex = `0 0 ${width}px`;
+      node.style.width = `${width}px`;
+    });
+    if (resetPosition) {
+      offsetRef.current = -width;
+      track.style.transition = 'none';
+      track.style.transform = `translate3d(${-width}px,0,0)`;
+    }
   };
 
-  const settleMonthSlide = (dir: -1 | 1) => {
-    const el = slideRef.current;
-    if (!el) {
-      releaseSlideLock();
-      return;
-    }
-    const px = dir * Math.min(56, el.offsetWidth * 0.28);
-    el.style.transition = 'none';
-    el.style.transform = `translate3d(${px}px,0,0)`;
-    el.getBoundingClientRect();
-    el.style.transition = `transform ${MONTH_SLIDE_MS}ms ease-out`;
-    el.style.transform = 'translate3d(0,0,0)';
-    whenTransformEnds(el, releaseSlideLock);
+  const placeTrack = (targetPx: number, animateMs: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    offsetRef.current = targetPx;
+    track.style.transition = animateMs > 0 ? `transform ${animateMs}ms cubic-bezier(0.22, 1, 0.36, 1)` : 'none';
+    track.style.transform = `translate3d(${targetPx}px,0,0)`;
   };
 
-  const runMonthSlide = (px: number, mode: 'snap' | 'next' | 'prev') => {
-    const el = slideRef.current;
-    if (!el) {
-      if (mode === 'next') onNextMonth();
-      else if (mode === 'prev') onPrevMonth();
-      releaseSlideLock();
-      return;
-    }
-    const gen = ++slideGenRef.current;
-    animatingRef.current = true;
-    el.style.transition = `transform ${MONTH_SLIDE_MS}ms ease-out`;
-    el.style.transform = `translate3d(${px}px,0,0)`;
-    whenTransformEnds(el, () => {
-      if (slideGenRef.current !== gen) return;
-      slideGenRef.current += 1;
-      if (mode === 'snap') {
-        el.style.transition = 'none';
-        el.style.transform = 'translate3d(0,0,0)';
-        releaseSlideLock();
-        return;
-      }
+  const finishSlide = (mode: 'snap' | 'next' | 'prev') => {
+    if (mode !== 'snap') {
       flushSync(() => {
         if (mode === 'next') onNextMonth();
         else onPrevMonth();
       });
-      settleMonthSlide(mode === 'next' ? 1 : -1);
+    }
+    alignTrack(true);
+    animatingRef.current = false;
+  };
+
+  useLayoutEffect(() => {
+    alignTrack(true);
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const observer = new ResizeObserver(() => {
+      if (dragRef.current || animatingRef.current) return;
+      alignTrack(true);
     });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [calendarGrid.year, calendarGrid.month]);
+
+  const runMonthSlide = (targetPx: number, mode: 'snap' | 'next' | 'prev') => {
+    const width = pageWidth();
+    if (width <= 0) {
+      finishSlide(mode);
+      return;
+    }
+    const distance = Math.abs(targetPx - offsetRef.current);
+    if (distance < 1) {
+      finishSlide(mode);
+      return;
+    }
+    const track = trackRef.current;
+    if (!track) {
+      finishSlide(mode);
+      return;
+    }
+    const duration = Math.round(Math.max(160, Math.min(MONTH_SLIDE_MS, (distance / width) * MONTH_SLIDE_MS)));
+    animatingRef.current = true;
+    placeTrack(targetPx, duration);
+    whenTransformEnds(track, duration, () => finishSlide(mode));
   };
 
   const onSlidePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -236,6 +266,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
     }
     suppressClickRef.current = false;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    offsetRef.current = -pageWidth();
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -264,13 +295,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         /* 포인터가 이미 놓인 경우 */
       }
     }
-    const width = event.currentTarget.offsetWidth || 1;
-    const limit = width * 0.42;
-    const shifted = Math.abs(dx) <= limit ? dx : Math.sign(dx) * (limit + (Math.abs(dx) - limit) * 0.2);
-    const el = slideRef.current;
-    if (!el) return;
-    el.style.transition = 'none';
-    el.style.transform = `translate3d(${shifted}px,0,0)`;
+    const width = pageWidth();
+    const clamped = Math.max(-width, Math.min(width, dx));
+    placeTrack(-width + clamped, 0);
   };
 
   const onSlidePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -279,14 +306,14 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
     dragRef.current = null;
     if (drag.axis !== 'x') return;
     const dx = event.clientX - drag.startX;
-    const width = event.currentTarget.offsetWidth || 1;
+    const width = pageWidth();
     const threshold = Math.max(28, Math.min(56, width * 0.2));
     if (Math.abs(dx) < threshold) {
-      runMonthSlide(0, 'snap');
+      runMonthSlide(-width, 'snap');
       return;
     }
     const toNext = dx < 0;
-    runMonthSlide(monthExitPx(width, toNext), toNext ? 'next' : 'prev');
+    runMonthSlide(toNext ? -2 * width : 0, toNext ? 'next' : 'prev');
   };
 
   const onSlidePointerLeave = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -305,8 +332,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
     if (animatingRef.current) return;
+    const width = pageWidth();
     const toNext = event.key === 'ArrowRight';
-    runMonthSlide(monthExitPx(slideRef.current?.offsetWidth || 160, toNext), toNext ? 'next' : 'prev');
+    runMonthSlide(toNext ? -2 * width : 0, toNext ? 'next' : 'prev');
   };
 
   return (
@@ -348,9 +376,8 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
             style={{ flex: '1 1 0%', minHeight: 0 }}
           >
             <div
-              ref={slideRef}
-              className="relative z-[5] flex min-h-0 w-full flex-1 touch-pan-y select-none flex-col"
-              style={{ gap: monthSlideGap }}
+              ref={viewportRef}
+              className="relative z-[5] flex min-h-0 w-full flex-1 touch-pan-y select-none flex-col overflow-hidden"
               onPointerDown={onSlidePointerDown}
               onPointerMove={onSlidePointerMove}
               onPointerUp={onSlidePointerUp}
@@ -358,8 +385,17 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               onPointerLeave={onSlidePointerLeave}
               onClickCapture={onSlideClickCapture}
             >
+              <div ref={trackRef} className="flex h-full min-h-0 w-[300%] shrink-0">
+                {calendarPages.map((page, pageIndex) => (
+                  <div
+                    key={`${page.year}-${page.month}`}
+                    className="flex h-full w-1/3 shrink-0 flex-col"
+                    style={{ gap: monthBg && page.month === 0 ? '0.8cqmin' : '2.2cqmin' }}
+                    inert={pageIndex === 1 ? undefined : true}
+                    aria-hidden={pageIndex === 1 ? undefined : true}
+                  >
             <div
-              className={`relative z-[5] flex items-center justify-center ${monthBg ? 'mx-auto w-[54%] max-w-[68%] self-center' : ''}`}
+              className={`relative z-[5] flex shrink-0 items-center justify-center ${monthBg ? 'mx-auto w-[54%] max-w-[68%] self-center' : ''}`}
               style={{
                 background: monthBg ? 'transparent' : skin.navBg,
                 borderRadius: '999px',
@@ -368,9 +404,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               }}
             >
               <h4
-                tabIndex={0}
-                aria-keyshortcuts="ArrowLeft ArrowRight"
-                onKeyDown={onMonthKeyDown}
+                tabIndex={pageIndex === 1 ? 0 : -1}
+                aria-keyshortcuts={pageIndex === 1 ? 'ArrowLeft ArrowRight' : undefined}
+                onKeyDown={pageIndex === 1 ? onMonthKeyDown : undefined}
                 className="relative z-[1] m-0 whitespace-nowrap text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                 style={{
                   fontSize: monthBg ? '5.3cqmin' : '5.5cqmin',
@@ -382,7 +418,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                   backgroundClip: 'text',
                 }}
               >
-                {monthTitle.split('\uE000').map((part, index) => (
+                {(monthTitles[pageIndex] ?? '').split('\uE000').map((part, index) => (
                   <span key={index} className={index > 0 ? 'ml-[0.7em]' : undefined}>
                     {part}
                   </span>
@@ -394,8 +430,8 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               style={
                 monthBg
                   ? {
-                      paddingLeft: calendarGrid.month === 0 ? '4cqmin' : monthPadL,
-                      paddingRight: calendarGrid.month === 0 ? '7.5cqmin' : monthPadR,
+                      paddingLeft: page.month === 0 ? '4cqmin' : monthPadL,
+                      paddingRight: page.month === 0 ? '7.5cqmin' : monthPadR,
                     }
                   : undefined
               }
@@ -404,7 +440,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                 className="calendar-grid"
                 style={{
                   gap: '1cqmin',
-                  gridTemplateRows: `auto repeat(${calendarGrid.weekRows}, minmax(0, 1fr))`,
+                  gridTemplateRows: `auto repeat(${page.weekRows}, minmax(0, 1fr))`,
                 }}
               >
                 {weekDays.map((day, i) => (
@@ -426,7 +462,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                     {day}
                   </div>
                 ))}
-                {calendarGrid.cells.map((cell, i) => {
+                {page.cells.map((cell, i) => {
                   if (cell.type === 'empty') {
                     return <div key={`empty-${i}`} aria-hidden />;
                   }
@@ -518,6 +554,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                 })}
               </div>
             </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <div
@@ -763,42 +802,44 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     }
   }, []);
 
-  const calendarGrid = useMemo(() => {
-    const y = calendarMonth.getFullYear();
-    const m = calendarMonth.getMonth();
-    const firstDay = new Date(y, m, 1).getDay();
-    const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const calendarPages = useMemo(() => {
     const today = new Date();
-    const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    const eventCountByDate: Record<string, number> = {};
+    const todayKey =
+      today.getFullYear() +
+      '-' +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(today.getDate()).padStart(2, '0');
+    const buildPage = (monthDate: Date): CalendarMonthPage => {
+      const y = monthDate.getFullYear();
+      const m = monthDate.getMonth();
+      const firstDay = new Date(y, m, 1).getDay();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const cells: CalendarGridCell[] = [];
 
-    for (let d = 1; d <= daysInMonth; d++) {
-      const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-      eventCountByDate[key] = (events || []).filter((e) => eventMatchesDate(e, key)).length;
-    }
+      for (let i = 0; i < firstDay; i++) cells.push({ type: 'empty' });
 
-    const cells: CalendarGridCell[] = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(y, m, d);
+        const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        const matched = (events || []).filter((e) => eventMatchesDate(e, key));
+        const titles = isKidsTheme && matched.length > 0 ? matched.map((e) => e.title) : [];
+        cells.push({
+          type: 'day',
+          date,
+          day: d,
+          isToday: key === todayKey,
+          eventCount: matched.length,
+          kidsSticker: titles.length > 0 ? kidsStickerFromTitles(titles, key) : null,
+        });
+      }
 
-    for (let i = 0; i < firstDay; i++) cells.push({ type: 'empty' });
+      return { cells, year: y, month: m, weekRows: Math.max(4, Math.ceil(cells.length / 7)) };
+    };
 
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(y, m, d);
-      const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-      const eventCount = eventCountByDate[key] || 0;
-      const titles = isKidsTheme && eventCount > 0
-        ? (events || []).filter((e) => eventMatchesDate(e, key)).map((e) => e.title)
-        : [];
-      cells.push({
-        type: 'day',
-        date,
-        day: d,
-        isToday: key === todayKey,
-        eventCount,
-        kidsSticker: titles.length > 0 ? kidsStickerFromTitles(titles, key) : null,
-      });
-    }
-
-    return { cells, year: y, month: m, weekRows: Math.max(4, Math.ceil(cells.length / 7)) };
+    return [-1, 0, 1].map((offset) =>
+      buildPage(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1)),
+    );
   }, [calendarMonth, events, eventMatchesDate, isKidsTheme]);
 
   const eventsOnSelectedDate = useMemo(() => {
@@ -979,7 +1020,10 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     [t],
   );
   const hasSelection = selectedDate != null;
-  const monthTitle = formatMonthYear(calendarGrid.year, calendarGrid.month).toUpperCase();
+  const monthTitles = useMemo(
+    () => calendarPages.map((page) => formatMonthYear(page.year, page.month).toUpperCase()),
+    [calendarPages, formatMonthYear],
+  );
 
   return (
       <div
@@ -989,7 +1033,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       >
         {/* 상세 패널은 프레임 밖(아래)으로 분리해 날짜 셀 CQ 스케일 유지 */}
         <CalendarMonthGrid
-          calendarGrid={calendarGrid}
+          calendarPages={calendarPages}
           selectedDate={selectedDate}
           isKidsTheme={isKidsTheme}
           uiTheme={uiTheme}
@@ -997,7 +1041,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           weekDays={weekDays}
           sectionTitle={t.section_title_calendar}
           addLabel={t.event_add_title}
-          monthTitle={monthTitle}
+          monthTitles={monthTitles}
           onPrevMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
           onSelectDate={setSelectedDate}
