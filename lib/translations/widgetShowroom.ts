@@ -100,6 +100,17 @@ export type WidgetShowroomTranslations = {
   howto_family_log_1: string;
   howto_family_log_2: string;
   howto_family_log_3: string;
+  howto_family_log_4: string;
+  howto_family_log_5: string;
+  howto_family_log_6: string;
+  howto_family_log_7: string;
+  howto_family_log_8: string;
+  howto_family_log_9: string;
+  demo_family_log_title_label: string;
+  demo_family_log_title: string;
+  demo_family_log_note: string;
+  demo_family_log_revisit: string;
+  demo_family_log_map_hint: string;
   howto_album_1: string;
   howto_album_2: string;
   howto_album_3: string;
@@ -205,9 +216,20 @@ const ko: WidgetShowroomTranslations = {
   howto_travel_quick_record_1: '지금 위치를 한 번에 기록해요.',
   howto_travel_quick_record_2: '이동 루트를 녹음하듯 남겨요.',
   howto_travel_quick_record_3: '길 위에서 빠르게 남기고 나중에 정리해요.',
-  howto_family_log_1: '여기 기록이나 동선 기록을 누르면 카드가 생겨요.',
-  howto_family_log_2: '카드 제목은 눌러서 고칠 수 있어요.',
-  howto_family_log_3: '일·월·연으로 모아 보고, 넘기면 다음 카드가 나와요.',
+  howto_family_log_1: '기록이 없으면 여기 기록으로 새 카드를 만들어요.',
+  howto_family_log_2: '제목을 입력해요.',
+  howto_family_log_3: '사진을 고르거나 앨범에서 넣어요.',
+  howto_family_log_4: '메모와 기분을 남겨요.',
+  howto_family_log_5: '별점·사진 스타일·지도를 골라요.',
+  howto_family_log_6: '영수증을 첨부할 수 있어요.',
+  howto_family_log_7: '경비와 다시 가고 싶어요를 채워요.',
+  howto_family_log_8: '저장을 누르면 카드가 완성돼요.',
+  howto_family_log_9: '저장된 카드에서 사진·지도·경비를 다시 봐요.',
+  demo_family_log_title_label: '제목',
+  demo_family_log_title: '집 근처 카페',
+  demo_family_log_note: '가족모임 저녁식사. 분위기가 참 좋았어요.',
+  demo_family_log_revisit: '다시 가고 싶어요',
+  demo_family_log_map_hint: '지도 미리보기',
   howto_album_1: '가족 사진을 앨범에 모아요.',
   howto_album_2: '페이지를 넘기며 추억을 봐요.',
   howto_album_3: '전체보기로 더 크게 즐길 수 있어요.',
@@ -313,9 +335,20 @@ const en: WidgetShowroomTranslations = {
   howto_travel_quick_record_1: 'Log your location in one tap.',
   howto_travel_quick_record_2: 'Record the route as you go.',
   howto_travel_quick_record_3: 'Capture on the road, tidy later.',
-  howto_family_log_1: 'Log here or a path to create a card.',
-  howto_family_log_2: 'Tap a card to change its title.',
-  howto_family_log_3: 'Filter by day, month, or year, then swipe for more.',
+  howto_family_log_1: 'If empty, tap Log here to start a card.',
+  howto_family_log_2: 'Type a title for the place.',
+  howto_family_log_3: 'Add photos from the camera or album.',
+  howto_family_log_4: 'Write a note and pick moods.',
+  howto_family_log_5: 'Set rating, photo style, and the map.',
+  howto_family_log_6: 'You can attach a receipt.',
+  howto_family_log_7: 'Fill expense and “want to revisit”.',
+  howto_family_log_8: 'Tap Save to finish the card.',
+  howto_family_log_9: 'Open the card to see photos, map, and expense.',
+  demo_family_log_title_label: 'Title',
+  demo_family_log_title: 'Cafe near home',
+  demo_family_log_note: 'Family dinner. The vibe was wonderful.',
+  demo_family_log_revisit: 'Want to go again',
+  demo_family_log_map_hint: 'Map preview',
   howto_album_1: 'Collect family photos in an album.',
   howto_album_2: 'Flip pages to browse memories.',
   howto_album_3: 'Open View all for a bigger look.',
@@ -403,8 +436,25 @@ const PIGGY_HOWTO_KEYS = [
 /** 영상 기준 저금통 쇼룸: 빈 위젯 → 통화 → 아이 → 입금 → 잔액 → 지출 → 내역 → 최종 */
 export const PIGGY_SHOWROOM_STEP_MS = [2000, 2400, 2200, 3800, 2400, 3200, 2800, 3000] as const;
 
+const FAMILY_LOG_HOWTO_KEYS = [
+  'howto_family_log_1',
+  'howto_family_log_2',
+  'howto_family_log_3',
+  'howto_family_log_4',
+  'howto_family_log_5',
+  'howto_family_log_6',
+  'howto_family_log_7',
+  'howto_family_log_8',
+  'howto_family_log_9',
+] as const satisfies readonly (keyof WidgetShowroomTranslations)[];
+
+/** 영상 기준 가족 로그: 빈 → 제목 → 사진 → 메모 → 별점 → 영수증 → 경비 → 저장 → 카드 */
+export const FAMILY_LOG_SHOWROOM_STEP_MS = [
+  2000, 3600, 2400, 3600, 2800, 2200, 2600, 2200, 3200,
+] as const;
+
 const HOWTO_KEYS: Record<
-  Exclude<DashboardWidgetKey, 'tasks' | 'calendar' | 'chat' | 'piggy'>,
+  Exclude<DashboardWidgetKey, 'tasks' | 'calendar' | 'chat' | 'piggy' | 'family_log'>,
   [
     keyof WidgetShowroomTranslations,
     keyof WidgetShowroomTranslations,
@@ -418,7 +468,6 @@ const HOWTO_KEYS: Record<
     'howto_travel_quick_record_2',
     'howto_travel_quick_record_3',
   ],
-  family_log: ['howto_family_log_1', 'howto_family_log_2', 'howto_family_log_3'],
   album: ['howto_album_1', 'howto_album_2', 'howto_album_3'],
   location: ['howto_location_1', 'howto_location_2', 'howto_location_3'],
   games: ['howto_games_1', 'howto_games_2', 'howto_games_3'],
@@ -447,6 +496,9 @@ export function getWidgetShowroomHowtoSteps(lang: LangCode, key: DashboardWidget
   }
   if (key === 'piggy') {
     return PIGGY_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
+  }
+  if (key === 'family_log') {
+    return FAMILY_LOG_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
   }
   const [a, b, c] = HOWTO_KEYS[key];
   return [
