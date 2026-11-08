@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation, formatTravelTranslation } from '@/lib/translations/travel';
+import { getCommonTranslation } from '@/lib/translations/common';
 import type {
   TravelTrip,
   TravelItinerary,
@@ -48,7 +49,6 @@ import { formatMoneyAmount } from '@/lib/format-currency';
 import {
   Eye,
   MapPin,
-  ChevronLeft,
   Calendar,
   ListOrdered,
   Wallet,
@@ -2654,18 +2654,20 @@ export function TravelPlannerContent({
   return (
     <div className="min-h-screen bg-[var(--surface-base)] p-5">
       <div ref={placesServiceContainerRef} className="absolute left-[-9999px] h-px w-px" aria-hidden="true" />
-      <div className="mb-6 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="glass-panel-soft inline-flex cursor-pointer items-center justify-center rounded-lg p-2"
-        >
-          <ChevronLeft className="h-5 w-5 text-slate-600" />
-        </button>
-        <div>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h1 className="m-0 text-[22px] font-bold text-slate-800">{tt('title')}</h1>
           <p className="m-0 mt-1 text-sm text-slate-500">{currentGroup?.name ?? tt('group_label')}</p>
         </div>
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-800 shadow-sm"
+          aria-label={getCommonTranslation(lang, 'close')}
+          title={getCommonTranslation(lang, 'close')}
+        >
+          <X className="h-5 w-5" strokeWidth={2.25} />
+        </button>
       </div>
 
       {error && (
