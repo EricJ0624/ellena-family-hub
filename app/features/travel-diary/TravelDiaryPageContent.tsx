@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -41,6 +41,17 @@ function localTodayYmd(): string {
 
 type DiaryViewMode = 'vertical' | 'horizontal';
 
+type TravelDiaryPageContentProps = {
+  /** 페이지 모드에서는 URL의 tripId. 패널 모드에서는 대시보드 state. */
+  tripId?: string;
+  /** 새 다이어리 작성 폼. tripId가 있으면 무시. */
+  openAdd?: boolean;
+  /** 있으면 패널 닫기. 없으면 대시보드 다이어리 위젯으로 이동. */
+  onClose?: () => void;
+  /** 있으면 패널 안에서 여행 전환. 없으면 /travel/diary 라우팅. */
+  onTripChange?: (tripId: string) => void;
+};
+
 type PlannerBundle = {
   accommodations: TravelAccommodation[];
   dining: TravelDining[];
@@ -49,11 +60,28 @@ type PlannerBundle = {
   itineraries: TravelItinerary[];
 };
 
-export function TravelDiaryPageContent() {
+export function TravelDiaryPageContent({
+  tripId = '',
+  openAdd = false,
+  onClose,
+  onTripChange,
+}: TravelDiaryPageContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const tripIdParam = searchParams.get('tripId');
-  const openAdd = searchParams.get('openAdd') === '1' && !tripIdParam;
+  const tripIdParam = tripId.trim() ? tripId.trim() : null;
+  const showAddForm = openAdd && !tripIdParam;
+  const handleClose = useCallback(() => {
+    if (onClose) onClose();
+    else router.push('/dashboard?focus=travel_diary');
+  }, [onClose, router]);
+  const openTrip = useCallback((id: string, mode: 'push' | 'replace' = 'push') => {
+    if (onTripChange) {
+      onTripChange(id);
+      return;
+    }
+    const href = `/travel/diary?tripId=${encodeURIComponent(id)}`;
+    if (mode === 'replace') router.replace(href);
+    else router.push(href);
+  }, [onTripChange, router]);
   const { currentGroupId, currentGroup, uiTheme } = useGroup();
   const { lang } = useLanguage();
   const isFamilyTheme = uiTheme === 'kids_friendly';
@@ -513,7 +541,7 @@ export function TravelDiaryPageContent() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || t('hide_all_failed'));
-      router.push('/dashboard');
+      handleClose();
     } catch (e) {
       console.error(e);
       alert(t('hide_all_failed'));
@@ -620,6 +648,11 @@ export function TravelDiaryPageContent() {
         labels={{
           note_placeholder: t('note_placeholder'),
           mood_label: t('mood_label'),
+          mood_group_basic: t('mood_group_basic'),
+          mood_group_enjoy: t('mood_group_enjoy'),
+          mood_group_meh: t('mood_group_meh'),
+          mood_group_scene: t('mood_group_scene'),
+          mood_group_place: t('mood_group_place'),
           photos_label: t('photos_label'),
           photos_uploading: t('photos_uploading'),
           photos_adjust: t('photos_adjust'),
@@ -726,7 +759,7 @@ export function TravelDiaryPageContent() {
       if (!res.ok) throw new Error(json.error || t('add_diary_failed'));
       const createdId = json.data?.id as string | undefined;
       if (!createdId) throw new Error(t('add_diary_failed'));
-      router.replace(`/travel/diary?tripId=${encodeURIComponent(createdId)}`);
+      openTrip(createdId, 'replace');
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : t('add_diary_failed'));
     } finally {
@@ -748,7 +781,7 @@ export function TravelDiaryPageContent() {
         <div className="mx-auto max-w-2xl">
           <button
             type="button"
-            onClick={() => router.push('/dashboard')}
+            onClick={handleClose}
             className={[
               'mb-4 inline-flex cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent text-sm font-medium',
               isDarkPage ? 'text-slate-300 hover:text-white' : 'text-slate-500 hover:text-slate-800',
@@ -757,7 +790,7 @@ export function TravelDiaryPageContent() {
             <ChevronLeft className="h-4 w-4" />
             {t('back')}
           </button>
-          {openAdd && currentGroupId ? (
+          {showAddForm && currentGroupId ? (
             <form
               onSubmit={(event) => void submitCreateDiary(event)}
               className={[
@@ -815,7 +848,7 @@ export function TravelDiaryPageContent() {
                 <button
                   type="button"
                   disabled={creatingDiary}
-                  onClick={() => router.push('/dashboard')}
+                  onClick={handleClose}
                   className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-60"
                 >
                   {t('cancel')}
@@ -851,7 +884,7 @@ export function TravelDiaryPageContent() {
       <div className="mx-auto max-w-2xl">
         <button
           type="button"
-          onClick={() => router.push('/dashboard')}
+          onClick={handleClose}
           className={[
             'mb-4 inline-flex cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent text-sm font-medium',
             isDarkPage
@@ -1001,7 +1034,7 @@ export function TravelDiaryPageContent() {
               void loadAll();
               return;
             }
-            router.push(`/travel/diary?tripId=${encodeURIComponent(tid)}`);
+            openTrip(tid);
           }}
         />
 

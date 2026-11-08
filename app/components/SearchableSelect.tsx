@@ -124,7 +124,7 @@ export function SearchableSelect({
               role="listbox"
               style={{ top: box.top, left: box.left, width: box.width }}
               className={[
-                'fixed z-[1300] flex max-h-72 flex-col overflow-hidden rounded-lg border shadow-lg',
+                'fixed z-[10035] flex max-h-72 flex-col overflow-hidden rounded-lg border shadow-lg',
                 night ? 'border-slate-600 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-800',
               ].join(' ')}
             >

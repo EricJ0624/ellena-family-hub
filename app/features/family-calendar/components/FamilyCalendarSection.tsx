@@ -20,6 +20,7 @@ import {
   kidsCongratsVariant,
   kidsStickerFromTitles,
 } from '../kids-decorations';
+import { firstCalendarStickerEmoji } from '../calendar-sticker-emoji';
 
 /** Family 테마 월별 위젯 배경. JS month는 0부터. */
 const KIDS_MONTH_BG: Partial<Record<number, string>> = {
@@ -124,7 +125,15 @@ function whenTransformEnds(el: HTMLElement, ms: number, onDone: () => void) {
 
 type CalendarGridCell =
   | { type: 'empty' }
-  | { type: 'day'; date: Date; day: number; isToday: boolean; eventCount: number; kidsSticker: string | null };
+  | {
+      type: 'day';
+      date: Date;
+      day: number;
+      isToday: boolean;
+      eventCount: number;
+      kidsEmoji: string | null;
+      kidsSticker: string | null;
+    };
 
 type CalendarMonthPage = {
   cells: CalendarGridCell[];
@@ -529,7 +538,14 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       ) : (
                         <>
                           <span>{cell.day}</span>
-                          {cell.kidsSticker ? (
+                          {cell.kidsEmoji ? (
+                            <span
+                              aria-hidden
+                              className="mt-[0.2cqmin] flex h-[3.2cqmin] w-[3.2cqmin] items-center justify-center text-[3cqmin] leading-none"
+                            >
+                              {cell.kidsEmoji}
+                            </span>
+                          ) : cell.kidsSticker ? (
                             <img
                               src={cell.kidsSticker}
                               alt=""
@@ -655,6 +671,11 @@ interface FamilyCalendarSectionProps {
     event_title_placeholder: string;
     event_desc_label: string;
     event_desc_placeholder: string;
+    event_emoji_label: string;
+    event_emoji_health: string;
+    event_emoji_kids: string;
+    event_emoji_together: string;
+    event_emoji_celebrate: string;
     event_repeat_label: string;
     event_repeat_none: string;
     event_repeat_monthly: string;
@@ -823,13 +844,15 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         const date = new Date(y, m, d);
         const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         const matched = (events || []).filter((e) => eventMatchesDate(e, key));
-        const titles = isKidsTheme && matched.length > 0 ? matched.map((e) => e.title) : [];
+        const kidsEmoji = isKidsTheme && matched.length > 0 ? firstCalendarStickerEmoji(matched) : null;
+        const titles = isKidsTheme && matched.length > 0 && !kidsEmoji ? matched.map((e) => e.title) : [];
         cells.push({
           type: 'day',
           date,
           day: d,
           isToday: key === todayKey,
           eventCount: matched.length,
+          kidsEmoji,
           kidsSticker: titles.length > 0 ? kidsStickerFromTitles(titles, key) : null,
         });
       }
@@ -911,6 +934,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
               event_date: payload.event_date,
               end_date: payload.end_date,
               repeat_type: payload.repeat_type,
+              sticker_emoji: payload.sticker_emoji,
             }
           : e,
       );
@@ -932,6 +956,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         event_date: payload.event_date,
         end_date: payload.end_date,
         repeat_type: payload.repeat_type,
+        sticker_emoji: payload.sticker_emoji,
       }).catch((error) => {
         console.error('일정 수정 실패, 복구 중:', error);
         onEventsChange(previousEvents);
@@ -939,8 +964,9 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       return;
     }
 
+    const newEventId = Date.now();
     const newEvent: FamilyEvent = {
-      id: Date.now(),
+      id: newEventId,
       month: payload.month,
       day: payload.day,
       title: payload.title,
@@ -948,6 +974,8 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       event_date: payload.event_date,
       end_date: payload.end_date,
       repeat_type: payload.repeat_type,
+      sticker_emoji: payload.sticker_emoji,
+      created_at: new Date(newEventId).toISOString(),
     };
 
     startTransition(() => {

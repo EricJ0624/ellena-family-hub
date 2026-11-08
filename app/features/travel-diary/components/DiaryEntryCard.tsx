@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Pencil, Star, Trash2 } from 'lucide-react';
 import type { DiaryTimelineSlot } from '@/lib/modules/travel-planner/diary-timeline';
 import type { TravelExpense, TravelPlaceFeedback } from '@/lib/modules/travel-planner/types';
@@ -46,11 +47,27 @@ import {
   diaryTitleClass,
 } from '@/lib/modules/travel-planner/diary-entry-theme';
 
-const MOOD_OPTIONS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'];
+const MOOD_GROUPS = [
+  { id: 'basic', emojis: ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'] },
+  { id: 'enjoy', emojis: ['🤩', '😍', '👍', '💎', '😌'] },
+  { id: 'meh', emojis: ['😐', '😞', '👎'] },
+  { id: 'scene', emojis: ['💸', '💰', '👥', '🤫', '⏳', '🎫', '👶', '🥵', '🥶'] },
+  { id: 'place', emojis: ['🏨', '☕', '🏛️', '🏖️', '⛰️', '🚆', '✈️', '🌃', '🎡', '🛍️'] },
+] as const;
+const BASIC_MOODS = MOOD_GROUPS[0].emojis;
+const EXTRA_MOOD_GROUPS = MOOD_GROUPS.filter((group) => group.id !== 'basic');
+const MOOD_OPTIONS = MOOD_GROUPS.flatMap((group) => group.emojis);
+const MOOD_OPTION_SET = new Set<string>(MOOD_OPTIONS);
+const MOOD_LIMIT = 12;
 
 type Labels = {
   note_placeholder: string;
   mood_label: string;
+  mood_group_basic: string;
+  mood_group_enjoy: string;
+  mood_group_meh: string;
+  mood_group_scene: string;
+  mood_group_place: string;
   photos_label: string;
   photos_uploading: string;
   photos_adjust: string;
@@ -239,6 +256,10 @@ export function DiaryEntryCard({
   const entry = slot.entry;
   const [note, setNote] = useState(entry?.note ?? '');
   const [moods, setMoods] = useState<string[]>(entry?.mood_tags ?? []);
+  const [moodPanelOpen, setMoodPanelOpen] = useState(false);
+  const [moodPanelPos, setMoodPanelPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
+  const moodAnchorRef = useRef<HTMLButtonElement>(null);
+  const moodPanelRef = useRef<HTMLDivElement>(null);
   const [rating, setRating] = useState<number | null>(feedback?.rating ?? null);
   const [isRevisit, setIsRevisit] = useState(Boolean(feedback?.is_revisit));
   const [expense, setExpense] = useState(expenseInputValue(linkedExpense));
@@ -519,7 +540,54 @@ export function DiaryEntryCard({
   );
 
   const toggleMood = (m: string) => {
-    setMoods((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
+    if (!MOOD_OPTION_SET.has(m)) return;
+    setMoods((prev) => {
+      if (prev.includes(m)) return prev.filter((x) => x !== m);
+      if (prev.length >= MOOD_LIMIT) return prev;
+      return [...prev, m];
+    });
+  };
+
+  useEffect(() => {
+    if (!moodPanelOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (moodAnchorRef.current?.contains(target) || moodPanelRef.current?.contains(target)) return;
+      setMoodPanelOpen(false);
+    };
+    const close = () => setMoodPanelOpen(false);
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Node && moodPanelRef.current?.contains(target)) return;
+      close();
+    };
+    document.addEventListener('pointerdown', onPointer);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [moodPanelOpen]);
+
+  const toggleMoodPanel = () => {
+    if (moodPanelOpen) {
+      setMoodPanelOpen(false);
+      return;
+    }
+    const rect = moodAnchorRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = 256;
+    const margin = 8;
+    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - margin);
+    const spaceAbove = Math.max(0, rect.top - margin);
+    const maxHeight = Math.min(360, Math.max(96, Math.floor(Math.max(spaceBelow, spaceAbove))));
+    let top = spaceBelow >= spaceAbove ? rect.bottom + 4 : rect.top - maxHeight - 4;
+    top = Math.max(margin, Math.min(top, window.innerHeight - maxHeight - margin));
+    setMoodPanelPos({ top, left, maxHeight });
+    setMoodPanelOpen(true);
   };
 
   const restoreFromSaved = () => {
@@ -986,7 +1054,7 @@ export function DiaryEntryCard({
             <div className={`flex items-stretch gap-2${note.trim() ? ' mt-2' : ' mt-3'}`}>
               <div className="flex w-max max-w-[58%] shrink-0 flex-col justify-center gap-1.5">
                 {selectedMoods.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex w-max max-w-[calc(2rem*5+0.375rem*4)] flex-wrap items-center gap-1.5">
                     {selectedMoods.map((m) => (
                       <span
                         key={m}
@@ -1125,8 +1193,8 @@ export function DiaryEntryCard({
               <span className={['text-xs font-medium', labelMutedClass].join(' ')}>
                 {labels.mood_label}
               </span>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {MOOD_OPTIONS.map((m) => (
+              <div className="mt-1 grid w-max grid-cols-4 gap-1">
+                {BASIC_MOODS.map((m) => (
                   <button
                     key={m}
                     type="button"
@@ -1141,7 +1209,61 @@ export function DiaryEntryCard({
                     {m}
                   </button>
                 ))}
+                <button
+                  ref={moodAnchorRef}
+                  type="button"
+                  aria-label={labels.mood_label}
+                  aria-expanded={moodPanelOpen}
+                  onClick={toggleMoodPanel}
+                  className="cursor-pointer rounded-full border border-slate-200 bg-white px-2 py-0.5 text-sm text-slate-600"
+                >
+                  +
+                </button>
               </div>
+              {/* 카드 overflow에 잘리지 않도록 버튼 좌표로 띄운다 */}
+              {moodPanelOpen && moodPanelPos && typeof document !== 'undefined'
+                ? createPortal(
+                <div
+                  ref={moodPanelRef}
+                  style={{ top: moodPanelPos.top, left: moodPanelPos.left, maxHeight: moodPanelPos.maxHeight }}
+                  className="fixed z-[10060] w-64 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+                >
+                  {EXTRA_MOOD_GROUPS.map((group, index) => (
+                    <div
+                      key={group.id}
+                      className={index === 0 ? '' : 'mt-1.5 border-t border-slate-100 pt-1.5'}
+                    >
+                      <p className="mb-1 text-[11px] font-medium text-slate-500">
+                        {group.id === 'enjoy'
+                          ? labels.mood_group_enjoy
+                          : group.id === 'meh'
+                            ? labels.mood_group_meh
+                            : group.id === 'scene'
+                              ? labels.mood_group_scene
+                              : labels.mood_group_place}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {group.emojis.map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => toggleMood(m)}
+                            className={[
+                              'cursor-pointer rounded-full border px-2 py-0.5 text-sm',
+                              moods.includes(m)
+                                ? 'border-violet-400 bg-violet-100'
+                                : 'border-slate-200 bg-white',
+                            ].join(' ')}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>,
+                document.body,
+              ) : null}
             </div>
             {displayMap ? (
               routeTrackId ? (

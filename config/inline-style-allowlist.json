@@ -6,6 +6,9 @@
   "app/modules/travel-planner/TravelPlannerContent.tsx": 1,
   "app/memories/page.tsx": 2,
   "app/features/family-calendar/components/FamilyCalendarSection.tsx": 1,
+  "app/features/family-calendar/components/CalendarEventModal.tsx": 1,
+  "app/features/travel-diary/components/DiaryEntryCard.tsx": 1,
+  "app/features/family-log/components/FamilyLogCardEditor.tsx": 1,
   "app/dashboard/page.tsx": 2,
   "app/admin/page.tsx": 1,
   "app/components/AnnouncementBanner.tsx": 1

@@ -36,7 +36,15 @@ const KIND_OPTIONS: ImportItemKind[] = [
   'other',
 ];
 
-export function TravelImportWizard() {
+export function TravelImportWizard({
+  onClose,
+  onImported,
+}: {
+  /** 있으면 패널 닫기. 없으면 대시보드 플래너 위젯으로 이동. */
+  onClose?: () => void;
+  /** 있으면 가져온 여행 id를 패널로 넘김. 없으면 /travel 로 이동. */
+  onImported?: (tripId: string) => void;
+} = {}) {
   const router = useRouter();
   const { lang } = useLanguage();
   const tt = (key: Parameters<typeof getTravelTranslation>[1]) => getTravelTranslation(lang, key);
@@ -91,7 +99,8 @@ export function TravelImportWizard() {
   }, [dayTitles, formStartDate]);
 
   const handleClose = () => {
-    router.push('/dashboard');
+    if (onClose) onClose();
+    else router.push('/dashboard?focus=travel');
   };
 
   const handleCopyPrompt = async () => {
@@ -197,7 +206,8 @@ export function TravelImportWizard() {
         dayTitles: resolvedDayTitles,
         headers,
       });
-      router.replace(`/travel?tripId=${tripId}`);
+      if (onImported) onImported(tripId);
+      else router.replace(`/travel?tripId=${tripId}`);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : tt('import_apply_failed'));
     } finally {

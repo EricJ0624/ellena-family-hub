@@ -167,12 +167,20 @@ async function extractTakenAt(file: File): Promise<string | null> {
   return null;
 }
 
-function MemoriesPageContent() {
+export function MemoriesPageContent({
+  onClose,
+  initialPhotoId = '',
+}: {
+  /** 있으면 패널 닫기. 없으면 대시보드 앨범 위젯으로 이동. */
+  onClose?: () => void;
+  /** 대시보드 썸네일에서 연 사진 id. 페이지 모드는 URL photo 쿼리. */
+  initialPhotoId?: string;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   useEffect(() => {
+    if (onClose) return;
     router.prefetch('/dashboard');
-  }, [router]);
+  }, [onClose, router]);
   const { currentGroupId } = useGroup();
   useEffect(() => {
     if (!currentGroupId) {
@@ -436,9 +444,9 @@ function MemoriesPageContent() {
     ? groupedByDate.flatMap((s) => s.photos)
     : album;
 
-  /** 대시보드 썸네일 → /memories?photo=<id> 진입 시 해당 사진 라이트박스 오픈 */
+  /** 대시보드 썸네일 → 해당 사진 라이트박스 오픈 */
   useEffect(() => {
-    const photoParam = searchParams.get('photo');
+    const photoParam = initialPhotoId.trim();
     if (!photoParam) return;
     if (openedPhotoQueryRef.current === photoParam) return;
 
@@ -455,18 +463,19 @@ function MemoriesPageContent() {
     // 앨범은 로드됐는데 id가 없으면 쿼리만 정리 (재시도/재오픈 방지)
     if (index < 0) {
       openedPhotoQueryRef.current = photoParam;
-      router.replace('/memories', { scroll: false });
+      if (!onClose) router.replace('/memories', { scroll: false });
       return;
     }
 
     openedPhotoQueryRef.current = photoParam;
     setEditingId(null);
     setSelectedIndex(index);
-    router.replace('/memories', { scroll: false });
-  }, [searchParams, album, viewMode, groupedByDate, router]);
+    if (!onClose) router.replace('/memories', { scroll: false });
+  }, [initialPhotoId, album, viewMode, groupedByDate, router, onClose]);
 
   const handleBack = () => {
-    router.push('/dashboard?focus=album');
+    if (onClose) onClose();
+    else router.push('/dashboard?focus=album');
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1169,10 +1178,24 @@ function MemoriesPageContent() {
   );
 }
 
+function MemoriesFromUrl() {
+  const searchParams = useSearchParams();
+  const photoId = searchParams.get('photo') ?? '';
+  return <MemoriesPageContent initialPhotoId={photoId} />;
+}
+
 export default function MemoriesPage() {
   return (
     <GroupRequiredRouteGuard>
-      <MemoriesPageContent />
+      <React.Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base)] p-6 text-slate-500">
+            Loading…
+          </div>
+        }
+      >
+        <MemoriesFromUrl />
+      </React.Suspense>
     </GroupRequiredRouteGuard>
   );
 }

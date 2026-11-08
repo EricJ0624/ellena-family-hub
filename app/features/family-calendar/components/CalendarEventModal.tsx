@@ -1,9 +1,14 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { FamilyEvent } from '../types';
 import { KIDS_ADD_DECOS } from '../kids-add-decorations';
+import { CALENDAR_STICKER_EMOJIS, CALENDAR_STICKER_GROUPS, normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
+
+const CALENDAR_QUICK_EMOJIS = CALENDAR_STICKER_EMOJIS.slice(0, 7);
+const CALENDAR_QUICK_SET = new Set<string>(CALENDAR_QUICK_EMOJIS);
 
 const KidsAddDecorations = memo(function KidsAddDecorations() {
   return (
@@ -40,6 +45,7 @@ export type CalendarEventSubmitPayload = {
   event_date: string;
   end_date?: string;
   repeat_type: 'none' | 'monthly' | 'yearly';
+  sticker_emoji: string | null;
 };
 
 export type CalendarEventModalTranslations = {
@@ -50,6 +56,11 @@ export type CalendarEventModalTranslations = {
   event_title_placeholder: string;
   event_desc_label: string;
   event_desc_placeholder: string;
+  event_emoji_label: string;
+  event_emoji_health: string;
+  event_emoji_kids: string;
+  event_emoji_together: string;
+  event_emoji_celebrate: string;
   event_repeat_label: string;
   event_repeat_none: string;
   event_repeat_monthly: string;
@@ -124,6 +135,13 @@ function CalendarEventForm({
   const [datePickerOpen, setDatePickerOpen] = useState<'start' | 'end' | null>(null);
   const [pickerView, setPickerView] = useState({ year: startDate.getFullYear(), month: startDate.getMonth() });
   const [formError, setFormError] = useState<string | null>(null);
+  const [stickerEmoji, setStickerEmoji] = useState<string | null>(
+    normalizeCalendarStickerEmoji(editingEvent?.sticker_emoji),
+  );
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [emojiPanelPos, setEmojiPanelPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
+  const emojiAnchorRef = useRef<HTMLButtonElement>(null);
+  const emojiPanelRef = useRef<HTMLDivElement>(null);
   const [eventForm, setEventForm] = useState({
     title: editingEvent?.title || prefillTitle || '',
     month: editingEvent?.month || startDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
@@ -165,7 +183,50 @@ function CalendarEventForm({
       event_date,
       end_date,
       repeat_type: eventForm.repeat_type,
+      sticker_emoji: stickerEmoji,
     });
+  };
+
+  useEffect(() => {
+    if (!emojiOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (emojiAnchorRef.current?.contains(target) || emojiPanelRef.current?.contains(target)) return;
+      setEmojiOpen(false);
+    };
+    const close = () => setEmojiOpen(false);
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Node && emojiPanelRef.current?.contains(target)) return;
+      close();
+    };
+    document.addEventListener('pointerdown', onPointer);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [emojiOpen]);
+
+  const toggleEmojiPanel = () => {
+    if (emojiOpen) {
+      setEmojiOpen(false);
+      return;
+    }
+    const rect = emojiAnchorRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = 240;
+    const margin = 8;
+    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - margin);
+    const spaceAbove = Math.max(0, rect.top - margin);
+    const maxHeight = Math.min(360, Math.max(96, Math.floor(Math.max(spaceBelow, spaceAbove))));
+    let top = spaceBelow >= spaceAbove ? rect.bottom + 4 : rect.top - maxHeight - 4;
+    top = Math.max(margin, Math.min(top, window.innerHeight - maxHeight - margin));
+    setEmojiPanelPos({ top, left, maxHeight });
+    setEmojiOpen(true);
   };
 
   const startStr = toDateStr(eventFormDate);
@@ -413,6 +474,98 @@ function CalendarEventForm({
               isKidsTheme ? 'rounded-2xl border-none bg-white shadow-sm' : 'rounded-lg border border-slate-200'
             }`}
           />
+        </div>
+
+        <div className="mb-4">
+          <p className={`mb-2 text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
+            {t.event_emoji_label}
+          </p>
+          <div className="flex flex-nowrap items-center gap-1">
+            {CALENDAR_QUICK_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => setStickerEmoji((prev) => (prev === emoji ? null : emoji))}
+                className={[
+                  'cursor-pointer rounded-full border px-1.5 py-0.5 text-sm',
+                  stickerEmoji === emoji
+                    ? 'border-violet-400 bg-violet-100'
+                    : isKidsTheme
+                      ? 'border-white bg-white shadow-sm'
+                      : 'border-slate-200 bg-white',
+                ].join(' ')}
+              >
+                {emoji}
+              </button>
+            ))}
+            <button
+              ref={emojiAnchorRef}
+              type="button"
+              aria-label={t.event_emoji_label}
+              aria-expanded={emojiOpen}
+              onClick={toggleEmojiPanel}
+              className={`cursor-pointer rounded-full border px-1.5 py-0.5 text-sm ${
+                stickerEmoji && !CALENDAR_QUICK_SET.has(stickerEmoji)
+                  ? 'border-violet-400 bg-violet-100'
+                  : isKidsTheme
+                    ? 'border-white bg-white text-slate-600 shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600'
+              }`}
+            >
+              {stickerEmoji && !CALENDAR_QUICK_SET.has(stickerEmoji) ? stickerEmoji : '+'}
+            </button>
+          </div>
+          {/* 모달 overflow에 잘리지 않도록 버튼 좌표로 띄운다 */}
+          {emojiOpen && emojiPanelPos && typeof document !== 'undefined'
+            ? createPortal(
+            <div
+              ref={emojiPanelRef}
+              style={{ top: emojiPanelPos.top, left: emojiPanelPos.left, maxHeight: emojiPanelPos.maxHeight }}
+              className="fixed z-[10060] w-60 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+            >
+              {CALENDAR_STICKER_GROUPS.map((group) => {
+                const emojis = group.emojis.filter((emoji) => !CALENDAR_QUICK_SET.has(emoji));
+                if (emojis.length === 0) return null;
+                return (
+                <div
+                  key={group.id}
+                  className="mt-1.5 border-t border-slate-100 pt-1.5 first:mt-0 first:border-t-0 first:pt-0"
+                >
+                  <p className="mb-1 text-[11px] font-medium text-slate-500">
+                    {group.id === 'health'
+                      ? t.event_emoji_health
+                      : group.id === 'kids'
+                        ? t.event_emoji_kids
+                        : group.id === 'together'
+                          ? t.event_emoji_together
+                          : t.event_emoji_celebrate}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {emojis.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          setStickerEmoji((prev) => (prev === emoji ? null : emoji));
+                          setEmojiOpen(false);
+                        }}
+                        className={[
+                          'cursor-pointer rounded-full border px-2 py-0.5 text-sm',
+                          stickerEmoji === emoji
+                            ? 'border-violet-400 bg-violet-100'
+                            : 'border-slate-200 bg-white',
+                        ].join(' ')}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                );
+              })}
+            </div>,
+            document.body,
+          ) : null}
         </div>
 
         <div className="mb-5">

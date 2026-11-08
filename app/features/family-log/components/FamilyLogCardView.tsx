@@ -217,7 +217,7 @@ export function FamilyLogCardView({
             <div className={`flex items-stretch gap-2${note ? ' mt-2' : ' mt-3'}`}>
               <div className="flex w-max max-w-[58%] shrink-0 flex-col justify-center gap-1.5">
                 {card.mood_tags.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex w-max max-w-[calc(2rem*5+0.375rem*4)] flex-wrap items-center gap-1.5">
                     {card.mood_tags.map((mood) => (
                       <span
                         key={mood}

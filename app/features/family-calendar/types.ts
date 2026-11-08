@@ -14,4 +14,6 @@ export type FamilyEvent = {
   created_at?: string;
   supabaseId?: string | number;
   repeat_type?: 'none' | 'monthly' | 'yearly';
+  /** 키즈 날짜 칸에 직접 고른 이모지. 없으면 제목 단어 스티커. */
+  sticker_emoji?: string | null;
 };

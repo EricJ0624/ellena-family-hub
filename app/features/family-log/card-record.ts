@@ -37,7 +37,19 @@ export function routePointsForCard(
   return [];
 }
 
-export const FAMILY_LOG_MOODS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'] as const;
+export const FAMILY_LOG_BASIC_MOODS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'] as const;
+
+export const FAMILY_LOG_EXTRA_MOOD_GROUPS = [
+  { id: 'enjoy', emojis: ['🤩', '😍', '👍', '💎', '😌'] },
+  { id: 'meh', emojis: ['😐', '😞', '👎'] },
+  { id: 'scene', emojis: ['💸', '💰', '👥', '🤫', '⏳', '🎫', '👶', '🥵', '🥶'] },
+  { id: 'place', emojis: ['🏨', '☕', '🏛️', '🏖️', '⛰️', '🚆', '✈️', '🌃', '🎡', '🛍️'] },
+] as const;
+
+export const FAMILY_LOG_MOODS = [
+  ...FAMILY_LOG_BASIC_MOODS,
+  ...FAMILY_LOG_EXTRA_MOOD_GROUPS.flatMap((group) => group.emojis),
+] as const;
 
 const MOODS = new Set<string>(FAMILY_LOG_MOODS);
 
@@ -90,7 +102,7 @@ export function parseFamilyLogCardPatch(body: Record<string, unknown>): {
 
   const note = typeof body.note === 'string' ? body.note.trim().slice(0, 8000) : '';
   const moodTags = Array.isArray(body.mood_tags)
-    ? body.mood_tags.filter((tag): tag is string => typeof tag === 'string' && MOODS.has(tag)).slice(0, 8)
+    ? body.mood_tags.filter((tag): tag is string => typeof tag === 'string' && MOODS.has(tag)).slice(0, 12)
     : [];
   const amountRaw = body.amount == null || body.amount === '' ? null : Number(body.amount);
   const amount = amountRaw != null && Number.isFinite(amountRaw) && amountRaw > 0 ? amountRaw : null;

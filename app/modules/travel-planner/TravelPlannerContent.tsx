@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -108,9 +108,44 @@ function parseExpenseSourceKey(key: string): { source_kind: TravelPlaceSourceKin
   return { source_kind: kind, source_id: id };
 }
 
-export function TravelPlannerContent() {
+export function TravelPlannerContent({
+  tripId = '',
+  openAdd = false,
+  onClose,
+  onTripChange,
+  onOpenDiary,
+}: {
+  /** 페이지 모드에서는 URL의 tripId. 패널 모드에서는 대시보드 state. */
+  tripId?: string;
+  openAdd?: boolean;
+  /** 뒤로 가기. 없으면 대시보드 플래너 위젯으로 이동. */
+  onClose?: () => void;
+  /** 있으면 패널 안에서 여행 전환. 없으면 /travel 라우팅. */
+  onTripChange?: (tripId: string) => void;
+  /** 있으면 다이어리 패널. 없으면 /travel/diary 라우팅. */
+  onOpenDiary?: (tripId: string) => void;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const urlTripId = tripId.trim() ? tripId.trim() : null;
+  const urlOpenAdd = openAdd;
+  const handleBack = useCallback(() => {
+    if (onClose) onClose();
+    else router.push('/dashboard?focus=travel');
+  }, [onClose, router]);
+  const leavePlanner = useCallback(() => {
+    if (onClose) onClose();
+    else router.replace('/dashboard');
+  }, [onClose, router]);
+  const leavePlannerRef = useRef(leavePlanner);
+  leavePlannerRef.current = leavePlanner;
+  const syncTripUrl = useCallback((id: string) => {
+    if (onTripChange) onTripChange(id);
+    else router.replace(`/travel?tripId=${encodeURIComponent(id)}`);
+  }, [onTripChange, router]);
+  const openDiary = useCallback((id: string) => {
+    if (onOpenDiary) onOpenDiary(id);
+    else router.push(`/travel/diary?tripId=${encodeURIComponent(id)}`);
+  }, [onOpenDiary, router]);
   const { lang } = useLanguage();
   const tt = (key: keyof import('@/lib/translations/travel').TravelTranslations) => getTravelTranslation(lang, key);
   const ft = (
@@ -715,9 +750,6 @@ export function TravelPlannerContent() {
     }
   }, [currentGroupId, fetchTrips]);
 
-  const urlTripId = searchParams.get('tripId');
-  const urlOpenAdd = searchParams.get('openAdd') === '1';
-
   useEffect(() => {
     if (urlOpenAdd) setShowTripForm(true);
   }, [urlOpenAdd]);
@@ -752,10 +784,10 @@ export function TravelPlannerContent() {
     if (trips.length > 0) {
       const next = trips[0];
       setSelectedTrip(next);
-      router.replace(`/travel?tripId=${encodeURIComponent(next.id)}`);
+      syncTripUrl(next.id);
       return;
     }
-    router.replace('/dashboard');
+    leavePlanner();
   }, [
     currentGroupId,
     loading,
@@ -764,7 +796,8 @@ export function TravelPlannerContent() {
     selectedTrip,
     urlTripId,
     trips,
-    router,
+    syncTripUrl,
+    leavePlanner,
   ]);
 
   // 자동완성/지도 공용 스크립트: 필요한 시점에만 로드
@@ -1198,7 +1231,7 @@ export function TravelPlannerContent() {
         fetchTrips();
         const isDelete = payload?.eventType === 'DELETE' || payload?.type === 'DELETE' || (payload?.old?.id != null && payload?.new == null);
         if (isDelete && payload?.old?.id === selectedTripIdRef.current) {
-          router.replace('/dashboard');
+          leavePlannerRef.current();
         }
       })
       .subscribe();
@@ -1312,7 +1345,7 @@ export function TravelPlannerContent() {
       if (created?.id) {
         setSelectedTrip(created);
         setTrips((prev) => (prev.some((t) => t.id === created.id) ? prev : [created, ...prev]));
-        router.replace(`/travel?tripId=${encodeURIComponent(created.id)}`);
+        syncTripUrl(created.id);
         void fetchTrips();
       } else {
         await fetchTrips();
@@ -1446,7 +1479,7 @@ export function TravelPlannerContent() {
         setSelectedTrip((json as { data: TravelTrip }).data);
       }
       dispatchWidgetConfigsUpdated();
-      router.push(`/travel/diary?tripId=${encodeURIComponent(tripId)}`);
+      openDiary(tripId);
       void fetchTrips();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : tt('diary_enable_failed'));
@@ -1470,7 +1503,7 @@ export function TravelPlannerContent() {
       setTrips((prev) => prev.filter((t) => t.id !== trip.id));
       if (wasCurrent) {
         // 빈 선택 화면을 거치지 않고 바로 대시보드로 이동
-        router.replace('/dashboard');
+        leavePlanner();
       } else {
         void fetchTrips();
       }
@@ -2605,7 +2638,7 @@ export function TravelPlannerContent() {
           <p>{tt('select_group_first')}</p>
           <button
             type="button"
-            onClick={() => router.push('/dashboard')}
+            onClick={handleBack}
             className="mt-4 cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
           >
             {tt('go_to_dashboard')}
@@ -2624,7 +2657,7 @@ export function TravelPlannerContent() {
       <div className="mb-6 flex items-center gap-3">
         <button
           type="button"
-          onClick={() => router.push('/dashboard')}
+          onClick={handleBack}
           className="glass-panel-soft inline-flex cursor-pointer items-center justify-center rounded-lg p-2"
         >
           <ChevronLeft className="h-5 w-5 text-slate-600" />
@@ -3695,7 +3728,7 @@ export function TravelPlannerContent() {
       {showTripForm && (isKidsTheme ? (
         <div
           className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
-          onClick={() => !submitting && router.push('/dashboard')}
+          onClick={() => !submitting && handleBack()}
         >
           <div
             className="travel-kids-add-trip-frame"
@@ -3712,7 +3745,7 @@ export function TravelPlannerContent() {
             <button
               type="button"
               disabled={submitting}
-              onClick={() => router.push('/dashboard')}
+              onClick={handleBack}
               className="travel-kids-add-trip-close disabled:cursor-not-allowed"
             >
               <X className="h-5 w-5" />
@@ -3795,7 +3828,7 @@ export function TravelPlannerContent() {
               ) : null}
               <button
                 type="button"
-                onClick={() => router.push('/dashboard')}
+                onClick={handleBack}
                 disabled={submitting}
                 className={`travel-kids-add-trip-cancel ${submitting ? 'cursor-not-allowed' : ''}`}
               >
@@ -3815,7 +3848,7 @@ export function TravelPlannerContent() {
       ) : (
         <div
           className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
-          onClick={() => !submitting && router.push('/dashboard')}
+          onClick={() => !submitting && handleBack()}
         >
           <div
             className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
@@ -3826,7 +3859,7 @@ export function TravelPlannerContent() {
               <button
                 type="button"
                 disabled={submitting}
-                onClick={() => router.push('/dashboard')}
+                onClick={handleBack}
                 className="cursor-pointer border-0 bg-transparent p-1 text-slate-500 disabled:cursor-not-allowed"
               >
                 <X className="h-5 w-5" />
@@ -3888,7 +3921,7 @@ export function TravelPlannerContent() {
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => router.push('/dashboard')}
+                  onClick={handleBack}
                   disabled={submitting}
                   className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${
                     submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'

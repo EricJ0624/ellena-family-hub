@@ -9,7 +9,6 @@ import type { LangCode } from '@/lib/language-fonts';
 import { billingApiMessage, formatBillingTranslation, getBillingTranslation } from '@/lib/translations/billing';
 import { billingAppUserId, buildBillingProductId, type BillingQuotaTier } from '@/lib/billing-catalog';
 import { openBillingPurchase } from '@/lib/billing-purchase-client';
-import { clearDashboardScrollMemory } from '@/lib/dashboard-scroll-memory';
 import { supabase } from '@/lib/supabase';
 
 const FIVE_GB = 5 * 1024 * 1024 * 1024;
@@ -303,7 +302,6 @@ function BillingCheckout() {
       return;
     }
     if (isStorageIntent(intent)) {
-      clearDashboardScrollMemory();
       router.push('/dashboard?focus=album');
       return;
     }

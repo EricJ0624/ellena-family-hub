@@ -35,6 +35,7 @@ import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import { emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyEvent } from '../types';
+import { normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
 
 interface UseFamilyCalendarProps {
   currentGroupId: string | null;
@@ -53,7 +54,7 @@ function eventsContentSignature(events: ReadonlyArray<FamilyEvent>): string {
   return events
     .map(
       (e) =>
-        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}`,
+        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.sticker_emoji ?? ''}`,
     )
     .join('|');
 }
@@ -89,6 +90,7 @@ export function useFamilyCalendar({
     event_date: string;
     end_date?: string;
     repeat_type?: 'none' | 'monthly' | 'yearly';
+    sticker_emoji?: string | null;
   }) => {
     // [수정 1] return → throw: 호출부 .catch()가 낙관적 UI를 롤백할 수 있도록
     if (!payload || !payload.title) {
@@ -110,6 +112,7 @@ export function useFamilyCalendar({
       event_date: payload.event_date,
       end_date: (payload.end_date && payload.end_date > payload.event_date) ? payload.end_date : null,
       repeat_type: payload.repeat_type || 'none',
+      sticker_emoji: normalizeCalendarStickerEmoji(payload.sticker_emoji),
     };
 
     console.log('ADD_EVENT: family_events 테이블에 저장:', {
@@ -238,6 +241,7 @@ export function useFamilyCalendar({
     event_date: string;
     end_date?: string;
     repeat_type?: 'none' | 'monthly' | 'yearly';
+    sticker_emoji?: string | null;
   }) => {
     if (!payload?.id || !payload.title) {
       throw new Error('UPDATE_EVENT: invalid payload');
@@ -274,6 +278,7 @@ export function useFamilyCalendar({
         event_date: payload.event_date,
         end_date: (payload.end_date && payload.end_date > payload.event_date) ? payload.end_date : null,
         repeat_type: payload.repeat_type || 'none',
+        sticker_emoji: normalizeCalendarStickerEmoji(payload.sticker_emoji),
       })
       .eq('id', eventIdStr)
       .eq('group_id', currentGroupId);
@@ -305,7 +310,7 @@ export function useFamilyCalendar({
 
       const { data: eventsData, error: eventsError } = await supabase
         .from('family_events')
-        .select('id, title, description, event_date, end_date, location, created_by, created_at, group_id, repeat_type') // app_id 미사용 — 불필요 컬럼 제거
+        .select('id, title, description, event_date, end_date, location, created_by, created_at, group_id, repeat_type, sticker_emoji')
         .eq('group_id', currentGroupId)
         .order('event_date', { ascending: true });
 
@@ -381,6 +386,7 @@ export function useFamilyCalendar({
             created_by: event.created_by,
             created_at: event.created_at,
             repeat_type: repeatType,
+            sticker_emoji: normalizeCalendarStickerEmoji(event.sticker_emoji),
           };
         });
 
@@ -489,6 +495,7 @@ export function useFamilyCalendar({
                   event_date: eventDateStr,
                   end_date: updatedEvent.end_date || undefined,
                   repeat_type: repeatType,
+                  sticker_emoji: normalizeCalendarStickerEmoji(updatedEvent.sticker_emoji),
                 }
               : e,
           );
@@ -603,6 +610,7 @@ export function useFamilyCalendar({
                       created_by: newEvent.created_by,
                       created_at: newEvent.created_at,
                       repeat_type: repeatType,
+                      sticker_emoji: normalizeCalendarStickerEmoji(newEvent.sticker_emoji),
                     }
                   : e
               )
@@ -630,6 +638,7 @@ export function useFamilyCalendar({
             created_by: newEvent.created_by,
             created_at: newEvent.created_at,
             repeat_type: repeatType,
+            sticker_emoji: normalizeCalendarStickerEmoji(newEvent.sticker_emoji),
           },
           ...latestEvents,
         ]);

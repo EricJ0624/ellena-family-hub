@@ -32,7 +32,10 @@ import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies
 import type { LangCode } from '@/lib/language-fonts';
 import type { UiTheme } from '@/lib/ui-theme';
 import { readFamilyLogAttachments, ensureFamilyLogAttachments, writeFamilyLogAttachments } from '../attachment-cache';
-import { FAMILY_LOG_MOODS, routePointsForCard } from '../card-record';
+import { getTravelDiaryTranslation } from '@/lib/translations/travel-diary';
+import { FAMILY_LOG_BASIC_MOODS, FAMILY_LOG_EXTRA_MOOD_GROUPS, FAMILY_LOG_MOODS, routePointsForCard } from '../card-record';
+
+const FAMILY_LOG_MOOD_SET = new Set<string>(FAMILY_LOG_MOODS);
 import { deleteFamilyLogCard, familyLogAuthHeaders } from '../client-auth';
 import { readDevicePosition } from '../device-position';
 import type { FamilyLogLabels } from '../labels';
@@ -75,6 +78,10 @@ export function FamilyLogCardEditor({
   const [title, setTitle] = useState(card.title);
   const [note, setNote] = useState(card.note ?? '');
   const [moods, setMoods] = useState<string[]>(card.mood_tags ?? []);
+  const [moodPanelOpen, setMoodPanelOpen] = useState(false);
+  const [moodPanelPos, setMoodPanelPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
+  const moodAnchorRef = useRef<HTMLButtonElement>(null);
+  const moodPanelRef = useRef<HTMLDivElement>(null);
   const [amount, setAmount] = useState(card.amount != null ? String(card.amount) : '');
   const [currency, setCurrency] = useState(card.currency ?? '');
   const [showMap, setShowMap] = useState(card.show_map !== false);
@@ -441,6 +448,68 @@ export function FamilyLogCardEditor({
       setLocating(false);
     }
   };
+  useEffect(() => {
+    if (!moodPanelOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (moodAnchorRef.current?.contains(target) || moodPanelRef.current?.contains(target)) return;
+      setMoodPanelOpen(false);
+    };
+    const close = () => setMoodPanelOpen(false);
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Node && moodPanelRef.current?.contains(target)) return;
+      close();
+    };
+    document.addEventListener('pointerdown', onPointer);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [moodPanelOpen]);
+  const toggleLogMood = (mood: string) => {
+    if (!FAMILY_LOG_MOOD_SET.has(mood)) return;
+    setMoods((prev) => {
+      if (prev.includes(mood)) return prev.filter((item) => item !== mood);
+      if (prev.length >= 12) return prev;
+      return [...prev, mood];
+    });
+  };
+  const openLogMoodPanel = () => {
+    if (moodPanelOpen) {
+      setMoodPanelOpen(false);
+      return;
+    }
+    const rect = moodAnchorRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = 256;
+    const margin = 8;
+    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - margin);
+    const spaceAbove = Math.max(0, rect.top - margin);
+    const maxHeight = Math.min(360, Math.max(96, Math.floor(Math.max(spaceBelow, spaceAbove))));
+    let top = spaceBelow >= spaceAbove ? rect.bottom + 4 : rect.top - maxHeight - 4;
+    top = Math.max(margin, Math.min(top, window.innerHeight - maxHeight - margin));
+    setMoodPanelPos({ top, left, maxHeight });
+    setMoodPanelOpen(true);
+  };
+  const logMoodClass = (selected: boolean) =>
+    `cursor-pointer border px-2 py-0.5 text-sm ${
+      tone === 'neo'
+        ? selected
+          ? 'rounded-sm border-2 border-[var(--neo-ink)] bg-[var(--neo-ink)]'
+          : 'rounded-sm border-2 border-[var(--neo-ink)] bg-white'
+        : tone === 'glass'
+          ? selected
+            ? 'rounded-full border-white/50 bg-white/25'
+            : 'rounded-full border-white/20 bg-white/5'
+          : selected
+            ? 'rounded-full border-violet-400 bg-violet-100'
+            : 'rounded-full border-slate-200 bg-white'
+    }`;
   const hasExpenseDraft = amount.trim() !== '' && Number.isFinite(Number(amount)) && Number(amount) > 0;
   const actionClass =
     tone === 'neo'
@@ -517,32 +586,67 @@ export function FamilyLogCardEditor({
           <div className="flex items-stretch gap-2">
             <div className="min-w-0 flex-1">
               <p className={`m-0 ${labelClass}`}>{labels.mood}</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {FAMILY_LOG_MOODS.map((mood) => (
+              <div className="mt-1 grid w-max grid-cols-4 gap-1">
+                {FAMILY_LOG_BASIC_MOODS.map((mood) => (
                   <button
                     key={mood}
                     type="button"
-                    onClick={() =>
-                      setMoods((prev) => (prev.includes(mood) ? prev.filter((item) => item !== mood) : [...prev, mood]))
-                    }
-                    className={`cursor-pointer border px-2 py-0.5 text-sm ${
-                      tone === 'neo'
-                        ? moods.includes(mood)
-                          ? 'rounded-sm border-2 border-[var(--neo-ink)] bg-[var(--neo-ink)]'
-                          : 'rounded-sm border-2 border-[var(--neo-ink)] bg-white'
-                        : tone === 'glass'
-                          ? moods.includes(mood)
-                            ? 'rounded-full border-white/50 bg-white/25'
-                            : 'rounded-full border-white/20 bg-white/5'
-                          : moods.includes(mood)
-                            ? 'rounded-full border-violet-400 bg-violet-100'
-                            : 'rounded-full border-slate-200 bg-white'
-                    }`}
+                    onClick={() => toggleLogMood(mood)}
+                    className={logMoodClass(moods.includes(mood))}
                   >
                     {mood}
                   </button>
                 ))}
+                <button
+                  ref={moodAnchorRef}
+                  type="button"
+                  aria-label={labels.mood}
+                  aria-expanded={moodPanelOpen}
+                  onClick={openLogMoodPanel}
+                  className={logMoodClass(false)}
+                >
+                  +
+                </button>
               </div>
+              {moodPanelOpen && moodPanelPos && typeof document !== 'undefined'
+                ? createPortal(
+                    <div
+                      ref={moodPanelRef}
+                      style={{ top: moodPanelPos.top, left: moodPanelPos.left, maxHeight: moodPanelPos.maxHeight }}
+                      className="fixed z-[10060] w-64 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+                    >
+                      {FAMILY_LOG_EXTRA_MOOD_GROUPS.map((group) => (
+                        <div
+                          key={group.id}
+                          className="mt-1.5 border-t border-slate-100 pt-1.5 first:mt-0 first:border-t-0 first:pt-0"
+                        >
+                          <p className="mb-1 text-[11px] font-medium text-slate-500">
+                            {group.id === 'enjoy'
+                              ? getTravelDiaryTranslation(lang, 'mood_group_enjoy')
+                              : group.id === 'meh'
+                                ? getTravelDiaryTranslation(lang, 'mood_group_meh')
+                                : group.id === 'scene'
+                                  ? getTravelDiaryTranslation(lang, 'mood_group_scene')
+                                  : getTravelDiaryTranslation(lang, 'mood_group_place')}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {group.emojis.map((mood) => (
+                              <button
+                                key={mood}
+                                type="button"
+                                onClick={() => toggleLogMood(mood)}
+                                className={logMoodClass(moods.includes(mood))}
+                              >
+                                {mood}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>,
+                    document.body,
+                  )
+                : null}
             </div>
             {canPlaceMap && showMap ? (
               <div className="min-h-24 min-w-0 flex-1">

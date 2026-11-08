@@ -2,7 +2,9 @@
 
 export const dynamic = 'force-dynamic';
 
+import { Suspense } from 'react';
 import nextDynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getCommonTranslation } from '@/lib/translations/common';
@@ -22,10 +24,19 @@ const TravelPlannerContent = nextDynamic(
   { ssr: false, loading: () => <TravelLoading /> }
 );
 
+function TravelPlannerFromUrl() {
+  const searchParams = useSearchParams();
+  const tripId = searchParams.get('tripId') ?? '';
+  const openAdd = searchParams.get('openAdd') === '1';
+  return <TravelPlannerContent tripId={tripId} openAdd={openAdd} />;
+}
+
 export default function TravelPlannerPage() {
   return (
     <GroupRequiredRouteGuard>
-      <TravelPlannerContent />
+      <Suspense fallback={<TravelLoading />}>
+        <TravelPlannerFromUrl />
+      </Suspense>
     </GroupRequiredRouteGuard>
   );
 }

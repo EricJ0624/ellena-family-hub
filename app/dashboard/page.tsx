@@ -125,7 +125,6 @@ import {
   type WidgetConfigDraft,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, readWidgetConfigCache } from '@/lib/widgets/widget-configs';
-import { rememberDashboardScroll, restoreDashboardScroll } from '@/lib/dashboard-scroll-memory';
 import {
   focusWidgetFromLocation,
   scrollDashboardWidgetIntoView,
@@ -186,6 +185,14 @@ const FamilyLocationNavMapModal = dynamicImport(
   () => import('@/app/features/family-location/components/FamilyLocationNavMapModal').then(m => ({ default: m.FamilyLocationNavMapModal })),
   { ssr: false }
 );
+const TravelPlannerContent = dynamicImport(
+  () => import('@/app/modules/travel-planner/TravelPlannerContent').then(m => ({ default: m.TravelPlannerContent })),
+  { ssr: false }
+);
+const TravelImportWizard = dynamicImport(
+  () => import('@/app/features/travel-planner/components/TravelImportWizard').then(m => ({ default: m.TravelImportWizard })),
+  { ssr: false }
+);
 const TravelPlannerSection = dynamicImport(
   () => import('@/app/features/travel-planner/components/TravelPlannerSection').then(m => ({ default: m.TravelPlannerSection })),
   { ssr: false }
@@ -198,8 +205,16 @@ const FamilyGamesSection = dynamicImport(
   () => import('@/app/features/family-games/components/FamilyGamesSection').then(m => ({ default: m.FamilyGamesSection })),
   { ssr: false }
 );
+const MemoriesPageContent = dynamicImport(
+  () => import('@/app/memories/page').then(m => ({ default: m.MemoriesPageContent })),
+  { ssr: false }
+);
 const FamilyLogSection = dynamicImport(
   () => import('@/app/features/family-log/components/FamilyLogSection').then(m => ({ default: m.FamilyLogSection })),
+  { ssr: false }
+);
+const TravelDiaryPageContent = dynamicImport(
+  () => import('@/app/features/travel-diary/TravelDiaryPageContent').then(m => ({ default: m.TravelDiaryPageContent })),
   { ssr: false }
 );
 const TravelDiaryDashboardSection = dynamicImport(
@@ -212,6 +227,10 @@ const DiaryCompletionInviteModal = dynamicImport(
 );
 const PiggyBankSection = dynamicImport(
   () => import('@/app/features/piggy-bank/components/PiggyBankSection').then(m => ({ default: m.PiggyBankSection })),
+  { ssr: false }
+);
+const PiggyBankPanelContent = dynamicImport(
+  () => import('@/app/features/piggy-bank/components/PiggyBankPanelContent').then(m => ({ default: m.PiggyBankPanelContent })),
   { ssr: false }
 );
 const WidgetMagnifyModal = dynamicImport(
@@ -331,7 +350,7 @@ function eventsSignature(events: ReadonlyArray<FamilyEvent>): string {
   return events
     .map(
       (e) =>
-        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.supabaseId ?? ''}`,
+        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.sticker_emoji ?? ''}:${e.supabaseId ?? ''}`,
     )
     .join('|');
 }
@@ -414,6 +433,16 @@ const INITIAL_STATE: AppState = {
     fontFamily: 'Inter',
   }
 };
+
+function DashboardScreenPanel({ children }: { children: React.ReactNode }) {
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[10030] overflow-y-auto overscroll-contain bg-[var(--surface-base)]">
+      {children}
+    </div>,
+    document.body,
+  );
+}
 
 function WidgetPanelCloseIcon() {
   return (
@@ -509,6 +538,11 @@ export default function FamilyHub() {
     event_title_placeholder: getDashboardTranslation(lang, 'event_title_placeholder'),
     event_desc_label: getDashboardTranslation(lang, 'event_desc_label'),
     event_desc_placeholder: getDashboardTranslation(lang, 'event_desc_placeholder'),
+    event_emoji_label: getDashboardTranslation(lang, 'event_emoji_label'),
+    event_emoji_health: getDashboardTranslation(lang, 'event_emoji_health'),
+    event_emoji_kids: getDashboardTranslation(lang, 'event_emoji_kids'),
+    event_emoji_together: getDashboardTranslation(lang, 'event_emoji_together'),
+    event_emoji_celebrate: getDashboardTranslation(lang, 'event_emoji_celebrate'),
     event_repeat_label: getDashboardTranslation(lang, 'event_repeat_label'),
     event_repeat_none: getDashboardTranslation(lang, 'event_repeat_none'),
     event_repeat_monthly: getDashboardTranslation(lang, 'event_repeat_monthly'),
@@ -682,20 +716,21 @@ export default function FamilyHub() {
     dismissInvite: dismissDiaryInvite,
     showModal: showDiaryInviteModal,
   } = useDiaryInvite(travelTrips, currentGroupId);
+  /** 다이어리 패널: 페이지 이동 없이 대시보드 위에서 열기 */
+  const [diaryPanel, setDiaryPanel] = useState<{ tripId: string; openAdd: boolean } | null>(null);
   const handleAcceptDiaryInvite = useCallback(async () => {
     const tripId = diaryInviteTrip?.id;
     try {
       const updated = await acceptDiaryInvite();
       const openId = updated?.id ?? tripId;
       if (openId) {
-        rememberDashboardScroll();
-        router.push(`/travel/diary?tripId=${encodeURIComponent(openId)}`);
+        setDiaryPanel({ tripId: openId, openAdd: false });
       }
       void reloadTravelTrips();
     } catch (error) {
       alert(error instanceof Error ? error.message : tdy('start_trip_failed'));
     }
-  }, [acceptDiaryInvite, diaryInviteTrip?.id, reloadTravelTrips, router, tdy]);
+  }, [acceptDiaryInvite, diaryInviteTrip?.id, reloadTravelTrips, tdy]);
   const handleStartTripDiary = useCallback(
     async (tripId: string) => {
       if (!currentGroupId) return;
@@ -736,14 +771,13 @@ export default function FamilyHub() {
           throw new Error((json as { error?: string }).error || tdy('start_trip_failed'));
         }
         dispatchWidgetConfigsUpdated();
-        rememberDashboardScroll();
-        router.push(`/travel/diary?tripId=${encodeURIComponent(tripId)}`);
+        setDiaryPanel({ tripId, openAdd: false });
         void reloadTravelTrips();
       } catch (error) {
         alert(error instanceof Error ? error.message : tdy('start_trip_failed'));
       }
     },
-    [currentGroupId, reloadTravelTrips, router, tdy],
+    [currentGroupId, reloadTravelTrips, tdy],
   );
   const { piggyLabel, formatAmount: formatDashboardPiggy } = usePiggyDisplay({
     piggySummary,
@@ -784,6 +818,14 @@ export default function FamilyHub() {
   const [expandedWidget, setExpandedWidget] = useState<DashboardWidgetKey | null>(null);
   /** 입력칸·채팅 알림으로 여는 대화 화면. S 칸 돋보기(expandedWidget)와 분리. */
   const [chatRoomOpen, setChatRoomOpen] = useState(false);
+  /** 저금통 패널: 페이지 이동 없이 대시보드 위에서 열기 */
+  const [piggyPanelOpen, setPiggyPanelOpen] = useState(false);
+  const [piggyPanelChildId, setPiggyPanelChildId] = useState('');
+  /** 앨범 패널: 페이지 이동 없이 대시보드 위에서 열기 */
+  const [albumPanel, setAlbumPanel] = useState<{ photoId: string } | null>(null);
+  /** 플래너 패널: 페이지 이동 없이 대시보드 위에서 열기 */
+  const [plannerPanel, setPlannerPanel] = useState<{ tripId: string; openAdd: boolean } | null>(null);
+  const [importPanelOpen, setImportPanelOpen] = useState(false);
   const [chatRoomFrame, setChatRoomFrame] = useState<{ top: number; height: number } | null>(null);
   const chatRoomFromUrlRef = useRef(false);
   const chatRoomOpenRef = useRef(false);
@@ -6646,11 +6688,6 @@ export default function FamilyHub() {
   }, [currentGroupId, groupIsOwner, isAuthenticated, widgetConfigsReloadToken]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    restoreDashboardScroll();
-  }, [isAuthenticated, currentGroupId]);
-
-  useEffect(() => {
     if (!currentGroupId || !isAuthenticated) return;
 
     const reloadWidgetConfigs = async () => {
@@ -7138,16 +7175,13 @@ export default function FamilyHub() {
             loading={travelTripsLoading}
             currentGroupId={currentGroupId}
             onTripClick={(tripId) => {
-              rememberDashboardScroll();
-              router.push(`/travel?tripId=${tripId}`);
+              setPlannerPanel({ tripId, openAdd: false });
             }}
             onAddClick={() => {
-              rememberDashboardScroll();
-              router.push('/travel?openAdd=1');
+              setPlannerPanel({ tripId: '', openAdd: true });
             }}
             onImportClick={() => {
-              rememberDashboardScroll();
-              router.push('/travel/import');
+              setImportPanelOpen(true);
             }}
             uiTheme={uiTheme}
             translations={{
@@ -7187,8 +7221,7 @@ export default function FamilyHub() {
             }}
             onFieldSaved={reloadTravelTrips}
             onOpenTripDiary={(tid) => {
-              rememberDashboardScroll();
-              router.push(`/travel/diary?tripId=${encodeURIComponent(tid)}`);
+              setDiaryPanel({ tripId: tid, openAdd: false });
             }}
           />
         );
@@ -7201,13 +7234,11 @@ export default function FamilyHub() {
             loading={travelTripsLoading}
             currentGroupId={currentGroupId}
             onOpenTrip={(tripId) => {
-              rememberDashboardScroll();
-              router.push(`/travel/diary?tripId=${tripId}`);
+              setDiaryPanel({ tripId, openAdd: false });
             }}
             onStartTrip={handleStartTripDiary}
             onAddDiary={() => {
-              rememberDashboardScroll();
-              router.push('/travel/diary?openAdd=1');
+              setDiaryPanel({ tripId: '', openAdd: true });
             }}
             uiTheme={uiTheme}
             translations={{
@@ -7234,12 +7265,12 @@ export default function FamilyHub() {
             piggyLabel={piggyLabel}
             formatAmount={formatDashboardPiggy}
             onGoClick={() => {
-              rememberDashboardScroll();
-              router.push('/piggy-bank');
+              setPiggyPanelChildId('');
+              setPiggyPanelOpen(true);
             }}
             onManageClick={() => {
-              rememberDashboardScroll();
-              router.push('/piggy-bank');
+              setPiggyPanelChildId('');
+              setPiggyPanelOpen(true);
             }}
             onAddPiggy={handleDashboardAddPiggy}
             onDeletePiggy={handleDashboardDeletePiggy}
@@ -7247,8 +7278,8 @@ export default function FamilyHub() {
             onRejectRequest={handleRejectAccountRequest}
             onRequestAccount={handlePiggyRequestAccount}
             onMemberClick={(targetUserId) => {
-              rememberDashboardScroll();
-              router.push(`/piggy-bank?child_id=${targetUserId}`);
+              setPiggyPanelChildId(targetUserId);
+              setPiggyPanelOpen(true);
             }}
             translations={{
               section_title_admin: dt('piggy_section_admin_title'),
@@ -7280,9 +7311,9 @@ export default function FamilyHub() {
           <FamilyAlbumSection
             photos={stableAlbum}
             onPhotoClick={(photo) =>
-              router.push(`/memories?photo=${encodeURIComponent(String(photo.id))}`)
+              setAlbumPanel({ photoId: String(photo.id) })
             }
-            onViewAllClick={() => router.push('/memories')}
+            onViewAllClick={() => setAlbumPanel({ photoId: '' })}
             uiTheme={uiTheme}
             translations={{
               section_title: dt('section_title_memories'),
@@ -7756,7 +7787,7 @@ export default function FamilyHub() {
             showTitle={false}
             noBackground
             frameStyleStorageScope={currentGroupId}
-            onFrameClick={() => router.push('/memories')}
+            onFrameClick={() => setAlbumPanel({ photoId: '' })}
             gestureHintEnabled={frameGestureHintEnabled}
           />
           <div className="status-indicator">
@@ -8095,6 +8126,65 @@ export default function FamilyHub() {
         </Link>
       </div>
     </div>
+
+    {importPanelOpen ? (
+      <DashboardScreenPanel>
+        <TravelImportWizard
+          onClose={() => setImportPanelOpen(false)}
+          onImported={(tripId) => {
+            setImportPanelOpen(false);
+            setPlannerPanel({ tripId, openAdd: false });
+          }}
+        />
+      </DashboardScreenPanel>
+    ) : null}
+
+    {plannerPanel ? (
+      <DashboardScreenPanel>
+        <TravelPlannerContent
+          tripId={plannerPanel.tripId}
+          openAdd={plannerPanel.openAdd}
+          onClose={() => setPlannerPanel(null)}
+          onTripChange={(tripId) => setPlannerPanel({ tripId, openAdd: false })}
+          onOpenDiary={(tripId) => {
+            setPlannerPanel(null);
+            setDiaryPanel({ tripId, openAdd: false });
+          }}
+        />
+      </DashboardScreenPanel>
+    ) : null}
+
+    {albumPanel ? (
+      <DashboardScreenPanel>
+        <MemoriesPageContent
+          initialPhotoId={albumPanel.photoId}
+          onClose={() => setAlbumPanel(null)}
+        />
+      </DashboardScreenPanel>
+    ) : null}
+
+    {diaryPanel ? (
+      <DashboardScreenPanel>
+        <TravelDiaryPageContent
+          tripId={diaryPanel.tripId}
+          openAdd={diaryPanel.openAdd}
+          onClose={() => setDiaryPanel(null)}
+          onTripChange={(tripId) => setDiaryPanel({ tripId, openAdd: false })}
+        />
+      </DashboardScreenPanel>
+    ) : null}
+
+    {piggyPanelOpen ? (
+      <DashboardScreenPanel>
+        <PiggyBankPanelContent
+          initialChildId={piggyPanelChildId}
+          onClose={() => {
+            setPiggyPanelOpen(false);
+            setPiggyPanelChildId('');
+          }}
+        />
+      </DashboardScreenPanel>
+    ) : null}
     </>
     </OnlinePresenceProvider>
   );
