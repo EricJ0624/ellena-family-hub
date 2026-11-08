@@ -9,12 +9,16 @@ import {
   WidgetPreviewSurfaceProvider,
 } from '@/app/components/group-admin/WidgetPreviewComponents';
 import { CalendarShowroomDemo } from '@/app/components/dashboard/CalendarShowroomDemo';
+import { ChatShowroomDemo } from '@/app/components/dashboard/ChatShowroomDemo';
+import { PiggyShowroomDemo } from '@/app/components/dashboard/PiggyShowroomDemo';
 import { TasksShowroomDemo } from '@/app/components/dashboard/TasksShowroomDemo';
 import {
   CALENDAR_SHOWROOM_STEP_MS,
+  CHAT_SHOWROOM_STEP_MS,
   getWidgetShowroomHowtoSteps,
   getWidgetShowroomTranslation,
   hasNativeShowroomCopy,
+  PIGGY_SHOWROOM_STEP_MS,
   TASKS_SHOWROOM_STEP_MS,
 } from '@/lib/translations/widgetShowroom';
 import { supabase } from '@/lib/supabase';
@@ -24,25 +28,6 @@ import type { DashboardWidgetKey } from '@/lib/widgets/types';
 
 const STEP_MS = 2200;
 
-/** 할 일·달력은 기존 코드 연출을 유지한다. 여기 있는 위젯만 작동 영상을 쓴다. */
-const OPERATION_VIDEO_KEYS = new Set<DashboardWidgetKey>([
-  'chat',
-  'location',
-  'album',
-  'travel',
-  'piggy',
-  'games',
-  'travel_diary',
-  'travel_quick_record',
-  'family_log',
-]);
-
-function operationVideoSrc(lang: LangCode, widgetKey: DashboardWidgetKey): string | null {
-  if (lang !== 'ko' && lang !== 'en') return null;
-  if (!OPERATION_VIDEO_KEYS.has(widgetKey)) return null;
-  return `/showroom-widget-videos/${lang}/${widgetKey}.webm`;
-}
-
 type Props = {
   lang: LangCode;
   widgetKey: DashboardWidgetKey;
@@ -51,17 +36,16 @@ type Props = {
   /** 관리자 확인 화면에서만 넘긴다. 없으면 기존 닫기 문구. */
   closeLabel?: string;
   /**
-   * 가족 쇼룸 미리보기에서만 켠다.
-   * 할 일·달력은 코드 연출이다.
-   * 그 외 위젯은 한국어·영어 작동 영상을 재생하고, 파일이 없으면 기존 코드 연출로 돌아간다.
-   * 업로드된 영상이 있으면 그 영상이 우선이다.
+   * 가족 쇼룸에서만 켠다. 한국어는 항상 코드 연출이다.
+   * 박스가 꺼진 언어는 영어 코드 연출을 유지한다.
+   * 박스가 켜진 언어는 그 언어 영상, 그 언어 코드 연출, 영어 영상, 영어 코드 연출 순이다.
    */
   usePublishedVideo?: boolean;
 };
 
 /**
  * 쇼룸 「미리보기」— 이용법 단계 + 위젯 카드 연출 (실기능 없음).
- * tasks 는 7단계, calendar 는 6단계, 그 외 위젯은 기존 3단계.
+ * tasks 7 · calendar 6 · chat 6 · piggy 8 단계 코드 연출, 그 외는 기존 3단계.
  */
 export function WidgetShowroomDemoOverlay({
   lang,
@@ -74,30 +58,34 @@ export function WidgetShowroomDemoOverlay({
   const Preview = WIDGET_PREVIEW_MAP[widgetKey];
   const [step, setStep] = useState(0);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
-  const [operationBroken, setOperationBroken] = useState(false);
   const [scriptLang, setScriptLang] = useState<LangCode>(lang);
   const englishVideoUrl = useRef<string | null>(null);
   const steps = useMemo(
     () => getWidgetShowroomHowtoSteps(scriptLang, widgetKey),
     [scriptLang, widgetKey],
   );
-  const isScripted = widgetKey === 'tasks' || widgetKey === 'calendar';
-  const operationSrc =
-    usePublishedVideo && !operationBroken ? operationVideoSrc(lang, widgetKey) : null;
-  const videoSrc = publishedUrl ?? operationSrc;
-  const showVideo = videoSrc !== null;
-  const playingLocalOperation = publishedUrl === null && videoSrc !== null;
+  const isScripted =
+    widgetKey === 'tasks' ||
+    widgetKey === 'calendar' ||
+    widgetKey === 'chat' ||
+    widgetKey === 'piggy';
+  const showVideo = publishedUrl !== null;
 
   useEffect(() => {
     if (showVideo || steps.length === 0) return;
     let current = 0;
     let timer = 0;
+    setStep(0);
     const durations =
       widgetKey === 'tasks' && steps.length === TASKS_SHOWROOM_STEP_MS.length
         ? TASKS_SHOWROOM_STEP_MS
         : widgetKey === 'calendar' && steps.length === CALENDAR_SHOWROOM_STEP_MS.length
           ? CALENDAR_SHOWROOM_STEP_MS
-          : steps.map(() => STEP_MS);
+          : widgetKey === 'chat' && steps.length === CHAT_SHOWROOM_STEP_MS.length
+            ? CHAT_SHOWROOM_STEP_MS
+            : widgetKey === 'piggy' && steps.length === PIGGY_SHOWROOM_STEP_MS.length
+              ? PIGGY_SHOWROOM_STEP_MS
+              : steps.map(() => STEP_MS);
     const tick = () => {
       timer = window.setTimeout(() => {
         current = (current + 1) % steps.length;
@@ -111,7 +99,6 @@ export function WidgetShowroomDemoOverlay({
 
   useEffect(() => {
     setPublishedUrl(null);
-    setOperationBroken(false);
     setScriptLang(lang);
     englishVideoUrl.current = null;
     if (!usePublishedVideo || lang === 'ko') return;
@@ -190,19 +177,13 @@ export function WidgetShowroomDemoOverlay({
         <div className="relative min-h-0 flex-1 overflow-hidden bg-slate-50 p-3">
           {showVideo ? (
             <video
-              key={videoSrc}
-              src={videoSrc ?? undefined}
+              key={publishedUrl}
+              src={publishedUrl ?? undefined}
               controls
               autoPlay
               playsInline
-              muted={playingLocalOperation}
-              loop={playingLocalOperation}
               className="max-h-full w-full bg-slate-950"
               onError={() => {
-                if (publishedUrl === null) {
-                  setOperationBroken(true);
-                  return;
-                }
                 const englishUrl = englishVideoUrl.current;
                 if (englishUrl && englishUrl !== publishedUrl) {
                   englishVideoUrl.current = null;
@@ -226,6 +207,10 @@ export function WidgetShowroomDemoOverlay({
                   <TasksShowroomDemo lang={scriptLang} step={step} />
                 ) : widgetKey === 'calendar' ? (
                   <CalendarShowroomDemo lang={scriptLang} step={step} />
+                ) : widgetKey === 'chat' ? (
+                  <ChatShowroomDemo lang={scriptLang} step={step} />
+                ) : widgetKey === 'piggy' ? (
+                  <PiggyShowroomDemo lang={scriptLang} step={step} />
                 ) : (
                   <motion.div
                     key={`${widgetKey}-${step}`}
