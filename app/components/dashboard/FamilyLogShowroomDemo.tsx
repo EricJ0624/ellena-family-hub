@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Pencil, Star, Trash2 } from 'lucide-react';
-import { FAMILY_LOG_BASIC_MOODS } from '@/app/features/family-log/card-record';
 import { getFamilyLogLabels } from '@/app/features/family-log/labels';
 import { getWidgetShowroomTranslation } from '@/lib/translations/widgetShowroom';
 import type { LangCode } from '@/lib/language-fonts';
@@ -11,6 +10,8 @@ import type { LangCode } from '@/lib/language-fonts';
 const RING = 'ring-2 ring-violet-500 ring-offset-1';
 const BG_SRC = '/family-log/family-log-title.png';
 const DEMO_DATE = '2026-11-08';
+/** 쇼룸 전용. card-record export에 의존하지 않는다. */
+const BASIC_MOODS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'] as const;
 const DEMO_MOODS = ['😊', '🍜', '❤️', '☀️'] as const;
 
 function TypedField({
@@ -262,7 +263,7 @@ export function FamilyLogShowroomDemo({ lang, step }: { lang: LangCode; step: nu
               <div>
                 <p className="m-0 mb-1 text-xs font-semibold text-[#8a7355]">{labels.mood}</p>
                 <div className={`flex flex-wrap gap-1 ${step === 3 ? RING : ''} rounded-lg p-0.5`}>
-                  {FAMILY_LOG_BASIC_MOODS.map((mood) => {
+                  {BASIC_MOODS.map((mood) => {
                     const on = showMoods && moodSelected.has(mood);
                     return (
                       <span
