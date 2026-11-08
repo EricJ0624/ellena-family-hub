@@ -130,6 +130,7 @@ import {
   focusWidgetFromLocation,
   scrollDashboardWidgetIntoView,
 } from '@/lib/notifications/dashboard-focus';
+import { readMainContentScroll, writeMainContentScroll } from '@/lib/dashboard-scroll-memory';
 import {
   readDashboardContentSnapshot,
   writeDashboardContentSnapshot,
@@ -2014,27 +2015,6 @@ export default function FamilyHub() {
       channels.forEach((ch) => void supabase.removeChannel(ch));
     };
   }, [isAuthenticated, currentGroupId]);
-
-  // 관리자: 대시보드에서 멤버에게 저금통 추가
-  const handleDashboardAddPiggy = useCallback(async (childId: string) => {
-    if (!currentGroupId) return;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-      const response = await fetch('/api/piggy-bank/accounts', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: currentGroupId, childId }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || dt('piggy_add_failed'));
-      await loadPiggySummary();
-    } catch (err: any) {
-      if (!isSupabaseLockError(err)) {
-        setPiggySummaryError(err.message || dt('piggy_add_failed'));
-      }
-    }
-  }, [currentGroupId, loadPiggySummary]);
 
   // 멤버: 저금통 생성 요청
   const handlePiggyRequestAccount = useCallback(async () => {
@@ -7005,6 +6985,38 @@ export default function FamilyHub() {
     setChatRoomOpen(false);
   }, [chatRoomOpen, orderedWidgets]);
 
+  const piggyPanelWasOpenRef = useRef(false);
+  const piggyDashboardScrollRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (piggyPanelOpen) {
+      if (!piggyPanelWasOpenRef.current) {
+        piggyDashboardScrollRef.current = readMainContentScroll();
+      }
+      piggyPanelWasOpenRef.current = true;
+      return;
+    }
+    if (!piggyPanelWasOpenRef.current) return;
+    piggyPanelWasOpenRef.current = false;
+    const saved = piggyDashboardScrollRef.current;
+    piggyDashboardScrollRef.current = null;
+    let cancelled = false;
+    const focusPiggy = () => {
+      if (cancelled) return;
+      const found = scrollDashboardWidgetIntoView('piggy');
+      if (!found && saved != null) writeMainContentScroll(saved);
+    };
+    if (saved != null) writeMainContentScroll(saved);
+    focusPiggy();
+    const later = window.setTimeout(focusPiggy, 400);
+    void loadPiggySummaryRef.current().finally(() => {
+      if (!cancelled) focusPiggy();
+    });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(later);
+    };
+  }, [piggyPanelOpen]);
+
   useEffect(() => {
     const focus = focusWidgetFromLocation(window.location.search);
     if (!focus || orderedWidgets.length === 0) return undefined;
@@ -7021,10 +7033,12 @@ export default function FamilyHub() {
     };
     const first = window.setTimeout(tryScroll, 0);
     const second = window.setTimeout(tryScroll, 400);
+    const third = window.setTimeout(tryScroll, 900);
     return () => {
       cancelled = true;
       window.clearTimeout(first);
       window.clearTimeout(second);
+      window.clearTimeout(third);
     };
   }, [orderedWidgets, openChatRoom]);
 
@@ -7285,7 +7299,10 @@ export default function FamilyHub() {
               setPiggyPanelChildId('');
               setPiggyPanelOpen(true);
             }}
-            onAddPiggy={handleDashboardAddPiggy}
+            onAddPiggy={() => {
+              setPiggyPanelChildId('');
+              setPiggyPanelOpen(true);
+            }}
             onDeletePiggy={handleDashboardDeletePiggy}
             onApproveRequest={handleApproveAccountRequest}
             onRejectRequest={handleRejectAccountRequest}
