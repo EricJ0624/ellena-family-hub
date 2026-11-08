@@ -60,11 +60,19 @@ export function customTitleMaxFontSize(
 }
 
 /**
- * Kids 나무 간판 — 글자 가용 폭에서 빼는 좌우 여백.
- * 테두리 46px는 판자 그림이라 글자 크기에서 빼지 않는다.
- * 고리에 닿지 않을 만큼만 남긴다.
+ * Kids 나무 간판.
+ * 글자는 border-box가 아니라 콘텐츠 박스(좌우 border-image 46px 안쪽)에 가운데 정렬된다.
+ * 테두리를 폭에서 빼지 않으면 짧은 이름이 고리와 판자 끝 밖으로 나간다.
+ * 판면 높이 = 7.75rem(124px, 루트 16px) - 위 40px - 아래 18px.
  */
-const KIDS_SIGN_CHROME_X_PX = 28 * 2;
+const KIDS_SIGN_BORDER_X_PX = 46;
+const KIDS_SIGN_INNER_PAD_X_PX = 10;
+const KIDS_SIGN_SAFETY_SLACK_PX = 8;
+const KIDS_SIGN_CHROME_X_PX =
+  (KIDS_SIGN_BORDER_X_PX + KIDS_SIGN_INNER_PAD_X_PX) * 2 + KIDS_SIGN_SAFETY_SLACK_PX;
+const KIDS_SIGN_FACE_HEIGHT_PX = 7.75 * 16 - 40 - 18;
+/** 판면 위아래 8px씩. 이보다 크면 글자 em이 나무 밖으로 나간다. */
+export const KIDS_SIGN_TITLE_MAX_PX = KIDS_SIGN_FACE_HEIGHT_PX - 16;
 
 /**
  * h1 가용 폭(관리자 버튼 제외) 안에 글자가 간판 판면 안에 들어가게 font-size를 고른다.

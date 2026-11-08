@@ -1411,7 +1411,7 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
 
 /*
  * Kids 대시보드 패밀리 타이틀: 나무 간판 PNG (9-slice).
- * 테두리·최소 높이는 판자 크기. 글자는 그 안쪽을 채우고 고리 안쪽 나무까지 쓴다.
+ * 테두리·최소 높이는 판자 크기. 글자는 콘텐츠 박스(판면) 안에 둔다.
  */
 :root[data-ui-theme='kids_friendly'] .dashboard-family-title-glass,
 .dark[data-ui-theme='kids_friendly'] .dashboard-family-title-glass {

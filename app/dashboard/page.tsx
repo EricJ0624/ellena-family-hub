@@ -61,6 +61,7 @@ import {
   fitFontSizeToWidth,
   fitAppTitleFontSizeToWidth,
   fitKidsGlassTitleFontSize,
+  KIDS_SIGN_TITLE_MAX_PX,
   fitNeoStampTitleFontSize,
   fitHighendCapsuleTitleFontSize,
   CUSTOM_TITLE_FONT_MIN_PX,
@@ -2285,8 +2286,8 @@ export default function FamilyHub() {
   const titleFitMaxPx = frameIsPortrait && !isDefaultDashboardTitle
     ? portraitCustomTitleMaxPx
     : customTitleMaxPx;
-  /* 나무판 타이틀은 저장된 글자 상한보다 크게. 행 폭이 좁으면 fit이 줄인다. */
-  const kidsTitleFontMaxPx = frameIsPortrait ? 96 : 120;
+  /* 판면 높이 안에 둔다. 일반 사용자는 관리 버튼이 없어 행 폭까지 커지면 판자 밖으로 나간다. */
+  const kidsTitleFontMaxPx = KIDS_SIGN_TITLE_MAX_PX;
 
   /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
   const estimatedCustomTitleFontSize = useMemo(() => {
