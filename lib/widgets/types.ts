@@ -43,11 +43,10 @@ export const TRAVEL_QUICK_RECORD_M_LAYOUT_H = 4;
 export const FAMILY_LOG_M_LAYOUT_H = 11;
 
 /**
- * Family Location M 기본 높이. 전역 M(8)보다 높여 세로 나무 프레임에 맞춤.
- * 공유/요청 UI(상태+3버튼)가 하단 장식과 겹치지 않도록 중간(지도창)만 늘어날 여유(15).
- * FG는 border-image로 상·하단 고정, 세로 레일만 stretch.
+ * Family Location M 기본 높이. 전역 M(8)보다 높여 세로 나무 프레임(481×519)에 맞춤.
+ * 12열 풀폭 기준 약 정사각보다 약간 김.
  */
-export const LOCATION_M_LAYOUT_H = 15;
+export const LOCATION_M_LAYOUT_H = 13;
 
 /** layout_w/h(12열) → DB col_span/row_span (CHECK 1~4, 1~6). layout-presets.layoutWHToLegacySpans 와 동일 */
 function legacySpanFromLayoutWH(w: number, h: number): { colSpan: number; rowSpan: number } {

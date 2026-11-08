@@ -371,7 +371,9 @@ function LocationPreview() {
         {surface !== 'showroom' ? (
           <h3 className="section-title">{dt('section_title_location')}</h3>
         ) : null}
-        <div className="location-header-actions">
+      </div>
+      <div className="section-body location-section-body flex min-h-0 flex-col gap-2">
+        <div className="location-header-actions shrink-0">
           <div className="location-header-actions-twin">
             <span className="location-action-btn bg-emerald-500 text-white">
               <span>📍</span>
@@ -387,8 +389,6 @@ function LocationPreview() {
             <span>{dt('location_im_here_btn')}</span>
           </span>
         </div>
-      </div>
-      <div className="section-body location-section-body flex min-h-0 flex-col gap-2">
         <div className="location-map-slot min-h-[7rem] flex-1">
           <div
             className="location-map-surface relative flex h-full min-h-[7rem] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-cover bg-center text-slate-600"

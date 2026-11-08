@@ -1,7 +1,7 @@
 /**
  * 가족 위치 섹션 UI — 지도는 `#map` div만 제공하고 초기화·마커 로직은 대시보드에 유지
  *
- * 레이아웃 원칙: 요청/종료 UI는 맵과 겹치지 않는다 (맵 위 absolute 오버레이 금지).
+ * 레이아웃 원칙: 요청/종료·3버튼은 section-body 안에서 맵과 스택 (맵 위 오버레이 금지).
  * showMap = 부모의 accepted 공유 여부(단일 진실).
  */
 
@@ -144,6 +144,7 @@ export function FamilyLocationSection({
   const acceptedRequests = locationRequests.filter((req) => req.status === 'accepted');
   const hasRequestUi = pendingRequests.length > 0 || acceptedRequests.length > 0;
 
+  // SSR/하이드레이션 일치: 첫 클라이언트 paint 이후에만 iOS FS 버튼 표시
   const [iosFullscreenUi, setIosFullscreenUi] = useState(false);
   const [mapExpanded, setMapExpanded] = useState(false);
 
@@ -189,34 +190,6 @@ export function FamilyLocationSection({
       <LocationOvalFromViewedAlbum lang={lang} />
       <div className="section-header shrink-0">
         <h3 className="section-title">{t.section_title_location}</h3>
-        <div className="location-header-actions">
-          <div className="location-header-actions-twin">
-            <button
-              type="button"
-              onClick={onOpenRequestModal}
-              className="location-action-btn bg-emerald-500 text-white hover:bg-emerald-600"
-            >
-              <span>📍</span>
-              <span>{t.location_where_btn}</span>
-            </button>
-            <button
-              type="button"
-              onClick={onOpenComeHereModal}
-              className="location-action-btn bg-blue-500 text-white hover:bg-blue-600"
-            >
-              <span>🚶</span>
-              <span>{t.location_come_btn}</span>
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={onShareImHere}
-            className="location-action-btn location-action-btn--im-here bg-amber-500 text-white hover:bg-amber-600"
-          >
-            <span>📌</span>
-            <span>{t.location_im_here_btn}</span>
-          </button>
-        </div>
       </div>
       <div
         className={`section-body location-section-body min-h-0${
@@ -388,6 +361,36 @@ export function FamilyLocationSection({
             </div>
           </div>
         )}
+
+        {/* 상태/요청 패널 아래 · 지도와 같은 section-body 좌표로 스택 (겹침 방지) */}
+        <div className="location-header-actions shrink-0">
+          <div className="location-header-actions-twin">
+            <button
+              type="button"
+              onClick={onOpenRequestModal}
+              className="location-action-btn bg-emerald-500 text-white hover:bg-emerald-600"
+            >
+              <span>📍</span>
+              <span>{t.location_where_btn}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenComeHereModal}
+              className="location-action-btn bg-blue-500 text-white hover:bg-blue-600"
+            >
+              <span>🚶</span>
+              <span>{t.location_come_btn}</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onShareImHere}
+            className="location-action-btn location-action-btn--im-here bg-amber-500 text-white hover:bg-amber-600"
+          >
+            <span>📌</span>
+            <span>{t.location_im_here_btn}</span>
+          </button>
+        </div>
 
         <div
           className={`location-map-slot min-h-0 flex-1 touch-pan-y${
