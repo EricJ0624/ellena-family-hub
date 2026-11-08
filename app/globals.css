@@ -4973,6 +4973,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     position: absolute;
     z-index: 6;
     right: 8%;
+    /* OFF: 양피지 띠 아래 슬롯. 요청/공유 시(--compact)는 상태 패널 아래로 내림 */
     bottom: 20.5%;
     left: 8%;
     justify-content: space-between;
@@ -4981,6 +4982,16 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     gap: 1cqmin;
     width: auto;
     pointer-events: auto;
+  }
+
+  /*
+   * 요청·공유 UI 표시 시: 상태/종료 패널 아래쪽에 3버튼 배치.
+   * FG 프레임(widget-fg) inset·실루엣은 변경하지 않음.
+   */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-header-actions,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-header-actions,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-header-actions {
+    bottom: 11%;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions-twin,
@@ -5166,11 +5177,14 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     border-radius: 4cqmin;
   }
 
-  /* kids: 요청 패널은 맵 창 하단 띠 — 맵 슬롯은 그 위를 침범하지 않음 */
+  /*
+   * kids: 하단 스택 = 상태/요청 패널 → 3버튼.
+   * 맵 슬롯은 그 위만 사용 (패널·버튼과 비겹침). FG 구멍 inset 유지.
+   */
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot,
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot {
-    bottom: 34%;
+    bottom: 40%;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-address-row,
@@ -5186,10 +5200,11 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-requests-panel {
     top: auto;
     right: 2%;
-    bottom: 2%;
+    /* 3버튼(frame bottom≈11%) 위 — 맵 창 기준 */
+    bottom: 16%;
     left: 2%;
     width: auto;
-    max-height: 30%;
+    max-height: 22%;
     margin: 0;
     z-index: 4;
   }
@@ -5208,10 +5223,11 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     position: absolute;
     z-index: 3;
     right: 2%;
+    /* compact 시 버튼이 bottom 11%로 내려가므로 그 위에 상태 패널 */
     bottom: 16%;
     left: 2%;
     width: auto;
-    max-height: 36%;
+    max-height: 22%;
     margin: 0;
     overflow-x: hidden;
     overflow-y: auto;
