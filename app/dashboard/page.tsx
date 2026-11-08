@@ -8106,9 +8106,9 @@ export default function FamilyHub() {
         }
       `}</style>
 
-      {/* 하단 고정: 문의 + 계정(그룹 탈퇴·회원 탈퇴는 /account) */}
+      {/* 하단 고정: 문의(좌) + 계정(우) — 세로 스택 시 게임 위젯 시작하기와 겹침 방지 */}
       <div
-        className="pointer-events-none fixed bottom-[calc(4px+env(safe-area-inset-bottom,0px))] right-[calc(6px+env(safe-area-inset-right,0px))] z-[1000] flex flex-col items-end gap-1.5"
+        className="pointer-events-none fixed bottom-[calc(4px+env(safe-area-inset-bottom,0px))] right-[calc(6px+env(safe-area-inset-right,0px))] z-[1000] flex flex-row items-center gap-1.5"
       >
         {showMemberInquiryFab && (
           <button
