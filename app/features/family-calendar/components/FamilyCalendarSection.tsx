@@ -4,13 +4,14 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback, useLayoutEffect, memo, useRef, startTransition } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, memo, useRef, startTransition } from 'react';
 import { flushSync } from 'react-dom';
 import { Calendar, CalendarDays, Plus, X } from 'lucide-react';
 import type { FamilyEvent } from '../types';
 import { useFamilyCalendar } from '../hooks/useFamilyCalendar';
 import { openCalendarEventModal } from '../calendar-event-modal-store';
 import type { CalendarEventSubmitPayload } from './CalendarEventModal';
+import { CalendarCelebrateOverlay } from './CalendarCelebrateOverlay';
 import { getCommonTranslation } from '@/lib/translations/common';
 import type { LangCode } from '@/lib/language-fonts';
 import { intlLocaleForLang } from '@/lib/language-fonts';
@@ -20,7 +21,8 @@ import {
   kidsCongratsVariant,
   kidsStickerFromTitles,
 } from '../kids-decorations';
-import { firstCalendarStickerEmoji } from '../calendar-sticker-emoji';
+import { firstCalendarStickerEmoji, normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
+import { supabase } from '@/lib/supabase';
 
 /** Family 테마 월별 위젯 배경. JS month는 0부터. */
 const KIDS_MONTH_BG: Partial<Record<number, string>> = {
@@ -58,7 +60,6 @@ const KIDS_MONTH_WASH: Partial<Record<number, string>> = {
 const CALENDAR_SKINS = {
   kids_friendly: {
     sectionBg: 'linear-gradient(180deg, rgba(237,233,254,0.92) 0%, rgba(221,214,254,0.85) 30%, rgba(252,231,243,0.75) 70%, rgba(254,215,170,0.5) 100%)',
-    titleColor: '#5b21b6',
     navBg: 'rgba(255,255,255,0.9)',
     navTitle: 'linear-gradient(90deg, #5b4b82 0%, #4a6d8c 28%, #4a7a6e 52%, #7a6a3d 76%, #7a5360 100%)',
     addBg: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
@@ -71,7 +72,6 @@ const CALENDAR_SKINS = {
   },
   highend_glass: {
     sectionBg: 'transparent',
-    titleColor: '#ffffff',
     navBg: 'rgba(255,255,255,0.16)',
     navTitle: 'linear-gradient(90deg, #67e8f9 0%, #f9a8d4 100%)',
     addBg: 'linear-gradient(135deg, #22d3ee 0%, #818cf8 100%)',
@@ -84,7 +84,6 @@ const CALENDAR_SKINS = {
   },
   default: {
     sectionBg: 'linear-gradient(180deg, #faf5ff 0%, #f8fafc 40%, #e0f2fe 100%)',
-    titleColor: '#334155',
     navBg: 'rgba(255,255,255,0.92)',
     navTitle: 'linear-gradient(90deg, #6366f1 0%, #7c3aed 100%)',
     addBg: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
@@ -665,6 +664,13 @@ interface FamilyCalendarSectionProps {
     event_repeat_none: string;
     event_repeat_monthly: string;
     event_repeat_yearly: string;
+    event_remind_label: string;
+    event_remind_1d: string;
+    event_remind_3d: string;
+    event_remind_1w: string;
+    event_remind_2w: string;
+    event_remind_1m: string;
+    calendar_celebrate_confirm: string;
     event_submit_btn: string;
     event_title_required: string;
     event_date_invalid: string;
@@ -730,6 +736,139 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   const sanitizeInputRef = useRef(sanitizeInput);
   sanitizeInputRef.current = sanitizeInput;
   const submitEventRef = useRef<(payload: CalendarEventSubmitPayload) => void>(() => {});
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
+
+  type CelebrateState = {
+    eventId: string;
+    title: string;
+    stickerEmoji: string | null;
+  };
+  const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
+  const dismissedCelebrateIdsRef = useRef<Set<string>>(new Set());
+  const celebrateActiveIdRef = useRef<string | null>(null);
+
+  const clearCelebrateQuery = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('celebrate')) return;
+      url.searchParams.delete('celebrate');
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState(window.history.state, '', next);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const resolveCelebrateFromEvent = useCallback((eventId: string) => {
+    if (dismissedCelebrateIdsRef.current.has(eventId)) return;
+    if (celebrateActiveIdRef.current === eventId) return;
+    const found = eventsRef.current.find((e) => String(e.id) === eventId);
+    const title = found?.title?.trim() || translationsRef.current.section_title_calendar;
+    const stickerEmoji = normalizeCalendarStickerEmoji(found?.sticker_emoji);
+    celebrateActiveIdRef.current = eventId;
+    setCelebrate({ eventId, title, stickerEmoji });
+  }, []);
+
+  useEffect(() => {
+    if (!currentGroupId || celebrate) return;
+    let cancelled = false;
+
+    const run = async () => {
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const celebrateId = params?.get('celebrate')?.trim() || '';
+
+      if (celebrateId) {
+        resolveCelebrateFromEvent(celebrateId);
+        return;
+      }
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token || cancelled) return;
+        const res = await fetch(
+          `/api/notifications?groupId=${encodeURIComponent(currentGroupId)}&unreadOnly=1&limit=20`,
+          { headers: { Authorization: `Bearer ${session.access_token}` } },
+        );
+        if (!res.ok || cancelled) return;
+        const json = await res.json().catch(() => null);
+        const rows = Array.isArray(json?.data) ? json.data : [];
+        const reminder = rows.find(
+          (row: {
+            event_type?: string;
+            entity_id?: string | null;
+            payload?: { celebration?: boolean; eventId?: string };
+          }) =>
+            row?.event_type === 'CALENDAR_EVENT_REMINDER' &&
+            (row?.payload?.celebration === true || !!row?.entity_id),
+        );
+        if (!reminder || cancelled) return;
+        const eventId =
+          (typeof reminder.entity_id === 'string' && reminder.entity_id) ||
+          (typeof reminder.payload?.eventId === 'string' && reminder.payload.eventId) ||
+          '';
+        if (!eventId || dismissedCelebrateIdsRef.current.has(eventId)) return;
+        resolveCelebrateFromEvent(eventId);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentGroupId, celebrate, resolveCelebrateFromEvent]);
+
+  useEffect(() => {
+    if (!celebrate) return;
+    const found = events.find((e) => String(e.id) === celebrate.eventId);
+    if (!found) return;
+    const title = found.title?.trim() || celebrate.title;
+    const stickerEmoji = normalizeCalendarStickerEmoji(found.sticker_emoji);
+    if (title === celebrate.title && stickerEmoji === celebrate.stickerEmoji) return;
+    setCelebrate((prev) =>
+      prev && prev.eventId === celebrate.eventId
+        ? { ...prev, title, stickerEmoji }
+        : prev,
+    );
+  }, [events, celebrate]);
+
+  const handleCelebrateConfirm = useCallback(async () => {
+    const current = celebrate;
+    if (current?.eventId) {
+      dismissedCelebrateIdsRef.current.add(current.eventId);
+    }
+    celebrateActiveIdRef.current = null;
+    setCelebrate(null);
+    clearCelebrateQuery();
+
+    if (!currentGroupId || !current) return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          // 같은 일정의 여러 offset 리마인더를 한 번에 읽음 처리
+          entityIds: [current.eventId],
+          eventType: 'CALENDAR_EVENT_REMINDER',
+        }),
+      });
+    } catch {
+      /* ignore */
+    }
+  }, [celebrate, clearCelebrateQuery, currentGroupId]);
 
   const fireConfetti = useCallback(() => {
     import('canvas-confetti').then(({ default: confetti }) => {
@@ -920,6 +1059,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
               end_date: payload.end_date,
               repeat_type: payload.repeat_type,
               sticker_emoji: payload.sticker_emoji,
+              remind_offsets: payload.remind_offsets,
             }
           : e,
       );
@@ -942,6 +1082,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         end_date: payload.end_date,
         repeat_type: payload.repeat_type,
         sticker_emoji: payload.sticker_emoji,
+        remind_offsets: payload.remind_offsets,
       }).catch((error) => {
         console.error('일정 수정 실패, 복구 중:', error);
         onEventsChange(previousEvents);
@@ -960,6 +1101,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       end_date: payload.end_date,
       repeat_type: payload.repeat_type,
       sticker_emoji: payload.sticker_emoji,
+      remind_offsets: payload.remind_offsets,
       created_at: new Date(newEventId).toISOString(),
     };
 
@@ -1040,10 +1182,21 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
 
   return (
       <div
-        className={`calendar-widget-stack${
+        className={`calendar-widget-stack relative${
           hasSelection ? ' calendar-widget-stack--expanded' : ''
         }`}
       >
+        {celebrate ? (
+          <CalendarCelebrateOverlay
+            eventId={celebrate.eventId}
+            title={celebrate.title}
+            stickerEmoji={celebrate.stickerEmoji}
+            confirmLabel={t.calendar_celebrate_confirm}
+            onConfirm={() => {
+              void handleCelebrateConfirm();
+            }}
+          />
+        ) : null}
         {/* 상세 패널은 프레임 밖(아래)으로 분리해 날짜 셀 CQ 스케일 유지 */}
         <CalendarMonthGrid
           calendarPages={calendarPages}

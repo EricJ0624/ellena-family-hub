@@ -1139,6 +1139,7 @@ export interface Database {
           location: string | null
           created_at: string
           repeat_type: 'none' | 'monthly' | 'yearly' | null
+          remind_offsets: number[]
         }
         Insert: {
           id?: string
@@ -1150,6 +1151,7 @@ export interface Database {
           location?: string | null
           created_at?: string
           repeat_type?: 'none' | 'monthly' | 'yearly' | null
+          remind_offsets?: number[]
         }
         Update: {
           id?: string
@@ -1161,6 +1163,7 @@ export interface Database {
           location?: string | null
           created_at?: string
           repeat_type?: 'none' | 'monthly' | 'yearly' | null
+          remind_offsets?: number[]
         }
         Relationships: [
           {

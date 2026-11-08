@@ -237,7 +237,9 @@ export default function NotificationCenter({ groupId, userId, lang, onOpenChatRo
   const openItem = async (item: NotificationRow) => {
     if (!groupId) return;
     const headers = await authHeaders();
-    if (headers && !item.read_at) {
+    // 일정 리마인더 연출은 달력 위젯 확인 버튼에서 읽음 처리한다.
+    const deferReadForCelebrate = item.event_type === 'CALENDAR_EVENT_REMINDER';
+    if (headers && !item.read_at && !deferReadForCelebrate) {
       void fetch('/api/notifications', {
         method: 'PATCH',
         headers,

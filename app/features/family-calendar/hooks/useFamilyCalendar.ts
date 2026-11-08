@@ -36,6 +36,7 @@ import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import { emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyEvent } from '../types';
 import { normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
+import { normalizeRemindOffsets } from '../remind-offsets';
 
 interface UseFamilyCalendarProps {
   currentGroupId: string | null;
@@ -54,7 +55,7 @@ function eventsContentSignature(events: ReadonlyArray<FamilyEvent>): string {
   return events
     .map(
       (e) =>
-        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.sticker_emoji ?? ''}`,
+        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.sticker_emoji ?? ''}:${(e.remind_offsets ?? []).join(',')}`,
     )
     .join('|');
 }
@@ -91,6 +92,7 @@ export function useFamilyCalendar({
     end_date?: string;
     repeat_type?: 'none' | 'monthly' | 'yearly';
     sticker_emoji?: string | null;
+    remind_offsets?: number[];
   }) => {
     // [수정 1] return → throw: 호출부 .catch()가 낙관적 UI를 롤백할 수 있도록
     if (!payload || !payload.title) {
@@ -113,6 +115,7 @@ export function useFamilyCalendar({
       end_date: (payload.end_date && payload.end_date > payload.event_date) ? payload.end_date : null,
       repeat_type: payload.repeat_type || 'none',
       sticker_emoji: normalizeCalendarStickerEmoji(payload.sticker_emoji),
+      remind_offsets: normalizeRemindOffsets(payload.remind_offsets),
     };
 
     console.log('ADD_EVENT: family_events 테이블에 저장:', {
@@ -242,6 +245,7 @@ export function useFamilyCalendar({
     end_date?: string;
     repeat_type?: 'none' | 'monthly' | 'yearly';
     sticker_emoji?: string | null;
+    remind_offsets?: number[];
   }) => {
     if (!payload?.id || !payload.title) {
       throw new Error('UPDATE_EVENT: invalid payload');
@@ -279,6 +283,7 @@ export function useFamilyCalendar({
         end_date: (payload.end_date && payload.end_date > payload.event_date) ? payload.end_date : null,
         repeat_type: payload.repeat_type || 'none',
         sticker_emoji: normalizeCalendarStickerEmoji(payload.sticker_emoji),
+        remind_offsets: normalizeRemindOffsets(payload.remind_offsets),
       })
       .eq('id', eventIdStr)
       .eq('group_id', currentGroupId);
@@ -310,7 +315,7 @@ export function useFamilyCalendar({
 
       const { data: eventsData, error: eventsError } = await supabase
         .from('family_events')
-        .select('id, title, description, event_date, end_date, location, created_by, created_at, group_id, repeat_type, sticker_emoji')
+        .select('id, title, description, event_date, end_date, location, created_by, created_at, group_id, repeat_type, sticker_emoji, remind_offsets')
         .eq('group_id', currentGroupId)
         .order('event_date', { ascending: true });
 
@@ -387,6 +392,7 @@ export function useFamilyCalendar({
             created_at: event.created_at,
             repeat_type: repeatType,
             sticker_emoji: normalizeCalendarStickerEmoji(event.sticker_emoji),
+            remind_offsets: normalizeRemindOffsets(event.remind_offsets),
           };
         });
 
@@ -496,6 +502,7 @@ export function useFamilyCalendar({
                   end_date: updatedEvent.end_date || undefined,
                   repeat_type: repeatType,
                   sticker_emoji: normalizeCalendarStickerEmoji(updatedEvent.sticker_emoji),
+                  remind_offsets: normalizeRemindOffsets(updatedEvent.remind_offsets),
                 }
               : e,
           );
@@ -611,6 +618,7 @@ export function useFamilyCalendar({
                       created_at: newEvent.created_at,
                       repeat_type: repeatType,
                       sticker_emoji: normalizeCalendarStickerEmoji(newEvent.sticker_emoji),
+                      remind_offsets: normalizeRemindOffsets(newEvent.remind_offsets),
                     }
                   : e
               )
@@ -639,6 +647,7 @@ export function useFamilyCalendar({
             created_at: newEvent.created_at,
             repeat_type: repeatType,
             sticker_emoji: normalizeCalendarStickerEmoji(newEvent.sticker_emoji),
+            remind_offsets: normalizeRemindOffsets(newEvent.remind_offsets),
           },
           ...latestEvents,
         ]);

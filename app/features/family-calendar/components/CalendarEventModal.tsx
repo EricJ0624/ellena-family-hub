@@ -6,6 +6,11 @@ import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { FamilyEvent } from '../types';
 import { KIDS_ADD_DECOS } from '../kids-add-decorations';
 import { CALENDAR_STICKER_EMOJIS, CALENDAR_STICKER_GROUPS, normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
+import {
+  CALENDAR_REMIND_OFFSET_DAYS,
+  normalizeRemindOffsets,
+  type CalendarRemindOffsetDays,
+} from '../remind-offsets';
 
 const CALENDAR_QUICK_EMOJIS = CALENDAR_STICKER_EMOJIS.slice(0, 7);
 const CALENDAR_QUICK_SET = new Set<string>(CALENDAR_QUICK_EMOJIS);
@@ -46,6 +51,7 @@ export type CalendarEventSubmitPayload = {
   end_date?: string;
   repeat_type: 'none' | 'monthly' | 'yearly';
   sticker_emoji: string | null;
+  remind_offsets: number[];
 };
 
 export type CalendarEventModalTranslations = {
@@ -65,6 +71,12 @@ export type CalendarEventModalTranslations = {
   event_repeat_none: string;
   event_repeat_monthly: string;
   event_repeat_yearly: string;
+  event_remind_label: string;
+  event_remind_1d: string;
+  event_remind_3d: string;
+  event_remind_1w: string;
+  event_remind_2w: string;
+  event_remind_1m: string;
   event_submit_btn: string;
   event_update_btn: string;
   event_start_date: string;
@@ -138,6 +150,9 @@ function CalendarEventForm({
   const [stickerEmoji, setStickerEmoji] = useState<string | null>(
     normalizeCalendarStickerEmoji(editingEvent?.sticker_emoji),
   );
+  const [remindOffsets, setRemindOffsets] = useState<CalendarRemindOffsetDays[]>(() =>
+    normalizeRemindOffsets(editingEvent?.remind_offsets),
+  );
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiPanelPos, setEmojiPanelPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const emojiAnchorRef = useRef<HTMLButtonElement>(null);
@@ -184,7 +199,22 @@ function CalendarEventForm({
       end_date,
       repeat_type: eventForm.repeat_type,
       sticker_emoji: stickerEmoji,
+      remind_offsets: normalizeRemindOffsets(remindOffsets),
     });
+  };
+
+  const toggleRemindOffset = (days: CalendarRemindOffsetDays) => {
+    setRemindOffsets((prev) =>
+      normalizeRemindOffsets(prev.includes(days) ? prev.filter((d) => d !== days) : [...prev, days]),
+    );
+  };
+
+  const remindLabels: Record<CalendarRemindOffsetDays, string> = {
+    1: t.event_remind_1d,
+    3: t.event_remind_3d,
+    7: t.event_remind_1w,
+    14: t.event_remind_2w,
+    30: t.event_remind_1m,
   };
 
   useEffect(() => {
@@ -615,6 +645,24 @@ function CalendarEventForm({
               />
               {t.event_repeat_yearly}
             </label>
+          </div>
+        </div>
+
+        <div className="mb-5">
+          <label className={`mb-2 block text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
+            {t.event_remind_label}
+          </label>
+          <div className="flex flex-wrap gap-3">
+            {CALENDAR_REMIND_OFFSET_DAYS.map((days) => (
+              <label key={days} className="flex cursor-pointer items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={remindOffsets.includes(days)}
+                  onChange={() => toggleRemindOffset(days)}
+                />
+                {remindLabels[days]}
+              </label>
+            ))}
           </div>
         </div>
 
