@@ -4,7 +4,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, useSyncExternalStore, startTransition } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
@@ -6884,22 +6884,34 @@ export default function FamilyHub() {
       node = node.parentElement;
     }
   }, []);
+  const focusChatInput = useCallback(() => {
+    const input = chatInputRef.current;
+    if (!input) return;
+    try {
+      input.focus({ preventScroll: true });
+    } catch {
+      input.focus();
+    }
+  }, []);
   const openChatRoom = useCallback((opts?: { focusInput?: boolean }) => {
-    const focusInput = () => {
-      window.requestAnimationFrame(() => {
-        chatInputRef.current?.focus({ preventScroll: true });
-      });
-    };
     if (chatRoomOpenRef.current) {
-      if (opts?.focusInput) pinChatRoomToLatest();
-      if (opts?.focusInput) focusInput();
+      if (opts?.focusInput) {
+        pinChatRoomToLatest();
+        focusChatInput();
+      }
       return;
     }
     chatRoomPinLatestRef.current = true;
-    setExpandedWidget((key) => (key === 'chat' ? null : key));
-    setChatRoomOpen(true);
-    focusInput();
-  }, [pinChatRoomToLatest]);
+    // 포털 이동 전에 표시해, 포커스가 다시 openChatRoom을 호출해도 중복으로 열지 않는다.
+    chatRoomOpenRef.current = true;
+    // 클릭 처리 안에서 커밋까지 끝내야 모바일 키보드가 첫 탭에 열린다.
+    // rAF 포커스는 사용자 제스처 밖으로 나가 두 번째 탭이 필요해진다.
+    flushSync(() => {
+      setExpandedWidget((key) => (key === 'chat' ? null : key));
+      setChatRoomOpen(true);
+    });
+    focusChatInput();
+  }, [focusChatInput, pinChatRoomToLatest]);
   const handleChatInputFocus = useCallback(() => {
     openChatRoom();
   }, [openChatRoom]);

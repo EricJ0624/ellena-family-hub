@@ -29,7 +29,7 @@ interface FamilyChatSectionProps {
   /** 텍스트 전송 중 — 버튼·입력 잠금 (늦은 중복 전송·연타 완화) */
   isSendingText?: boolean;
   onSendMessage: (message: string) => void;
-  /** M 이상 칸에서 입력칸 포커스 시 대화 화면을 연다. S 칸 돋보기와는 별개. */
+  /** M 이상 칸에서 입력칸을 누르면 대화 화면을 연다. S 칸 돋보기와는 별개. */
   onInputFocus?: () => void;
   /** 대화 화면(큰 창)일 때만 글자·입력·버튼을 키운다. */
   roomMode?: boolean;
@@ -339,7 +339,45 @@ export const FamilyChatSection = memo(function FamilyChatSection({
       ref={chatInputRef}
       type="text"
       aria-busy={isSendingText}
-      onPointerDown={() => onInputFocus?.()}
+      onPointerDown={() => {
+        if (roomMode) return;
+        onInputFocus?.();
+        // 창이 커지며 입력칸이 손가락 아래에서 벗어난다.
+        // pointerup·click은 아직 사용자 탭 안이므로, 포커스가 풀렸으면 여기서 다시 넣는다.
+        const refocusInput = () => {
+          const input = chatInputRef.current;
+          if (!input || document.activeElement === input) return;
+          try {
+            input.focus({ preventScroll: true });
+          } catch {
+            input.focus();
+          }
+        };
+        let timer = 0;
+        const cleanup = () => {
+          window.clearTimeout(timer);
+          window.removeEventListener('pointerup', onPointerUp, true);
+          window.removeEventListener('click', onClickOutside, true);
+          window.removeEventListener('pointercancel', cleanup);
+        };
+        const onPointerUp = () => {
+          refocusInput();
+        };
+        const onClickOutside = (event: MouseEvent) => {
+          cleanup();
+          const input = chatInputRef.current;
+          const target = event.target;
+          if (input && target instanceof Node && (target === input || input.contains(target))) return;
+          if (target instanceof Element && target.closest('button, a, input, textarea, select')) return;
+          event.preventDefault();
+          event.stopPropagation();
+          refocusInput();
+        };
+        timer = window.setTimeout(cleanup, 500);
+        window.addEventListener('pointerup', onPointerUp, true);
+        window.addEventListener('click', onClickOutside, true);
+        window.addEventListener('pointercancel', cleanup);
+      }}
       onFocus={onInputFocus}
       onKeyDown={handleKeyDown}
       className={`chat-input min-w-0 flex-1 ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
