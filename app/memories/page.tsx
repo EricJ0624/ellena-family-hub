@@ -18,17 +18,30 @@ import {
   getMimeTypeFromExtension,
   isRawFileExtension,
 } from '@/lib/photo-upload-utils';
+import { signGroupAssetUrls } from '@/lib/media-display-client';
 import { supabase } from '@/lib/supabase';
 import {
   isStorageLimitMessage,
   presentOriginalUploadLimit,
   presentStorageLimit,
 } from '@/lib/billing-limit-prompt';
-import { clearDashboardScrollMemory } from '@/lib/dashboard-scroll-memory';
 import * as exifr from 'exifr';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB 통일
+
+/**
+ * 업로드 직후 CloudFront URL을 /api/media/sign 경유 서명 URL로 교체한다.
+ * 서명 실패 시 원래 URL을 그대로 반환 (안전 폴백).
+ */
+async function signedUrlOrOrig(groupId: string, url: string): Promise<string> {
+  try {
+    const map = await signGroupAssetUrls(groupId, [url]);
+    return map.get(url) ?? url;
+  } catch {
+    return url;
+  }
+}
 const COMPRESSION_OPTIONS = {
   maxSizeMB: 3,
   maxWidthOrHeight: 2560,
@@ -453,7 +466,6 @@ function MemoriesPageContent() {
   }, [searchParams, album, viewMode, groupedByDate, router]);
 
   const handleBack = () => {
-    clearDashboardScrollMemory();
     router.push('/dashboard?focus=album');
   };
 
@@ -609,17 +621,23 @@ function MemoriesPageContent() {
         clearTimeout(completeTimeout);
         const completeResult = await completeRes.json();
         if (completeRes.ok && completeResult.id && completeResult.s3Url) {
+          // 업로드 직후 URL 서명 → private 버킷 접근 불가로 흰 화면이 되는 문제 방지
+          // originalUrl: localStorage에 원본 CloudFront URL 저장 (loadAlbum 패턴과 동일)
+          const signedUrl = await signedUrlOrOrig(currentGroupId, completeResult.s3Url);
           updatePhotoId({
             oldId: photoId,
             newId: completeResult.id,
-            s3Url: completeResult.s3Url,
+            s3Url: signedUrl,
+            originalUrl: completeResult.s3Url,
           });
           uploadCompleted = true;
         } else if (completeRes.ok) {
+          const signedUrl = await signedUrlOrOrig(currentGroupId, s3Url);
           updatePhotoId({
             oldId: photoId,
             newId: photoId,
-            s3Url: s3Url,
+            s3Url: signedUrl,
+            originalUrl: s3Url,
           });
           uploadCompleted = true;
         } else {
@@ -646,10 +664,13 @@ function MemoriesPageContent() {
             });
             const fallbackResult = await fallbackRes.json();
             if (fallbackRes.ok && fallbackResult.id && fallbackResult.s3Url) {
+              // fallback 경로도 URL 서명 적용 + originalUrl 분리
+              const signedFallbackUrl = await signedUrlOrOrig(currentGroupId, fallbackResult.s3Url);
               updatePhotoId({
                 oldId: photoId,
                 newId: fallbackResult.id,
-                s3Url: fallbackResult.s3Url,
+                s3Url: signedFallbackUrl,
+                originalUrl: fallbackResult.s3Url,
               });
               uploadCompleted = true;
               if (isCors) alert('업로드 완료: CORS 오류로 인해 서버 경유 방식으로 업로드되었습니다.');

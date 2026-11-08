@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { GlassSafeModal } from '@/app/components/GlassSafeModal';
 import { supabase } from '@/lib/supabase';
 import { DB_TABLES } from '@/lib/db-table-names';
+import { signGroupAssetUrls } from '@/lib/media-display-client';
 
 export type AlbumPickItem = {
   id: string;
@@ -61,7 +62,17 @@ export function FamilyAlbumPickerModal({
           id: String((row as { id: string }).id),
           image_url: String((row as { image_url: string }).image_url),
         }));
-      setItems(rows);
+
+      // private 버킷: 공개 CloudFront URL로는 접근 불가 → 그룹 확인 후 서명 URL로 교체
+      const rawUrls = rows.map((r) => r.image_url);
+      const signedMap = await signGroupAssetUrls(groupId, rawUrls).catch(() => new Map<string, string>());
+      if (cancelled) return;
+      const signedRows = rows.map((r) => ({
+        ...r,
+        image_url: signedMap.get(r.image_url) ?? r.image_url,
+      }));
+
+      setItems(signedRows);
       setLoading(false);
     })();
     return () => {

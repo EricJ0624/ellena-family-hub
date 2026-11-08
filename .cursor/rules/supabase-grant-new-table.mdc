@@ -1,0 +1,37 @@
+---
+description: 새 Supabase 테이블 생성 시 Data API GRANT 필수 (2024-10-30 정책 변경)
+alwaysApply: true
+---
+
+# Supabase 새 테이블 GRANT 필수
+
+## 배경
+2024-10-30부터 public 스키마에 새로 생성되는 테이블은 Data API(supabase-js, PostgREST, GraphQL)에 대한 GRANT가 **자동 부여되지 않는다**.  
+기존 테이블은 영향 없다. 신규 테이블·preview 브랜치·`supabase db reset` 후 재생성 테이블 모두 해당된다.
+
+## 필수 규칙
+
+새 테이블을 `CREATE TABLE`하는 모든 마이그레이션·SQL에 아래 GRANT를 **동일 파일 내**에 반드시 포함한다.
+
+```sql
+-- ✅ 새 테이블 생성 시 항상 아래 GRANT 포함
+grant select
+  on public.<new_table>
+  to anon;
+
+grant select, insert, update, delete
+  on public.<new_table>
+  to authenticated;
+
+grant select, insert, update, delete
+  on public.<new_table>
+  to service_role;
+```
+
+GRANT가 없으면 API 호출 시 `permission denied` 오류가 반환된다.
+
+## 확인 항목
+
+- `apply_migration` / `execute_sql` 로 테이블을 만들 때 GRANT 블록을 포함했는지 체크
+- RLS 정책과 별개로 GRANT도 필요함 (RLS만으로는 API 접근 불가)
+- `supabase-schema-first.mdc` 규칙과 함께 적용

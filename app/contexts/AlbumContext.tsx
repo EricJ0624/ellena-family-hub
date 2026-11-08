@@ -40,6 +40,9 @@ type AlbumContextType = {
     oldId: number | string;
     newId: number | string;
     s3Url?: string | null;
+    /** localStorage에 안정 URL로 저장할 원본 CloudFront URL.
+     *  s3Url이 서명된 /api/media/file?... 형태일 때 이 값으로 캐시에 저장한다. */
+    originalUrl?: string | null;
     uploadFailed?: boolean;
   }) => void;
 };
@@ -365,6 +368,20 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
           }
           return [newEntry, ...prev];
         });
+        // Realtime INSERT 직후 URL 서명 → private 버킷 접근 불가로 사진이 안 보이는 문제 방지
+        // (다른 가족 기기가 업로드한 경우에도 즉시 서명 URL로 교체)
+        void signGroupAssetUrls(gid, [url]).then((signedMap) => {
+          const signed = signedMap.get(url);
+          if (!signed || signed === url) return;
+          setAlbum((prev) =>
+            prev.map((p) =>
+              String(p.id) === String(newPhoto.id) ||
+              (p.supabaseId != null && String(p.supabaseId) === String(newPhoto.id))
+                ? { ...p, data: signed }
+                : p
+            )
+          );
+        });
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -421,6 +438,9 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       oldId: number | string;
       newId: number | string;
       s3Url?: string | null;
+      /** localStorage에 안정 URL로 저장할 원본 CloudFront URL.
+       *  s3Url이 서명된 /api/media/file?... 형태일 때 이 값으로 캐시에 저장한다. */
+      originalUrl?: string | null;
       uploadFailed?: boolean;
     }) => {
       setAlbum((prev) => {
@@ -438,7 +458,18 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
         });
         albumRef.current = next;
         const key = getKey();
-        if (key && userId) persistAlbumOnly(userId, currentGroupId, key, next);
+        if (key && userId) {
+          // loadAlbum 패턴과 동일: localStorage에는 원본 CloudFront URL(stable)로 저장,
+          // 화면(next)에는 서명된 URL을 사용한다.
+          const forStorage = payload.originalUrl
+            ? next.map((p) =>
+                (p.id === payload.newId || p.supabaseId === payload.newId)
+                  ? { ...p, data: payload.originalUrl as string }
+                  : p
+              )
+            : next;
+          persistAlbumOnly(userId, currentGroupId, key, forStorage);
+        }
         return next;
       });
     },

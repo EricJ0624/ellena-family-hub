@@ -104,7 +104,9 @@ export async function POST(
           s3_key: s3Key,
           image_url: imageUrl,
           thumbnail_s3_key: null,
-          thumbnail_url: imageUrl,
+          // thumbnail_s3_key가 없으면 withMediaFileUrls가 thumbnail_url을 서명할 수 없으므로
+          // null로 저장하여 image_url(s3_key 기반 서명됨)을 fallback으로 사용하게 한다.
+          thumbnail_url: null,
         };
       })
       .filter((row): row is NonNullable<typeof row> => row != null);
