@@ -202,6 +202,9 @@ BEGIN
     RAISE EXCEPTION 'GROUP_SUSPENDED';
   END IF;
 
+  -- 같은 앱·같은 코드 생성은 한 트랜잭션만 통과 (동시 생성 시 중복 방지)
+  PERFORM pg_advisory_xact_lock(hashtext('short_invite:' || p_app_id || ':' || normalized));
+
   UPDATE public.group_short_invite_codes
   SET status = 'expired'
   WHERE app_id = p_app_id
@@ -246,6 +249,9 @@ BEGIN
     'group_id', row_rec.group_id,
     'status', 'created'
   );
+EXCEPTION
+  WHEN unique_violation THEN
+    RAISE EXCEPTION 'Short invite code already in use';
 END;
 $$;
 

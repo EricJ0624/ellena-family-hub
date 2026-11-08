@@ -50,7 +50,10 @@ export function mapShortInviteRpcError(message: string): {
   if (msg.includes('no longer pending')) {
     return { status: 409, code: GROUP_SHORT_INVITE_ERROR.NO_LONGER_PENDING };
   }
-  if (msg.includes('already in use')) {
+  if (
+    msg.includes('already in use') ||
+    msg.includes('idx_group_short_invite_codes_active_code_per_app')
+  ) {
     return { status: 409, code: GROUP_SHORT_INVITE_ERROR.CODE_IN_USE };
   }
   if (msg.includes('not found') || msg.includes('Group not found')) {
