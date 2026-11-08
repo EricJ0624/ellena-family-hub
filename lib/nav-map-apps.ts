@@ -144,8 +144,13 @@ export function buildNavMapUrl(
   return buildNavMapUrls(app, lat, lng, start).web;
 }
 
-function isIosUserAgent(): boolean {
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+/** iOS/iPadOS — Google Maps fullscreenControl 미표시 기기 판별용으로도 사용 */
+export function isIosUserAgent(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/i.test(ua)) return true;
+  // iPadOS 13+ desktop UA
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
 }
 
 function openAppScheme(url: string): void {

@@ -149,7 +149,6 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   uiTheme,
   skin,
   weekDays,
-  sectionTitle,
   addLabel,
   monthTitles,
   onPrevMonth,
@@ -163,7 +162,6 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   uiTheme: UiTheme;
   skin: CalendarSkin;
   weekDays: string[];
-  sectionTitle: string;
   addLabel: string;
   monthTitles: string[];
   onPrevMonth: () => void;
@@ -366,19 +364,6 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               : undefined
         }
       >
-        <div className="section-header calendar-section-header relative z-[5]" style={{ marginBottom: monthBg && calendarGrid.month === 0 ? '1cqmin' : '2.5cqmin' }}>
-          <h3
-            className="section-title m-0 flex items-center calendar-section-title"
-            style={{ color: skin.titleColor, fontWeight: 800 }}
-          >
-            {isKidsTheme ? (
-              <span aria-hidden style={{ fontSize: '1.05em' }}>📅</span>
-            ) : (
-              <Calendar className="calendar-section-title-icon" />
-            )}
-            {sectionTitle}
-          </h3>
-        </div>
         <div className="section-body calendar-section-body" style={{ gap: monthBg && calendarGrid.month === 0 ? '1cqmin' : '2.2cqmin' }}>
           <div
             className="calendar-month-block min-h-0"
@@ -1067,7 +1052,6 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           uiTheme={uiTheme}
           skin={skin}
           weekDays={weekDays}
-          sectionTitle={t.section_title_calendar}
           addLabel={t.event_add_title}
           monthTitles={monthTitles}
           onPrevMonth={handlePrevMonth}

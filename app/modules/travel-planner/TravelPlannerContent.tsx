@@ -127,7 +127,6 @@ export function TravelPlannerContent({
 }) {
   const router = useRouter();
   const urlTripId = tripId.trim() ? tripId.trim() : null;
-  const urlOpenAdd = openAdd;
   const handleBack = useCallback(() => {
     if (onClose) onClose();
     else router.push('/dashboard?focus=travel');
@@ -751,8 +750,8 @@ export function TravelPlannerContent({
   }, [currentGroupId, fetchTrips]);
 
   useEffect(() => {
-    if (urlOpenAdd) setShowTripForm(true);
-  }, [urlOpenAdd]);
+    if (openAdd) setShowTripForm(true);
+  }, [openAdd]);
 
   useEffect(() => {
     if (!showTripForm) {
@@ -777,7 +776,7 @@ export function TravelPlannerContent({
 
   // 여행 미선택 빈 화면 대신 대시보드(또는 남은 여행)로 보냄
   useEffect(() => {
-    if (!currentGroupId || loading || showTripForm || urlOpenAdd) return;
+    if (!currentGroupId || loading || showTripForm || openAdd) return;
     if (selectedTrip) return;
     if (urlTripId && trips.some((t) => t.id === urlTripId)) return;
 
@@ -792,7 +791,7 @@ export function TravelPlannerContent({
     currentGroupId,
     loading,
     showTripForm,
-    urlOpenAdd,
+    openAdd,
     selectedTrip,
     urlTripId,
     trips,
@@ -2650,6 +2649,7 @@ export function TravelPlannerContent({
 
   const additionList = expenses.filter((e) => e.entry_type === 'addition');
   const expenseList = expenses.filter((e) => e.entry_type !== 'addition');
+  const closeLabel = getCommonTranslation(lang, 'close');
 
   return (
     <div className="min-h-screen bg-[var(--surface-base)] p-5">
@@ -2663,8 +2663,8 @@ export function TravelPlannerContent({
           type="button"
           onClick={handleBack}
           className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-800 shadow-sm"
-          aria-label={getCommonTranslation(lang, 'close')}
-          title={getCommonTranslation(lang, 'close')}
+          aria-label={closeLabel}
+          title={closeLabel}
         >
           <X className="h-5 w-5" strokeWidth={2.25} />
         </button>

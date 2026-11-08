@@ -7,10 +7,34 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { DashboardLocationRequestRow } from '../types';
 import type { DashboardTranslations } from '@/lib/translations/dashboard';
+import { isIosUserAgent } from '@/lib/nav-map-apps';
 import { LocationOvalFromViewedAlbum } from './LocationOvalFromViewedAlbum';
+
+/** Google Maps fullscreenControl 과 비슷한 아이콘 (iOS 대체용) */
+function FullscreenEnterIcon() {
+  return (
+    <svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M2 2h5v2H4v3H2V2zm9 0h5v5h-2V4h-3V2zM2 11h2v3h3v2H2v-5zm11 3v-3h2v5h-5v-2h3z"
+      />
+    </svg>
+  );
+}
+
+function FullscreenExitIcon() {
+  return (
+    <svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M7 2H5v3H2v2h5V2zm6 3V2h-2v5h5V5h-3zM7 13H2v-2h5v5H5v-3zm4-2h5v2h-3v3h-2v-5z"
+      />
+    </svg>
+  );
+}
 
 export type FamilyLocationSectionTranslations = Pick<
   DashboardTranslations,
@@ -119,6 +143,42 @@ export function FamilyLocationSection({
   const pendingRequests = locationRequests.filter((req) => req.status === 'pending');
   const acceptedRequests = locationRequests.filter((req) => req.status === 'accepted');
   const hasRequestUi = pendingRequests.length > 0 || acceptedRequests.length > 0;
+
+  const [iosFullscreenUi, setIosFullscreenUi] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
+
+  useEffect(() => {
+    setIosFullscreenUi(isIosUserAgent());
+  }, []);
+
+  useEffect(() => {
+    if (!showMap) setMapExpanded(false);
+  }, [showMap]);
+
+  useEffect(() => {
+    if (!mapExpanded) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMapExpanded(false);
+    };
+    window.addEventListener('keydown', onKey);
+    // ResizeObserver(대시보드)가 슬롯 크기 변화를 잡아 map resize
+    window.dispatchEvent(new Event('resize'));
+    const t1 = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+    const t2 = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKey);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.dispatchEvent(new Event('resize'));
+    };
+  }, [mapExpanded]);
+
+  const showIosFsBtn = iosFullscreenUi && showMap && hasGoogleMapsApiKey && !mapError;
+  const fsLabelEnter = lang === 'ko' ? '전체 화면' : 'Fullscreen';
+  const fsLabelExit = lang === 'ko' ? '전체 화면 종료' : 'Exit fullscreen';
 
   return (
     <section
@@ -329,7 +389,22 @@ export function FamilyLocationSection({
           </div>
         )}
 
-        <div className="location-map-slot min-h-0 flex-1 touch-pan-y">
+        <div
+          className={`location-map-slot min-h-0 flex-1 touch-pan-y${
+            mapExpanded ? ' location-map-slot--expanded' : ''
+          }`}
+        >
+          {showIosFsBtn ? (
+            <button
+              type="button"
+              className="location-ios-fullscreen-btn"
+              aria-label={mapExpanded ? fsLabelExit : fsLabelEnter}
+              title={mapExpanded ? fsLabelExit : fsLabelEnter}
+              onClick={() => setMapExpanded((v) => !v)}
+            >
+              {mapExpanded ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
+            </button>
+          ) : null}
           {!showMap ? (
             <div
               key="location-map-off"
