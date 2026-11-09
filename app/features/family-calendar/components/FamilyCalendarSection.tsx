@@ -518,6 +518,14 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                             className="calendar-day-cell-congrats-frame"
                           />
                           <span className="calendar-day-cell-congrats-num">{cell.day}</span>
+                          {cell.kidsEmoji ? (
+                            <span
+                              aria-hidden
+                              className="pointer-events-none absolute left-1/2 top-[62%] z-[2] -translate-x-1/2 text-[3cqmin] leading-none drop-shadow-[0_0_0.45cqmin_#fff]"
+                            >
+                              {cell.kidsEmoji}
+                            </span>
+                          ) : null}
                         </>
                       ) : (
                         <>
@@ -969,7 +977,15 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         const matched = (events || []).filter((e) => eventMatchesDate(e, key));
         const kidsEmoji = isKidsTheme && matched.length > 0 ? firstCalendarStickerEmoji(matched) : null;
-        const titles = isKidsTheme && matched.length > 0 && !kidsEmoji ? matched.map((e) => e.title) : [];
+        // 생일(congrats) 프레임은 선택 이모지와 공존. 그 외 자동 스티커는 이모지 없을 때만.
+        const titles = isKidsTheme && matched.length > 0 ? matched.map((e) => e.title) : [];
+        const autoSticker = titles.length > 0 ? kidsStickerFromTitles(titles, key) : null;
+        const kidsSticker =
+          autoSticker && isKidsCongratsFrame(autoSticker)
+            ? autoSticker
+            : !kidsEmoji
+              ? autoSticker
+              : null;
         cells.push({
           type: 'day',
           date,
@@ -977,7 +993,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           isToday: key === todayKey,
           eventCount: matched.length,
           kidsEmoji,
-          kidsSticker: titles.length > 0 ? kidsStickerFromTitles(titles, key) : null,
+          kidsSticker,
         });
       }
 

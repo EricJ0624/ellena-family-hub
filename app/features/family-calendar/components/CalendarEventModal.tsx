@@ -510,14 +510,14 @@ function CalendarEventForm({
           <p className={`mb-2 text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
             {t.event_emoji_label}
           </p>
-          <div className="flex flex-nowrap items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             {CALENDAR_QUICK_EMOJIS.map((emoji) => (
               <button
                 key={emoji}
                 type="button"
                 onClick={() => setStickerEmoji((prev) => (prev === emoji ? null : emoji))}
                 className={[
-                  'cursor-pointer rounded-full border px-1.5 py-0.5 text-sm',
+                  'shrink-0 cursor-pointer rounded-full border px-1.5 py-0.5 text-sm',
                   stickerEmoji === emoji
                     ? 'border-violet-400 bg-violet-100'
                     : isKidsTheme
@@ -528,21 +528,28 @@ function CalendarEventForm({
                 {emoji}
               </button>
             ))}
+            {stickerEmoji && !CALENDAR_QUICK_SET.has(stickerEmoji) ? (
+              <button
+                type="button"
+                onClick={() => setStickerEmoji(null)}
+                className="shrink-0 cursor-pointer rounded-full border border-violet-400 bg-violet-100 px-1.5 py-0.5 text-sm"
+              >
+                {stickerEmoji}
+              </button>
+            ) : null}
             <button
               ref={emojiAnchorRef}
               type="button"
               aria-label={t.event_emoji_label}
               aria-expanded={emojiOpen}
               onClick={toggleEmojiPanel}
-              className={`cursor-pointer rounded-full border px-1.5 py-0.5 text-sm ${
-                stickerEmoji && !CALENDAR_QUICK_SET.has(stickerEmoji)
-                  ? 'border-violet-400 bg-violet-100'
-                  : isKidsTheme
-                    ? 'border-white bg-white text-slate-600 shadow-sm'
-                    : 'border-slate-200 bg-white text-slate-600'
+              className={`shrink-0 cursor-pointer rounded-full border px-1.5 py-0.5 text-sm ${
+                isKidsTheme
+                  ? 'border-white bg-white text-slate-600 shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-600'
               }`}
             >
-              {stickerEmoji && !CALENDAR_QUICK_SET.has(stickerEmoji) ? stickerEmoji : '+'}
+              +
             </button>
           </div>
           {/* 모달 overflow에 잘리지 않도록 버튼 좌표로 띄운다 */}
