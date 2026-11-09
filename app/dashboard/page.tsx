@@ -5793,6 +5793,10 @@ export default function FamilyHub() {
       return;
     }
 
+    const lockKey = 'location-modal-send';
+    if (processingRequestsRef.current.has(lockKey)) return;
+    processingRequestsRef.current.add(lockKey);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -5831,6 +5835,8 @@ export default function FamilyHub() {
     } catch (error) {
       console.error('위치 요청 전송 오류:', error);
       alert(dt('location_request_send_error'));
+    } finally {
+      processingRequestsRef.current.delete(lockKey);
     }
   };
 
@@ -5848,6 +5854,10 @@ export default function FamilyHub() {
       alert(dt('location_geolocation_unsupported'));
       return;
     }
+
+    const lockKey = 'location-modal-send';
+    if (processingRequestsRef.current.has(lockKey)) return;
+    processingRequestsRef.current.add(lockKey);
 
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -5918,6 +5928,8 @@ export default function FamilyHub() {
       } else {
         alert(dt('location_request_send_error'));
       }
+    } finally {
+      processingRequestsRef.current.delete(lockKey);
     }
   };
 
