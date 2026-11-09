@@ -62,6 +62,7 @@ import {
   fitAppTitleFontSizeToWidth,
   fitKidsGlassTitleFontSize,
   KIDS_SIGN_TITLE_MAX_PX,
+  KIDS_SIGN_MIN_HEIGHT_REM,
   fitNeoStampTitleFontSize,
   fitHighendCapsuleTitleFontSize,
   CUSTOM_TITLE_FONT_MIN_PX,
@@ -7672,9 +7673,10 @@ export default function FamilyHub() {
           ref={titleRowRef}
           className={[
             'relative z-20 box-border w-full min-w-0 max-w-full px-1',
-            /* Kids 간판(7.75rem)이 줄 높이보다 크면 WebKit에서 액자 위로 넘친다. min-h-12는 48px뿐 */
-            isKidsTheme ? 'min-h-[7.75rem]' : 'min-h-12',
+            /* Kids 간판이 줄 높이보다 크면 WebKit에서 액자 위로 넘친다. min-h-12는 48px뿐 */
+            isKidsTheme ? '' : 'min-h-12',
           ].join(' ')}
+          style={isKidsTheme ? { minHeight: `${KIDS_SIGN_MIN_HEIGHT_REM}rem` } : undefined}
         >
           <div
             ref={titleContainerRef}
@@ -7682,12 +7684,14 @@ export default function FamilyHub() {
           >
             <h1
               ref={titleH1Ref}
-              style={dashboardTitleStyle}
+              style={{
+                ...dashboardTitleStyle,
+                ...(isKidsTheme ? { minHeight: `${KIDS_SIGN_MIN_HEIGHT_REM}rem` } : null),
+              }}
               className={[
                 frameIsPortrait ? 'leading-[1.15]' : '',
                 /* 간판을 행 높이에 포함. Kids는 관리자여도 적용 — absolute 글자만 있으면 WebKit이 자식 min-height를 flex 최소 높이로 안 올림 */
                 (isKidsTheme || !isAdminTitleContext) ? 'flex min-w-0 items-center' : '',
-                isKidsTheme ? 'min-h-[7.75rem]' : '',
               ].filter(Boolean).join(' ') || undefined}
             >
               {isKidsTheme ? (

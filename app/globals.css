@@ -1420,7 +1420,8 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  min-height: 7.75rem;
+  /* 판면↑ → 짧은 이름 가독성. 좌우·상하 border(글자 여백)는 유지. fit 상수 KIDS_SIGN_MIN_HEIGHT_REM 과 동기화 */
+  min-height: 8.5rem;
   padding: 0;
   border-style: solid;
   border-width: 40px 46px 18px 46px;
