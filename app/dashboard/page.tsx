@@ -2196,19 +2196,9 @@ export default function FamilyHub() {
     const kidsGlassInsetPx = 0;
     if (isKidsTheme) {
       const row = titleRowRef.current;
-      /* 뷰포트 전체 폭을 쓰면 폰 프레임보다 크게 그린 뒤 다시 줄어든다 */
+      /* 알림/관리자 버튼은 밧줄 쪽 absolute — 판면 폭에서 빼지 않는다 */
       const rowWidth = row && row.clientWidth > 0 ? row.clientWidth : 430;
-      const adminBtn = row?.querySelector('[data-dashboard-admin-btn]') as HTMLElement | null;
-      const notifEl = row?.querySelector('[data-notification-center]') as HTMLElement | null;
-      const hasAdminButton = !!adminBtn || isAdminTitleContext;
-      const btnWidth =
-        (adminBtn
-          ? adminBtn.getBoundingClientRect().width + 12
-          : hasAdminButton
-            ? DASHBOARD_TITLE_ADMIN_RESERVE_PX
-            : 0)
-        + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
-      return Math.max(120, rowWidth - btnWidth - 16);
+      return Math.max(120, rowWidth - 16);
     }
     const capMemberTitleWidth = (px: number) => {
       /* kids 간판은 액자 폭에 묶지 않고, 관리 버튼 왼쪽 행 폭까지 글자를 키운다 */
@@ -7680,7 +7670,11 @@ export default function FamilyHub() {
         >
           <div
             ref={titleContainerRef}
-            className="flex w-full min-w-0 items-center gap-3"
+            className={[
+              'w-full min-w-0',
+              /* Kids: 간판 풀폭. 알림/관리자는 밧줄 영역 absolute */
+              isKidsTheme ? 'relative' : 'flex items-center gap-3',
+            ].join(' ')}
           >
             <h1
               ref={titleH1Ref}
@@ -7692,6 +7686,7 @@ export default function FamilyHub() {
                 frameIsPortrait ? 'leading-[1.15]' : '',
                 /* 간판을 행 높이에 포함. Kids는 관리자여도 적용 — absolute 글자만 있으면 WebKit이 자식 min-height를 flex 최소 높이로 안 올림 */
                 (isKidsTheme || !isAdminTitleContext) ? 'flex min-w-0 items-center' : '',
+                isKidsTheme ? 'w-full' : '',
               ].filter(Boolean).join(' ') || undefined}
             >
               {isKidsTheme ? (
@@ -7732,9 +7727,11 @@ export default function FamilyHub() {
             </h1>
             <div
               className={[
-                'ml-auto flex shrink-0 items-center gap-2',
-                /* 줄 중앙은 밧줄(40px) 때문에 판자보다 위. (40−18)/2 만큼 내려 판자에 맞춘다 */
-                isKidsTheme ? 'translate-y-[11px]' : '',
+                'flex shrink-0 items-center gap-2',
+                /* Kids: 판면이 아니라 상단 밧줄·고리 쪽에 올려 가로 fit에서 제외 */
+                isKidsTheme
+                  ? 'absolute right-1 top-1 z-30 translate-y-0'
+                  : 'relative ml-auto',
               ].filter(Boolean).join(' ')}
             >
               {showLeaveGrantedDashboard ? (
