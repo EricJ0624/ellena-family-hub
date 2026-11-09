@@ -4616,7 +4616,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     min-height: 0;
   }
 
-  .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot-anchor {
+  .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot {
     flex: 1 1 auto;
     min-height: 20cqmin;
   }
@@ -4634,27 +4634,6 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   .widget-chrome[data-widget-key='location'] .location-widget-section--compact .location-address-row .location-text {
     margin-bottom: 1cqmin;
     font-size: 3.5cqmin;
-  }
-
-  /* 축소 시 portal 앵커 — kids/기본 레이아웃 구멍 유지 */
-  .widget-chrome[data-widget-key='location'] .location-map-slot-anchor {
-    position: relative;
-    display: flex;
-    flex: 1 1 0;
-    flex-direction: column;
-    min-height: 0;
-    width: 100%;
-  }
-
-  .widget-chrome[data-widget-key='location'] .location-map-slot-anchor--expanded {
-    pointer-events: none;
-  }
-
-  .widget-chrome[data-widget-key='location'] .location-map-slot-anchor .location-map-slot {
-    flex: 1 1 0;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
   }
 
   .widget-chrome[data-widget-key='location'] .location-map-slot {
@@ -4948,6 +4927,37 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     filter: drop-shadow(0 10px 16px rgb(28 18 10 / 0.38));
   }
 
+  /*
+   * iOS 전체화면: #map DOM은 유지하고 containing block만 해제.
+   * container-type(size) / overflow / filter 가 fixed를 위젯에 가둠.
+   */
+  body.location-map-ios-fs .widget-chrome[data-widget-key='location'] {
+    filter: none !important;
+    z-index: 10050;
+  }
+
+  body.location-map-ios-fs .widget-chrome[data-widget-key='location'] > .widget-scale-root {
+    container-type: normal !important;
+    contain: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    filter: none !important;
+    perspective: none !important;
+  }
+
+  body.location-map-ios-fs .widget-chrome[data-widget-key='location'] .content-section.location-widget-section,
+  body.location-map-ios-fs .widget-chrome[data-widget-key='location'] .location-section-body,
+  body.location-map-ios-fs .widget-chrome[data-widget-key='location'] .location-map-slot {
+    overflow: visible !important;
+    transform: none !important;
+    filter: none !important;
+    contain: none !important;
+  }
+
+  body.location-map-ios-fs .widget-chrome[data-widget-key='location'] .content-section.location-widget-section::after {
+    visibility: hidden !important;
+  }
+
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-header,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-header,
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-header,
@@ -5194,12 +5204,9 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     text-shadow: 0 1px 0 rgb(255 252 245 / 0.7);
   }
 
-  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot-anchor,
-  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot-anchor,
-  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot-anchor,
-  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot-anchor .location-map-slot,
-  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot-anchor .location-map-slot,
-  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot-anchor .location-map-slot {
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot {
     position: absolute;
     inset: 0;
     z-index: 0;
@@ -5215,9 +5222,9 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
    * kids 하단 스택: 지도 → 상태(bottom 28%·max-h 22%) → 3버튼(bottom 12%).
    * 맵 bottom ≥ 패널 top(≈50%) + 여유.
    */
-  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot-anchor,
-  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot-anchor,
-  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot-anchor {
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body--has-requests .location-map-slot {
     bottom: 52%;
   }
 
@@ -5283,19 +5290,20 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     display: block;
   }
 
-  /* 지도 전체화면(iOS 커스텀) — body portal. 100vw는 iOS에서 가로 넘침 */
+  /* 지도 전체화면(iOS 커스텀) — DOM 유지 + fixed. body.location-map-ios-fs 와 함께 사용 */
   .location-map-slot.location-map-slot--expanded {
     position: fixed !important;
     inset: 0 !important;
     z-index: 10050 !important;
-    width: 100% !important;
+    width: auto !important;
     max-width: none !important;
-    height: 100dvh !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
     border-radius: 0 !important;
     overflow: hidden !important;
-    background: #000;
-    touch-action: none !important;
+    background: #e5e7eb;
+    touch-action: manipulation !important;
   }
 
   .location-map-slot.location-map-slot--expanded .location-map-canvas,
@@ -5306,6 +5314,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     max-width: none !important;
     height: auto !important;
     max-height: none !important;
+    min-height: 0 !important;
     border-radius: 0 !important;
     border-width: 0 !important;
   }

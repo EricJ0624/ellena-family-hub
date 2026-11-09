@@ -3390,8 +3390,14 @@ export default function FamilyHub() {
         resizeRaf = 0;
         try {
           const g = (window as any).google;
-          if (g?.maps?.event && mapRef.current) {
-            g.maps.event.trigger(mapRef.current, 'resize');
+          const map = mapRef.current;
+          if (g?.maps?.event && map) {
+            const center = typeof map.getCenter === 'function' ? map.getCenter() : null;
+            g.maps.event.trigger(map, 'resize');
+            // 컨테이너 크기 급변 후 흰/회색 타일 방지
+            if (center && typeof map.setCenter === 'function') {
+              map.setCenter(center);
+            }
           }
         } catch (e) {
           console.warn('[location-map] resize skipped:', e);
@@ -3406,7 +3412,7 @@ export default function FamilyHub() {
       window.setTimeout(triggerMapResize, 300);
     };
 
-    // portal로 body에 옮겨도 동일 DOM 노드라 observe 유지됨. 확대 슬롯 우선.
+    // iOS CSS 전체화면(expanded) 또는 위젯 안 슬롯
     const slot =
       document.querySelector('.location-map-slot.location-map-slot--expanded') ||
       document.querySelector('.widget-chrome[data-widget-key="location"] .location-map-slot');
