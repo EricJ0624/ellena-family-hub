@@ -4929,7 +4929,8 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
 
   /*
    * iOS 전체화면: #map DOM은 유지하고 containing block만 해제.
-   * container-type(size) / overflow / filter 가 fixed를 위젯에 가둠.
+   * 대시보드 크롬(타이틀·관리자·타원·접속자 등)은 가려 지도 위에 안 겹치게 함.
+   * 공지 배너는 유지하고, 종료 버튼은 배너 아래에 둠 (--location-ios-fs-btn-top).
    */
   body.location-map-ios-fs .widget-chrome[data-widget-key='location'] {
     filter: none !important;
@@ -4954,8 +4955,24 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     contain: none !important;
   }
 
-  body.location-map-ios-fs .widget-chrome[data-widget-key='location'] .content-section.location-widget-section::after {
+  body.location-map-ios-fs .widget-chrome[data-widget-key='location'] .content-section.location-widget-section::after,
+  body.location-map-ios-fs .location-oval-from-album,
+  body.location-map-ios-fs .location-widget-section .section-title,
+  body.location-map-ios-fs .location-header-actions,
+  body.location-map-ios-fs .location-requests-panel,
+  body.location-map-ios-fs .location-address-row,
+  body.location-map-ios-fs [data-dashboard-title-row],
+  body.location-map-ios-fs .app-header,
+  body.location-map-ios-fs [data-dashboard-session-chrome],
+  body.location-map-ios-fs .dashboard-widget-grid > *:not(:has([data-widget-key='location'])),
+  body.location-map-ios-fs .widget-expand-overlay--location {
     visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  body.location-map-ios-fs .announcement-banner {
+    position: relative;
+    z-index: 10060;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-header,
@@ -5319,10 +5336,11 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     border-width: 0 !important;
   }
 
+  /* 공지 있으면 JS가 --location-ios-fs-btn-top(배너 bottom+8) 설정, 없으면 safe-area 우상단 */
   .location-map-slot.location-map-slot--expanded .location-ios-fullscreen-btn {
-    top: max(12px, env(safe-area-inset-top, 0px));
+    top: var(--location-ios-fs-btn-top, max(12px, env(safe-area-inset-top, 0px)));
     right: max(12px, env(safe-area-inset-right, 0px));
-    z-index: 10051;
+    z-index: 10070;
     width: 44px;
     height: 44px;
     border-radius: 4px;

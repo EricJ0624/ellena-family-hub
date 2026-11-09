@@ -161,18 +161,36 @@ export function FamilyLocationSection({
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     document.body.classList.add('location-map-ios-fs');
+
+    const syncExitBtnTop = () => {
+      const banner = document.querySelector('.announcement-banner') as HTMLElement | null;
+      if (banner && banner.getClientRects().length > 0) {
+        const top = Math.ceil(banner.getBoundingClientRect().bottom + 8);
+        document.documentElement.style.setProperty('--location-ios-fs-btn-top', `${top}px`);
+      } else {
+        document.documentElement.style.removeProperty('--location-ios-fs-btn-top');
+      }
+    };
+    syncExitBtnTop();
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMapExpanded(false);
     };
     window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', syncExitBtnTop);
     // #map DOM을 옮기지 않음 — Maps 인스턴스 유지. CSS로만 전체화면 + resize.
     window.dispatchEvent(new Event('resize'));
-    const t1 = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+    const t1 = window.setTimeout(() => {
+      syncExitBtnTop();
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
     const t2 = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
     return () => {
       document.body.style.overflow = prevOverflow;
       document.body.classList.remove('location-map-ios-fs');
+      document.documentElement.style.removeProperty('--location-ios-fs-btn-top');
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', syncExitBtnTop);
       window.clearTimeout(t1);
       window.clearTimeout(t2);
       window.dispatchEvent(new Event('resize'));
