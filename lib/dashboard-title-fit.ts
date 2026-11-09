@@ -69,13 +69,26 @@ export function customTitleMaxFontSize(
 export const KIDS_SIGN_MIN_HEIGHT_REM = 8.5;
 /**
  * 9-slice 좌우 46px는 구멍가 아니라 판자 그림이다. 글자는 overflow로 그 위에도 올라간다.
- * 고리는 위쪽이라, 판면(border-box)에서 양끝 16px만 비운다.
+ * 고리는 위쪽이라, 판면(border-box)에서 양끝 12px을 비운다.
  */
-const KIDS_SIGN_EDGE_INSET_PX = 16;
+const KIDS_SIGN_EDGE_INSET_PX = 12;
 const KIDS_SIGN_CHROME_X_PX = KIDS_SIGN_EDGE_INSET_PX * 2;
 const KIDS_SIGN_FACE_HEIGHT_PX = KIDS_SIGN_MIN_HEIGHT_REM * 16 - 40 - 18;
-/** 판면 위아래 8px씩. 이보다 크면 글자 em이 나무 밖으로 나간다. (~62px @ 8.5rem) */
-export const KIDS_SIGN_TITLE_MAX_PX = KIDS_SIGN_FACE_HEIGHT_PX - 16;
+/** 판면 위아래 4px씩. (~70px @ 8.5rem) */
+export const KIDS_SIGN_TITLE_MAX_PX = KIDS_SIGN_FACE_HEIGHT_PX - 8;
+
+/** 짧은 한글은 높이 상한까지 커져 영어보다 커 보인다. 한글만 조금 낮춘다. */
+const HANGUL_RE = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;
+export function kidsSignTitleMaxPx(text: string): number {
+  if (HANGUL_RE.test(text)) return Math.round(KIDS_SIGN_TITLE_MAX_PX * 0.68);
+  return KIDS_SIGN_TITLE_MAX_PX;
+}
+
+/** Neo: 짧은 한글이 패딩 대비 작아 보이면 상한만 조금 올린다. Neo·High-end 공용. */
+export function chipTitleMaxPx(baseMaxPx: number, text: string): number {
+  if (HANGUL_RE.test(text)) return Math.round(baseMaxPx * 1.15);
+  return baseMaxPx;
+}
 
 /**
  * h1 가용 폭(관리자 버튼 제외) 안에 글자가 간판 판면 안에 들어가게 font-size를 고른다.
@@ -102,21 +115,48 @@ export function fitKidsGlassTitleFontSize(
   return minPx;
 }
 
-/** Neo 스탬프 — padding 0.72em×2 + border 3px×2 + margin-right 4px + letter-spacing 0.04em */
-const NEO_STAMP_PAD_X_EM = 0.72 * 2;
-const NEO_STAMP_BORDER_PX = 3 * 2;
-const NEO_STAMP_MARGIN_PX = 4;
-const NEO_STAMP_LETTER_SPACING_EM = 0.04;
-/** canvas/DOM 측정·서브픽셀 오차 여유 */
-const NEO_STAMP_SAFETY_SLACK_PX = 6;
-/** 긴 제목+관리자 버튼에서도 스탬프 안에 들어가게 허용하는 절대 하한 */
-export const NEO_STAMP_TITLE_MIN_PX = 12;
+/** Neo / High-end 칩 공통 — 가로 패딩 0.75em×2 + letter-spacing 0.04em */
+const CHIP_TITLE_PAD_X_EM = 0.75 * 2;
+const CHIP_TITLE_LETTER_SPACING_EM = 0.04;
+const CHIP_TITLE_SAFETY_SLACK_PX = 6;
+/** 긴 제목+관리자 버튼에서도 칩 안에 들어가게 허용하는 절대 하한 */
+export const CHIP_TITLE_MIN_PX = 12;
 
-/**
- * 잉크 스탬프 칩 안에 타이틀이 들어가게 font-size를 고른다.
- * (패딩·보더·여백·측정 오차를 차감한 가용 폭 기준)
- * 호출부 min(titleFontMin 등)이 높아도 스탬프 절대 하한까지 더 줄일 수 있다.
- */
+/** Neo 스탬프 — 보더 3px×2 + margin-right 4px (하드 섀도 여유) */
+const NEO_STAMP_EXTRA_CHROME_PX = 3 * 2 + 4;
+/** High-end glass capsule — 보더 1px×2 */
+const HIGHEND_CAPSULE_EXTRA_CHROME_PX = 1 * 2;
+
+function fitChipTitleFontSize(
+  text: string,
+  boxWidthPx: number,
+  minPx: number,
+  maxPx: number,
+  fontFamily: string,
+  fontWeight: string | number,
+  extraChromePx: number,
+  useAppTitleMeasure: boolean,
+): number {
+  if (!text || boxWidthPx <= 0) return maxPx;
+  // 호출부 min이 titleFontMin(33)처럼 높아도 칩 절대 하한까지 축소 허용
+  const lowPx = Math.min(minPx, CHIP_TITLE_MIN_PX);
+  for (let size = maxPx; size >= lowPx; size -= 1) {
+    const avail =
+      boxWidthPx
+      - CHIP_TITLE_PAD_X_EM * size
+      - extraChromePx
+      - CHIP_TITLE_SAFETY_SLACK_PX;
+    if (avail <= 8) continue;
+    const letterSpacingPx = CHIP_TITLE_LETTER_SPACING_EM * size;
+    const width = useAppTitleMeasure
+      ? measureAppTitleWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx)
+      : measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx);
+    if (width <= avail) return size;
+  }
+  return lowPx;
+}
+
+/** 잉크 스탬프 칩 안에 타이틀이 들어가게 font-size를 고른다. */
 export function fitNeoStampTitleFontSize(
   text: string,
   boxWidthPx: number,
@@ -126,39 +166,19 @@ export function fitNeoStampTitleFontSize(
   fontWeight: string | number = 800,
   useAppTitleMeasure = false,
 ): number {
-  if (!text || boxWidthPx <= 0) return maxPx;
-  // 호출부 min이 titleFontMin(33)처럼 높아도 스탬프 절대 하한까지 축소 허용
-  const lowPx = Math.min(minPx, NEO_STAMP_TITLE_MIN_PX);
-  for (let size = maxPx; size >= lowPx; size -= 1) {
-    const avail =
-      boxWidthPx
-      - NEO_STAMP_PAD_X_EM * size
-      - NEO_STAMP_BORDER_PX
-      - NEO_STAMP_MARGIN_PX
-      - NEO_STAMP_SAFETY_SLACK_PX;
-    if (avail <= 8) continue;
-    const letterSpacingPx = NEO_STAMP_LETTER_SPACING_EM * size;
-    const width = useAppTitleMeasure
-      ? measureAppTitleWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx)
-      : measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx);
-    if (width <= avail) return size;
-  }
-  return lowPx;
+  return fitChipTitleFontSize(
+    text,
+    boxWidthPx,
+    minPx,
+    maxPx,
+    fontFamily,
+    fontWeight,
+    NEO_STAMP_EXTRA_CHROME_PX,
+    useAppTitleMeasure,
+  );
 }
 
-/** High-end glass capsule — padding 0.75em×2 + border 1px×2 + letter-spacing 0.04em */
-const HIGHEND_CAPSULE_PAD_X_EM = 0.75 * 2;
-const HIGHEND_CAPSULE_BORDER_PX = 1 * 2;
-const HIGHEND_CAPSULE_LETTER_SPACING_EM = 0.04;
-/** canvas/DOM 측정·서브픽셀·마지막 글자 letter-spacing 여유 */
-const HIGHEND_CAPSULE_SAFETY_SLACK_PX = 8;
-/** 긴 제목+관리자 버튼에서도 캡슐 안에 들어가게 허용하는 절대 하한 */
-export const HIGHEND_CAPSULE_TITLE_MIN_PX = 12;
-
-/**
- * Quiet glass 캡슐 안에 타이틀이 들어가게 font-size를 고른다.
- * (패딩·보더·자간·측정 오차를 차감한 가용 폭 기준)
- */
+/** Quiet glass 캡슐 안에 타이틀이 들어가게 font-size를 고른다. */
 export function fitHighendCapsuleTitleFontSize(
   text: string,
   boxWidthPx: number,
@@ -168,22 +188,16 @@ export function fitHighendCapsuleTitleFontSize(
   fontWeight: string | number = 600,
   useAppTitleMeasure = false,
 ): number {
-  if (!text || boxWidthPx <= 0) return maxPx;
-  const lowPx = Math.min(minPx, HIGHEND_CAPSULE_TITLE_MIN_PX);
-  for (let size = maxPx; size >= lowPx; size -= 1) {
-    const avail =
-      boxWidthPx
-      - HIGHEND_CAPSULE_PAD_X_EM * size
-      - HIGHEND_CAPSULE_BORDER_PX
-      - HIGHEND_CAPSULE_SAFETY_SLACK_PX;
-    if (avail <= 8) continue;
-    const letterSpacingPx = HIGHEND_CAPSULE_LETTER_SPACING_EM * size;
-    const width = useAppTitleMeasure
-      ? measureAppTitleWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx)
-      : measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx);
-    if (width <= avail) return size;
-  }
-  return lowPx;
+  return fitChipTitleFontSize(
+    text,
+    boxWidthPx,
+    minPx,
+    maxPx,
+    fontFamily,
+    fontWeight,
+    HIGHEND_CAPSULE_EXTRA_CHROME_PX,
+    useAppTitleMeasure,
+  );
 }
 
 export function fitFontSizeToWidth(

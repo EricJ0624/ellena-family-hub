@@ -4,8 +4,6 @@ import { useLayoutEffect, type MutableRefObject, type RefObject } from 'react';
 import {
   shrinkFontSizeToElement,
   CUSTOM_TITLE_FONT_MIN_PX,
-  NEO_STAMP_TITLE_MIN_PX,
-  HIGHEND_CAPSULE_TITLE_MIN_PX,
   DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
   DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
 } from '@/lib/dashboard-title-fit';
@@ -80,10 +78,13 @@ export function useDashboardTitleMeasureEffects(opts: {
   useLayoutEffect(() => {
     const el = titleH1Ref.current;
     if (!el) return;
-    /* kids 간판은 테두리가 h1 scrollWidth에 포함된다. 여기서 다시 줄이면 글자가 최소 크기까지 떨어진다. */
-    if (isKidsTheme) return;
+    /*
+     * Kids/Neo/High-end는 테마 전용 fit(판면·칩 패딩)으로 이미 맞춤.
+     * h1/칩 scrollWidth로 다시 줄이면 테두리·버튼 폭까지 먹어 과축소된다.
+     */
+    if (isKidsTheme || isNeoTheme || isHighendTheme) return;
 
-    if (frameIsPortrait && isDefaultDashboardTitle && !isHighendTheme) {
+    if (frameIsPortrait && isDefaultDashboardTitle) {
       const maxPx = Math.min(
         customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
         DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
@@ -94,24 +95,10 @@ export function useDashboardTitleMeasureEffects(opts: {
       return;
     }
 
-    if (!frameIsPortrait && isDefaultDashboardTitle && !isNeoTheme && !isHighendTheme) return;
+    if (!frameIsPortrait && isDefaultDashboardTitle) return;
 
-    const chipTarget = isNeoTheme
-      ? ((el.querySelector('.dashboard-neo-title-text') as HTMLElement | null)
-        ?? (el.querySelector('.dashboard-neo-title-stamp') as HTMLElement | null)
-        ?? el)
-      : isHighendTheme
-        ? ((el.querySelector('.dashboard-highend-title-text') as HTMLElement | null)
-          ?? (el.querySelector('.dashboard-highend-title-capsule') as HTMLElement | null)
-          ?? el)
-        : el;
-    const minPx = isNeoTheme
-      ? NEO_STAMP_TITLE_MIN_PX
-      : isHighendTheme
-        ? HIGHEND_CAPSULE_TITLE_MIN_PX
-        : CUSTOM_TITLE_FONT_MIN_PX;
     const startPx = customTitleFontSizeRef.current ?? estimatedCustomTitleFontSize ?? titleFitMaxPx;
-    const fitted = shrinkFontSizeToElement(chipTarget, startPx, minPx);
+    const fitted = shrinkFontSizeToElement(el, startPx, CUSTOM_TITLE_FONT_MIN_PX);
     setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
   }, [
     frameIsPortrait,

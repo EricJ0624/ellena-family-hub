@@ -1457,9 +1457,11 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   transform: translate(-50%, -50%);
   white-space: nowrap;
   overflow: visible;
-  color: #3f2914;
-  -webkit-text-fill-color: #3f2914;
-  text-shadow: 0 1px 0 rgba(255, 236, 210, 0.55);
+  color: #24140c;
+  -webkit-text-fill-color: #24140c;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 0 rgba(255, 236, 210, 0.35);
 }
 
 /*
@@ -1474,12 +1476,12 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   max-width: 100%;
   width: max-content;
   box-sizing: border-box;
-  padding: 0.38em 0.72em;
+  padding: 0.32em 0.75em;
   margin-right: 4px;
   margin-bottom: 4px;
   border: 3px solid var(--neo-ink, #0a0a0a);
   border-radius: var(--neo-radius, 4px);
-  line-height: 1.2;
+  line-height: 1.25;
   vertical-align: middle;
   overflow: hidden;
   white-space: nowrap;
