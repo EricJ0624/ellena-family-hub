@@ -3396,9 +3396,10 @@ export default function FamilyHub() {
       window.setTimeout(triggerMapResize, 300);
     };
 
-    const slot = document.querySelector(
-      '.widget-chrome[data-widget-key="location"] .location-map-slot',
-    );
+    // portal로 body에 옮겨도 동일 DOM 노드라 observe 유지됨. 확대 슬롯 우선.
+    const slot =
+      document.querySelector('.location-map-slot.location-map-slot--expanded') ||
+      document.querySelector('.widget-chrome[data-widget-key="location"] .location-map-slot');
     if (!slot) return;
 
     const ro = new ResizeObserver(() => {
@@ -3406,12 +3407,15 @@ export default function FamilyHub() {
     });
     ro.observe(slot);
     triggerMapResize();
+    // iOS 커스텀 확대가 window resize 이벤트를 쏘므로 함께 수신
+    window.addEventListener('resize', triggerMapResize);
     document.addEventListener('fullscreenchange', onFullscreenChange);
     document.addEventListener('webkitfullscreenchange', onFullscreenChange as EventListener);
 
     return () => {
       if (resizeRaf) cancelAnimationFrame(resizeRaf);
       ro.disconnect();
+      window.removeEventListener('resize', triggerMapResize);
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', onFullscreenChange as EventListener);
     };

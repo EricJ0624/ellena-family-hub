@@ -7,7 +7,8 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { DashboardLocationRequestRow } from '../types';
 import type { DashboardTranslations } from '@/lib/translations/dashboard';
 import { isIosUserAgent } from '@/lib/nav-map-apps';
@@ -147,14 +148,29 @@ export function FamilyLocationSection({
   // SSR/하이드레이션 일치: 첫 클라이언트 paint 이후에만 iOS FS 버튼 표시
   const [iosFullscreenUi, setIosFullscreenUi] = useState(false);
   const [mapExpanded, setMapExpanded] = useState(false);
+  /** portal 대상: 축소=위젯 앵커, 확대=document.body (#map DOM 유지) */
+  const [mapPortalHost, setMapPortalHost] = useState<HTMLElement | null>(null);
+  const mapAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  // 콜백 identity를 고정 — mapExpanded에 묶으면 React가 ref(null)을 호출해 host가 끊김
+  const setMapAnchorRef = useCallback((node: HTMLDivElement | null) => {
+    mapAnchorRef.current = node;
+    if (!node) return;
+    setMapPortalHost((prev) => (prev === document.body ? prev : node));
+  }, []);
 
   useEffect(() => {
     setIosFullscreenUi(isIosUserAgent());
   }, []);
 
-  useEffect(() => {
-    if (!showMap) setMapExpanded(false);
-  }, [showMap]);
+  useLayoutEffect(() => {
+    if (!showMap) {
+      if (mapExpanded) setMapExpanded(false);
+      setMapPortalHost(mapAnchorRef.current);
+      return;
+    }
+    setMapPortalHost(mapExpanded ? document.body : mapAnchorRef.current);
+  }, [mapExpanded, showMap]);
 
   useEffect(() => {
     if (!mapExpanded) return;
@@ -164,7 +180,7 @@ export function FamilyLocationSection({
       if (e.key === 'Escape') setMapExpanded(false);
     };
     window.addEventListener('keydown', onKey);
-    // ResizeObserver(대시보드)가 슬롯 크기 변화를 잡아 map resize
+    // 대시보드 resize 리스너가 맵 캔버스를 다시 맞춤
     window.dispatchEvent(new Event('resize'));
     const t1 = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
     const t2 = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
@@ -393,180 +409,192 @@ export function FamilyLocationSection({
         </div>
 
         <div
-          className={`location-map-slot min-h-0 flex-1 touch-pan-y${
-            mapExpanded ? ' location-map-slot--expanded' : ''
+          ref={setMapAnchorRef}
+          className={`location-map-slot-anchor min-h-0 flex-1${
+            mapExpanded ? ' location-map-slot-anchor--expanded' : ''
           }`}
-        >
-          {showIosFsBtn ? (
-            <button
-              type="button"
-              className="location-ios-fullscreen-btn"
-              aria-label={mapExpanded ? fsLabelExit : fsLabelEnter}
-              title={mapExpanded ? fsLabelExit : fsLabelEnter}
-              onClick={() => setMapExpanded((v) => !v)}
-            >
-              {mapExpanded ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
-            </button>
-          ) : null}
-          {!showMap ? (
-            <div
-              key="location-map-off"
-              className="location-map-surface flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
-              style={{ padding: hasRequestUi ? '2cqmin' : '5cqmin' }}
-            >
-              <p className="location-map-placeholder-title font-semibold text-slate-600">
-                {t.location_ui_map_title}
-              </p>
-              <p className="location-map-placeholder-hint text-slate-500">
-                {t.location_ui_map_hint_off}
-              </p>
-            </div>
-          ) : hasGoogleMapsApiKey ? (
-            mapError ? (
+          aria-hidden={mapExpanded}
+        />
+        {mapPortalHost
+          ? createPortal(
               <div
-                key="location-map-error"
-                className="location-map-surface flex w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-800"
+                className={`location-map-slot min-h-0 flex-1 touch-pan-y${
+                  mapExpanded ? ' location-map-slot--expanded' : ''
+                }`}
+              >
+                {showIosFsBtn ? (
+                  <button
+                    type="button"
+                    className="location-ios-fullscreen-btn"
+                    aria-label={mapExpanded ? fsLabelExit : fsLabelEnter}
+                    title={mapExpanded ? fsLabelExit : fsLabelEnter}
+                    onClick={() => setMapExpanded((v) => !v)}
+                  >
+                    {mapExpanded ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
+                  </button>
+                ) : null}
+            {!showMap ? (
+              <div
+                key="location-map-off"
+                className="location-map-surface flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
+                style={{ padding: hasRequestUi ? '2cqmin' : '5cqmin' }}
+              >
+                <p className="location-map-placeholder-title font-semibold text-slate-600">
+                  {t.location_ui_map_title}
+                </p>
+                <p className="location-map-placeholder-hint text-slate-500">
+                  {t.location_ui_map_hint_off}
+                </p>
+              </div>
+            ) : hasGoogleMapsApiKey ? (
+              mapError ? (
+                <div
+                  key="location-map-error"
+                  className="location-map-surface flex w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-800"
+                  style={{ padding: '5cqmin' }}
+                >
+                  <div className="text-center" style={{ maxWidth: '80cqmin' }}>
+                    <p
+                      className="font-semibold text-red-600"
+                      style={{ marginBottom: '3cqmin', fontSize: '7cqmin' }}
+                    >
+                      {t.location_ui_gmaps_error_title}
+                    </p>
+                    <p style={{ marginBottom: '4cqmin', fontSize: '5cqmin', lineHeight: 1.6 }}>{mapError}</p>
+                    <div
+                      className="rounded-lg bg-red-100"
+                      style={{ marginBottom: '4cqmin', padding: '3cqmin', fontSize: '4.5cqmin', lineHeight: 1.6 }}
+                    >
+                      <p className="font-semibold" style={{ marginBottom: '2cqmin' }}>
+                        {t.location_ui_troubleshoot_title}
+                      </p>
+                      <ol className="ml-5" style={{ lineHeight: 1.8 }}>
+                        <li>
+                          <a
+                            href="https://console.cloud.google.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-red-600 underline"
+                          >
+                            {t.location_ui_troubleshoot_1}
+                          </a>
+                        </li>
+                        <li>{t.location_ui_troubleshoot_2}</li>
+                        <li>{t.location_ui_troubleshoot_3}</li>
+                        <li>{t.location_ui_troubleshoot_4}</li>
+                      </ol>
+                      <p
+                        className="text-red-800"
+                        style={{ marginTop: '2cqmin', fontSize: '3.5cqmin' }}
+                      >
+                        {t.location_ui_troubleshoot_note}
+                      </p>
+                    </div>
+                    {(lat !== 0 || lng !== 0) && (
+                      <a
+                        href={`https://www.google.com/maps?q=${lat},${lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-red-600 underline"
+                        style={{ fontSize: '5cqmin' }}
+                      >
+                        {t.location_ui_open_in_gmaps}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  key="location-map-on"
+                  id="map"
+                  className="location-map-canvas h-full min-h-0 w-full flex-1 rounded-xl border border-slate-200"
+                />
+              )
+            ) : (
+              <div
+                key="location-map-no-key"
+                className="location-map-surface flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
                 style={{ padding: '5cqmin' }}
               >
                 <div className="text-center" style={{ maxWidth: '80cqmin' }}>
                   <p
-                    className="font-semibold text-red-600"
-                    style={{ marginBottom: '3cqmin', fontSize: '7cqmin' }}
+                    className="font-semibold text-slate-800"
+                    style={{ marginBottom: '3cqmin', fontSize: '6cqmin' }}
                   >
-                    {t.location_ui_gmaps_error_title}
+                    {t.location_ui_api_key_title}
                   </p>
-                  <p style={{ marginBottom: '4cqmin', fontSize: '5cqmin', lineHeight: 1.6 }}>{mapError}</p>
                   <div
-                    className="rounded-lg bg-red-100"
-                    style={{ marginBottom: '4cqmin', padding: '3cqmin', fontSize: '4.5cqmin', lineHeight: 1.6 }}
+                    className="rounded-lg border border-slate-200 bg-white text-left"
+                    style={{ marginBottom: '3cqmin', padding: '4cqmin', fontSize: '4.5cqmin' }}
                   >
                     <p className="font-semibold" style={{ marginBottom: '2cqmin' }}>
-                      {t.location_ui_troubleshoot_title}
+                      {t.location_ui_api_setup_title}
                     </p>
                     <ol className="ml-5" style={{ lineHeight: 1.8 }}>
                       <li>
-                        <a
-                          href="https://console.cloud.google.com/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-red-600 underline"
+                        {t.location_ui_api_li1_before}
+                        <code
+                          className="rounded bg-slate-100"
+                          style={{ padding: '0.5cqmin 1.5cqmin', fontSize: '4cqmin' }}
                         >
-                          {t.location_ui_troubleshoot_1}
-                        </a>
+                          .env.local
+                        </code>
+                        {t.location_ui_api_li1_after}
                       </li>
-                      <li>{t.location_ui_troubleshoot_2}</li>
-                      <li>{t.location_ui_troubleshoot_3}</li>
-                      <li>{t.location_ui_troubleshoot_4}</li>
+                      <li>
+                        {t.location_ui_api_li2_intro}
+                        <br />
+                        <code
+                          className="mt-1 inline-block rounded bg-slate-100"
+                          style={{ padding: '1cqmin 2cqmin', fontSize: '3.5cqmin' }}
+                        >
+                          {t.location_ui_api_env_example}
+                        </code>
+                      </li>
+                      <li>
+                        {t.location_ui_api_li3_before}
+                        <code
+                          className="rounded bg-slate-100"
+                          style={{ padding: '0.5cqmin 1.5cqmin', fontSize: '4cqmin' }}
+                        >
+                          npm run dev
+                        </code>
+                        {t.location_ui_api_li3_after}
+                      </li>
                     </ol>
-                    <p
-                      className="text-red-800"
-                      style={{ marginTop: '2cqmin', fontSize: '3.5cqmin' }}
-                    >
-                      {t.location_ui_troubleshoot_note}
+                    <p className="text-slate-500" style={{ marginTop: '3cqmin', fontSize: '3.5cqmin' }}>
+                      {t.location_ui_api_hint_before}
+                      <a
+                        href="https://console.cloud.google.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500"
+                      >
+                        Google Cloud Console
+                      </a>
+                      {t.location_ui_api_hint_after}
                     </p>
                   </div>
                   {(lat !== 0 || lng !== 0) && (
-                    <a
-                      href={`https://www.google.com/maps?q=${lat},${lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-red-600 underline"
-                      style={{ fontSize: '5cqmin' }}
-                    >
-                      {t.location_ui_open_in_gmaps}
-                    </a>
+                    <p style={{ marginTop: '2cqmin', fontSize: '4cqmin' }}>
+                      {t.location_ui_or_maps_before}
+                      <a
+                        href={`https://www.google.com/maps?q=${lat},${lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline"
+                      >
+                        {t.location_ui_or_maps_link}
+                      </a>
+                    </p>
                   )}
                 </div>
               </div>
-            ) : (
-              <div
-                key="location-map-on"
-                id="map"
-                className="location-map-canvas h-full min-h-0 w-full flex-1 rounded-xl border border-slate-200"
-              />
+            )}
+              </div>,
+              mapPortalHost,
             )
-          ) : (
-            <div
-              key="location-map-no-key"
-              className="location-map-surface flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-              style={{ padding: '5cqmin' }}
-            >
-              <div className="text-center" style={{ maxWidth: '80cqmin' }}>
-                <p
-                  className="font-semibold text-slate-800"
-                  style={{ marginBottom: '3cqmin', fontSize: '6cqmin' }}
-                >
-                  {t.location_ui_api_key_title}
-                </p>
-                <div
-                  className="rounded-lg border border-slate-200 bg-white text-left"
-                  style={{ marginBottom: '3cqmin', padding: '4cqmin', fontSize: '4.5cqmin' }}
-                >
-                  <p className="font-semibold" style={{ marginBottom: '2cqmin' }}>
-                    {t.location_ui_api_setup_title}
-                  </p>
-                  <ol className="ml-5" style={{ lineHeight: 1.8 }}>
-                    <li>
-                      {t.location_ui_api_li1_before}
-                      <code
-                        className="rounded bg-slate-100"
-                        style={{ padding: '0.5cqmin 1.5cqmin', fontSize: '4cqmin' }}
-                      >
-                        .env.local
-                      </code>
-                      {t.location_ui_api_li1_after}
-                    </li>
-                    <li>
-                      {t.location_ui_api_li2_intro}
-                      <br />
-                      <code
-                        className="mt-1 inline-block rounded bg-slate-100"
-                        style={{ padding: '1cqmin 2cqmin', fontSize: '3.5cqmin' }}
-                      >
-                        {t.location_ui_api_env_example}
-                      </code>
-                    </li>
-                    <li>
-                      {t.location_ui_api_li3_before}
-                      <code
-                        className="rounded bg-slate-100"
-                        style={{ padding: '0.5cqmin 1.5cqmin', fontSize: '4cqmin' }}
-                      >
-                        npm run dev
-                      </code>
-                      {t.location_ui_api_li3_after}
-                    </li>
-                  </ol>
-                  <p className="text-slate-500" style={{ marginTop: '3cqmin', fontSize: '3.5cqmin' }}>
-                    {t.location_ui_api_hint_before}
-                    <a
-                      href="https://console.cloud.google.com/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500"
-                    >
-                      Google Cloud Console
-                    </a>
-                    {t.location_ui_api_hint_after}
-                  </p>
-                </div>
-                {(lat !== 0 || lng !== 0) && (
-                  <p style={{ marginTop: '2cqmin', fontSize: '4cqmin' }}>
-                    {t.location_ui_or_maps_before}
-                    <a
-                      href={`https://www.google.com/maps?q=${lat},${lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 underline"
-                    >
-                      {t.location_ui_or_maps_link}
-                    </a>
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+          : null}
       </div>
     </section>
   );
