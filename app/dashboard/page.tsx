@@ -6778,14 +6778,23 @@ export default function FamilyHub() {
     // ellipsis는 scrollWidth 오탐으로 폰트 축소를 막아 "Fami..." 고착의 주원인
     textOverflow: 'clip',
     fontSize: titleFontSizeValue,
-    fontWeight: isDefaultDashboardTitle
-      ? (frameIsPortrait
-        ? titleFont.fontWeight
-        : (effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight))
-      : BAROQUE_MAT_DASHBOARD_TITLE.fontWeight,
-    letterSpacing: isDefaultDashboardTitle
-      ? `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`
-      : `${BAROQUE_MAT_DASHBOARD_TITLE.letterSpacingPx}px`,
+    /* 테마별 값은 여기서만 — spread에 중복 넣으면 TS2783으로 빌드 실패 */
+    fontWeight: isKidsTheme || isNeoTheme
+      ? 800
+      : isHighendTheme
+        ? 600
+        : isDefaultDashboardTitle
+          ? (frameIsPortrait
+            ? titleFont.fontWeight
+            : (effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight))
+          : BAROQUE_MAT_DASHBOARD_TITLE.fontWeight,
+    letterSpacing: isKidsTheme
+      ? '1px'
+      : isNeoTheme || isHighendTheme
+        ? '0.04em'
+        : isDefaultDashboardTitle
+          ? `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`
+          : `${BAROQUE_MAT_DASHBOARD_TITLE.letterSpacingPx}px`,
     fontFamily: isDefaultDashboardTitle
       ? (frameIsPortrait
         ? titleFont.fontFamily
@@ -6801,8 +6810,6 @@ export default function FamilyHub() {
           WebkitTextFillColor: '#24140c',
           backgroundClip: 'unset',
           textShadow: '0 1px 0 rgba(255, 236, 210, 0.35)',
-          fontWeight: 800,
-          letterSpacing: '1px',
         }
       : isNeoTheme
         ? {
@@ -6814,8 +6821,6 @@ export default function FamilyHub() {
             WebkitTextFillColor: '#0a0a0a',
             backgroundClip: 'unset',
             textShadow: 'none',
-            fontWeight: 800,
-            letterSpacing: '0.04em',
           }
       : isHighendTheme
         ? {
@@ -6827,8 +6832,6 @@ export default function FamilyHub() {
             WebkitTextFillColor: '#f8fafc',
             backgroundClip: 'unset',
             textShadow: 'none',
-            fontWeight: 600,
-            letterSpacing: '0.04em',
           }
       : isDefaultDashboardTitle
         ? {
