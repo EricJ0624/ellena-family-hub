@@ -7489,6 +7489,8 @@ export default function FamilyHub() {
               location_ui_pin_time_left: dt('location_ui_pin_time_left'),
               location_ui_pin_expired: dt('location_ui_pin_expired'),
               location_ui_sharing_with: dt('location_ui_sharing_with'),
+              location_ui_im_here_heading: dt('location_ui_im_here_heading'),
+              location_ui_im_here_sharing: dt('location_ui_im_here_sharing'),
               location_ui_end_sharing: dt('location_ui_end_sharing'),
             }}
             cancelLabel={ct('cancel')}

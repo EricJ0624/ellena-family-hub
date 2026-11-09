@@ -77,6 +77,8 @@ export type FamilyLocationSectionTranslations = Pick<
   | 'location_ui_pin_time_left'
   | 'location_ui_pin_expired'
   | 'location_ui_sharing_with'
+  | 'location_ui_im_here_heading'
+  | 'location_ui_im_here_sharing'
   | 'location_ui_end_sharing'
 >;
 
@@ -116,6 +118,10 @@ function fillName(template: string, name: string) {
   return template.replace(/\{name\}/g, name);
 }
 
+function fillNames(template: string, names: string) {
+  return template.replace(/\{names\}/g, names);
+}
+
 export function FamilyLocationSection({
   onOpenRequestModal,
   onOpenComeHereModal,
@@ -142,7 +148,23 @@ export function FamilyLocationSection({
   const lng = myLocation.longitude ?? 0;
   const pendingRequests = locationRequests.filter((req) => req.status === 'pending');
   const acceptedRequests = locationRequests.filter((req) => req.status === 'accepted');
-  const hasRequestUi = pendingRequests.length > 0 || acceptedRequests.length > 0;
+  const myImHereShares = acceptedRequests.filter(
+    (req) => req.request_type === 'im_here' && req.requester_id === userId,
+  );
+  const otherAcceptedRequests = acceptedRequests.filter((req) => req.request_type !== 'im_here');
+  const hasRequestUi = pendingRequests.length > 0 || otherAcceptedRequests.length > 0 || myImHereShares.length > 0;
+  const imHereNames = myImHereShares
+    .map((req) => {
+      const otherUser = req.target;
+      const otherUserName =
+        otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
+      const otherUserRole = otherUser?.id && familyRoleByUserId[otherUser.id];
+      const roleDisplay = otherUserRole
+        ? ` ${getFamilyRoleEmoji(otherUserRole)} ${getFamilyRoleLabel(lang, otherUserRole)}`
+        : '';
+      return `${otherUserName}${roleDisplay}`.trim();
+    })
+    .join('·');
 
   // SSR/하이드레이션 일치: 첫 클라이언트 paint 이후에만 iOS FS 버튼 표시
   const [iosFullscreenUi, setIosFullscreenUi] = useState(false);
@@ -224,7 +246,7 @@ export function FamilyLocationSection({
           </div>
         )}
 
-        {hasRequestUi && (
+        {(pendingRequests.length > 0 || otherAcceptedRequests.length > 0) && (
           <div className="location-requests-panel shrink-0">
             <h4 className="location-requests-heading">{t.location_ui_requests_heading}</h4>
             <div className="location-requests-list">
@@ -330,7 +352,7 @@ export function FamilyLocationSection({
                 );
               })}
 
-              {acceptedRequests.map((req) => {
+              {otherAcceptedRequests.map((req) => {
                 const isRequester = req.requester_id === userId;
                 const otherUser = isRequester ? req.target : req.requester;
                 const otherUserName =
@@ -368,18 +390,51 @@ export function FamilyLocationSection({
                         )}
                       </div>
                     </div>
-                    {(req.request_type !== 'im_here' || isRequester) && (
+                    <button
+                      type="button"
+                      onClick={() => onEndLocationSharing(req.id)}
+                      className="location-request-btn location-request-btn--sm bg-red-500 text-white"
+                    >
+                      {t.location_ui_end_sharing}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {myImHereShares.length > 0 && (
+          <div className="location-requests-panel shrink-0">
+            <h4 className="location-requests-heading">{t.location_ui_im_here_heading}</h4>
+            <div className="location-requests-list">
+              <div className="location-request-card rounded-lg border border-emerald-500 bg-emerald-100">
+                <div className="location-request-card-body">
+                  <div className="location-request-card-name text-emerald-600">
+                    {fillNames(t.location_ui_im_here_sharing, imHereNames)}
+                  </div>
+                </div>
+                <div className="location-request-card-actions">
+                  {myImHereShares.map((req) => {
+                    const otherUser = req.target;
+                    const otherUserName =
+                      otherUser?.nickname ||
+                      otherUser?.email ||
+                      otherUser?.id?.substring(0, 8) ||
+                      t.location_ui_unknown_user;
+                    return (
                       <button
+                        key={req.id}
                         type="button"
                         onClick={() => onEndLocationSharing(req.id)}
                         className="location-request-btn location-request-btn--sm bg-red-500 text-white"
                       >
-                        {t.location_ui_end_sharing}
+                        {myImHereShares.length > 1 ? `${otherUserName} ${t.location_ui_end_sharing}` : t.location_ui_end_sharing}
                       </button>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}

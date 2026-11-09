@@ -257,6 +257,8 @@ export type DashboardTranslations = {
   location_ui_pin_time_left: string;
   location_ui_pin_expired: string;
   location_ui_sharing_with: string;
+  location_ui_im_here_heading: string;
+  location_ui_im_here_sharing: string;
   location_ui_end_sharing: string;
   location_modal_send_title: string;
   location_modal_loading_users: string;
@@ -583,6 +585,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 {h}시간 {m}분 남음',
     location_ui_pin_expired: '📍 만료됨',
     location_ui_sharing_with: '✓ {name}와(과) 위치 공유 중',
+    location_ui_im_here_heading: '위치 공유',
+    location_ui_im_here_sharing: '{names}에게 내 위치 공유 중',
     location_ui_end_sharing: '종료',
     location_modal_send_title: '위치 공유 요청 보내기',
     location_modal_loading_users: '사용자 목록을 불러오는 중...',
@@ -902,6 +906,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 {h}h {m}m left',
     location_ui_pin_expired: '📍 Expired',
     location_ui_sharing_with: '✓ Sharing location with {name}',
+    location_ui_im_here_heading: 'Location sharing',
+    location_ui_im_here_sharing: 'Sharing my location with {names}',
     location_ui_end_sharing: 'End',
     location_modal_send_title: 'Send location share request',
     location_modal_loading_users: 'Loading users…',
@@ -1221,6 +1227,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 残り {h}時間 {m}分',
     location_ui_pin_expired: '📍 期限切れ',
     location_ui_sharing_with: '✓ {name}と位置を共有中',
+    location_ui_im_here_heading: '位置共有',
+    location_ui_im_here_sharing: '{names}に自分の位置を共有中',
     location_ui_end_sharing: '終了',
     location_modal_send_title: '位置共有リクエストを送る',
     location_modal_loading_users: 'ユーザーを読み込み中…',
@@ -1538,6 +1546,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 剩余 {h} 小时 {m} 分钟',
     location_ui_pin_expired: '📍 已过期',
     location_ui_sharing_with: '✓ 正在与 {name} 共享位置',
+    location_ui_im_here_heading: '位置共享',
+    location_ui_im_here_sharing: '正在向{names}共享我的位置',
     location_ui_end_sharing: '结束',
     location_modal_send_title: '发送位置共享请求',
     location_modal_loading_users: '正在加载用户列表…',
@@ -1854,6 +1864,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 剩餘 {h} 小時 {m} 分鐘',
     location_ui_pin_expired: '📍 已過期',
     location_ui_sharing_with: '✓ 正在與 {name} 分享位置',
+    location_ui_im_here_heading: '位置分享',
+    location_ui_im_here_sharing: '正在向{names}分享我的位置',
     location_ui_end_sharing: '結束',
     location_modal_send_title: '傳送位置分享請求',
     location_modal_loading_users: '正在載入使用者清單…',
@@ -2170,6 +2182,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 Faltan {h}h {m}m',
     location_ui_pin_expired: '📍 Caducado',
     location_ui_sharing_with: '✓ Compartiendo ubicación con {name}',
+    location_ui_im_here_heading: 'Ubicación compartida',
+    location_ui_im_here_sharing: 'Compartiendo mi ubicación con {names}',
     location_ui_end_sharing: 'Fin',
     location_modal_send_title: 'Enviar solicitud para compartir ubicación',
     location_modal_loading_users: 'Cargando usuarios…',
@@ -2485,6 +2499,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 {h}h il reste {m}m',
     location_ui_pin_expired: '📍 Expiré',
     location_ui_sharing_with: '✓ Partager la position avec {name}',
+    location_ui_im_here_heading: 'Partage de position',
+    location_ui_im_here_sharing: 'Je partage ma position avec {names}',
     location_ui_end_sharing: 'Fin',
     location_modal_send_title: 'Envoyer une demande de partage de position',
     location_modal_loading_users: 'Chargement des utilisateurs…',
@@ -2800,6 +2816,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 {h}h {m}m übrig',
     location_ui_pin_expired: '📍Abgelaufen',
     location_ui_sharing_with: '✓ Standort mit {name} teilen',
+    location_ui_im_here_heading: 'Standortfreigabe',
+    location_ui_im_here_sharing: 'Mein Standort wird mit {names} geteilt',
     location_ui_end_sharing: 'Ende',
     location_modal_send_title: 'Senden Sie eine Anfrage zur Standortfreigabe',
     location_modal_loading_users: 'Benutzer werden geladen…',
@@ -3115,6 +3133,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 {h}h {m}m a sinistra',
     location_ui_pin_expired: '📍Scaduto',
     location_ui_sharing_with: '✓ Condivisione della posizione con {name}',
+    location_ui_im_here_heading: 'Condivisione posizione',
+    location_ui_im_here_sharing: 'Condivido la mia posizione con {names}',
     location_ui_end_sharing: 'FINE',
     location_modal_send_title: 'Invia richiesta di condivisione della posizione',
     location_modal_loading_users: 'Caricamento utenti…',
@@ -3430,6 +3450,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     location_ui_pin_time_left: '📍 {h}h {m}m restantes',
     location_ui_pin_expired: '📍 Expirado',
     location_ui_sharing_with: '✓ Compartilhando localização com {name}',
+    location_ui_im_here_heading: 'Compartilhamento de localização',
+    location_ui_im_here_sharing: 'Compartilhando minha localização com {names}',
     location_ui_end_sharing: 'Encerrar',
     location_modal_send_title: 'Enviar solicitação de compartilhamento de localização',
     location_modal_loading_users: 'Carregando usuários…',
