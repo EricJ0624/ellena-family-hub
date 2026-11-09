@@ -61,17 +61,18 @@ export function customTitleMaxFontSize(
 
 /**
  * Kids 나무 간판.
- * 글자는 border-box가 아니라 콘텐츠 박스(좌우 border-image 46px 안쪽)에 가운데 정렬된다.
- * 테두리를 폭에서 빼지 않으면 짧은 이름이 고리와 판자 끝 밖으로 나간다.
+ * 글자는 판면(border-box) 가운데에 두고, 양끝만 살짝 비운다.
+ * 좌우 border-image 46px까지 빼면 판자 한가운데만 써서 글자가 작아 보인다.
  * 판면 높이 = KIDS_SIGN_MIN_HEIGHT_REM(8.5rem=136px) - 위 40px - 아래 18px.
  * globals.css · page.tsx 의 min-height 와 동일 값을 유지할 것.
  */
 export const KIDS_SIGN_MIN_HEIGHT_REM = 8.5;
-const KIDS_SIGN_BORDER_X_PX = 46;
-const KIDS_SIGN_INNER_PAD_X_PX = 10;
-const KIDS_SIGN_SAFETY_SLACK_PX = 8;
-const KIDS_SIGN_CHROME_X_PX =
-  (KIDS_SIGN_BORDER_X_PX + KIDS_SIGN_INNER_PAD_X_PX) * 2 + KIDS_SIGN_SAFETY_SLACK_PX;
+/**
+ * 9-slice 좌우 46px는 구멍가 아니라 판자 그림이다. 글자는 overflow로 그 위에도 올라간다.
+ * 고리는 위쪽이라, 판면(border-box)에서 양끝 16px만 비운다.
+ */
+const KIDS_SIGN_EDGE_INSET_PX = 16;
+const KIDS_SIGN_CHROME_X_PX = KIDS_SIGN_EDGE_INSET_PX * 2;
 const KIDS_SIGN_FACE_HEIGHT_PX = KIDS_SIGN_MIN_HEIGHT_REM * 16 - 40 - 18;
 /** 판면 위아래 8px씩. 이보다 크면 글자 em이 나무 밖으로 나간다. (~62px @ 8.5rem) */
 export const KIDS_SIGN_TITLE_MAX_PX = KIDS_SIGN_FACE_HEIGHT_PX - 16;

@@ -2195,8 +2195,10 @@ export default function FamilyHub() {
     /** kids: 간판 좌우 크롬은 fitKidsGlassTitleFontSize가 고정 px로 뺀다. h1은 글자에 맞춰 줄므로 행 폭을 쓴다. */
     const kidsGlassInsetPx = 0;
     if (isKidsTheme) {
+      /* 간판은 이미 알림/관리자 옆 flex 폭. 버튼 폭을 다시 빼면 판면보다 글자가 작아진다. */
+      const glass = titleH1Ref.current?.querySelector('.dashboard-family-title-glass') as HTMLElement | null;
+      if (glass && glass.offsetWidth > 0) return glass.offsetWidth;
       const row = titleRowRef.current;
-      /* 뷰포트 전체 폭을 쓰면 폰 프레임보다 크게 그린 뒤 다시 줄어든다 */
       const rowWidth = row && row.clientWidth > 0 ? row.clientWidth : 430;
       const adminBtn = row?.querySelector('[data-dashboard-admin-btn]') as HTMLElement | null;
       const notifEl = row?.querySelector('[data-notification-center]') as HTMLElement | null;
