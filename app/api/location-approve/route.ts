@@ -79,7 +79,14 @@ export async function POST(request: NextRequest) {
       const isRequester = locationRequest.requester_id === userId;
       const isTarget = locationRequest.target_id === userId;
       const isAccepted = locationRequest.status === 'accepted';
-      
+      // 나여기는 위치를 공유한 사람만 취소. 어디야·일루와는 승인 후 양쪽 모두 취소 가능.
+      if (locationRequest.request_type === 'im_here' && !isRequester) {
+        return NextResponse.json(
+          { error: '취소 권한이 없습니다.' },
+          { status: 403 }
+        );
+      }
+
       if (!isRequester && !(isAccepted && isTarget)) {
         return NextResponse.json(
           { error: '취소 권한이 없습니다.' },

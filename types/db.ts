@@ -600,7 +600,7 @@ export interface Database {
           target_id: string
           group_id: string | null
           status: 'pending' | 'accepted' | 'rejected' | 'cancelled'
-          request_type: 'where' | 'come_here'
+          request_type: 'where' | 'come_here' | 'im_here'
           destination_lat: number | null
           destination_lng: number | null
           created_at: string
@@ -613,7 +613,7 @@ export interface Database {
           target_id: string
           group_id?: string | null
           status?: 'pending' | 'accepted' | 'rejected' | 'cancelled'
-          request_type?: 'where' | 'come_here'
+          request_type?: 'where' | 'come_here' | 'im_here'
           destination_lat?: number | null
           destination_lng?: number | null
           created_at?: string
@@ -626,7 +626,7 @@ export interface Database {
           target_id?: string
           group_id?: string | null
           status?: 'pending' | 'accepted' | 'rejected' | 'cancelled'
-          request_type?: 'where' | 'come_here'
+          request_type?: 'where' | 'come_here' | 'im_here'
           destination_lat?: number | null
           destination_lng?: number | null
           created_at?: string

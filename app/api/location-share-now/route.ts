@@ -4,8 +4,8 @@ import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { notifyFamily } from '@/lib/notifications/notify';
 
 /**
- * 「나여기」— 내 GPS를 저장하고 같은 그룹 멤버와 accepted 공유를 즉시 연다.
- * 기존 /api/location-request · /api/location-approve 경로는 수정하지 않는다.
+ * 「나여기」— 내 GPS만 저장하고, 그룹 멤버가 내 위치만 보도록 im_here 공유를 연다.
+ * 상대 좌표는 올리지 않는다. 어디야·일루와 요청 생성/승인 경로는 바꾸지 않는다.
  */
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -113,46 +113,27 @@ export async function POST(request: NextRequest) {
     const sharedWith: string[] = [];
 
     for (const targetId of targetIds) {
-      const { data: acceptedRows } = await supabase
+      const { data: existingImHere } = await supabase
         .from('location_requests')
         .select('id')
         .eq('group_id', groupId)
         .eq('status', 'accepted')
-        .or(
-          `and(requester_id.eq.${user.id},target_id.eq.${targetId}),and(requester_id.eq.${targetId},target_id.eq.${user.id})`,
-        )
+        .eq('request_type', 'im_here')
+        .eq('requester_id', user.id)
+        .eq('target_id', targetId)
         .limit(1);
 
-      if (acceptedRows && acceptedRows.length > 0) {
-        sharedWith.push(targetId);
-        continue;
-      }
-
-      const { data: pendingWhereRows } = await supabase
-        .from('location_requests')
-        .select('id, request_type')
-        .eq('group_id', groupId)
-        .eq('status', 'pending')
-        .eq('request_type', 'where')
-        .or(
-          `and(requester_id.eq.${user.id},target_id.eq.${targetId}),and(requester_id.eq.${targetId},target_id.eq.${user.id})`,
-        )
-        .limit(1);
-
-      if (pendingWhereRows && pendingWhereRows.length > 0) {
-        const pendingId = pendingWhereRows[0].id;
-        const { error: acceptError } = await supabase
+      if (existingImHere && existingImHere.length > 0) {
+        const { error: refreshError } = await supabase
           .from('location_requests')
-          .update({ status: 'accepted', expires_at: expiresAt })
-          .eq('id', pendingId)
+          .update({ expires_at: expiresAt })
+          .eq('id', existingImHere[0].id)
           .eq('group_id', groupId);
-
-        if (acceptError) {
-          console.error('나여기 pending 승인 오류:', acceptError, pendingId);
+        if (refreshError) {
+          console.error('나여기 공유 갱신 오류:', refreshError, targetId);
           continue;
         }
         sharedWith.push(targetId);
-        newlyNotified.push(targetId);
         continue;
       }
 
@@ -163,7 +144,7 @@ export async function POST(request: NextRequest) {
           target_id: targetId,
           group_id: groupId,
           status: 'accepted',
-          request_type: 'where',
+          request_type: 'im_here',
           expires_at: expiresAt,
         });
 

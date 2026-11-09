@@ -314,12 +314,75 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
     .substring(0, maxLength);
 };
 
+type LocationShareType = 'where' | 'come_here' | 'im_here';
+
+function normalizeLocationRequestType(value: unknown): LocationShareType {
+  if (value === 'come_here' || value === 'im_here') return value;
+  return 'where';
+}
+
+function imHereShareExpired(req: { request_type?: string; status?: string; expires_at?: string | null }): boolean {
+  if (req.request_type !== 'im_here' || req.status !== 'accepted' || !req.expires_at) return false;
+  const expiresAt = new Date(req.expires_at).getTime();
+  return Number.isFinite(expiresAt) && expiresAt <= Date.now();
+}
+
+/** im_here는 버튼을 누른 사람만. where·come_here는 승인된 상대를 그대로 보여 준다. */
+function locationShareShowsUser(
+  req: { status?: string; request_type?: string; requester_id?: string | null; target_id?: string | null },
+  viewerId: string,
+  locationUserId: string,
+): boolean {
+  if (req.status !== 'accepted' || !viewerId || !locationUserId || locationUserId === viewerId) return false;
+  if (imHereShareExpired(req)) return false;
+  if (req.request_type === 'im_here') {
+    return req.requester_id === locationUserId && req.target_id === viewerId;
+  }
+  return (
+    (req.requester_id === viewerId && req.target_id === locationUserId) ||
+    (req.requester_id === locationUserId && req.target_id === viewerId)
+  );
+}
+
+function viewerPublishesOwnPin(
+  requests: ReadonlyArray<{ status?: string; request_type?: string; requester_id?: string | null; target_id?: string | null }>,
+  viewerId: string,
+): boolean {
+  return requests.some((req) => {
+    if (req.status !== 'accepted' || !viewerId || imHereShareExpired(req)) return false;
+    if (req.request_type === 'im_here') return req.requester_id === viewerId;
+    return req.requester_id === viewerId || req.target_id === viewerId;
+  });
+}
+
+function visibleFamilyUserIds(
+  requests: ReadonlyArray<{ status?: string; request_type?: string; requester_id?: string | null; target_id?: string | null }>,
+  viewerId: string,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const req of requests) {
+    if (req.status !== 'accepted' || imHereShareExpired(req)) continue;
+    if (req.request_type === 'im_here') {
+      if (req.requester_id && req.requester_id !== viewerId && req.target_id === viewerId) {
+        ids.add(req.requester_id);
+      }
+      continue;
+    }
+    if (req.requester_id === viewerId && req.target_id && req.target_id !== viewerId) {
+      ids.add(req.target_id);
+    } else if (req.target_id === viewerId && req.requester_id && req.requester_id !== viewerId) {
+      ids.add(req.requester_id);
+    }
+  }
+  return ids;
+}
+
 // location_requests 레거시/혼용 스키마(target_user_id) 안전 정규화
 function normalizeLocationRequestRow(req: any) {
   return {
     ...req,
     target_id: req?.target_id || req?.target_user_id || req?.target?.id || null,
-    request_type: req?.request_type === 'come_here' ? 'come_here' : 'where',
+    request_type: normalizeLocationRequestType(req?.request_type),
     destination_lat: req?.destination_lat ?? null,
     destination_lng: req?.destination_lng ?? null,
     expires_at: req?.expires_at ?? undefined,
@@ -819,7 +882,7 @@ export default function FamilyHub() {
     requester_id: string;
     target_id: string;
     status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
-    request_type?: 'where' | 'come_here';
+    request_type?: 'where' | 'come_here' | 'im_here';
     destination_lat?: number | null;
     destination_lng?: number | null;
     created_at: string;
@@ -829,8 +892,10 @@ export default function FamilyHub() {
   }>>([]);
   const locationRequestsRef = useRef(locationRequests);
   locationRequestsRef.current = locationRequests;
-  /** 맵 표시·GPS 동기화의 단일 진실: accepted 공유 여부 */
+  /** 맵 표시: 승인된 공유가 하나라도 있으면 지도를 연다 */
   const hasAcceptedShare = locationRequests.some((r) => r.status === 'accepted');
+  /** GPS 전송: 나여기는 버튼을 누른 사람만. 어디야·일루와는 승인된 양쪽. */
+  const publishesOwnPin = viewerPublishesOwnPin(locationRequests, userId);
   /** saveLocationToSupabase 스로틀 등 비동기에서 공유 중 여부 참조 */
   const isLocationSharingRef = useRef(false);
   isLocationSharingRef.current = hasAcceptedShare;
@@ -2642,16 +2707,16 @@ export default function FamilyHub() {
               const { latitude, longitude, accuracy, timestamp } = event.data.data;
               console.log('Service Worker에서 위치 업데이트 수신:', { latitude, longitude, accuracy });
               
-              // 위치 업데이트 (기존 updateLocation 로직 재사용)
-              if (userId) {
+              // 나여기 수신만으로는 내 좌표를 올리지 않는다
+              if (userId && viewerPublishesOwnPin(locationRequestsRef.current, userId)) {
                 updateLocationFromServiceWorker(latitude, longitude, accuracy);
               }
             }
           });
         }
 
-        // 위치 공유가 활성화되어 있으면 백그라운드 위치 추적 시작
-        if (hasAcceptedShare) {
+        // 내 위치를 올리는 공유일 때만 백그라운드 추적. 나여기 수신자는 지도를 보기만 한다.
+        if (viewerPublishesOwnPin(locationRequestsRef.current, userId)) {
           startBackgroundLocationTracking();
         }
       } catch (error) {
@@ -2668,7 +2733,7 @@ export default function FamilyHub() {
         stopBackgroundLocationTracking();
       }
     };
-  }, [isMounted, isAuthenticated, userId, hasAcceptedShare]);
+  }, [isMounted, isAuthenticated, userId, publishesOwnPin]);
 
   // Service Worker에서 받은 위치 업데이트 처리 함수
   const updateLocationFromServiceWorker = async (latitude: number, longitude: number, accuracy: number) => {
@@ -2761,8 +2826,9 @@ export default function FamilyHub() {
         return null;
       };
 
-      // 현재 위치 마커 업데이트 또는 생성
-      if (state.location.latitude && state.location.longitude) {
+      // 현재 위치 마커. 나여기는 버튼을 누른 뒤에만 본인 핀을 그린다.
+      const showOwnPin = viewerPublishesOwnPin(locationRequestsRef.current, userId);
+      if (showOwnPin && state.location.latitude && state.location.longitude) {
         const existingMyMarker = dropIfDetached('my-location', markersRef.current.get('my-location'));
         if (existingMyMarker) {
           // 기존 마커 위치 업데이트
@@ -3545,10 +3611,22 @@ export default function FamilyHub() {
             if (ev === 'INSERT') {
               console.log('📍 Realtime 위치 요청 INSERT 이벤트 수신:', payload);
               const newRequest = payload.new;
+              if (
+                newRequest?.status === 'accepted' &&
+                newRequest.request_type === 'im_here' &&
+                newRequest.requester_id &&
+                newRequest.requester_id !== userId &&
+                newRequest.target_id === userId
+              ) {
+                acceptedUserIdsRef.current.add(newRequest.requester_id);
+              }
               if (newRequest && newRequest.target_id === userId) {
                 await loadLocationRequests();
               } else {
                 loadLocationRequests();
+              }
+              if (newRequest?.status === 'accepted') {
+                loadFamilyLocations();
               }
               return;
             }
@@ -3562,8 +3640,10 @@ export default function FamilyHub() {
             console.log('📍 Realtime 위치 요청 UPDATE 이벤트 수신:', payload);
             const updatedRequest = payload.new;
             if (updatedRequest && updatedRequest.status === 'accepted') {
-              const otherId = updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id;
-              if (otherId) acceptedUserIdsRef.current.add(otherId);
+              const otherId = updatedRequest.request_type === 'im_here'
+                ? (updatedRequest.requester_id !== userId ? updatedRequest.requester_id : null)
+                : (updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id);
+              if (otherId && otherId !== userId) acceptedUserIdsRef.current.add(otherId);
             }
             const cancelledOtherId = (updatedRequest && (updatedRequest.status === 'cancelled' || updatedRequest.status === 'rejected'))
               ? (updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id)
@@ -3579,10 +3659,11 @@ export default function FamilyHub() {
                   });
                   const json = await res.json();
                   if (json.success && Array.isArray(json.data)) {
-                    const hasAcceptedWithUser = json.data.some(
-                      (r: any) => r.status === 'accepted' && (r.requester_id === cancelledOtherId || r.target_id === cancelledOtherId)
+                    const stillVisible = visibleFamilyUserIds(
+                      (json.data as any[]).map(normalizeLocationRequestRow),
+                      userId,
                     );
-                    if (!hasAcceptedWithUser) acceptedUserIdsRef.current.delete(cancelledOtherId);
+                    if (!stillVisible.has(cancelledOtherId)) acceptedUserIdsRef.current.delete(cancelledOtherId);
                   }
                 }
               } catch (_) {}
@@ -3590,9 +3671,9 @@ export default function FamilyHub() {
             if (updatedRequest && updatedRequest.status === 'accepted') {
               const isRequester = updatedRequest.requester_id === userId;
               const isTarget = updatedRequest.target_id === userId;
-              // ✅ FIX: 승인 시 무조건 위치 저장 (!isLocationSharing 조건 제거)
-              // 양방향 위치 공유를 위해 양쪽 모두 user_locations에 데이터 저장 필요
-              if (isRequester || isTarget) {
+              const isImHere = updatedRequest.request_type === 'im_here';
+              // 어디야·일루와 승인 시 양쪽 GPS 저장. 나여기는 버튼을 누른 사람만 저장한다.
+              if ((isRequester || isTarget) && !(isImHere && !isRequester)) {
                 console.log('🎯 [Realtime] 승인됨 - 위치 즉시 저장 시작');
                 try {
                   if (navigator.geolocation) {
@@ -4185,6 +4266,7 @@ export default function FamilyHub() {
     const checkExpiredRequests = () => {
       const now = new Date();
       const expiredAcceptedRequests: string[] = [];
+      const viewerExpiredImHereIds: string[] = [];
       
       locationRequestsRef.current.forEach((req: any) => {
         // expires_at이 있는 경우에만 만료 체크
@@ -4192,21 +4274,26 @@ export default function FamilyHub() {
           const expiresAt = new Date(req.expires_at);
           // 만료된 accepted 요청만 자동으로 종료 (pending은 사용자가 직접 삭제)
           if (expiresAt < now && req.status === 'accepted') {
-            // 만료된 accepted 요청 ID 수집
+            // 나여기 만료 정리는 공유한 사람만 서버에 반영한다. 보는 사람은 목록에서만 뺀다.
+            if (req.request_type === 'im_here' && req.requester_id !== userId) {
+              viewerExpiredImHereIds.push(req.id);
+              return;
+            }
             expiredAcceptedRequests.push(req.id);
           }
           // pending 상태의 만료된 요청은 자동 삭제하지 않음 (사용자가 직접 삭제)
         }
       });
       
+      const hideIds = expiredAcceptedRequests.concat(viewerExpiredImHereIds);
       // 만료된 accepted 요청들을 silent 모드로 자동 종료 (skipReload로 무한 루프 방지)
-      if (expiredAcceptedRequests.length > 0) {
+      if (hideIds.length > 0) {
         expiredAcceptedRequests.forEach((requestId) => {
           // skipReload=true로 설정하여 loadLocationRequests 재호출 방지
           endLocationSharing(requestId, true, true).catch(() => {});
         });
         // 상태만 업데이트 (재로드 없이)
-        setLocationRequests(prev => prev.filter(req => !expiredAcceptedRequests.includes(req.id)));
+        setLocationRequests(prev => prev.filter(req => !hideIds.includes(req.id)));
       }
     };
 
@@ -4948,12 +5035,12 @@ export default function FamilyHub() {
     }
   };
 
-  // accepted 공유가 없으면 GPS 중지 (맵은 hasAcceptedShare로 자동 숨김)
+  // 내 위치를 올리지 않으면 GPS만 중지. 지도는 hasAcceptedShare가 유지한다.
   useEffect(() => {
-    if (!hasAcceptedShare) {
+    if (!publishesOwnPin) {
       stopLocationTracking();
     }
-  }, [hasAcceptedShare]);
+  }, [publishesOwnPin]);
 
   // 컴포넌트 언마운트 시 위치 추적 정리
   useEffect(() => {
@@ -5057,7 +5144,9 @@ export default function FamilyHub() {
         const result = await response.json();
         console.log('📍 [loadFamilyLocations] location_requests fetch 결과:', result);
         if (result.success && result.data) {
-          currentLocationRequests = (result.data || []).map(normalizeLocationRequestRow);
+          currentLocationRequests = (result.data || [])
+            .map(normalizeLocationRequestRow)
+            .filter((req: { request_type?: string; status?: string; expires_at?: string | null }) => !imHereShareExpired(req));
           console.log('📍 [loadFamilyLocations] currentLocationRequests 개수:', currentLocationRequests.length);
           console.log('📍 [loadFamilyLocations] currentLocationRequests:', JSON.stringify(currentLocationRequests, null, 2));
           // ✅ CRITICAL FIX: state에도 반영 (내용 동일하면 참조 유지 → effect 연쇄 방지)
@@ -5072,13 +5161,8 @@ export default function FamilyHub() {
         console.warn('❌ [loadFamilyLocations] 위치 요청 조회 실패:', err);
       }
 
-      // ✅ 표시할 사용자 = 승인된 location_requests 기준 (stale fetch여도 마커 유지)
-      const expectedUserIds = new Set<string>();
-      (currentLocationRequests || []).forEach((req: any) => {
-        if (req.status !== 'accepted') return;
-        const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
-        if (otherId) expectedUserIds.add(otherId);
-      });
+      // 표시할 사용자: 어디야·일루와는 승인된 상대, 나여기는 버튼을 누른 사람만
+      const expectedUserIds = visibleFamilyUserIds(currentLocationRequests || [], userId);
       
       // 승인된 위치 요청이 있는 사용자들의 위치만 조회
       // RLS 정책에 의해 승인된 관계의 위치만 반환됨
@@ -5106,8 +5190,9 @@ export default function FamilyHub() {
         return;
       }
 
-      // ✅ CRITICAL FIX: 승인된 관계가 있는데 user_locations 데이터가 없으면 자동으로 위치 저장
-      if (expectedUserIds.size > 0 && (!data || data.length === 0)) {
+      // 나여기 수신만으로는 내 GPS를 올리지 않는다. 어디야·일루와 승인, 또는 내가 나여기를 누른 경우만 저장.
+      const shouldPublishOwnGps = viewerPublishesOwnPin(currentLocationRequests || [], userId);
+      if (shouldPublishOwnGps && expectedUserIds.size > 0 && (!data || data.length === 0)) {
         console.log('⚠️ [loadFamilyLocations] 승인된 관계 있지만 user_locations 데이터 없음 - 위치 자동 저장 시작');
         
         // 세션 확인 (없으면 대기)
@@ -5188,11 +5273,8 @@ export default function FamilyHub() {
               console.log('🔍 [loadFamilyLocations] 본인 위치 제외:', loc.user_id);
               return false;
             }
-            // 다른 사용자 위치는 승인된 요청이 있는 경우만 표시 (최신 locationRequests 사용)
-            const hasAcceptedRequest = currentLocationRequests.some(
-              req => 
-                (req.requester_id === userId && req.target_id === loc.user_id && req.status === 'accepted') ||
-                (req.requester_id === loc.user_id && req.target_id === userId && req.status === 'accepted')
+            const hasAcceptedRequest = currentLocationRequests.some((req: any) =>
+              locationShareShowsUser(req, userId, loc.user_id),
             );
             
             console.log(`🔍 [loadFamilyLocations] user_id: ${loc.user_id}, hasAcceptedRequest: ${hasAcceptedRequest}`);
@@ -5341,7 +5423,7 @@ export default function FamilyHub() {
     created_at: string;
     updated_at?: string;
     expires_at?: string;
-    request_type?: 'where' | 'come_here';
+    request_type?: 'where' | 'come_here' | 'im_here';
     destination_lat?: number | null;
     destination_lng?: number | null;
     requester?: { id: string; email: string; nickname: string | null };
@@ -5378,9 +5460,10 @@ export default function FamilyHub() {
           if (req.expires_at && req.status === 'accepted') {
             const expiresAt = new Date(req.expires_at);
             if (expiresAt < now) {
-              // 만료된 accepted 요청 ID 수집 (나중에 일괄 처리)
-              expiredAcceptedRequests.push(req.id);
-              return null; // 필터링을 위해 null 반환
+              if (!(req.request_type === 'im_here' && req.requester_id !== userId)) {
+                expiredAcceptedRequests.push(req.id);
+              }
+              return null;
             }
           }
           // pending 상태의 만료된 요청은 그대로 반환 (사용자가 직접 삭제)
@@ -5448,15 +5531,17 @@ export default function FamilyHub() {
       );
       locationRequestsRef.current = nextRequests;
       setLocationRequests(nextRequests);
-      if (otherId) acceptedUserIdsRef.current.delete(otherId);
+      const stillVisible = visibleFamilyUserIds(nextRequests, userId);
+      const stillPublish = viewerPublishesOwnPin(nextRequests, userId);
+      if (otherId && !stillVisible.has(otherId)) acceptedUserIdsRef.current.delete(otherId);
       setState((prev) => ({
         ...prev,
-        familyLocations: otherId
-          ? (prev.familyLocations || []).filter((loc: any) => loc.userId !== otherId)
-          : [],
-        location: { address: '', latitude: 0, longitude: 0, userId: '', updatedAt: '' },
+        familyLocations: (prev.familyLocations || []).filter((loc: any) => stillVisible.has(loc.userId)),
+        location: stillPublish
+          ? prev.location
+          : { address: '', latitude: 0, longitude: 0, userId: '', updatedAt: '' },
       }));
-      if (!nextRequests.some((r) => r.status === 'accepted')) {
+      if (!stillPublish) {
         stopLocationTracking();
       }
 

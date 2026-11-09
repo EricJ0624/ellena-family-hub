@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 이미 pending 요청이 있는지 확인
-    const { data: existingRequest, error: checkError } = await supabase
+    const { data: existingRequest } = await supabase
       .from('location_requests')
       .select('id, status')
       .eq('requester_id', requesterId)
@@ -135,12 +135,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 이미 승인된 요청이 있는지 확인
-    const { data: acceptedRequest, error: acceptedCheckError } = await supabase
+    const { data: acceptedRequest } = await supabase
       .from('location_requests')
       .select('id')
       .or(`and(requester_id.eq.${requesterId},target_id.eq.${targetId}),and(requester_id.eq.${targetId},target_id.eq.${requesterId})`)
       .eq('group_id', groupId)
       .eq('status', 'accepted')
+      .neq('request_type', 'im_here')
       .single();
 
     if (acceptedRequest) {

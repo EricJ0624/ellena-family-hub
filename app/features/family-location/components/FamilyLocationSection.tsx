@@ -368,13 +368,15 @@ export function FamilyLocationSection({
                         )}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onEndLocationSharing(req.id)}
-                      className="location-request-btn location-request-btn--sm bg-red-500 text-white"
-                    >
-                      {t.location_ui_end_sharing}
-                    </button>
+                    {(req.request_type !== 'im_here' || isRequester) && (
+                      <button
+                        type="button"
+                        onClick={() => onEndLocationSharing(req.id)}
+                        className="location-request-btn location-request-btn--sm bg-red-500 text-white"
+                      >
+                        {t.location_ui_end_sharing}
+                      </button>
+                    )}
                   </div>
                 );
               })}

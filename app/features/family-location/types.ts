@@ -3,7 +3,7 @@
  * 대시보드 `locationRequests` / 모달 사용자 목록과 동일한 형태를 유지합니다.
  */
 
-export type LocationRequestType = 'where' | 'come_here';
+export type LocationRequestType = 'where' | 'come_here' | 'im_here';
 
 export type DashboardLocationRequestRow = {
   id: string;
