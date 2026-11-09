@@ -456,6 +456,25 @@ function WidgetPanelCloseIcon() {
   );
 }
 
+/** AdvancedMarker는 map=null, 기본 Marker는 setMap(null). 둘 다 호출해야 핀이 남거나 추적이 끊기지 않는다. */
+function detachMapMarker(marker: any) {
+  if (!marker) return;
+  try {
+    if (typeof marker.setMap === 'function') marker.setMap(null);
+  } catch (_) {}
+  try {
+    marker.map = null;
+  } catch (_) {}
+}
+
+function markerIsOnMap(marker: any, map: any) {
+  if (!marker || !map) return false;
+  try {
+    if (typeof marker.getMap === 'function') return marker.getMap() === map;
+  } catch (_) {}
+  return marker.map === map;
+}
+
 export default function FamilyHub() {
   const router = useRouter();
   // 그룹 컨텍스트에서 현재 그룹 ID 및 권한 정보 가져오기 (안전하게 처리)
@@ -920,6 +939,12 @@ export default function FamilyHub() {
   const chatScrollRestoreRef = useRef<{ sh: number; st: number } | null>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
+
+  /** 맵에서 마커를 떼고 추적 맵을 비운다. 새 Map 생성 전에 호출해야 DOM에 핀이 남지 않는다. */
+  const releaseTrackedMarkers = useCallback(() => {
+    markersRef.current.forEach((marker) => detachMapMarker(marker));
+    markersRef.current.clear();
+  }, []);
   const geolocationWatchIdRef = useRef<number | null>(null);
   const lastLocationUpdateRef = useRef<number>(0);
   const lastSentLatRef = useRef<number | null>(null);
@@ -2729,9 +2754,16 @@ export default function FamilyHub() {
       // Advanced Markers는 Map ID가 있을 때만 사용 (없으면 기본 Marker로 폴백)
       const useAdvancedMarker = Boolean(AdvancedMarkerElement && PinElement && mapId);
 
+      const dropIfDetached = (key: string, marker: any) => {
+        if (!marker || markerIsOnMap(marker, mapRef.current)) return marker;
+        detachMapMarker(marker);
+        markersRef.current.delete(key);
+        return null;
+      };
+
       // 현재 위치 마커 업데이트 또는 생성
       if (state.location.latitude && state.location.longitude) {
-        const existingMyMarker = markersRef.current.get('my-location');
+        const existingMyMarker = dropIfDetached('my-location', markersRef.current.get('my-location'));
         if (existingMyMarker) {
           // 기존 마커 위치 업데이트
           if (useAdvancedMarker && existingMyMarker.position) {
@@ -2739,28 +2771,13 @@ export default function FamilyHub() {
           } else if (existingMyMarker.setPosition) {
             existingMyMarker.setPosition({ lat: state.location.latitude, lng: state.location.longitude });
           }
-          // AdvancedMarkerElement는 content를 업데이트해야 함
-          if (useAdvancedMarker && existingMyMarker.content) {
-            const pinElement = new PinElement({
-              background: '#4285F4',
-              borderColor: '#ffffff',
-              glyphColor: '#ffffff',
-              scale: 1.2
-            });
-            const labelDiv = document.createElement('div');
-            labelDiv.textContent = userName || ct('me');
-            labelDiv.style.color = '#ffffff';
-            labelDiv.style.fontSize = '12px';
-            labelDiv.style.fontWeight = 'bold';
-            labelDiv.style.textAlign = 'center';
-            labelDiv.style.marginTop = '4px';
-            const container = document.createElement('div');
-            container.appendChild(pinElement.element);
-            container.appendChild(labelDiv);
-            existingMyMarker.content = container;
-          } else if (existingMyMarker.setLabel) {
+          // content를 매번 갈아끼우면 이전 핀 DOM이 남을 수 있어 라벨 글자만 갱신
+          const myLabel = userName || ct('me');
+          const myLabelNode = existingMyMarker.content?.lastElementChild;
+          if (myLabelNode) myLabelNode.textContent = myLabel;
+          else if (existingMyMarker.setLabel) {
             existingMyMarker.setLabel({
-              text: userName || ct('me'),
+              text: myLabel,
               color: '#ffffff',
               fontSize: '12px',
               fontWeight: 'bold'
@@ -2815,11 +2832,7 @@ export default function FamilyHub() {
         // 위치가 없으면 본인 위치 마커 제거
         const existingMyMarker = markersRef.current.get('my-location');
         if (existingMyMarker) {
-          if (useAdvancedMarker && existingMyMarker.map) {
-            existingMyMarker.map = null;
-          } else if (existingMyMarker.setMap) {
-            existingMyMarker.setMap(null);
-          }
+          detachMapMarker(existingMyMarker);
           markersRef.current.delete('my-location');
         }
       }
@@ -2847,14 +2860,15 @@ export default function FamilyHub() {
       console.log('🗺️ [updateMapMarkers] familyLocations 순회 시작:', state.familyLocations.length, '개');
       state.familyLocations.forEach((loc) => {
         console.log('🗺️ [updateMapMarkers] 위치 처리:', loc.userId, '- 본인:', loc.userId === userId);
-        if (!loc.userId || loc.userId === userId) {
+        // userId가 없으면 본인 행을 가족 마커로 또 그릴 수 있어 이 행은 건너뛴다
+        if (!userId || !loc.userId || loc.userId === userId) {
           console.log('  ❌ userId 없거나 본인 - 스킵');
           return;
         }
         if (loc.latitude && loc.longitude) {
           console.log('  ✅ 좌표 있음 - 마커 생성/업데이트');
           const style = getFamilyMarkerStyle(loc.familyRole);
-          const existingMarker = markersRef.current.get(loc.userId);
+          const existingMarker = dropIfDetached(loc.userId, markersRef.current.get(loc.userId));
           if (existingMarker) {
             // 기존 마커 위치 및 label 업데이트
             if (useAdvancedMarker && existingMarker.position) {
@@ -2862,28 +2876,10 @@ export default function FamilyHub() {
             } else if (existingMarker.setPosition) {
               existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
             }
-            // AdvancedMarkerElement는 content를 업데이트해야 함
-            if (useAdvancedMarker && existingMarker.content) {
-              const pinElement = new PinElement({
-                background: style.background,
-                borderColor: '#ffffff',
-                glyphColor: '#ffffff',
-                scale: style.scale
-              });
-              const labelDiv = document.createElement('div');
-              const emojiLabel = getFamilyMarkerEmoji(loc.familyRole) + ' ' + (loc.userName || ct('user'));
-              labelDiv.textContent = emojiLabel;
-              labelDiv.style.color = '#ffffff';
-              labelDiv.style.fontSize = '12px';
-              labelDiv.style.fontWeight = 'bold';
-              labelDiv.style.textAlign = 'center';
-              labelDiv.style.marginTop = '4px';
-              const container = document.createElement('div');
-              container.appendChild(pinElement.element);
-              container.appendChild(labelDiv);
-              existingMarker.content = container;
-            } else if (existingMarker.setLabel) {
-              const emojiLabel = getFamilyMarkerEmoji(loc.familyRole) + ' ' + (loc.userName || ct('user'));
+            const emojiLabel = getFamilyMarkerEmoji(loc.familyRole) + ' ' + (loc.userName || ct('user'));
+            const familyLabelNode = existingMarker.content?.lastElementChild;
+            if (familyLabelNode) familyLabelNode.textContent = emojiLabel;
+            else if (existingMarker.setLabel) {
               existingMarker.setLabel({
                 text: emojiLabel,
                 color: '#ffffff',
@@ -2966,12 +2962,7 @@ export default function FamilyHub() {
         }
         
         console.log(`  ❌ 제거 대상`);
-        // 그 외 마커는 제거
-        if (useAdvancedMarker && marker.map) {
-          marker.map = null;
-        } else if (marker.setMap) {
-          marker.setMap(null);
-        }
+        detachMapMarker(marker);
         markersRef.current.delete(markerUserId);
       });
     } catch (error) {
@@ -2988,13 +2979,7 @@ export default function FamilyHub() {
         clearTimeout(updateMapMarkersDebounceRef.current);
         updateMapMarkersDebounceRef.current = null;
       }
-      markersRef.current.forEach((marker) => {
-        try {
-          if (marker?.map != null) marker.map = null;
-          else if (typeof marker?.setMap === 'function') marker.setMap(null);
-        } catch (_) {}
-      });
-      markersRef.current.clear();
+      releaseTrackedMarkers();
       mapRef.current = null;
       setMapLoaded(false);
       return;
@@ -3087,7 +3072,7 @@ export default function FamilyHub() {
         }
 
         // 지도가 이미 초기화되어 있으면 업데이트만 수행
-        // 공유 OFF→ON 또는 에러→복구로 #map이 새로 마운트되면 기존 mapRef는 폐기
+        // 공유 OFF→ON 또는 에러→복구로 #map이 새로 마운트되면 기존 map·마커를 함께 폐기
         if (mapRef.current) {
           try {
             const boundDiv =
@@ -3165,6 +3150,8 @@ export default function FamilyHub() {
               };
             }
             
+            // 새 Map 전에 추적 마커를 떼지 않으면 같은 div에 핀이 한 번 더 남는다
+            releaseTrackedMarkers();
             mapRef.current = new (window as any).google.maps.Map(mapElement, mapOptions);
             
             // console.warn, console.error 복원
@@ -3215,17 +3202,7 @@ export default function FamilyHub() {
           }
         }
 
-        // ✅ 지도가 이미 초기화된 경우 기존 마커는 유지하고 업데이트만 수행
-        // ✅ 처음 초기화하는 경우에만 기존 마커 제거 (Strict Mode 이중 실행 시 참조 유실 방지)
-        if (!mapRef.current) {
-          markersRef.current.forEach((marker) => {
-            if (marker.map !== undefined) (marker as any).map = null;
-            else if (typeof (marker as any).setMap === 'function') (marker as any).setMap(null);
-          });
-          markersRef.current.clear();
-        }
-
-        // ✅ 마커 업데이트 (본인 위치 + 상대방 위치)
+        // 새 Map이면 releaseTrackedMarkers로 이미 비워 둠. 기존 Map이면 update만.
         updateMapMarkers();
         return true;
       } catch (error: any) {
@@ -3372,7 +3349,7 @@ export default function FamilyHub() {
         mapsReadyPoll = null;
       }
     };
-  }, [hasAcceptedShare, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, updateMapMarkers]);
+  }, [hasAcceptedShare, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, updateMapMarkers, releaseTrackedMarkers]);
 
   // 위젯 CQ/그리드 리사이즈·구글맵 전체화면 종료 시 캔버스 크기 동기화
   useEffect(() => {
