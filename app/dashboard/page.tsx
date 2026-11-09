@@ -7683,6 +7683,7 @@ export default function FamilyHub() {
         {/* 타이틀 + 관리자 — 세로/가로 모두 좌측 타이틀 + 우측 admin flex */}
         <div
           ref={titleRowRef}
+          data-dashboard-title-row
           className={[
             'relative z-20 box-border w-full min-w-0 max-w-full px-1',
             /* Kids 간판이 줄 높이보다 크면 WebKit에서 액자 위로 넘친다. min-h-12는 48px뿐 */
@@ -8148,6 +8149,7 @@ export default function FamilyHub() {
 
       {/* 하단 고정: 문의(좌) + 계정(우) — 세로 스택 시 게임 위젯 시작하기와 겹침 방지 */}
       <div
+        data-dashboard-session-chrome
         className="pointer-events-none fixed bottom-[calc(4px+env(safe-area-inset-bottom,0px))] right-[calc(6px+env(safe-area-inset-right,0px))] z-[1000] flex flex-row items-center gap-1.5"
       >
         {showMemberInquiryFab && (
