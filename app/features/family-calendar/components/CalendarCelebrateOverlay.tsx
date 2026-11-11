@@ -25,12 +25,19 @@ function pickRandomEmojis(seed: string, count: number): string[] {
   return out;
 }
 
+export type CalendarCelebrateItem = {
+  eventId: string;
+  title: string;
+  stickerEmoji: string | null;
+};
+
 export type CalendarCelebrateOverlayProps = {
   title: string;
   eventDateLabel: string;
   stickerEmoji: string | null;
   birthdayFrameSrc?: string | null;
   eventId: string;
+  items?: CalendarCelebrateItem[];
   confirmLabel: string;
   onConfirm: () => void;
 };
@@ -41,13 +48,15 @@ export function CalendarCelebrateOverlay({
   stickerEmoji,
   birthdayFrameSrc = null,
   eventId,
+  items,
   confirmLabel,
   onConfirm,
 }: CalendarCelebrateOverlayProps) {
+  const group = items && items.length > 1 ? items : null;
   const scatter = useMemo(() => {
-    if (stickerEmoji) return [] as string[];
+    if (group || stickerEmoji) return [] as string[];
     return pickRandomEmojis(eventId || title, 8);
-  }, [eventId, stickerEmoji, title]);
+  }, [eventId, group, stickerEmoji, title]);
 
   return (
     <div
@@ -64,7 +73,7 @@ export function CalendarCelebrateOverlay({
           className="pointer-events-none absolute inset-0 z-0 h-full w-full object-contain"
         />
       ) : null}
-      {!stickerEmoji
+      {!group && !stickerEmoji
         ? scatter.map((emoji, i) => (
             <span
               key={`${emoji}-${i}`}
@@ -82,7 +91,20 @@ export function CalendarCelebrateOverlay({
         : null}
 
       <div className="relative z-[1] flex max-w-full flex-col items-center gap-3 text-center">
-        {stickerEmoji ? (
+        {group ? (
+          <div className="flex w-full max-w-full flex-wrap items-start justify-center gap-x-3 gap-y-2">
+            {group.map((item) => (
+              <div key={item.eventId} className="flex min-w-0 max-w-[46%] flex-1 flex-col items-center gap-1">
+                <span className="text-[clamp(3rem,22cqmin,5.5rem)] leading-none drop-shadow-md" aria-hidden>
+                  {item.stickerEmoji || '🎉'}
+                </span>
+                <p className="m-0 max-w-full break-words text-[clamp(0.95rem,5.5cqmin,1.45rem)] font-bold leading-tight text-white drop-shadow">
+                  {item.title}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : stickerEmoji ? (
           <span className="text-[clamp(3rem,22cqmin,5.5rem)] leading-none drop-shadow-md" aria-hidden>
             {stickerEmoji}
           </span>
@@ -96,9 +118,11 @@ export function CalendarCelebrateOverlay({
             {eventDateLabel}
           </p>
         ) : null}
-        <p className="m-0 max-w-[92%] break-words text-[clamp(0.95rem,5.5cqmin,1.45rem)] font-bold leading-tight text-white drop-shadow">
-          {title}
-        </p>
+        {group ? null : (
+          <p className="m-0 max-w-[92%] break-words text-[clamp(0.95rem,5.5cqmin,1.45rem)] font-bold leading-tight text-white drop-shadow">
+            {title}
+          </p>
+        )}
         <button
           type="button"
           onClick={onConfirm}

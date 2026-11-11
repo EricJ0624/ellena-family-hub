@@ -51,9 +51,81 @@ function dateFromKey(eventDate: string): Date | null {
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
+type CelebrateItem = {
+  eventId: string;
+  offsetDays: number | null;
+  title: string;
+  stickerEmoji: string | null;
+};
+
 function birthdayFrameForTitle(title: string, seed: string): string | null {
   const src = kidsStickerFromTitles([title], seed);
   return isKidsCongratsFrame(src) ? src : null;
+}
+
+function birthdayFrameForItems(items: CelebrateItem[], eventDate: string): string | null {
+  for (const item of items) {
+    const src = birthdayFrameForTitle(item.title, eventDate || item.eventId);
+    if (src) return src;
+  }
+  return null;
+}
+
+function celebrateFromItems(
+  built: { eventDate: string; items: CelebrateItem[] },
+  formatLong: (date: Date) => string,
+  fallbackLabel: string,
+) {
+  const parsedDate = built.eventDate ? dateFromKey(built.eventDate) : null;
+  return {
+    eventDate: built.eventDate,
+    eventDateLabel: parsedDate ? formatLong(parsedDate) : fallbackLabel,
+    items: built.items,
+    birthdayFrameSrc: birthdayFrameForItems(built.items, built.eventDate),
+  };
+}
+
+function collectSameDayCelebrateItems(
+  events: FamilyEvent[],
+  anchorId: string,
+  anchorOffset: number | null,
+  dismissed: Set<string>,
+  fallbackTitle: string,
+): { eventDate: string; items: CelebrateItem[] } | null {
+  if (!isSavedEventId(anchorId)) return null;
+  if (isCelebrateDismissed(dismissed, anchorId, anchorOffset)) return null;
+  const found = events.find((event) => String(event.id) === anchorId);
+  const eventDate = found?.event_date || '';
+  const pool = events.filter((event) => {
+    const id = String(event.id);
+    if (!isSavedEventId(id)) return false;
+    if (eventDate) return event.event_date === eventDate;
+    return id === anchorId;
+  });
+  const items: CelebrateItem[] = [];
+  for (const event of pool) {
+    const id = String(event.id);
+    const due =
+      dueRemindOffsets(event.event_date, event.remind_offsets).find(
+        (days) => !isCelebrateDismissed(dismissed, id, days),
+      ) ?? null;
+    if (due == null && id !== anchorId) continue;
+    items.push({
+      eventId: id,
+      offsetDays: due ?? (id === anchorId ? anchorOffset : null),
+      title: event.title?.trim() || fallbackTitle,
+      stickerEmoji: normalizeCalendarStickerEmoji(event.sticker_emoji),
+    });
+  }
+  if (!items.some((item) => item.eventId === anchorId)) {
+    items.unshift({
+      eventId: anchorId,
+      offsetDays: anchorOffset,
+      title: found?.title?.trim() || fallbackTitle,
+      stickerEmoji: normalizeCalendarStickerEmoji(found?.sticker_emoji),
+    });
+  }
+  return { eventDate, items };
 }
 
 function celebrateOffsetKey(eventId: string, offsetDays: number) {
@@ -794,11 +866,9 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   eventsRef.current = events;
 
   type CelebrateState = {
-    eventId: string;
-    offsetDays: number | null;
-    title: string;
+    eventDate: string;
     eventDateLabel: string;
-    stickerEmoji: string | null;
+    items: CelebrateItem[];
     birthdayFrameSrc: string | null;
   };
   const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
@@ -821,17 +891,17 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   }, []);
 
   const resolveCelebrateFromEvent = useCallback((eventId: string, offsetDays: number | null) => {
-    if (!isSavedEventId(eventId)) return;
     if (celebrateActiveIdRef.current) return;
-    if (isCelebrateDismissed(dismissedCelebrateIdsRef.current, eventId, offsetDays)) return;
-    const found = eventsRef.current.find((e) => String(e.id) === eventId);
-    const title = found?.title?.trim() || translationsRef.current.section_title_calendar;
-    const stickerEmoji = normalizeCalendarStickerEmoji(found?.sticker_emoji);
-    const parsedDate = found?.event_date ? dateFromKey(found.event_date) : null;
-    const eventDateLabel = parsedDate ? formatLongDateRef.current(parsedDate) : '';
-    const birthdayFrameSrc = birthdayFrameForTitle(title, found?.event_date || eventId);
-    celebrateActiveIdRef.current = eventId;
-    setCelebrate({ eventId, offsetDays, title, eventDateLabel, stickerEmoji, birthdayFrameSrc });
+    const built = collectSameDayCelebrateItems(
+      eventsRef.current,
+      eventId,
+      offsetDays,
+      dismissedCelebrateIdsRef.current,
+      translationsRef.current.section_title_calendar,
+    );
+    if (!built) return;
+    celebrateActiveIdRef.current = built.items.map((item) => item.eventId).join(',');
+    setCelebrate(celebrateFromItems(built, formatLongDateRef.current, ''));
   }, []);
 
   useEffect(() => {
@@ -921,41 +991,54 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
 
   useEffect(() => {
     if (!celebrate) return;
-    const found = events.find((e) => String(e.id) === celebrate.eventId);
-    if (!found) return;
-    const title = found.title?.trim() || celebrate.title;
-    const stickerEmoji = normalizeCalendarStickerEmoji(found.sticker_emoji);
-    const parsedDate = found.event_date ? dateFromKey(found.event_date) : null;
-    const eventDateLabel = parsedDate ? formatLongDate(parsedDate) : celebrate.eventDateLabel;
-    const birthdayFrameSrc = birthdayFrameForTitle(title, found.event_date || celebrate.eventId);
+    const anchor = celebrate.items[0];
+    if (!anchor) return;
+    const built = collectSameDayCelebrateItems(
+      events,
+      anchor.eventId,
+      anchor.offsetDays,
+      dismissedCelebrateIdsRef.current,
+      t.section_title_calendar,
+    );
+    if (!built) return;
+    const next = celebrateFromItems(built, formatLongDate, celebrate.eventDateLabel);
+    const sameItems =
+      next.items.length === celebrate.items.length &&
+      next.items.every((item, index) => {
+        const prev = celebrate.items[index];
+        return (
+          prev?.eventId === item.eventId &&
+          prev.offsetDays === item.offsetDays &&
+          prev.title === item.title &&
+          prev.stickerEmoji === item.stickerEmoji
+        );
+      });
     if (
-      title === celebrate.title &&
-      stickerEmoji === celebrate.stickerEmoji &&
-      eventDateLabel === celebrate.eventDateLabel &&
-      birthdayFrameSrc === celebrate.birthdayFrameSrc
+      sameItems &&
+      next.eventDate === celebrate.eventDate &&
+      next.eventDateLabel === celebrate.eventDateLabel &&
+      next.birthdayFrameSrc === celebrate.birthdayFrameSrc
     ) {
       return;
     }
-    setCelebrate((prev) =>
-      prev && prev.eventId === celebrate.eventId
-        ? { ...prev, title, stickerEmoji, eventDateLabel, birthdayFrameSrc }
-        : prev,
-    );
-  }, [events, celebrate, formatLongDate]);
+    setCelebrate(next);
+  }, [events, celebrate, formatLongDate, t.section_title_calendar]);
 
   const handleCelebrateConfirm = useCallback(async () => {
     const current = celebrate;
-    if (current?.eventId) {
-      const found = eventsRef.current.find((event) => String(event.id) === current.eventId);
-      const due = found ? dueRemindOffsets(found.event_date, found.remind_offsets) : [];
-      if (due.length > 0) {
-        for (const offset of due) {
-          dismissedCelebrateIdsRef.current.add(celebrateOffsetKey(current.eventId, offset));
+    if (current && current.items.length > 0) {
+      for (const item of current.items) {
+        const found = eventsRef.current.find((event) => String(event.id) === item.eventId);
+        const due = found ? dueRemindOffsets(found.event_date, found.remind_offsets) : [];
+        if (due.length > 0) {
+          for (const offset of due) {
+            dismissedCelebrateIdsRef.current.add(celebrateOffsetKey(item.eventId, offset));
+          }
+        } else if (item.offsetDays != null) {
+          dismissedCelebrateIdsRef.current.add(celebrateOffsetKey(item.eventId, item.offsetDays));
+        } else {
+          dismissedCelebrateIdsRef.current.add(item.eventId);
         }
-      } else if (current.offsetDays != null) {
-        dismissedCelebrateIdsRef.current.add(celebrateOffsetKey(current.eventId, current.offsetDays));
-      } else {
-        dismissedCelebrateIdsRef.current.add(current.eventId);
       }
       if (currentGroupId) {
         writeDismissedCelebrateIds(currentGroupId, dismissedCelebrateIdsRef.current);
@@ -980,7 +1063,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         body: JSON.stringify({
           groupId: currentGroupId,
           // 같은 일정의 여러 offset 리마인더를 한 번에 읽음 처리
-          entityIds: [current.eventId],
+          entityIds: current.items.map((item) => item.eventId),
           eventType: 'CALENDAR_EVENT_REMINDER',
         }),
       });
@@ -1313,13 +1396,14 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           hasSelection ? ' calendar-widget-stack--expanded' : ''
         }`}
       >
-        {celebrate ? (
+        {celebrate && celebrate.items[0] ? (
           <CalendarCelebrateOverlay
-            eventId={celebrate.eventId}
-            title={celebrate.title}
+            eventId={celebrate.items[0].eventId}
+            title={celebrate.items[0].title}
             eventDateLabel={celebrate.eventDateLabel}
-            stickerEmoji={celebrate.stickerEmoji}
+            stickerEmoji={celebrate.items[0].stickerEmoji}
             birthdayFrameSrc={celebrate.birthdayFrameSrc}
+            items={celebrate.items}
             confirmLabel={t.calendar_celebrate_confirm}
             onConfirm={() => {
               void handleCelebrateConfirm();
