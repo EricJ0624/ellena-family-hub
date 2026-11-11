@@ -2,44 +2,14 @@ import { CURRENT_APP_ID } from '@/lib/apps';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import {
   CALENDAR_REMIND_OFFSET_DAYS,
+  isRemindOffsetDue,
+  kstTodayDateStr,
   normalizeRemindOffsets,
+  reminderBody,
+  shiftDateStr,
+  toDateOnly,
 } from '@/app/features/family-calendar/remind-offsets';
 import { getGroupMemberUserIds, notifyFamily } from '@/lib/notifications/notify';
-
-/** Asia/Seoul 기준 YYYY-MM-DD */
-export function kstTodayDateStr(now = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now);
-}
-
-function toDateOnly(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const m = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
-  if (m) return m[1];
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
-}
-
-function shiftDateStr(dateStr: string, days: number): string {
-  const d = new Date(`${dateStr}T12:00:00+09:00`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
-}
 
 export type CalendarReminderCronResult = {
   fireDate: string;
@@ -82,7 +52,7 @@ export async function runCalendarReminderCron(options?: {
   const supabase = getSupabaseServerClient();
   const { data: events, error } = await supabase
     .from('family_events')
-    .select('id, group_id, app_id, event_date, sticker_emoji, remind_offsets')
+    .select('id, group_id, event_date, sticker_emoji, remind_offsets')
     .eq('app_id', CURRENT_APP_ID)
     .overlaps('remind_offsets', [...CALENDAR_REMIND_OFFSET_DAYS]);
 
@@ -111,8 +81,9 @@ export async function runCalendarReminderCron(options?: {
     const offsets = normalizeRemindOffsets(event.remind_offsets);
 
     for (const offsetDays of offsets) {
+      // 발송일 당일만 보면, 그 날 크론이 빠지면 다음 날부터 영원히 건너뛴다.
+      if (!isRemindOffsetDue(eventDate, offsetDays, fireDate)) continue;
       const dueDate = shiftDateStr(eventDate, -offsetDays);
-      if (dueDate !== fireDate) continue;
 
       result.due += 1;
 
@@ -125,7 +96,7 @@ export async function runCalendarReminderCron(options?: {
         event_id: eventId,
         group_id: groupId,
         offset_days: offsetDays,
-        fire_date: fireDate,
+        fire_date: dueDate,
       });
 
       if (insertError) {
@@ -140,6 +111,7 @@ export async function runCalendarReminderCron(options?: {
       try {
         const recipients = await getGroupMemberUserIds(groupId, supabase);
         if (recipients.length === 0) {
+          await deleteDispatch(supabase, eventId, offsetDays, dueDate);
           result.skipped += 1;
           continue;
         }
@@ -155,16 +127,17 @@ export async function runCalendarReminderCron(options?: {
           widgetKey: 'calendar',
           eventType: 'CALENDAR_EVENT_REMINDER',
           title: '📅 다가오는 가족 일정',
-          body: offsetDays === 1 ? '내일 일정이 있어요.' : `${offsetDays}일 뒤 일정이 있어요.`,
+          body: reminderBody(eventDate, fireDate),
           url: `/dashboard?focus=calendar&celebrate=${encodeURIComponent(eventId)}`,
           entityId: eventId,
           payload: {
             celebration: true,
             eventId,
             offsetDays,
+            eventDate,
             sticker_emoji: sticker,
           },
-          tag: `calendar-reminder-${eventId}-${offsetDays}-${fireDate}`,
+          tag: `calendar-reminder-${eventId}-${offsetDays}-${dueDate}`,
           appId: CURRENT_APP_ID,
         });
 
@@ -181,10 +154,10 @@ export async function runCalendarReminderCron(options?: {
           continue;
         }
 
-        await deleteDispatch(supabase, eventId, offsetDays, fireDate);
+        await deleteDispatch(supabase, eventId, offsetDays, dueDate);
         result.errors.push(`${eventId}/${offsetDays}: notify produced no delivery`);
       } catch (err) {
-        await deleteDispatch(supabase, eventId, offsetDays, fireDate);
+        await deleteDispatch(supabase, eventId, offsetDays, dueDate);
         const message = err instanceof Error ? err.message : String(err);
         result.errors.push(`${eventId}/${offsetDays}: ${message}`);
       }

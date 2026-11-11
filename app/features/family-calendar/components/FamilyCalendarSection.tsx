@@ -22,7 +22,53 @@ import {
   kidsStickerFromTitles,
 } from '../kids-decorations';
 import { firstCalendarStickerEmoji, normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
+import { dueRemindOffsets } from '../remind-offsets';
 import { supabase } from '@/lib/supabase';
+
+function celebrateDismissKey(groupId: string) {
+  return `hearth-calendar-celebrate-dismissed:${groupId}`;
+}
+
+function readDismissedCelebrateIds(groupId: string): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(celebrateDismissKey(groupId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.map((id) => String(id)));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeDismissedCelebrateIds(groupId: string, ids: Set<string>) {
+  window.localStorage.setItem(celebrateDismissKey(groupId), JSON.stringify([...ids]));
+}
+
+function dateFromKey(eventDate: string): Date | null {
+  const match = eventDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function birthdayFrameForTitle(title: string, seed: string): string | null {
+  const src = kidsStickerFromTitles([title], seed);
+  return isKidsCongratsFrame(src) ? src : null;
+}
+
+function celebrateOffsetKey(eventId: string, offsetDays: number) {
+  return `${eventId}:${offsetDays}`;
+}
+
+function isCelebrateDismissed(ids: Set<string>, eventId: string, offsetDays: number | null) {
+  if (ids.has(eventId)) return true;
+  if (offsetDays == null) return false;
+  return ids.has(celebrateOffsetKey(eventId, offsetDays));
+}
+
+function isSavedEventId(eventId: string) {
+  return !/^\d+$/.test(eventId);
+}
 
 /** Family 테마 월별 위젯 배경. JS month는 0부터. */
 const KIDS_MONTH_BG: Partial<Record<number, string>> = {
@@ -749,12 +795,17 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
 
   type CelebrateState = {
     eventId: string;
+    offsetDays: number | null;
     title: string;
+    eventDateLabel: string;
     stickerEmoji: string | null;
+    birthdayFrameSrc: string | null;
   };
   const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
   const dismissedCelebrateIdsRef = useRef<Set<string>>(new Set());
   const celebrateActiveIdRef = useRef<string | null>(null);
+  const formatLongDateRef = useRef(formatLongDate);
+  formatLongDateRef.current = formatLongDate;
 
   const clearCelebrateQuery = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -769,15 +820,53 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     }
   }, []);
 
-  const resolveCelebrateFromEvent = useCallback((eventId: string) => {
-    if (dismissedCelebrateIdsRef.current.has(eventId)) return;
-    if (celebrateActiveIdRef.current === eventId) return;
+  const resolveCelebrateFromEvent = useCallback((eventId: string, offsetDays: number | null) => {
+    if (!isSavedEventId(eventId)) return;
+    if (celebrateActiveIdRef.current) return;
+    if (isCelebrateDismissed(dismissedCelebrateIdsRef.current, eventId, offsetDays)) return;
     const found = eventsRef.current.find((e) => String(e.id) === eventId);
     const title = found?.title?.trim() || translationsRef.current.section_title_calendar;
     const stickerEmoji = normalizeCalendarStickerEmoji(found?.sticker_emoji);
+    const parsedDate = found?.event_date ? dateFromKey(found.event_date) : null;
+    const eventDateLabel = parsedDate ? formatLongDateRef.current(parsedDate) : '';
+    const birthdayFrameSrc = birthdayFrameForTitle(title, found?.event_date || eventId);
     celebrateActiveIdRef.current = eventId;
-    setCelebrate({ eventId, title, stickerEmoji });
+    setCelebrate({ eventId, offsetDays, title, eventDateLabel, stickerEmoji, birthdayFrameSrc });
   }, []);
+
+  useEffect(() => {
+    if (!currentGroupId || celebrate || celebrateActiveIdRef.current) return;
+    dismissedCelebrateIdsRef.current = readDismissedCelebrateIds(currentGroupId);
+    const dismissed = dismissedCelebrateIdsRef.current;
+
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const celebrateId = params?.get('celebrate')?.trim() || '';
+    if (celebrateId && isSavedEventId(celebrateId)) {
+      const linked = eventsRef.current.find((event) => String(event.id) === celebrateId);
+      const due = linked ? dueRemindOffsets(linked.event_date, linked.remind_offsets) : [];
+      const offset = due.find((days) => !isCelebrateDismissed(dismissed, celebrateId, days)) ?? null;
+      const blocked = dismissed.has(celebrateId) || (due.length > 0 && offset == null);
+      if (!blocked) {
+        resolveCelebrateFromEvent(celebrateId, offset);
+        return;
+      }
+    }
+
+    const pending = eventsRef.current.find((event) => {
+      const eventId = String(event.id);
+      if (!isSavedEventId(eventId)) return false;
+      return dueRemindOffsets(event.event_date, event.remind_offsets).some(
+        (days) => !isCelebrateDismissed(dismissed, eventId, days),
+      );
+    });
+    if (!pending) return;
+    const pendingId = String(pending.id);
+    const offset =
+      dueRemindOffsets(pending.event_date, pending.remind_offsets).find(
+        (days) => !isCelebrateDismissed(dismissed, pendingId, days),
+      ) ?? null;
+    resolveCelebrateFromEvent(pendingId, offset);
+  }, [currentGroupId, events, celebrate, resolveCelebrateFromEvent]);
 
   useEffect(() => {
     if (!currentGroupId || celebrate) return;
@@ -785,12 +874,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
 
     const run = async () => {
       const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const celebrateId = params?.get('celebrate')?.trim() || '';
-
-      if (celebrateId) {
-        resolveCelebrateFromEvent(celebrateId);
-        return;
-      }
+      if (params?.get('celebrate')?.trim()) return;
 
       try {
         const {
@@ -808,7 +892,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           (row: {
             event_type?: string;
             entity_id?: string | null;
-            payload?: { celebration?: boolean; eventId?: string };
+            payload?: { celebration?: boolean; eventId?: string; offsetDays?: number };
           }) =>
             row?.event_type === 'CALENDAR_EVENT_REMINDER' &&
             (row?.payload?.celebration === true || !!row?.entity_id),
@@ -818,8 +902,12 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           (typeof reminder.entity_id === 'string' && reminder.entity_id) ||
           (typeof reminder.payload?.eventId === 'string' && reminder.payload.eventId) ||
           '';
-        if (!eventId || dismissedCelebrateIdsRef.current.has(eventId)) return;
-        resolveCelebrateFromEvent(eventId);
+        const offsetRaw = reminder.payload?.offsetDays;
+        const offsetNum = typeof offsetRaw === 'number' ? offsetRaw : Number(offsetRaw);
+        const offsetDays = Number.isFinite(offsetNum) ? offsetNum : null;
+        if (!eventId || !isSavedEventId(eventId)) return;
+        if (isCelebrateDismissed(dismissedCelebrateIdsRef.current, eventId, offsetDays)) return;
+        resolveCelebrateFromEvent(eventId, offsetDays);
       } catch {
         /* ignore */
       }
@@ -837,18 +925,41 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     if (!found) return;
     const title = found.title?.trim() || celebrate.title;
     const stickerEmoji = normalizeCalendarStickerEmoji(found.sticker_emoji);
-    if (title === celebrate.title && stickerEmoji === celebrate.stickerEmoji) return;
+    const parsedDate = found.event_date ? dateFromKey(found.event_date) : null;
+    const eventDateLabel = parsedDate ? formatLongDate(parsedDate) : celebrate.eventDateLabel;
+    const birthdayFrameSrc = birthdayFrameForTitle(title, found.event_date || celebrate.eventId);
+    if (
+      title === celebrate.title &&
+      stickerEmoji === celebrate.stickerEmoji &&
+      eventDateLabel === celebrate.eventDateLabel &&
+      birthdayFrameSrc === celebrate.birthdayFrameSrc
+    ) {
+      return;
+    }
     setCelebrate((prev) =>
       prev && prev.eventId === celebrate.eventId
-        ? { ...prev, title, stickerEmoji }
+        ? { ...prev, title, stickerEmoji, eventDateLabel, birthdayFrameSrc }
         : prev,
     );
-  }, [events, celebrate]);
+  }, [events, celebrate, formatLongDate]);
 
   const handleCelebrateConfirm = useCallback(async () => {
     const current = celebrate;
     if (current?.eventId) {
-      dismissedCelebrateIdsRef.current.add(current.eventId);
+      const found = eventsRef.current.find((event) => String(event.id) === current.eventId);
+      const due = found ? dueRemindOffsets(found.event_date, found.remind_offsets) : [];
+      if (due.length > 0) {
+        for (const offset of due) {
+          dismissedCelebrateIdsRef.current.add(celebrateOffsetKey(current.eventId, offset));
+        }
+      } else if (current.offsetDays != null) {
+        dismissedCelebrateIdsRef.current.add(celebrateOffsetKey(current.eventId, current.offsetDays));
+      } else {
+        dismissedCelebrateIdsRef.current.add(current.eventId);
+      }
+      if (currentGroupId) {
+        writeDismissedCelebrateIds(currentGroupId, dismissedCelebrateIdsRef.current);
+      }
     }
     celebrateActiveIdRef.current = null;
     setCelebrate(null);
@@ -1206,7 +1317,9 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           <CalendarCelebrateOverlay
             eventId={celebrate.eventId}
             title={celebrate.title}
+            eventDateLabel={celebrate.eventDateLabel}
             stickerEmoji={celebrate.stickerEmoji}
+            birthdayFrameSrc={celebrate.birthdayFrameSrc}
             confirmLabel={t.calendar_celebrate_confirm}
             onConfirm={() => {
               void handleCelebrateConfirm();
@@ -1254,7 +1367,14 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                       >
                         <div className="flex items-start justify-between" style={{ gap: '2.5cqmin' }}>
                           <div className="min-w-0 flex-1">
-                            <h5 className="calendar-event-card-title">{e.title}</h5>
+                            <h5 className="calendar-event-card-title">
+                              {e.title}
+                              {(e.remind_offsets?.length ?? 0) > 0 ? (
+                                <span className="ml-[0.35em] align-middle" aria-label="알림">
+                                  🔔
+                                </span>
+                              ) : null}
+                            </h5>
                             {(e.repeat_type === 'monthly' || e.repeat_type === 'yearly') && (
                               <p className="calendar-event-card-meta text-violet-600">
                                 {e.repeat_type === 'monthly' ? t.event_repeat_monthly : t.event_repeat_yearly}

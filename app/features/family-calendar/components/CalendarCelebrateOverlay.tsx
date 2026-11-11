@@ -27,7 +27,9 @@ function pickRandomEmojis(seed: string, count: number): string[] {
 
 export type CalendarCelebrateOverlayProps = {
   title: string;
+  eventDateLabel: string;
   stickerEmoji: string | null;
+  birthdayFrameSrc?: string | null;
   eventId: string;
   confirmLabel: string;
   onConfirm: () => void;
@@ -35,7 +37,9 @@ export type CalendarCelebrateOverlayProps = {
 
 export function CalendarCelebrateOverlay({
   title,
+  eventDateLabel,
   stickerEmoji,
+  birthdayFrameSrc = null,
   eventId,
   confirmLabel,
   onConfirm,
@@ -47,15 +51,19 @@ export function CalendarCelebrateOverlay({
 
   return (
     <div
-      className="absolute inset-0 z-[40] flex flex-col items-center justify-center overflow-hidden rounded-[inherit] px-3 py-4"
-      style={{
-        background:
-          'linear-gradient(160deg, rgba(124,58,237,0.92) 0%, rgba(236,72,153,0.9) 45%, rgba(251,146,60,0.88) 100%)',
-      }}
+      className="pointer-events-auto absolute inset-0 z-[40] flex flex-col items-center justify-center overflow-hidden rounded-[inherit] bg-[linear-gradient(160deg,rgba(124,58,237,0.92)_0%,rgba(236,72,153,0.9)_45%,rgba(251,146,60,0.88)_100%)] px-3 py-4"
       role="dialog"
       aria-modal="true"
-      aria-label={title}
+      aria-label={eventDateLabel || title}
     >
+      {birthdayFrameSrc ? (
+        <img
+          src={birthdayFrameSrc}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full object-contain"
+        />
+      ) : null}
       {!stickerEmoji
         ? scatter.map((emoji, i) => (
             <span
@@ -83,7 +91,12 @@ export function CalendarCelebrateOverlay({
             {scatter[0] || '🎉'}
           </span>
         )}
-        <p className="m-0 max-w-[92%] break-words text-[clamp(1.1rem,7.5cqmin,2rem)] font-extrabold leading-tight text-white drop-shadow">
+        {eventDateLabel ? (
+          <p className="m-0 max-w-[96%] text-[clamp(1.6rem,11cqmin,3.2rem)] font-extrabold leading-none text-white drop-shadow">
+            {eventDateLabel}
+          </p>
+        ) : null}
+        <p className="m-0 max-w-[92%] break-words text-[clamp(0.95rem,5.5cqmin,1.45rem)] font-bold leading-tight text-white drop-shadow">
           {title}
         </p>
         <button
