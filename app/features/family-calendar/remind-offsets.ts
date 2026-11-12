@@ -1,5 +1,7 @@
-/** Allowed reminder offsets in days before event_date (no hour-based reminders). */
+/** Allowed reminder offsets in days before event_date. The send clock is 09:00 Asia/Seoul. */
 export const CALENDAR_REMIND_OFFSET_DAYS = [1, 3, 7, 14, 30] as const;
+
+export const CALENDAR_REMIND_SEND_HOUR_KST = 9;
 
 export type CalendarRemindOffsetDays = (typeof CALENDAR_REMIND_OFFSET_DAYS)[number];
 
@@ -25,6 +27,47 @@ export function kstTodayDateStr(now = new Date()): string {
     month: '2-digit',
     day: '2-digit',
   }).format(now);
+}
+
+function kstTimeParts(now = new Date()): { hour: number; minute: number; second: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const num = (type: Intl.DateTimeFormatPartTypes) => {
+    const value = Number(parts.find((part) => part.type === type)?.value ?? '0');
+    return Number.isFinite(value) ? value : 0;
+  };
+  return { hour: num('hour') % 24, minute: num('minute'), second: num('second') };
+}
+
+function kstHour(now = new Date()): number {
+  return kstTimeParts(now).hour;
+}
+
+/** 발송일 당일, 한국 시간 9시까지 남은 밀리초. 9시가 지났으면 0. */
+export function msUntilKstSendHour(now = new Date(), hour = CALENDAR_REMIND_SEND_HOUR_KST): number {
+  const clock = kstTimeParts(now);
+  const current = clock.hour * 3600 + clock.minute * 60 + clock.second;
+  const target = hour * 3600;
+  if (current >= target) return 0;
+  return (target - current) * 1000;
+}
+
+/** 발송일이 오늘이고, 아직 오전 9시 전인 알림이 있는지. */
+export function hasRemindOffsetWaitingForSendHour(
+  eventDate: string | null | undefined,
+  offsets: unknown,
+  now = new Date(),
+): boolean {
+  if (kstHour(now) >= CALENDAR_REMIND_SEND_HOUR_KST) return false;
+  const today = kstTodayDateStr(now);
+  const eventDay = toDateOnly(eventDate);
+  if (!eventDay) return false;
+  return normalizeRemindOffsets(offsets).some((offset) => shiftDateStr(eventDay, -offset) === today);
 }
 
 /** date 또는 timestamptz 값을 한국 달력의 YYYY-MM-DD로 맞춘다. */
@@ -53,17 +96,24 @@ export function daysBetweenDateStr(from: string, to: string): number {
   return Math.round((b - a) / 86_400_000);
 }
 
-/** 발송일이 오늘 이전이고, 일정 다음 날까지면 아직 보낼 알림이다. */
+/**
+ * 발송일 오전 9시(한국)부터 일정 다음 날까지 보낼 알림이다.
+ * 발송일 당일 9시 전은 아직 아니다. 그 아침을 놓친 뒤는 시각과 관계없이 한 번 보낸다.
+ */
 export function isRemindOffsetDue(
   eventDate: string | null | undefined,
   offsetDays: number,
   today = kstTodayDateStr(),
+  now = new Date(),
 ): boolean {
   const eventDay = toDateOnly(eventDate);
   if (!eventDay) return false;
   const dueDate = shiftDateStr(eventDay, -offsetDays);
   const lastSendDay = shiftDateStr(eventDay, 1);
-  return dueDate <= today && today <= lastSendDay;
+  if (today < dueDate || today > lastSendDay) return false;
+  const realToday = kstTodayDateStr(now);
+  if (today === dueDate && today === realToday && kstHour(now) < CALENDAR_REMIND_SEND_HOUR_KST) return false;
+  return true;
 }
 
 /** 지금 보내야 하는 알림 종류. 1일·3일·1주·2주·1개월을 같은 규칙으로 본다. */
@@ -71,8 +121,9 @@ export function dueRemindOffsets(
   eventDate: string | null | undefined,
   offsets: unknown,
   today = kstTodayDateStr(),
+  now = new Date(),
 ): CalendarRemindOffsetDays[] {
-  return normalizeRemindOffsets(offsets).filter((offset) => isRemindOffsetDue(eventDate, offset, today));
+  return normalizeRemindOffsets(offsets).filter((offset) => isRemindOffsetDue(eventDate, offset, today, now));
 }
 
 export function reminderBody(eventDate: string, fireDate: string): string {

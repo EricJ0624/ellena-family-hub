@@ -42,6 +42,8 @@ export type CalendarCelebrateOverlayProps = {
   onConfirm: () => void;
 };
 
+const captionChip = 'rounded-2xl bg-white text-violet-800 shadow-md';
+
 export function CalendarCelebrateOverlay({
   title,
   eventDateLabel,
@@ -104,28 +106,26 @@ export function CalendarCelebrateOverlay({
               <span className="text-[32cqmin] leading-none drop-shadow-md" aria-hidden>
                 {item.stickerEmoji || '🎉'}
               </span>
-              <p className="m-0 line-clamp-2 max-w-full break-words text-center text-[11cqmin] font-bold leading-[1.15] text-white drop-shadow">
+              <p className={`m-0 line-clamp-2 max-w-full break-words px-[0.7em] py-[0.28em] text-center text-[clamp(0.8rem,20cqmin,1.05rem)] font-bold leading-tight ${captionChip}`}>
                 {item.title}
               </p>
             </div>
           ))}
         </div>
       ) : (
-        <div className="relative z-[1] grid min-h-0 w-full flex-1 grid-rows-[minmax(0,1fr)_minmax(0,0.32fr)] gap-[1.2cqmin]">
+        <div className="relative z-[1] grid min-h-0 w-full flex-1 grid-rows-[minmax(0,1fr)_auto] gap-[1.2cqmin]">
           <div className="flex min-h-0 items-center justify-center [container-type:size]">
             <span className="text-[52cqmin] leading-none drop-shadow-md" aria-hidden>
               {stickerEmoji || scatter[0] || '🎉'}
             </span>
           </div>
-          <div className="flex min-h-0 items-center justify-center [container-type:size]">
-            <p className="m-0 line-clamp-2 max-w-[92%] break-words text-center text-[22cqmin] font-bold leading-[1.15] text-white drop-shadow">
-              {title}
-            </p>
-          </div>
+          <p className={`m-0 line-clamp-2 max-w-[92%] justify-self-center break-words px-[0.75em] py-[0.3em] text-center text-[clamp(0.95rem,5.2cqmin,1.4rem)] font-bold leading-tight ${captionChip}`}>
+            {title}
+          </p>
         </div>
       )}
       {eventDateLabel ? (
-        <p className="relative z-[1] m-0 mt-[1cqmin] max-w-full shrink-0 whitespace-nowrap text-center text-[clamp(0.8rem,7.2cqw,1.65rem)] font-extrabold leading-none text-white drop-shadow">
+        <p className={`relative z-[1] m-0 mt-[1cqmin] max-w-full shrink-0 whitespace-nowrap px-[0.7em] py-[0.22em] text-center text-[clamp(0.8rem,7.2cqw,1.65rem)] font-extrabold leading-none ${captionChip}`}>
           {eventDateLabel}
         </p>
       ) : null}

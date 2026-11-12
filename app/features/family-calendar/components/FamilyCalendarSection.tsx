@@ -22,7 +22,7 @@ import {
   kidsStickerFromTitles,
 } from '../kids-decorations';
 import { firstCalendarStickerEmoji, normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
-import { dueRemindOffsets } from '../remind-offsets';
+import { dueRemindOffsets, hasRemindOffsetWaitingForSendHour, msUntilKstSendHour } from '../remind-offsets';
 import { supabase } from '@/lib/supabase';
 
 function celebrateDismissKey(groupId: string) {
@@ -872,6 +872,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     birthdayFrameSrc: string | null;
   };
   const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
+  const [sendReadyTick, setSendReadyTick] = useState(0);
   const dismissedCelebrateIdsRef = useRef<Set<string>>(new Set());
   const celebrateActiveIdRef = useRef<string | null>(null);
   const formatLongDateRef = useRef(formatLongDate);
@@ -936,7 +937,18 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         (days) => !isCelebrateDismissed(dismissed, pendingId, days),
       ) ?? null;
     resolveCelebrateFromEvent(pendingId, offset);
-  }, [currentGroupId, events, celebrate, resolveCelebrateFromEvent]);
+  }, [currentGroupId, events, celebrate, resolveCelebrateFromEvent, sendReadyTick]);
+
+  useEffect(() => {
+    const waiting = events.some((event) =>
+      hasRemindOffsetWaitingForSendHour(event.event_date, event.remind_offsets),
+    );
+    if (!waiting) return;
+    const ms = msUntilKstSendHour();
+    if (ms <= 0) return;
+    const id = window.setTimeout(() => setSendReadyTick((tick) => tick + 1), ms);
+    return () => window.clearTimeout(id);
+  }, [events, sendReadyTick]);
 
   useEffect(() => {
     if (!currentGroupId || celebrate) return;
