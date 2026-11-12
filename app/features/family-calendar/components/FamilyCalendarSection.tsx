@@ -1397,18 +1397,20 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         }`}
       >
         {celebrate && celebrate.items[0] ? (
-          <CalendarCelebrateOverlay
-            eventId={celebrate.items[0].eventId}
-            title={celebrate.items[0].title}
-            eventDateLabel={celebrate.eventDateLabel}
-            stickerEmoji={celebrate.items[0].stickerEmoji}
-            birthdayFrameSrc={celebrate.birthdayFrameSrc}
-            items={celebrate.items}
-            confirmLabel={t.calendar_celebrate_confirm}
-            onConfirm={() => {
-              void handleCelebrateConfirm();
-            }}
-          />
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-[40] h-[var(--widget-scale-box-h,var(--widget-min-h,auto))] overflow-hidden [container-type:size]">
+            <CalendarCelebrateOverlay
+              eventId={celebrate.items[0].eventId}
+              title={celebrate.items[0].title}
+              eventDateLabel={celebrate.eventDateLabel}
+              stickerEmoji={celebrate.items[0].stickerEmoji}
+              birthdayFrameSrc={celebrate.birthdayFrameSrc}
+              items={celebrate.items}
+              confirmLabel={t.calendar_celebrate_confirm}
+              onConfirm={() => {
+                void handleCelebrateConfirm();
+              }}
+            />
+          </div>
         ) : null}
         {/* 상세 패널은 프레임 밖(아래)으로 분리해 날짜 셀 CQ 스케일 유지 */}
         <CalendarMonthGrid

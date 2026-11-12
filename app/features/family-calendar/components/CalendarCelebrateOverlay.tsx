@@ -60,7 +60,7 @@ export function CalendarCelebrateOverlay({
 
   return (
     <div
-      className="pointer-events-auto absolute inset-0 z-[40] flex flex-col items-center justify-center overflow-hidden rounded-[inherit] bg-[linear-gradient(160deg,rgba(124,58,237,0.92)_0%,rgba(236,72,153,0.9)_45%,rgba(251,146,60,0.88)_100%)] px-3 py-4"
+      className="pointer-events-auto relative z-[40] flex h-full w-full flex-col items-center rounded-[inherit] bg-[linear-gradient(160deg,rgba(124,58,237,0.92)_0%,rgba(236,72,153,0.9)_45%,rgba(251,146,60,0.88)_100%)] px-[4cqmin] py-[3cqmin] [container-type:size]"
       role="dialog"
       aria-modal="true"
       aria-label={eventDateLabel || title}
@@ -78,7 +78,7 @@ export function CalendarCelebrateOverlay({
             <span
               key={`${emoji}-${i}`}
               aria-hidden
-              className="pointer-events-none absolute select-none text-[clamp(1.2rem,8cqmin,2.4rem)] opacity-90"
+              className="pointer-events-none absolute select-none text-[clamp(0.9rem,6cqmin,1.6rem)] opacity-90"
               style={{
                 left: `${8 + ((i * 17) % 76)}%`,
                 top: `${10 + ((i * 23) % 70)}%`,
@@ -90,47 +90,52 @@ export function CalendarCelebrateOverlay({
           ))
         : null}
 
-      <div className="relative z-[1] flex max-w-full flex-col items-center gap-3 text-center">
-        {group ? (
-          <div className="flex w-full max-w-full flex-wrap items-start justify-center gap-x-3 gap-y-2">
-            {group.map((item) => (
-              <div key={item.eventId} className="flex min-w-0 max-w-[46%] flex-1 flex-col items-center gap-1">
-                <span className="text-[clamp(3rem,22cqmin,5.5rem)] leading-none drop-shadow-md" aria-hidden>
-                  {item.stickerEmoji || '🎉'}
-                </span>
-                <p className="m-0 max-w-full break-words text-[clamp(0.95rem,5.5cqmin,1.45rem)] font-bold leading-tight text-white drop-shadow">
-                  {item.title}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : stickerEmoji ? (
-          <span className="text-[clamp(3rem,22cqmin,5.5rem)] leading-none drop-shadow-md" aria-hidden>
-            {stickerEmoji}
-          </span>
-        ) : (
-          <span className="text-[clamp(2.2rem,16cqmin,4rem)] leading-none drop-shadow-md" aria-hidden>
-            {scatter[0] || '🎉'}
-          </span>
-        )}
-        {eventDateLabel ? (
-          <p className="m-0 max-w-[96%] text-[clamp(1.6rem,11cqmin,3.2rem)] font-extrabold leading-none text-white drop-shadow">
-            {eventDateLabel}
-          </p>
-        ) : null}
-        {group ? null : (
-          <p className="m-0 max-w-[92%] break-words text-[clamp(0.95rem,5.5cqmin,1.45rem)] font-bold leading-tight text-white drop-shadow">
-            {title}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={onConfirm}
-          className="mt-2 cursor-pointer rounded-2xl border-none bg-white px-6 py-2.5 text-[clamp(0.85rem,4.5cqmin,1rem)] font-bold text-violet-700 shadow-md transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+      {group ? (
+        <div
+          className="relative z-[1] grid min-h-0 w-full flex-1 grid-cols-2 gap-x-[2cqmin] gap-y-[1cqmin]"
+          // 같은 날 일정 수에 따라 줄 수가 바뀌므로 행 높이만 여기서 나눈다.
+          style={{ gridTemplateRows: `repeat(${Math.ceil(group.length / 2)}, minmax(0, 1fr))` }}
         >
-          {confirmLabel}
-        </button>
-      </div>
+          {group.map((item) => (
+            <div
+              key={item.eventId}
+              className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-[3cqmin] px-[4%] [container-type:size]"
+            >
+              <span className="text-[32cqmin] leading-none drop-shadow-md" aria-hidden>
+                {item.stickerEmoji || '🎉'}
+              </span>
+              <p className="m-0 line-clamp-2 max-w-full break-words text-center text-[11cqmin] font-bold leading-[1.15] text-white drop-shadow">
+                {item.title}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="relative z-[1] grid min-h-0 w-full flex-1 grid-rows-[minmax(0,1fr)_minmax(0,0.32fr)] gap-[1.2cqmin]">
+          <div className="flex min-h-0 items-center justify-center [container-type:size]">
+            <span className="text-[52cqmin] leading-none drop-shadow-md" aria-hidden>
+              {stickerEmoji || scatter[0] || '🎉'}
+            </span>
+          </div>
+          <div className="flex min-h-0 items-center justify-center [container-type:size]">
+            <p className="m-0 line-clamp-2 max-w-[92%] break-words text-center text-[22cqmin] font-bold leading-[1.15] text-white drop-shadow">
+              {title}
+            </p>
+          </div>
+        </div>
+      )}
+      {eventDateLabel ? (
+        <p className="relative z-[1] m-0 mt-[1cqmin] max-w-full shrink-0 whitespace-nowrap text-center text-[clamp(0.8rem,7.2cqw,1.65rem)] font-extrabold leading-none text-white drop-shadow">
+          {eventDateLabel}
+        </p>
+      ) : null}
+      <button
+        type="button"
+        onClick={onConfirm}
+        className="relative z-[1] mt-[1.2cqmin] shrink-0 cursor-pointer rounded-2xl border-none bg-white px-[5cqmin] py-[1.6cqmin] text-[clamp(0.72rem,3.6cqmin,0.95rem)] font-bold text-violet-700 shadow-md transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+      >
+        {confirmLabel}
+      </button>
     </div>
   );
 }

@@ -33,7 +33,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
-import { emitNotificationClient } from '@/lib/notifications/client';
+import { dispatchDueCalendarReminderClient, emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyEvent } from '../types';
 import { normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
 import { normalizeRemindOffsets } from '../remind-offsets';
@@ -105,6 +105,7 @@ export function useFamilyCalendar({
 
     const encryptedTitle = CryptoService.encrypt(payload.title, getCurrentKey());
     const encryptedDesc = payload.desc ? CryptoService.encrypt(payload.desc, getCurrentKey()) : '';
+    const remindOffsets = normalizeRemindOffsets(payload.remind_offsets);
 
     const eventData: any = {
       group_id: currentGroupId,
@@ -115,7 +116,7 @@ export function useFamilyCalendar({
       end_date: (payload.end_date && payload.end_date > payload.event_date) ? payload.end_date : null,
       repeat_type: payload.repeat_type || 'none',
       sticker_emoji: normalizeCalendarStickerEmoji(payload.sticker_emoji),
-      remind_offsets: normalizeRemindOffsets(payload.remind_offsets),
+      remind_offsets: remindOffsets,
     };
 
     console.log('ADD_EVENT: family_events 테이블에 저장:', {
@@ -145,6 +146,14 @@ export function useFamilyCalendar({
         url: '/dashboard?focus=calendar',
         entityId: insertedId ? String(insertedId) : null,
       });
+      if (insertedId) {
+        void dispatchDueCalendarReminderClient({
+          eventId: String(insertedId),
+          title: payload.title,
+          eventDate: payload.event_date,
+          remindOffsets,
+        });
+      }
     }
   };
 
@@ -273,6 +282,7 @@ export function useFamilyCalendar({
 
     const encryptedTitle = CryptoService.encrypt(payload.title, getCurrentKey());
     const encryptedDesc = payload.desc ? CryptoService.encrypt(payload.desc, getCurrentKey()) : '';
+    const remindOffsets = normalizeRemindOffsets(payload.remind_offsets);
 
     const { error } = await supabase
       .from('family_events')
@@ -283,7 +293,7 @@ export function useFamilyCalendar({
         end_date: (payload.end_date && payload.end_date > payload.event_date) ? payload.end_date : null,
         repeat_type: payload.repeat_type || 'none',
         sticker_emoji: normalizeCalendarStickerEmoji(payload.sticker_emoji),
-        remind_offsets: normalizeRemindOffsets(payload.remind_offsets),
+        remind_offsets: remindOffsets,
       })
       .eq('id', eventIdStr)
       .eq('group_id', currentGroupId);
@@ -298,6 +308,12 @@ export function useFamilyCalendar({
       body: '가족 일정이 수정되었습니다.',
       url: '/dashboard?focus=calendar',
       entityId: eventIdStr,
+    });
+    void dispatchDueCalendarReminderClient({
+      eventId: eventIdStr,
+      title: payload.title,
+      eventDate: payload.event_date,
+      remindOffsets,
     });
   };
 

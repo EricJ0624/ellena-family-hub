@@ -1,3 +1,4 @@
+import { dueRemindOffsets } from '@/app/features/family-calendar/remind-offsets';
 import { supabase } from '@/lib/supabase';
 import type { NotifiableWidgetKey, NotificationEventType } from './types';
 
@@ -34,5 +35,40 @@ export async function emitNotificationClient(input: EmitNotificationClientInput)
     });
   } catch (error) {
     console.warn('[emitNotificationClient] 오류:', error);
+  }
+}
+
+/** 저장 직후, 이미 발송일이 된 일정 알림만 서버에 맡긴다. 실패해도 일정 저장은 유지. */
+export async function dispatchDueCalendarReminderClient(input: {
+  eventId: string;
+  title: string;
+  eventDate: string;
+  remindOffsets: number[];
+}): Promise<void> {
+  try {
+    if (!input.eventId || /^\d+$/.test(input.eventId)) return;
+    if (dueRemindOffsets(input.eventDate, input.remindOffsets).length === 0) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    const res = await fetch('/api/calendar/reminders/dispatch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        eventId: input.eventId,
+        title: input.title,
+      }),
+    });
+    if (!res.ok) {
+      console.warn('[dispatchDueCalendarReminderClient] 요청 실패:', res.status);
+    }
+  } catch (error) {
+    console.warn('[dispatchDueCalendarReminderClient] 오류:', error);
   }
 }
