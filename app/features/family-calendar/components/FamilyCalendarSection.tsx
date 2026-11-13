@@ -1751,14 +1751,12 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                               {e.event_time ? <span className="mr-[0.4em]">{e.event_time}</span> : null}
                               {e.title}
                               {reminderLine ? (
-                                <span className="ml-[0.35em] align-middle" aria-hidden="true">
-                                  🔔
+                                <span className="ml-[0.35em] align-middle font-normal text-slate-500">
+                                  <span aria-hidden="true">🔔 </span>
+                                  <span>({reminderLine})</span>
                                 </span>
                               ) : null}
                             </h5>
-                            {reminderLine ? (
-                              <p className="calendar-event-card-meta text-slate-500">{reminderLine}</p>
-                            ) : null}
                             {(e.repeat_type === 'monthly' || e.repeat_type === 'yearly') && (
                               <p className="calendar-event-card-meta text-violet-600">
                                 {e.repeat_type === 'monthly' ? t.event_repeat_monthly : t.event_repeat_yearly}
