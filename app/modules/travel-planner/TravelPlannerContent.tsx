@@ -34,6 +34,8 @@ import {
 import { normalizeTripStatus, type TravelTripStatus } from '@/lib/modules/travel-planner/trip-status';
 import { isTripVisibleInPlanner } from '@/lib/modules/travel-planner/planner-visibility';
 import { TravelFieldRecordHost } from '@/app/features/travel-planner/components/TravelFieldRecordHost';
+import { TravelAiPlannerPanel } from '@/app/features/travel-planner/components/TravelAiPlannerPanel';
+import type { AiTravelPlan } from '@/app/features/travel-planner/hooks/useTravelAiPlanner';
 import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import {
   buildExpandedPlannerItinerary,
@@ -2629,6 +2631,80 @@ export function TravelPlannerContent({
     })();
   }, [selectedTrip, currentGroupId, pdfBusy, getAuthHeaders, printItineraryDocument, tt]);
 
+  /**
+   * AI 여행 계획 저장 — TravelAiPlannerPanel 콜백
+   * - AiTravelPlan의 각 항목을 해당 API에 순차 POST
+   * - 완료 후 모든 목록 refresh
+   */
+  const handleSaveAiPlan = useCallback(
+    async (plan: AiTravelPlan): Promise<void> => {
+      if (!selectedTrip || !currentGroupId) throw new Error('여행 또는 그룹 정보가 없습니다.');
+      const headers = await getAuthHeaders();
+
+      // 숙소
+      for (const item of plan.accommodations) {
+        const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/accommodations`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ groupId: currentGroupId, ...item, show_in_itinerary: true }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(json.error ?? `숙소 저장 실패 (HTTP ${res.status})`);
+        }
+      }
+
+      // 교통
+      for (const item of plan.transports) {
+        const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/transports`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ groupId: currentGroupId, ...item, show_in_itinerary: true }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(json.error ?? `교통 저장 실패 (HTTP ${res.status})`);
+        }
+      }
+
+      // 먹거리
+      for (const item of plan.dining) {
+        const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/dining`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ groupId: currentGroupId, ...item, show_in_itinerary: true }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(json.error ?? `먹거리 저장 실패 (HTTP ${res.status})`);
+        }
+      }
+
+      // 기타 일정
+      for (const item of plan.itineraries) {
+        const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/itineraries`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ groupId: currentGroupId, place_type: 'other', ...item }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(json.error ?? `일정 저장 실패 (HTTP ${res.status})`);
+        }
+      }
+
+      // 전체 목록 refresh
+      await Promise.all([
+        fetchItineraries(selectedTrip.id),
+        fetchAccommodations(selectedTrip.id),
+        fetchDining(selectedTrip.id),
+        fetchAttractions(selectedTrip.id),
+        fetchTransports(selectedTrip.id),
+      ]);
+    },
+    [selectedTrip, currentGroupId, getAuthHeaders, fetchItineraries, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports],
+  );
+
   if (!currentGroupId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base)] p-5">
@@ -2978,6 +3054,15 @@ export function TravelPlannerContent({
                   )}
                 </ul>
             </div>
+
+            {/* AI 여행 계획 생성 패널 */}
+            <TravelAiPlannerPanel
+              trip={selectedTrip}
+              participantCount={tripParticipantIds.length}
+              lang={lang}
+              onSavePlan={handleSaveAiPlan}
+              onOpenAccountSettings={() => window.dispatchEvent(new CustomEvent('sfh:open-nickname-modal'))}
+            />
 
             <div className="mt-5">
               <div className="mb-3 flex items-center justify-between">
