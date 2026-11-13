@@ -1,0 +1,1572 @@
+import type { LangCode } from '@/lib/language-fonts';
+
+export type BabyGrowthTranslations = {
+  // 공통
+  widget_title: string;
+  loading: string;
+  no_baby_profile: string;
+  add_baby: string;
+  edit_baby: string;
+  save: string;
+  cancel: string;
+  delete: string;
+  close: string;
+  error_load: string;
+  error_save: string;
+
+  // 아기 프로필
+  baby_name: string;
+  birth_date: string;
+  gender: string;
+  gender_male: string;
+  gender_female: string;
+  gender_other: string;
+  country_code: string;
+  age_days: string;
+  age_months: string;
+  age_weeks: string;
+  dday_label: string; // "D+{n}"
+
+  // 퀵 상태 카드
+  last_feeding: string;
+  last_sleep: string;
+  last_diaper: string;
+  last_temperature: string;
+  no_record: string;
+  record_now: string;
+  minutes_ago: string;
+  hours_ago: string;
+  days_ago: string;
+
+  // 로그 입력 모달
+  log_feeding: string;
+  log_sleep: string;
+  log_diaper: string;
+  log_temperature: string;
+  log_medication: string;
+  feeding_type: string;
+  feeding_breast_left: string;
+  feeding_breast_right: string;
+  feeding_bottle: string;
+  feeding_solid: string;
+  feeding_mixed: string;
+  feeding_amount_ml: string;
+  feeding_duration_min: string;
+  sleep_start: string;
+  sleep_end: string;
+  diaper_type: string;
+  diaper_wet: string;
+  diaper_dirty: string;
+  diaper_mixed: string;
+  diaper_dry: string;
+  temperature_celsius: string;
+  medication_name: string;
+  medication_dose_mg: string;
+  notes: string;
+  log_saved: string;
+
+  // 병원 리포트
+  report_title: string;
+  temperature_chart: string;
+  medication_timeline: string;
+  no_temperature_data: string;
+
+  // 성장 곡선
+  growth_title: string;
+  weight_kg: string;
+  height_cm: string;
+  head_cm: string;
+  measured_at: string;
+  add_measurement: string;
+  who_percentile: string;
+  no_growth_data: string;
+
+  // 마일스톤
+  milestone_title: string;
+  milestone_motor: string;
+  milestone_language: string;
+  milestone_social: string;
+  milestone_cognitive: string;
+  milestone_sensory: string;
+  milestone_achieved: string;
+  milestone_not_yet: string;
+
+  // 앨범
+  album_title: string;
+  album_month_label: string;
+  no_photos: string;
+  upload_photo: string;
+
+  // 예방접종
+  vaccine_title: string;
+  vaccine_scheduled: string;
+  vaccine_done: string;
+  vaccine_dday_today: string;
+  vaccine_dday_past: string;
+
+  // AI 가이드
+  ai_title: string;
+  ai_key_placeholder: string;
+  ai_key_save: string;
+  ai_key_saved: string;
+  ai_guide_prompt: string;
+  ai_diary_prompt: string;
+  ai_generating: string;
+  ai_error: string;
+  ai_key_required: string;
+  // AI V2
+  ai_provider: string;
+  ai_key_test: string;
+  ai_key_test_ok: string;
+  ai_key_test_fail: string;
+  ai_schedule_prompt: string;
+  ai_qa_prompt: string;
+  ai_qa_input: string;
+
+  // 모유 수유 타이머
+  breast_left_timer: string;
+  breast_right_timer: string;
+
+  // 이유식 재료·알레르기
+  solid_ingredients: string;
+  allergy_reaction: string;
+
+  // 배변 세부
+  diaper_color: string;
+  diaper_consistency: string;
+  diaper_loose: string;
+  diaper_solid: string;
+
+  // 기타 활동
+  log_activity: string;
+  activity_bath: string;
+  activity_tummy_time: string;
+  activity_pumping: string;
+  activity_other: string;
+  activity_duration_min: string;
+  pump_amount_ml: string;
+
+  // 영유아 검진
+  checkup_title: string;
+  checkup_type: string;
+  checkup_date: string;
+  checkup_vision: string;
+  checkup_hearing: string;
+
+  // 알림
+  reminder_growth_due: string;
+  reminder_checkup_due: string;
+};
+
+const ko: BabyGrowthTranslations = {
+  widget_title: '우리아이 성장기록',
+  loading: '불러오는 중...',
+  no_baby_profile: '아기 프로필을 등록해 주세요.',
+  add_baby: '아기 등록',
+  edit_baby: '프로필 수정',
+  save: '저장',
+  cancel: '취소',
+  delete: '삭제',
+  close: '닫기',
+  error_load: '데이터를 불러오지 못했습니다.',
+  error_save: '저장에 실패했습니다.',
+
+  baby_name: '이름',
+  birth_date: '생년월일',
+  gender: '성별',
+  gender_male: '남아',
+  gender_female: '여아',
+  gender_other: '기타',
+  country_code: '국가',
+  age_days: '{n}일',
+  age_months: '{n}개월',
+  age_weeks: '{n}주',
+  dday_label: 'D+{n}',
+
+  last_feeding: '마지막 수유',
+  last_sleep: '마지막 수면',
+  last_diaper: '마지막 배변',
+  last_temperature: '마지막 체온',
+  no_record: '기록 없음',
+  record_now: '지금 기록',
+  minutes_ago: '{n}분 전',
+  hours_ago: '{n}시간 전',
+  days_ago: '{n}일 전',
+
+  log_feeding: '수유',
+  log_sleep: '수면',
+  log_diaper: '배변',
+  log_temperature: '체온',
+  log_medication: '투약',
+  feeding_type: '수유 방법',
+  feeding_breast_left: '좌측 모유',
+  feeding_breast_right: '우측 모유',
+  feeding_bottle: '분유/젖병',
+  feeding_solid: '이유식',
+  feeding_mixed: '혼합',
+  feeding_amount_ml: '수유량 (ml)',
+  feeding_duration_min: '수유 시간 (분)',
+  sleep_start: '잠든 시각',
+  sleep_end: '깬 시각',
+  diaper_type: '배변 종류',
+  diaper_wet: '소변',
+  diaper_dirty: '대변',
+  diaper_mixed: '소변+대변',
+  diaper_dry: '없음',
+  temperature_celsius: '체온 (℃)',
+  medication_name: '약 이름',
+  medication_dose_mg: '용량 (mg)',
+  notes: '메모',
+  log_saved: '기록이 저장되었습니다.',
+
+  report_title: '병원 진료 리포트',
+  temperature_chart: '체온 변화',
+  medication_timeline: '해열제 복용 타임라인',
+  no_temperature_data: '체온 기록이 없습니다.',
+
+  growth_title: '성장 발달',
+  weight_kg: '몸무게 (kg)',
+  height_cm: '키 (cm)',
+  head_cm: '머리둘레 (cm)',
+  measured_at: '측정일',
+  add_measurement: '성장 측정 추가',
+  who_percentile: 'WHO 성장 곡선',
+  no_growth_data: '성장 기록이 없습니다.',
+
+  milestone_title: '발달 마일스톤',
+  milestone_motor: '운동 발달',
+  milestone_language: '언어 발달',
+  milestone_social: '사회성 발달',
+  milestone_cognitive: '인지 발달',
+  milestone_sensory: '감각 발달',
+  milestone_achieved: '달성!',
+  milestone_not_yet: '미달성',
+
+  album_title: '아기 앨범',
+  album_month_label: '{n}개월',
+  no_photos: '사진이 없습니다.',
+  upload_photo: '사진 추가',
+
+  vaccine_title: '예방접종 수첩',
+  vaccine_scheduled: '접종 예정',
+  vaccine_done: '접종 완료',
+  vaccine_dday_today: '오늘 접종일!',
+  vaccine_dday_past: '{n}일 지남',
+
+  ai_title: 'AI 육아 가이드',
+  ai_key_placeholder: 'API 키를 입력하세요',
+  ai_key_save: 'API 키 저장',
+  ai_key_saved: 'API 키가 저장되었습니다.',
+  ai_guide_prompt: '육아 가이드',
+  ai_diary_prompt: '일기 초안',
+  ai_generating: '생성 중...',
+  ai_error: 'AI 응답 오류',
+  ai_key_required: 'API 키를 먼저 입력해 주세요.',
+  ai_provider: 'AI 제공사',
+  ai_key_test: '연결 테스트',
+  ai_key_test_ok: '연결 성공',
+  ai_key_test_fail: '연결 실패',
+  ai_schedule_prompt: '일과 예측',
+  ai_qa_prompt: '질문하기',
+  ai_qa_input: '궁금한 것을 입력하세요...',
+
+  breast_left_timer: '왼쪽',
+  breast_right_timer: '오른쪽',
+
+  solid_ingredients: '사용 재료',
+  allergy_reaction: '알레르기 반응',
+
+  diaper_color: '대변 색상',
+  diaper_consistency: '대변 상태',
+  diaper_loose: '묽음',
+  diaper_solid: '딱딱',
+
+  log_activity: '기타 활동',
+  activity_bath: '목욕',
+  activity_tummy_time: '터미타임',
+  activity_pumping: '유축',
+  activity_other: '기타',
+  activity_duration_min: '소요 시간 (분)',
+  pump_amount_ml: '유축량 (ml)',
+
+  checkup_title: '영유아 검진',
+  checkup_type: '검진 차수',
+  checkup_date: '검진일',
+  checkup_vision: '시력',
+  checkup_hearing: '청력',
+
+  reminder_growth_due: '성장 측정 기록을 입력해 주세요',
+  reminder_checkup_due: '영유아 검진 예정',
+};
+
+const en: BabyGrowthTranslations = {
+  widget_title: "Baby's Growth Journal",
+  loading: 'Loading...',
+  no_baby_profile: 'Please register your baby profile.',
+  add_baby: 'Add Baby',
+  edit_baby: 'Edit Profile',
+  save: 'Save',
+  cancel: 'Cancel',
+  delete: 'Delete',
+  close: 'Close',
+  error_load: 'Failed to load data.',
+  error_save: 'Failed to save.',
+
+  baby_name: 'Name',
+  birth_date: 'Date of Birth',
+  gender: 'Gender',
+  gender_male: 'Boy',
+  gender_female: 'Girl',
+  gender_other: 'Other',
+  country_code: 'Country',
+  age_days: '{n} days',
+  age_months: '{n} months',
+  age_weeks: '{n} weeks',
+  dday_label: 'D+{n}',
+
+  last_feeding: 'Last Feeding',
+  last_sleep: 'Last Sleep',
+  last_diaper: 'Last Diaper',
+  last_temperature: 'Last Temp',
+  no_record: 'No record',
+  record_now: 'Record',
+  minutes_ago: '{n}m ago',
+  hours_ago: '{n}h ago',
+  days_ago: '{n}d ago',
+
+  log_feeding: 'Feeding',
+  log_sleep: 'Sleep',
+  log_diaper: 'Diaper',
+  log_temperature: 'Temperature',
+  log_medication: 'Medication',
+  feeding_type: 'Feeding Type',
+  feeding_breast_left: 'Left Breast',
+  feeding_breast_right: 'Right Breast',
+  feeding_bottle: 'Bottle',
+  feeding_solid: 'Solid Food',
+  feeding_mixed: 'Mixed',
+  feeding_amount_ml: 'Amount (ml)',
+  feeding_duration_min: 'Duration (min)',
+  sleep_start: 'Fell Asleep',
+  sleep_end: 'Woke Up',
+  diaper_type: 'Diaper Type',
+  diaper_wet: 'Wet',
+  diaper_dirty: 'Dirty',
+  diaper_mixed: 'Both',
+  diaper_dry: 'Dry',
+  temperature_celsius: 'Temperature (℃)',
+  medication_name: 'Medicine Name',
+  medication_dose_mg: 'Dose (mg)',
+  notes: 'Notes',
+  log_saved: 'Log saved.',
+
+  report_title: 'Medical Report',
+  temperature_chart: 'Temperature Chart',
+  medication_timeline: 'Medication Timeline',
+  no_temperature_data: 'No temperature records.',
+
+  growth_title: 'Growth & Development',
+  weight_kg: 'Weight (kg)',
+  height_cm: 'Height (cm)',
+  head_cm: 'Head (cm)',
+  measured_at: 'Measured On',
+  add_measurement: 'Add Measurement',
+  who_percentile: 'WHO Growth Chart',
+  no_growth_data: 'No growth records.',
+
+  milestone_title: 'Developmental Milestones',
+  milestone_motor: 'Motor',
+  milestone_language: 'Language',
+  milestone_social: 'Social',
+  milestone_cognitive: 'Cognitive',
+  milestone_sensory: 'Sensory',
+  milestone_achieved: 'Achieved!',
+  milestone_not_yet: 'Not yet',
+
+  album_title: 'Baby Album',
+  album_month_label: '{n} months',
+  no_photos: 'No photos yet.',
+  upload_photo: 'Add Photo',
+
+  vaccine_title: 'Vaccination Record',
+  vaccine_scheduled: 'Scheduled',
+  vaccine_done: 'Done',
+  vaccine_dday_today: 'Today!',
+  vaccine_dday_past: '{n}d overdue',
+
+  ai_title: 'AI Parenting Guide',
+  ai_key_placeholder: 'Enter your API key',
+  ai_key_save: 'Save Key',
+  ai_key_saved: 'API key saved.',
+  ai_guide_prompt: 'Parenting Tips',
+  ai_diary_prompt: 'Diary Draft',
+  ai_generating: 'Generating...',
+  ai_error: 'AI response failed.',
+  ai_key_required: 'Please enter your API key first.',
+  ai_provider: 'AI Provider',
+  ai_key_test: 'Test Connection',
+  ai_key_test_ok: 'Connected',
+  ai_key_test_fail: 'Failed',
+  ai_schedule_prompt: 'Predict Schedule',
+  ai_qa_prompt: 'Ask a Question',
+  ai_qa_input: 'Ask anything about your baby...',
+
+  breast_left_timer: 'Left',
+  breast_right_timer: 'Right',
+
+  solid_ingredients: 'Ingredients',
+  allergy_reaction: 'Allergy Reaction',
+
+  diaper_color: 'Stool Color',
+  diaper_consistency: 'Consistency',
+  diaper_loose: 'Loose',
+  diaper_solid: 'Hard',
+
+  log_activity: 'Activity',
+  activity_bath: 'Bath',
+  activity_tummy_time: 'Tummy Time',
+  activity_pumping: 'Pumping',
+  activity_other: 'Other',
+  activity_duration_min: 'Duration (min)',
+  pump_amount_ml: 'Amount (ml)',
+
+  checkup_title: 'Infant Checkup',
+  checkup_type: 'Checkup Type',
+  checkup_date: 'Checkup Date',
+  checkup_vision: 'Vision',
+  checkup_hearing: 'Hearing',
+
+  reminder_growth_due: 'Time to record growth measurements',
+  reminder_checkup_due: 'Upcoming infant checkup',
+};
+
+const ja: BabyGrowthTranslations = {
+  widget_title: '赤ちゃん成長記録',
+  loading: '読み込み中...',
+  no_baby_profile: '赤ちゃんのプロフィールを登録してください。',
+  add_baby: '赤ちゃんを追加',
+  edit_baby: 'プロフィール編集',
+  save: '保存',
+  cancel: 'キャンセル',
+  delete: '削除',
+  close: '閉じる',
+  error_load: 'データの読み込みに失敗しました。',
+  error_save: '保存に失敗しました。',
+
+  baby_name: '名前',
+  birth_date: '生年月日',
+  gender: '性別',
+  gender_male: '男の子',
+  gender_female: '女の子',
+  gender_other: 'その他',
+  country_code: '国',
+  age_days: '{n}日',
+  age_months: '{n}ヶ月',
+  age_weeks: '{n}週',
+  dday_label: 'D+{n}',
+
+  last_feeding: '最後の授乳',
+  last_sleep: '最後の睡眠',
+  last_diaper: '最後のおむつ',
+  last_temperature: '最後の体温',
+  no_record: '記録なし',
+  record_now: '今記録',
+  minutes_ago: '{n}分前',
+  hours_ago: '{n}時間前',
+  days_ago: '{n}日前',
+
+  log_feeding: '授乳',
+  log_sleep: '睡眠',
+  log_diaper: 'おむつ',
+  log_temperature: '体温',
+  log_medication: '投薬',
+  feeding_type: '授乳タイプ',
+  feeding_breast_left: '左母乳',
+  feeding_breast_right: '右母乳',
+  feeding_bottle: 'ミルク',
+  feeding_solid: '離乳食',
+  feeding_mixed: '混合',
+  feeding_amount_ml: '量 (ml)',
+  feeding_duration_min: '時間 (分)',
+  sleep_start: '就寝時刻',
+  sleep_end: '起床時刻',
+  diaper_type: 'おむつタイプ',
+  diaper_wet: 'おしっこ',
+  diaper_dirty: 'うんち',
+  diaper_mixed: '両方',
+  diaper_dry: 'なし',
+  temperature_celsius: '体温 (℃)',
+  medication_name: '薬の名前',
+  medication_dose_mg: '用量 (mg)',
+  notes: 'メモ',
+  log_saved: '記録が保存されました。',
+
+  report_title: '医療レポート',
+  temperature_chart: '体温変化',
+  medication_timeline: '解熱剤タイムライン',
+  no_temperature_data: '体温記録がありません。',
+
+  growth_title: '成長発達',
+  weight_kg: '体重 (kg)',
+  height_cm: '身長 (cm)',
+  head_cm: '頭囲 (cm)',
+  measured_at: '測定日',
+  add_measurement: '成長測定を追加',
+  who_percentile: 'WHO成長曲線',
+  no_growth_data: '成長記録がありません。',
+
+  milestone_title: '発達マイルストーン',
+  milestone_motor: '運動発達',
+  milestone_language: '言語発達',
+  milestone_social: '社会性',
+  milestone_cognitive: '認知発達',
+  milestone_sensory: '感覚発達',
+  milestone_achieved: '達成！',
+  milestone_not_yet: '未達成',
+
+  album_title: '赤ちゃんアルバム',
+  album_month_label: '{n}ヶ月',
+  no_photos: '写真がありません。',
+  upload_photo: '写真を追加',
+
+  vaccine_title: '予防接種手帳',
+  vaccine_scheduled: '予定',
+  vaccine_done: '完了',
+  vaccine_dday_today: '今日！',
+  vaccine_dday_past: '{n}日過ぎ',
+
+  ai_title: 'AI育児ガイド',
+  ai_key_placeholder: 'APIキーを入力',
+  ai_key_save: 'キーを保存',
+  ai_key_saved: 'APIキーが保存されました。',
+  ai_guide_prompt: '育児ガイド',
+  ai_diary_prompt: '日記草案',
+  ai_generating: '生成中...',
+  ai_error: 'AI応答の取得に失敗しました。',
+  ai_key_required: 'APIキーを入力してください。',
+  ai_provider: 'AIプロバイダー',
+  ai_key_test: '接続テスト',
+  ai_key_test_ok: '接続成功',
+  ai_key_test_fail: '接続失敗',
+  ai_schedule_prompt: 'スケジュール予測',
+  ai_qa_prompt: '質問する',
+  ai_qa_input: '赤ちゃんについて質問してください...',
+
+  breast_left_timer: '左',
+  breast_right_timer: '右',
+
+  solid_ingredients: '食材',
+  allergy_reaction: 'アレルギー反応',
+
+  diaper_color: '便の色',
+  diaper_consistency: '便の状態',
+  diaper_loose: '軟便',
+  diaper_solid: '硬便',
+
+  log_activity: '活動',
+  activity_bath: 'お風呂',
+  activity_tummy_time: '腹ばい',
+  activity_pumping: '搾乳',
+  activity_other: 'その他',
+  activity_duration_min: '所要時間 (分)',
+  pump_amount_ml: '搾乳量 (ml)',
+
+  checkup_title: '乳幼児健診',
+  checkup_type: '健診種類',
+  checkup_date: '健診日',
+  checkup_vision: '視力',
+  checkup_hearing: '聴力',
+
+  reminder_growth_due: '成長測定の記録をしてください',
+  reminder_checkup_due: '乳幼児健診の予定',
+};
+
+// ---------------------------------------------------------------------------
+// 중국어 간체 (zh-CN)
+// ---------------------------------------------------------------------------
+const zhCN: BabyGrowthTranslations = {
+  widget_title: '宝宝成长记录',
+  loading: '加载中...',
+  no_baby_profile: '请注册宝宝档案。',
+  add_baby: '添加宝宝',
+  edit_baby: '编辑档案',
+  save: '保存',
+  cancel: '取消',
+  delete: '删除',
+  close: '关闭',
+  error_load: '无法加载数据。',
+  error_save: '保存失败。',
+
+  baby_name: '姓名',
+  birth_date: '出生日期',
+  gender: '性别',
+  gender_male: '男宝宝',
+  gender_female: '女宝宝',
+  gender_other: '其他',
+  country_code: '国家',
+  age_days: '{n}天',
+  age_months: '{n}个月',
+  age_weeks: '{n}周',
+  dday_label: 'D+{n}',
+
+  last_feeding: '上次喂奶',
+  last_sleep: '上次睡眠',
+  last_diaper: '上次换尿布',
+  last_temperature: '上次体温',
+  no_record: '无记录',
+  record_now: '立即记录',
+  minutes_ago: '{n}分钟前',
+  hours_ago: '{n}小时前',
+  days_ago: '{n}天前',
+
+  log_feeding: '喂奶',
+  log_sleep: '睡眠',
+  log_diaper: '尿布',
+  log_temperature: '体温',
+  log_medication: '用药',
+  feeding_type: '喂奶方式',
+  feeding_breast_left: '左侧母乳',
+  feeding_breast_right: '右侧母乳',
+  feeding_bottle: '奶瓶',
+  feeding_solid: '辅食',
+  feeding_mixed: '混合',
+  feeding_amount_ml: '喂奶量 (ml)',
+  feeding_duration_min: '喂奶时间 (分钟)',
+  sleep_start: '入睡时间',
+  sleep_end: '醒来时间',
+  diaper_type: '尿布类型',
+  diaper_wet: '尿湿',
+  diaper_dirty: '大便',
+  diaper_mixed: '两者都有',
+  diaper_dry: '干净',
+  temperature_celsius: '体温 (℃)',
+  medication_name: '药品名称',
+  medication_dose_mg: '剂量 (mg)',
+  notes: '备注',
+  log_saved: '记录已保存。',
+
+  report_title: '医疗报告',
+  temperature_chart: '体温变化',
+  medication_timeline: '退烧药服用记录',
+  no_temperature_data: '暂无体温记录。',
+
+  growth_title: '生长发育',
+  weight_kg: '体重 (kg)',
+  height_cm: '身高 (cm)',
+  head_cm: '头围 (cm)',
+  measured_at: '测量日期',
+  add_measurement: '添加测量',
+  who_percentile: 'WHO生长曲线',
+  no_growth_data: '暂无生长记录。',
+
+  milestone_title: '发育里程碑',
+  milestone_motor: '运动发育',
+  milestone_language: '语言发育',
+  milestone_social: '社交发育',
+  milestone_cognitive: '认知发育',
+  milestone_sensory: '感官发育',
+  milestone_achieved: '已达成！',
+  milestone_not_yet: '未达成',
+
+  album_title: '宝宝相册',
+  album_month_label: '{n}个月',
+  no_photos: '暂无照片。',
+  upload_photo: '添加照片',
+
+  vaccine_title: '疫苗接种记录',
+  vaccine_scheduled: '待接种',
+  vaccine_done: '已接种',
+  vaccine_dday_today: '今天！',
+  vaccine_dday_past: '已过{n}天',
+
+  ai_title: 'AI育儿指南',
+  ai_key_placeholder: '输入API密钥',
+  ai_key_save: '保存密钥',
+  ai_key_saved: 'API密钥已保存。',
+  ai_guide_prompt: '育儿建议',
+  ai_diary_prompt: '日记初稿',
+  ai_generating: '生成中...',
+  ai_error: 'AI响应失败。',
+  ai_key_required: '请先输入API密钥。',
+  ai_provider: 'AI服务商',
+  ai_key_test: '测试连接',
+  ai_key_test_ok: '连接成功',
+  ai_key_test_fail: '连接失败',
+  ai_schedule_prompt: '日程预测',
+  ai_qa_prompt: '提问',
+  ai_qa_input: '请输入关于宝宝的问题...',
+
+  breast_left_timer: '左侧',
+  breast_right_timer: '右侧',
+  solid_ingredients: '食材',
+  allergy_reaction: '过敏反应',
+  diaper_color: '大便颜色',
+  diaper_consistency: '大便状态',
+  diaper_loose: '稀便',
+  diaper_solid: '硬便',
+  log_activity: '其他活动',
+  activity_bath: '洗澡',
+  activity_tummy_time: '俯卧练习',
+  activity_pumping: '吸奶',
+  activity_other: '其他',
+  activity_duration_min: '时长 (分钟)',
+  pump_amount_ml: '吸奶量 (ml)',
+  checkup_title: '婴幼儿体检',
+  checkup_type: '体检类型',
+  checkup_date: '体检日期',
+  checkup_vision: '视力',
+  checkup_hearing: '听力',
+  reminder_growth_due: '请记录生长测量数据',
+  reminder_checkup_due: '婴幼儿体检预定',
+};
+
+// ---------------------------------------------------------------------------
+// 중국어 번체 (zh-TW)
+// ---------------------------------------------------------------------------
+const zhTW: BabyGrowthTranslations = {
+  widget_title: '寶寶成長記錄',
+  loading: '載入中...',
+  no_baby_profile: '請登錄寶寶檔案。',
+  add_baby: '新增寶寶',
+  edit_baby: '編輯檔案',
+  save: '儲存',
+  cancel: '取消',
+  delete: '刪除',
+  close: '關閉',
+  error_load: '無法載入資料。',
+  error_save: '儲存失敗。',
+
+  baby_name: '姓名',
+  birth_date: '出生日期',
+  gender: '性別',
+  gender_male: '男寶寶',
+  gender_female: '女寶寶',
+  gender_other: '其他',
+  country_code: '國家',
+  age_days: '{n}天',
+  age_months: '{n}個月',
+  age_weeks: '{n}週',
+  dday_label: 'D+{n}',
+
+  last_feeding: '上次餵奶',
+  last_sleep: '上次睡眠',
+  last_diaper: '上次換尿布',
+  last_temperature: '上次體溫',
+  no_record: '無記錄',
+  record_now: '立即記錄',
+  minutes_ago: '{n}分鐘前',
+  hours_ago: '{n}小時前',
+  days_ago: '{n}天前',
+
+  log_feeding: '餵奶',
+  log_sleep: '睡眠',
+  log_diaper: '尿布',
+  log_temperature: '體溫',
+  log_medication: '用藥',
+  feeding_type: '餵奶方式',
+  feeding_breast_left: '左側母乳',
+  feeding_breast_right: '右側母乳',
+  feeding_bottle: '奶瓶',
+  feeding_solid: '副食品',
+  feeding_mixed: '混合',
+  feeding_amount_ml: '餵奶量 (ml)',
+  feeding_duration_min: '餵奶時間 (分鐘)',
+  sleep_start: '入睡時間',
+  sleep_end: '醒來時間',
+  diaper_type: '尿布類型',
+  diaper_wet: '尿溼',
+  diaper_dirty: '大便',
+  diaper_mixed: '兩者都有',
+  diaper_dry: '乾淨',
+  temperature_celsius: '體溫 (℃)',
+  medication_name: '藥品名稱',
+  medication_dose_mg: '劑量 (mg)',
+  notes: '備註',
+  log_saved: '記錄已儲存。',
+
+  report_title: '醫療報告',
+  temperature_chart: '體溫變化',
+  medication_timeline: '退燒藥服用記錄',
+  no_temperature_data: '暫無體溫記錄。',
+
+  growth_title: '生長發育',
+  weight_kg: '體重 (kg)',
+  height_cm: '身高 (cm)',
+  head_cm: '頭圍 (cm)',
+  measured_at: '測量日期',
+  add_measurement: '新增測量',
+  who_percentile: 'WHO生長曲線',
+  no_growth_data: '暫無生長記錄。',
+
+  milestone_title: '發育里程碑',
+  milestone_motor: '動作發育',
+  milestone_language: '語言發育',
+  milestone_social: '社交發育',
+  milestone_cognitive: '認知發育',
+  milestone_sensory: '感官發育',
+  milestone_achieved: '已達成！',
+  milestone_not_yet: '未達成',
+
+  album_title: '寶寶相簿',
+  album_month_label: '{n}個月',
+  no_photos: '暫無照片。',
+  upload_photo: '新增照片',
+
+  vaccine_title: '疫苗接種記錄',
+  vaccine_scheduled: '待接種',
+  vaccine_done: '已接種',
+  vaccine_dday_today: '今天！',
+  vaccine_dday_past: '已過{n}天',
+
+  ai_title: 'AI育兒指南',
+  ai_key_placeholder: '輸入API金鑰',
+  ai_key_save: '儲存金鑰',
+  ai_key_saved: 'API金鑰已儲存。',
+  ai_guide_prompt: '育兒建議',
+  ai_diary_prompt: '日記初稿',
+  ai_generating: '生成中...',
+  ai_error: 'AI回應失敗。',
+  ai_key_required: '請先輸入API金鑰。',
+  ai_provider: 'AI服務商',
+  ai_key_test: '測試連線',
+  ai_key_test_ok: '連線成功',
+  ai_key_test_fail: '連線失敗',
+  ai_schedule_prompt: '日程預測',
+  ai_qa_prompt: '提問',
+  ai_qa_input: '請輸入關於寶寶的問題...',
+
+  breast_left_timer: '左側',
+  breast_right_timer: '右側',
+  solid_ingredients: '食材',
+  allergy_reaction: '過敏反應',
+  diaper_color: '大便顏色',
+  diaper_consistency: '大便狀態',
+  diaper_loose: '稀便',
+  diaper_solid: '硬便',
+  log_activity: '其他活動',
+  activity_bath: '洗澡',
+  activity_tummy_time: '俯臥練習',
+  activity_pumping: '擠奶',
+  activity_other: '其他',
+  activity_duration_min: '時長 (分鐘)',
+  pump_amount_ml: '擠奶量 (ml)',
+  checkup_title: '嬰幼兒健檢',
+  checkup_type: '健檢類型',
+  checkup_date: '健檢日期',
+  checkup_vision: '視力',
+  checkup_hearing: '聽力',
+  reminder_growth_due: '請記錄生長測量資料',
+  reminder_checkup_due: '嬰幼兒健檢預定',
+};
+
+// ---------------------------------------------------------------------------
+// 스페인어 (es)
+// ---------------------------------------------------------------------------
+const es: BabyGrowthTranslations = {
+  widget_title: 'Registro de crecimiento del bebé',
+  loading: 'Cargando...',
+  no_baby_profile: 'Por favor, registra el perfil de tu bebé.',
+  add_baby: 'Añadir bebé',
+  edit_baby: 'Editar perfil',
+  save: 'Guardar',
+  cancel: 'Cancelar',
+  delete: 'Eliminar',
+  close: 'Cerrar',
+  error_load: 'No se pudieron cargar los datos.',
+  error_save: 'Error al guardar.',
+
+  baby_name: 'Nombre',
+  birth_date: 'Fecha de nacimiento',
+  gender: 'Género',
+  gender_male: 'Niño',
+  gender_female: 'Niña',
+  gender_other: 'Otro',
+  country_code: 'País',
+  age_days: '{n} días',
+  age_months: '{n} meses',
+  age_weeks: '{n} semanas',
+  dday_label: 'D+{n}',
+
+  last_feeding: 'Última toma',
+  last_sleep: 'Último sueño',
+  last_diaper: 'Último pañal',
+  last_temperature: 'Última temp.',
+  no_record: 'Sin registro',
+  record_now: 'Registrar',
+  minutes_ago: 'hace {n} min',
+  hours_ago: 'hace {n} h',
+  days_ago: 'hace {n} días',
+
+  log_feeding: 'Toma',
+  log_sleep: 'Sueño',
+  log_diaper: 'Pañal',
+  log_temperature: 'Temperatura',
+  log_medication: 'Medicación',
+  feeding_type: 'Tipo de toma',
+  feeding_breast_left: 'Pecho izquierdo',
+  feeding_breast_right: 'Pecho derecho',
+  feeding_bottle: 'Biberón',
+  feeding_solid: 'Papilla',
+  feeding_mixed: 'Mixta',
+  feeding_amount_ml: 'Cantidad (ml)',
+  feeding_duration_min: 'Duración (min)',
+  sleep_start: 'Se durmió',
+  sleep_end: 'Se despertó',
+  diaper_type: 'Tipo de pañal',
+  diaper_wet: 'Mojado',
+  diaper_dirty: 'Sucio',
+  diaper_mixed: 'Ambos',
+  diaper_dry: 'Seco',
+  temperature_celsius: 'Temperatura (℃)',
+  medication_name: 'Medicamento',
+  medication_dose_mg: 'Dosis (mg)',
+  notes: 'Notas',
+  log_saved: 'Registro guardado.',
+
+  report_title: 'Informe médico',
+  temperature_chart: 'Gráfica de temperatura',
+  medication_timeline: 'Historial de medicación',
+  no_temperature_data: 'Sin registros de temperatura.',
+
+  growth_title: 'Crecimiento y desarrollo',
+  weight_kg: 'Peso (kg)',
+  height_cm: 'Altura (cm)',
+  head_cm: 'Perímetro craneal (cm)',
+  measured_at: 'Fecha de medición',
+  add_measurement: 'Añadir medición',
+  who_percentile: 'Curva OMS',
+  no_growth_data: 'Sin registros de crecimiento.',
+
+  milestone_title: 'Hitos del desarrollo',
+  milestone_motor: 'Motor',
+  milestone_language: 'Lenguaje',
+  milestone_social: 'Social',
+  milestone_cognitive: 'Cognitivo',
+  milestone_sensory: 'Sensorial',
+  milestone_achieved: '¡Logrado!',
+  milestone_not_yet: 'Pendiente',
+
+  album_title: 'Álbum del bebé',
+  album_month_label: '{n} meses',
+  no_photos: 'Sin fotos aún.',
+  upload_photo: 'Añadir foto',
+
+  vaccine_title: 'Calendario de vacunas',
+  vaccine_scheduled: 'Programada',
+  vaccine_done: 'Completada',
+  vaccine_dday_today: '¡Hoy!',
+  vaccine_dday_past: '{n}d de retraso',
+
+  ai_title: 'Guía de crianza IA',
+  ai_key_placeholder: 'Introduce tu clave API',
+  ai_key_save: 'Guardar clave',
+  ai_key_saved: 'Clave API guardada.',
+  ai_guide_prompt: 'Consejos de crianza',
+  ai_diary_prompt: 'Borrador de diario',
+  ai_generating: 'Generando...',
+  ai_error: 'Error en la respuesta IA.',
+  ai_key_required: 'Introduce primero tu clave API.',
+  ai_provider: 'Proveedor IA',
+  ai_key_test: 'Probar conexión',
+  ai_key_test_ok: 'Conectado',
+  ai_key_test_fail: 'Fallo',
+  ai_schedule_prompt: 'Predecir horario',
+  ai_qa_prompt: 'Hacer pregunta',
+  ai_qa_input: 'Pregunta sobre tu bebé...',
+
+  breast_left_timer: 'Izquierdo',
+  breast_right_timer: 'Derecho',
+  solid_ingredients: 'Ingredientes',
+  allergy_reaction: 'Reacción alérgica',
+  diaper_color: 'Color de heces',
+  diaper_consistency: 'Consistencia',
+  diaper_loose: 'Líquido',
+  diaper_solid: 'Duro',
+  log_activity: 'Actividad',
+  activity_bath: 'Baño',
+  activity_tummy_time: 'Boca abajo',
+  activity_pumping: 'Extracción',
+  activity_other: 'Otro',
+  activity_duration_min: 'Duración (min)',
+  pump_amount_ml: 'Cantidad extraída (ml)',
+  checkup_title: 'Revisión pediátrica',
+  checkup_type: 'Tipo de revisión',
+  checkup_date: 'Fecha de revisión',
+  checkup_vision: 'Visión',
+  checkup_hearing: 'Audición',
+  reminder_growth_due: 'Hora de registrar medidas de crecimiento',
+  reminder_checkup_due: 'Revisión pediátrica próxima',
+};
+
+// ---------------------------------------------------------------------------
+// 프랑스어 (fr)
+// ---------------------------------------------------------------------------
+const fr: BabyGrowthTranslations = {
+  widget_title: 'Journal de croissance du bébé',
+  loading: 'Chargement...',
+  no_baby_profile: 'Veuillez enregistrer le profil de votre bébé.',
+  add_baby: 'Ajouter bébé',
+  edit_baby: 'Modifier le profil',
+  save: 'Enregistrer',
+  cancel: 'Annuler',
+  delete: 'Supprimer',
+  close: 'Fermer',
+  error_load: 'Impossible de charger les données.',
+  error_save: 'Échec de l\'enregistrement.',
+
+  baby_name: 'Prénom',
+  birth_date: 'Date de naissance',
+  gender: 'Sexe',
+  gender_male: 'Garçon',
+  gender_female: 'Fille',
+  gender_other: 'Autre',
+  country_code: 'Pays',
+  age_days: '{n} jours',
+  age_months: '{n} mois',
+  age_weeks: '{n} semaines',
+  dday_label: 'J+{n}',
+
+  last_feeding: 'Dernier repas',
+  last_sleep: 'Dernier sommeil',
+  last_diaper: 'Dernière couche',
+  last_temperature: 'Dernière temp.',
+  no_record: 'Aucun enregistrement',
+  record_now: 'Enregistrer',
+  minutes_ago: 'il y a {n} min',
+  hours_ago: 'il y a {n} h',
+  days_ago: 'il y a {n} j',
+
+  log_feeding: 'Repas',
+  log_sleep: 'Sommeil',
+  log_diaper: 'Couche',
+  log_temperature: 'Température',
+  log_medication: 'Médicament',
+  feeding_type: 'Type de repas',
+  feeding_breast_left: 'Sein gauche',
+  feeding_breast_right: 'Sein droit',
+  feeding_bottle: 'Biberon',
+  feeding_solid: 'Solide',
+  feeding_mixed: 'Mixte',
+  feeding_amount_ml: 'Quantité (ml)',
+  feeding_duration_min: 'Durée (min)',
+  sleep_start: 'Endormi(e)',
+  sleep_end: 'Réveillé(e)',
+  diaper_type: 'Type de couche',
+  diaper_wet: 'Mouillée',
+  diaper_dirty: 'Sale',
+  diaper_mixed: 'Les deux',
+  diaper_dry: 'Sèche',
+  temperature_celsius: 'Température (℃)',
+  medication_name: 'Médicament',
+  medication_dose_mg: 'Dose (mg)',
+  notes: 'Notes',
+  log_saved: 'Enregistrement sauvegardé.',
+
+  report_title: 'Rapport médical',
+  temperature_chart: 'Courbe de température',
+  medication_timeline: 'Historique des médicaments',
+  no_temperature_data: 'Aucune donnée de température.',
+
+  growth_title: 'Croissance et développement',
+  weight_kg: 'Poids (kg)',
+  height_cm: 'Taille (cm)',
+  head_cm: 'Tour de tête (cm)',
+  measured_at: 'Date de mesure',
+  add_measurement: 'Ajouter une mesure',
+  who_percentile: 'Courbe OMS',
+  no_growth_data: 'Aucune donnée de croissance.',
+
+  milestone_title: 'Étapes du développement',
+  milestone_motor: 'Motricité',
+  milestone_language: 'Langage',
+  milestone_social: 'Social',
+  milestone_cognitive: 'Cognitif',
+  milestone_sensory: 'Sensoriel',
+  milestone_achieved: 'Atteint !',
+  milestone_not_yet: 'Pas encore',
+
+  album_title: 'Album bébé',
+  album_month_label: '{n} mois',
+  no_photos: 'Aucune photo.',
+  upload_photo: 'Ajouter une photo',
+
+  vaccine_title: 'Carnet de vaccinations',
+  vaccine_scheduled: 'Prévu',
+  vaccine_done: 'Fait',
+  vaccine_dday_today: 'Aujourd\'hui !',
+  vaccine_dday_past: '{n}j de retard',
+
+  ai_title: 'Guide parental IA',
+  ai_key_placeholder: 'Entrez votre clé API',
+  ai_key_save: 'Sauvegarder la clé',
+  ai_key_saved: 'Clé API sauvegardée.',
+  ai_guide_prompt: 'Conseils parentaux',
+  ai_diary_prompt: 'Brouillon de journal',
+  ai_generating: 'Génération...',
+  ai_error: 'Échec de la réponse IA.',
+  ai_key_required: 'Veuillez d\'abord entrer votre clé API.',
+  ai_provider: 'Fournisseur IA',
+  ai_key_test: 'Tester la connexion',
+  ai_key_test_ok: 'Connecté',
+  ai_key_test_fail: 'Échec',
+  ai_schedule_prompt: 'Prédire le planning',
+  ai_qa_prompt: 'Poser une question',
+  ai_qa_input: 'Posez une question sur votre bébé...',
+
+  breast_left_timer: 'Gauche',
+  breast_right_timer: 'Droite',
+  solid_ingredients: 'Ingrédients',
+  allergy_reaction: 'Réaction allergique',
+  diaper_color: 'Couleur des selles',
+  diaper_consistency: 'Consistance',
+  diaper_loose: 'Liquide',
+  diaper_solid: 'Dur',
+  log_activity: 'Activité',
+  activity_bath: 'Bain',
+  activity_tummy_time: 'Sur le ventre',
+  activity_pumping: 'Tire-lait',
+  activity_other: 'Autre',
+  activity_duration_min: 'Durée (min)',
+  pump_amount_ml: 'Quantité (ml)',
+  checkup_title: 'Visite pédiatrique',
+  checkup_type: 'Type de visite',
+  checkup_date: 'Date de visite',
+  checkup_vision: 'Vue',
+  checkup_hearing: 'Ouïe',
+  reminder_growth_due: 'Il est temps d\'enregistrer les mesures de croissance',
+  reminder_checkup_due: 'Visite pédiatrique à venir',
+};
+
+// ---------------------------------------------------------------------------
+// 독일어 (de)
+// ---------------------------------------------------------------------------
+const de: BabyGrowthTranslations = {
+  widget_title: 'Wachstumstagebuch des Babys',
+  loading: 'Laden...',
+  no_baby_profile: 'Bitte das Baby-Profil registrieren.',
+  add_baby: 'Baby hinzufügen',
+  edit_baby: 'Profil bearbeiten',
+  save: 'Speichern',
+  cancel: 'Abbrechen',
+  delete: 'Löschen',
+  close: 'Schließen',
+  error_load: 'Daten konnten nicht geladen werden.',
+  error_save: 'Speichern fehlgeschlagen.',
+
+  baby_name: 'Name',
+  birth_date: 'Geburtsdatum',
+  gender: 'Geschlecht',
+  gender_male: 'Junge',
+  gender_female: 'Mädchen',
+  gender_other: 'Sonstiges',
+  country_code: 'Land',
+  age_days: '{n} Tage',
+  age_months: '{n} Monate',
+  age_weeks: '{n} Wochen',
+  dday_label: 'T+{n}',
+
+  last_feeding: 'Letzte Mahlzeit',
+  last_sleep: 'Letzter Schlaf',
+  last_diaper: 'Letzte Windel',
+  last_temperature: 'Letzte Temp.',
+  no_record: 'Kein Eintrag',
+  record_now: 'Jetzt erfassen',
+  minutes_ago: 'vor {n} Min.',
+  hours_ago: 'vor {n} Std.',
+  days_ago: 'vor {n} Tagen',
+
+  log_feeding: 'Mahlzeit',
+  log_sleep: 'Schlaf',
+  log_diaper: 'Windel',
+  log_temperature: 'Temperatur',
+  log_medication: 'Medikament',
+  feeding_type: 'Ernährungsart',
+  feeding_breast_left: 'Linke Brust',
+  feeding_breast_right: 'Rechte Brust',
+  feeding_bottle: 'Flasche',
+  feeding_solid: 'Beikost',
+  feeding_mixed: 'Gemischt',
+  feeding_amount_ml: 'Menge (ml)',
+  feeding_duration_min: 'Dauer (Min.)',
+  sleep_start: 'Eingeschlafen',
+  sleep_end: 'Aufgewacht',
+  diaper_type: 'Windeltyp',
+  diaper_wet: 'Nass',
+  diaper_dirty: 'Schmutzig',
+  diaper_mixed: 'Beides',
+  diaper_dry: 'Trocken',
+  temperature_celsius: 'Temperatur (℃)',
+  medication_name: 'Medikament',
+  medication_dose_mg: 'Dosis (mg)',
+  notes: 'Notizen',
+  log_saved: 'Eintrag gespeichert.',
+
+  report_title: 'Medizinischer Bericht',
+  temperature_chart: 'Temperaturverlauf',
+  medication_timeline: 'Medikamentenverlauf',
+  no_temperature_data: 'Keine Temperaturdaten.',
+
+  growth_title: 'Wachstum & Entwicklung',
+  weight_kg: 'Gewicht (kg)',
+  height_cm: 'Größe (cm)',
+  head_cm: 'Kopfumfang (cm)',
+  measured_at: 'Messdatum',
+  add_measurement: 'Messung hinzufügen',
+  who_percentile: 'WHO-Wachstumskurve',
+  no_growth_data: 'Keine Wachstumsdaten.',
+
+  milestone_title: 'Entwicklungsmeilensteine',
+  milestone_motor: 'Motorik',
+  milestone_language: 'Sprache',
+  milestone_social: 'Sozial',
+  milestone_cognitive: 'Kognitiv',
+  milestone_sensory: 'Sensorik',
+  milestone_achieved: 'Erreicht!',
+  milestone_not_yet: 'Noch nicht',
+
+  album_title: 'Baby-Album',
+  album_month_label: '{n} Monate',
+  no_photos: 'Noch keine Fotos.',
+  upload_photo: 'Foto hinzufügen',
+
+  vaccine_title: 'Impfkalender',
+  vaccine_scheduled: 'Geplant',
+  vaccine_done: 'Erledigt',
+  vaccine_dday_today: 'Heute!',
+  vaccine_dday_past: '{n}T überfällig',
+
+  ai_title: 'KI-Erziehungsratgeber',
+  ai_key_placeholder: 'API-Schlüssel eingeben',
+  ai_key_save: 'Schlüssel speichern',
+  ai_key_saved: 'API-Schlüssel gespeichert.',
+  ai_guide_prompt: 'Erziehungstipps',
+  ai_diary_prompt: 'Tagebuchentwurf',
+  ai_generating: 'Wird generiert...',
+  ai_error: 'KI-Antwort fehlgeschlagen.',
+  ai_key_required: 'Bitte zuerst den API-Schlüssel eingeben.',
+  ai_provider: 'KI-Anbieter',
+  ai_key_test: 'Verbindung testen',
+  ai_key_test_ok: 'Verbunden',
+  ai_key_test_fail: 'Fehlgeschlagen',
+  ai_schedule_prompt: 'Tagesplan vorhersagen',
+  ai_qa_prompt: 'Frage stellen',
+  ai_qa_input: 'Frage zu deinem Baby...',
+
+  breast_left_timer: 'Links',
+  breast_right_timer: 'Rechts',
+  solid_ingredients: 'Zutaten',
+  allergy_reaction: 'Allergiereaktion',
+  diaper_color: 'Stuhlfarbe',
+  diaper_consistency: 'Konsistenz',
+  diaper_loose: 'Flüssig',
+  diaper_solid: 'Hart',
+  log_activity: 'Aktivität',
+  activity_bath: 'Bad',
+  activity_tummy_time: 'Bauchlage',
+  activity_pumping: 'Abpumpen',
+  activity_other: 'Sonstiges',
+  activity_duration_min: 'Dauer (Min.)',
+  pump_amount_ml: 'Menge (ml)',
+  checkup_title: 'Kindervorsorge',
+  checkup_type: 'Vorsorgetyp',
+  checkup_date: 'Vorsorgetermin',
+  checkup_vision: 'Sehvermögen',
+  checkup_hearing: 'Gehör',
+  reminder_growth_due: 'Zeit für Wachstumsmessungen',
+  reminder_checkup_due: 'Kindervorsorge bald',
+};
+
+// ---------------------------------------------------------------------------
+// 이탈리아어 (it)
+// ---------------------------------------------------------------------------
+const it: BabyGrowthTranslations = {
+  widget_title: 'Diario di crescita del bambino',
+  loading: 'Caricamento...',
+  no_baby_profile: 'Registra il profilo del tuo bambino.',
+  add_baby: 'Aggiungi bambino',
+  edit_baby: 'Modifica profilo',
+  save: 'Salva',
+  cancel: 'Annulla',
+  delete: 'Elimina',
+  close: 'Chiudi',
+  error_load: 'Impossibile caricare i dati.',
+  error_save: 'Salvataggio fallito.',
+
+  baby_name: 'Nome',
+  birth_date: 'Data di nascita',
+  gender: 'Sesso',
+  gender_male: 'Maschio',
+  gender_female: 'Femmina',
+  gender_other: 'Altro',
+  country_code: 'Paese',
+  age_days: '{n} giorni',
+  age_months: '{n} mesi',
+  age_weeks: '{n} settimane',
+  dday_label: 'G+{n}',
+
+  last_feeding: 'Ultima poppata',
+  last_sleep: 'Ultimo sonno',
+  last_diaper: 'Ultimo pannolino',
+  last_temperature: 'Ultima temp.',
+  no_record: 'Nessun record',
+  record_now: 'Registra ora',
+  minutes_ago: '{n} min fa',
+  hours_ago: '{n} ore fa',
+  days_ago: '{n} giorni fa',
+
+  log_feeding: 'Poppata',
+  log_sleep: 'Sonno',
+  log_diaper: 'Pannolino',
+  log_temperature: 'Temperatura',
+  log_medication: 'Farmaco',
+  feeding_type: 'Tipo di poppata',
+  feeding_breast_left: 'Seno sinistro',
+  feeding_breast_right: 'Seno destro',
+  feeding_bottle: 'Biberon',
+  feeding_solid: 'Svezzamento',
+  feeding_mixed: 'Misto',
+  feeding_amount_ml: 'Quantità (ml)',
+  feeding_duration_min: 'Durata (min)',
+  sleep_start: 'Addormentato',
+  sleep_end: 'Svegliato',
+  diaper_type: 'Tipo di pannolino',
+  diaper_wet: 'Bagnato',
+  diaper_dirty: 'Sporco',
+  diaper_mixed: 'Entrambi',
+  diaper_dry: 'Asciutto',
+  temperature_celsius: 'Temperatura (℃)',
+  medication_name: 'Farmaco',
+  medication_dose_mg: 'Dose (mg)',
+  notes: 'Note',
+  log_saved: 'Record salvato.',
+
+  report_title: 'Rapporto medico',
+  temperature_chart: 'Andamento temperatura',
+  medication_timeline: 'Storico farmaci',
+  no_temperature_data: 'Nessun dato di temperatura.',
+
+  growth_title: 'Crescita e sviluppo',
+  weight_kg: 'Peso (kg)',
+  height_cm: 'Altezza (cm)',
+  head_cm: 'Circonferenza cranica (cm)',
+  measured_at: 'Data di misurazione',
+  add_measurement: 'Aggiungi misurazione',
+  who_percentile: 'Curva OMS',
+  no_growth_data: 'Nessun dato di crescita.',
+
+  milestone_title: 'Traguardi dello sviluppo',
+  milestone_motor: 'Motorio',
+  milestone_language: 'Linguaggio',
+  milestone_social: 'Sociale',
+  milestone_cognitive: 'Cognitivo',
+  milestone_sensory: 'Sensoriale',
+  milestone_achieved: 'Raggiunto!',
+  milestone_not_yet: 'Non ancora',
+
+  album_title: 'Album del bambino',
+  album_month_label: '{n} mesi',
+  no_photos: 'Ancora nessuna foto.',
+  upload_photo: 'Aggiungi foto',
+
+  vaccine_title: 'Calendario vaccinazioni',
+  vaccine_scheduled: 'Programmato',
+  vaccine_done: 'Completato',
+  vaccine_dday_today: 'Oggi!',
+  vaccine_dday_past: '{n}g di ritardo',
+
+  ai_title: 'Guida genitoriale IA',
+  ai_key_placeholder: 'Inserisci la chiave API',
+  ai_key_save: 'Salva chiave',
+  ai_key_saved: 'Chiave API salvata.',
+  ai_guide_prompt: 'Consigli genitoriali',
+  ai_diary_prompt: 'Bozza diario',
+  ai_generating: 'Generazione...',
+  ai_error: 'Risposta IA fallita.',
+  ai_key_required: 'Inserisci prima la chiave API.',
+  ai_provider: 'Fornitore IA',
+  ai_key_test: 'Testa connessione',
+  ai_key_test_ok: 'Connesso',
+  ai_key_test_fail: 'Fallito',
+  ai_schedule_prompt: 'Prevedi orario',
+  ai_qa_prompt: 'Fai una domanda',
+  ai_qa_input: 'Fai una domanda sul tuo bambino...',
+
+  breast_left_timer: 'Sinistro',
+  breast_right_timer: 'Destro',
+  solid_ingredients: 'Ingredienti',
+  allergy_reaction: 'Reazione allergica',
+  diaper_color: 'Colore feci',
+  diaper_consistency: 'Consistenza',
+  diaper_loose: 'Liquido',
+  diaper_solid: 'Duro',
+  log_activity: 'Attività',
+  activity_bath: 'Bagno',
+  activity_tummy_time: 'Pancia a terra',
+  activity_pumping: 'Tiralatte',
+  activity_other: 'Altro',
+  activity_duration_min: 'Durata (min)',
+  pump_amount_ml: 'Quantità (ml)',
+  checkup_title: 'Visita pediatrica',
+  checkup_type: 'Tipo di visita',
+  checkup_date: 'Data visita',
+  checkup_vision: 'Vista',
+  checkup_hearing: 'Udito',
+  reminder_growth_due: 'È ora di registrare le misurazioni di crescita',
+  reminder_checkup_due: 'Visita pediatrica in arrivo',
+};
+
+// ---------------------------------------------------------------------------
+// 포르투갈어 (pt)
+// ---------------------------------------------------------------------------
+const pt: BabyGrowthTranslations = {
+  widget_title: 'Diário de crescimento do bebê',
+  loading: 'Carregando...',
+  no_baby_profile: 'Por favor, registre o perfil do seu bebê.',
+  add_baby: 'Adicionar bebê',
+  edit_baby: 'Editar perfil',
+  save: 'Salvar',
+  cancel: 'Cancelar',
+  delete: 'Excluir',
+  close: 'Fechar',
+  error_load: 'Não foi possível carregar os dados.',
+  error_save: 'Falha ao salvar.',
+
+  baby_name: 'Nome',
+  birth_date: 'Data de nascimento',
+  gender: 'Sexo',
+  gender_male: 'Menino',
+  gender_female: 'Menina',
+  gender_other: 'Outro',
+  country_code: 'País',
+  age_days: '{n} dias',
+  age_months: '{n} meses',
+  age_weeks: '{n} semanas',
+  dday_label: 'D+{n}',
+
+  last_feeding: 'Última mamada',
+  last_sleep: 'Último sono',
+  last_diaper: 'Última fralda',
+  last_temperature: 'Última temp.',
+  no_record: 'Sem registro',
+  record_now: 'Registrar agora',
+  minutes_ago: 'há {n} min',
+  hours_ago: 'há {n} h',
+  days_ago: 'há {n} dias',
+
+  log_feeding: 'Mamada',
+  log_sleep: 'Sono',
+  log_diaper: 'Fralda',
+  log_temperature: 'Temperatura',
+  log_medication: 'Medicamento',
+  feeding_type: 'Tipo de mamada',
+  feeding_breast_left: 'Mama esquerda',
+  feeding_breast_right: 'Mama direita',
+  feeding_bottle: 'Mamadeira',
+  feeding_solid: 'Papinha',
+  feeding_mixed: 'Misto',
+  feeding_amount_ml: 'Quantidade (ml)',
+  feeding_duration_min: 'Duração (min)',
+  sleep_start: 'Adormeceu',
+  sleep_end: 'Acordou',
+  diaper_type: 'Tipo de fralda',
+  diaper_wet: 'Molhada',
+  diaper_dirty: 'Suja',
+  diaper_mixed: 'Ambos',
+  diaper_dry: 'Seca',
+  temperature_celsius: 'Temperatura (℃)',
+  medication_name: 'Medicamento',
+  medication_dose_mg: 'Dose (mg)',
+  notes: 'Observações',
+  log_saved: 'Registro salvo.',
+
+  report_title: 'Relatório médico',
+  temperature_chart: 'Gráfico de temperatura',
+  medication_timeline: 'Histórico de medicamentos',
+  no_temperature_data: 'Sem dados de temperatura.',
+
+  growth_title: 'Crescimento e desenvolvimento',
+  weight_kg: 'Peso (kg)',
+  height_cm: 'Altura (cm)',
+  head_cm: 'Perímetro cefálico (cm)',
+  measured_at: 'Data da medição',
+  add_measurement: 'Adicionar medição',
+  who_percentile: 'Curva OMS',
+  no_growth_data: 'Sem dados de crescimento.',
+
+  milestone_title: 'Marcos do desenvolvimento',
+  milestone_motor: 'Motor',
+  milestone_language: 'Linguagem',
+  milestone_social: 'Social',
+  milestone_cognitive: 'Cognitivo',
+  milestone_sensory: 'Sensorial',
+  milestone_achieved: 'Alcançado!',
+  milestone_not_yet: 'Ainda não',
+
+  album_title: 'Álbum do bebê',
+  album_month_label: '{n} meses',
+  no_photos: 'Ainda sem fotos.',
+  upload_photo: 'Adicionar foto',
+
+  vaccine_title: 'Caderneta de vacinação',
+  vaccine_scheduled: 'Agendada',
+  vaccine_done: 'Feita',
+  vaccine_dday_today: 'Hoje!',
+  vaccine_dday_past: '{n}d atrasada',
+
+  ai_title: 'Guia parental IA',
+  ai_key_placeholder: 'Digite sua chave API',
+  ai_key_save: 'Salvar chave',
+  ai_key_saved: 'Chave API salva.',
+  ai_guide_prompt: 'Dicas de criação',
+  ai_diary_prompt: 'Rascunho de diário',
+  ai_generating: 'Gerando...',
+  ai_error: 'Falha na resposta IA.',
+  ai_key_required: 'Digite sua chave API primeiro.',
+  ai_provider: 'Provedor IA',
+  ai_key_test: 'Testar conexão',
+  ai_key_test_ok: 'Conectado',
+  ai_key_test_fail: 'Falhou',
+  ai_schedule_prompt: 'Prever rotina',
+  ai_qa_prompt: 'Fazer pergunta',
+  ai_qa_input: 'Faça uma pergunta sobre seu bebê...',
+
+  breast_left_timer: 'Esquerda',
+  breast_right_timer: 'Direita',
+  solid_ingredients: 'Ingredientes',
+  allergy_reaction: 'Reação alérgica',
+  diaper_color: 'Cor das fezes',
+  diaper_consistency: 'Consistência',
+  diaper_loose: 'Líquido',
+  diaper_solid: 'Duro',
+  log_activity: 'Atividade',
+  activity_bath: 'Banho',
+  activity_tummy_time: 'Barriga para baixo',
+  activity_pumping: 'Extração de leite',
+  activity_other: 'Outro',
+  activity_duration_min: 'Duração (min)',
+  pump_amount_ml: 'Quantidade (ml)',
+  checkup_title: 'Consulta pediátrica',
+  checkup_type: 'Tipo de consulta',
+  checkup_date: 'Data da consulta',
+  checkup_vision: 'Visão',
+  checkup_hearing: 'Audição',
+  reminder_growth_due: 'Hora de registrar medidas de crescimento',
+  reminder_checkup_due: 'Consulta pediátrica próxima',
+};
+
+const translations: Record<LangCode, BabyGrowthTranslations> = {
+  ko,
+  en,
+  ja,
+  'zh-CN': zhCN,
+  'zh-TW': zhTW,
+  es,
+  fr,
+  de,
+  it,
+  pt,
+};
+
+export function getBabyGrowthTranslations(lang: LangCode): BabyGrowthTranslations {
+  return translations[lang] ?? translations.ko;
+}

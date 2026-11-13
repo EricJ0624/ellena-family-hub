@@ -750,4 +750,5 @@ export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNod
   travel_diary: () => <TravelDiaryPreview />,
   travel_quick_record: () => <TravelQuickRecordPreview />,
   family_log: () => <FamilyLogPreview />,
+  baby_growth: () => <FamilyLogPreview />,
 };

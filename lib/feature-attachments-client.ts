@@ -10,9 +10,10 @@ export type FeatureEntityType =
   | 'member_support_ticket'
   | 'support_ticket'
   | 'family_log_card'
-  | 'family_log_receipt';
+  | 'family_log_receipt'
+  | 'baby_profile';
 
-export type FeatureType = 'chat' | 'piggy' | 'travel' | 'support' | 'family_log';
+export type FeatureType = 'chat' | 'piggy' | 'travel' | 'support' | 'family_log' | 'baby_growth';
 
 export type UploadedAttachment = {
   id: string;

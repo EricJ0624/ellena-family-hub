@@ -23,5 +23,6 @@ export function showroomWidgetLabels(lang: LangCode): Record<DashboardWidgetKey,
     travel_diary: tdy('section_title'),
     travel_quick_record: tt('quick_record_title'),
     family_log: 'Family Log',
+    baby_growth: lang === 'ko' ? '우리아이 성장기록' : 'Baby Growth',
   };
 }

@@ -383,6 +383,7 @@ const BLURB_KEY: Record<DashboardWidgetKey, keyof WidgetShowroomTranslations> = 
   album: 'blurb_album',
   location: 'blurb_location',
   games: 'blurb_games',
+  baby_growth: 'blurb_family_log', // baby_growth 전용 번역키 없을 때 family_log 블러브 임시 사용
 };
 
 const TASKS_HOWTO_KEYS = [
@@ -454,7 +455,7 @@ export const FAMILY_LOG_SHOWROOM_STEP_MS = [
 ] as const;
 
 const HOWTO_KEYS: Record<
-  Exclude<DashboardWidgetKey, 'tasks' | 'calendar' | 'chat' | 'piggy' | 'family_log'>,
+  Exclude<DashboardWidgetKey, 'tasks' | 'calendar' | 'chat' | 'piggy' | 'family_log' | 'baby_growth'>,
   [
     keyof WidgetShowroomTranslations,
     keyof WidgetShowroomTranslations,
@@ -497,10 +498,10 @@ export function getWidgetShowroomHowtoSteps(lang: LangCode, key: DashboardWidget
   if (key === 'piggy') {
     return PIGGY_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
   }
-  if (key === 'family_log') {
+  if (key === 'family_log' || key === 'baby_growth') {
     return FAMILY_LOG_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
   }
-  const [a, b, c] = HOWTO_KEYS[key];
+  const [a, b, c] = HOWTO_KEYS[key as keyof typeof HOWTO_KEYS];
   return [
     getWidgetShowroomTranslation(lang, a),
     getWidgetShowroomTranslation(lang, b),

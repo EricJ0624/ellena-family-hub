@@ -1,0 +1,456 @@
+'use client';
+
+/**
+ * BabyGrowthSection — 우리아이 성장기록 위젯 메인 컴포넌트
+ *
+ * [재렌더 가드 준수 사항]
+ * - React.memo 적용
+ * - useGroup() / useLanguage() 직접 호출 금지 (props로 수신)
+ * - 모달 state는 이 컴포넌트 트리 안에서만 보유
+ * - setState 배열 비교: 시그니처 비교 후 동일 시 prev 반환
+ */
+
+import React, { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { getBabyGrowthTranslations } from '@/lib/translations/baby-growth';
+import type { LangCode } from '@/lib/language-fonts';
+import type { UiTheme } from '@/lib/ui-theme';
+import { getCountryOptions } from '@/lib/countries';
+import type { BabyProfile, BabyDailyLog, BabyRecentStatus, LogType } from '../types';
+import { useBabyGrowth } from '../hooks/useBabyGrowth';
+import { useBabyLogs, calcRecentStatus } from '../hooks/useBabyLogs';
+import { BabyProfileCard } from './BabyProfileCard';
+import { QuickStatusCards } from './QuickStatusCards';
+import { QuickLogModal } from './QuickLogModal';
+import { TodayPhotoSlider } from './TodayPhotoSlider';
+
+// lazy import — 대시보드 초기 로드 성능 보호
+const BabyGrowthNavigator = React.lazy(
+  () => import('./BabyGrowthNavigator').then((m) => ({ default: m.BabyGrowthNavigator }))
+);
+
+// ---------------------------------------------------------------------------
+// 로그 시그니처 비교 (재렌더 최소화)
+// ---------------------------------------------------------------------------
+function logsSignature(logs: BabyDailyLog[]): string {
+  if (logs.length === 0) return 'empty';
+  return logs
+    .slice(0, 10)
+    .map((l) => `${l.id}:${l.logged_at}`)
+    .join('|');
+}
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+interface BabyGrowthSectionProps {
+  currentGroupId: string | null;
+  userId: string;
+  lang: LangCode;
+  uiTheme: UiTheme;
+  isKidsTheme?: boolean;
+  getCurrentKey: () => string;
+  CryptoService: {
+    encrypt: (data: any, key: string) => string;
+    decrypt: (cipher: string, key: string) => any;
+  };
+  /** 확대 모달이 열렸을 때 true (WidgetChrome이 전달) */
+  isMagnified?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// BabyGrowthSection
+// ---------------------------------------------------------------------------
+export const BabyGrowthSection = memo(function BabyGrowthSection({
+  currentGroupId,
+  userId,
+  lang,
+  uiTheme,
+  isKidsTheme = false,
+  getCurrentKey,
+  CryptoService,
+  isMagnified = false,
+}: BabyGrowthSectionProps) {
+  const t = useMemo(() => getBabyGrowthTranslations(lang), [lang]);
+
+  // ---------------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------------
+  const [profile, setProfile] = useState<BabyProfile | null>(null);
+  const [logs, setLogs] = useState<BabyDailyLog[]>([]);
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [logModalType, setLogModalType] = useState<LogType>('feeding');
+  const [addProfileOpen, setAddProfileOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [aiText, setAiText] = useState<string | null>(null);
+
+  // 로그 시그니처 ref — 동일 내용 setState 방지
+  const logsSigRef = useRef<string>('');
+
+  // ---------------------------------------------------------------------------
+  // 콜백 (안정 참조 보장)
+  // ---------------------------------------------------------------------------
+  const handleProfileChange = useCallback((p: BabyProfile | null) => {
+    setProfile(p);
+  }, []);
+
+  const handleLogsChange = useCallback((newLogs: BabyDailyLog[]) => {
+    const sig = logsSignature(newLogs);
+    if (sig === logsSigRef.current) return;
+    logsSigRef.current = sig;
+    setLogs(newLogs);
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // 훅
+  // ---------------------------------------------------------------------------
+  const { addProfile, updateProfile, deleteProfile } = useBabyGrowth({
+    currentGroupId,
+    userId,
+    onProfileChange: handleProfileChange,
+  });
+
+  const { addLog } = useBabyLogs({
+    babyId: profile?.id ?? null,
+    currentGroupId,
+    userId,
+    onLogsChange: handleLogsChange,
+  });
+
+  // ---------------------------------------------------------------------------
+  // 파생 상태
+  // ---------------------------------------------------------------------------
+  const recentStatus: BabyRecentStatus = useMemo(() => calcRecentStatus(logs), [logs]);
+
+  // ---------------------------------------------------------------------------
+  // 이벤트 핸들러
+  // ---------------------------------------------------------------------------
+  const handleCardClick = useCallback((logType: LogType) => {
+    setLogModalType(logType);
+    setLogModalOpen(true);
+  }, []);
+
+  const handleLogSave = useCallback(
+    async (draft: Parameters<typeof addLog>[0]) => {
+      await addLog(draft);
+    },
+    [addLog]
+  );
+
+  // ---------------------------------------------------------------------------
+  // 렌더
+  // ---------------------------------------------------------------------------
+
+  // 확대 모달 뷰
+  if (isMagnified && profile) {
+    return (
+      <React.Suspense fallback={<div className="flex-1 flex items-center justify-center text-xs text-gray-400">{t.loading}</div>}>
+        <BabyGrowthNavigator
+          profile={profile}
+          logs={logs}
+          currentGroupId={currentGroupId}
+          userId={userId}
+          lang={lang}
+          uiTheme={uiTheme}
+          isKidsTheme={isKidsTheme}
+          getCurrentKey={getCurrentKey}
+          CryptoService={CryptoService}
+          t={t}
+          onLogsChange={handleLogsChange}
+          aiText={aiText}
+          onAiTextChange={setAiText}
+        />
+      </React.Suspense>
+    );
+  }
+
+  // 대시보드 위젯 뷰
+  return (
+    <div className="flex flex-col gap-2 w-full h-full overflow-y-auto px-1 pt-1 pb-3">
+      {/* 프로필 없을 때 */}
+      {!profile ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-4">
+          <span className="text-4xl">🍼</span>
+          <p className="text-sm text-gray-500">{t.no_baby_profile}</p>
+          <button
+            onClick={() => setAddProfileOpen(true)}
+            className="bg-pink-500 hover:bg-pink-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition-colors"
+          >
+            {t.add_baby}
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* 프로필 카드 */}
+          <BabyProfileCard
+            profile={profile}
+            t={t}
+            onEditClick={() => setEditProfileOpen(true)}
+          />
+
+          {/* AI 브리핑 배너 */}
+          {aiText && (
+            <div className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl px-3 py-2 leading-relaxed line-clamp-2">
+              🤖 {aiText}
+            </div>
+          )}
+
+          {/* 퀵 상태 카드 */}
+          <QuickStatusCards
+            status={recentStatus}
+            t={t}
+            onCardClick={handleCardClick}
+          />
+
+          {/* 오늘의 포토 슬라이드 */}
+          <TodayPhotoSlider
+            babyId={profile.id}
+            currentGroupId={currentGroupId}
+            birthDate={profile.birth_date}
+            t={t}
+          />
+        </>
+      )}
+
+      {/* 로그 입력 모달 */}
+      {logModalOpen && profile && (
+        <QuickLogModal
+          isOpen={logModalOpen}
+          defaultLogType={logModalType}
+          babyId={profile.id}
+          currentGroupId={currentGroupId ?? ''}
+          t={t}
+          onSave={handleLogSave}
+          onClose={() => setLogModalOpen(false)}
+        />
+      )}
+
+      {/* 아기 등록 모달 (간단 인라인) */}
+      {addProfileOpen && (
+        <AddBabyModal
+          t={t}
+          currentGroupId={currentGroupId ?? ''}
+          lang={lang}
+          onSave={async (draft) => {
+            await addProfile({ ...draft, group_id: currentGroupId ?? '' });
+            setAddProfileOpen(false);
+          }}
+          onClose={() => setAddProfileOpen(false)}
+        />
+      )}
+
+      {/* 프로필 수정 모달 */}
+      {editProfileOpen && profile && (
+        <AddBabyModal
+          t={t}
+          currentGroupId={currentGroupId ?? ''}
+          lang={lang}
+          initial={profile}
+          onSave={async (draft) => {
+            await updateProfile(profile.id, { ...draft, group_id: currentGroupId ?? '' });
+            setEditProfileOpen(false);
+          }}
+          onDelete={async () => {
+            await deleteProfile(profile.id);
+            setEditProfileOpen(false);
+          }}
+          onClose={() => setEditProfileOpen(false)}
+        />
+      )}
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// AddBabyModal — 아기 프로필 등록/수정 인라인 모달
+// ---------------------------------------------------------------------------
+interface AddBabyModalProps {
+  t: ReturnType<typeof getBabyGrowthTranslations>;
+  currentGroupId: string;
+  lang: LangCode;
+  initial?: BabyProfile;
+  onSave: (draft: { name: string; birth_date: string; gender?: 'male' | 'female' | 'other'; country_code?: string }) => Promise<void>;
+  onDelete?: () => Promise<void>;
+  onClose: () => void;
+}
+
+function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDelete, onClose }: AddBabyModalProps) {
+  const [name, setName] = useState(initial?.name ?? '');
+  const [birthDate, setBirthDate] = useState(initial?.birth_date ?? '');
+  const [gender, setGender] = useState<'male' | 'female' | 'other'>(initial?.gender ?? 'female');
+  const [countryCode, setCountryCode] = useState(initial?.country_code ?? 'KR');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!countryOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(e.target as Node)) {
+        setCountryOpen(false);
+        setCountrySearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [countryOpen]);
+
+  const allCountries = useMemo(() => getCountryOptions(lang), [lang]);
+  const filteredCountries = useMemo(() => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return allCountries;
+    return allCountries.filter(
+      ({ code, label }) =>
+        code.toLowerCase().includes(q) || label.toLowerCase().includes(q)
+    );
+  }, [allCountries, countrySearch]);
+
+  const selectedLabel = useMemo(
+    () => allCountries.find((c) => c.code === countryCode)?.label ?? countryCode,
+    [allCountries, countryCode]
+  );
+
+  const handleSave = async () => {
+    if (!name.trim() || !birthDate) return;
+    setSaving(true);
+    try {
+      await onSave({ name: name.trim(), birth_date: birthDate, gender, country_code: countryCode });
+    } catch (err) {
+      console.error('[AddBabyModal] 저장 오류:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full sm:w-96 bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl pb-safe">
+        <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-base font-bold">{initial ? t.edit_baby : t.add_baby}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+        </div>
+
+        <div className="px-5 py-4 space-y-3">
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-500">{t.baby_name}</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-500">{t.birth_date}</label>
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-500">{t.gender}</label>
+            <div className="flex gap-2">
+              {(['male', 'female', 'other'] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGender(g)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    gender === g
+                      ? 'bg-pink-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600'
+                  }`}
+                >
+                  {t[`gender_${g}` as keyof typeof t] as string}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-500">{t.country_code}</label>
+            <div className="relative" ref={countryDropdownRef}>
+              {/* 선택 버튼 */}
+              <button
+                type="button"
+                onClick={() => setCountryOpen((o) => !o)}
+                className="w-full flex items-center justify-between text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2 text-left"
+              >
+                <span>{countryCode} {selectedLabel}</span>
+                <span className="text-gray-400 ml-2">{countryOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {/* 드롭다운 패널 */}
+              {countryOpen && (
+                <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                  {/* 검색 인풋 */}
+                  <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      placeholder="🔍 국가 검색..."
+                      className="w-full text-sm bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-1.5 outline-none border border-gray-200 dark:border-gray-700"
+                    />
+                  </div>
+                  {/* 국가 목록 */}
+                  <ul className="max-h-48 overflow-y-auto">
+                    {filteredCountries.length === 0 ? (
+                      <li className="px-4 py-3 text-xs text-gray-400 text-center">검색 결과 없음</li>
+                    ) : (
+                      filteredCountries.map(({ code, label }) => (
+                        <li key={code}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCountryCode(code);
+                              setCountryOpen(false);
+                              setCountrySearch('');
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors ${
+                              countryCode === code ? 'bg-pink-50 dark:bg-pink-900/20 font-semibold text-pink-600 dark:text-pink-400' : ''
+                            }`}
+                          >
+                            {code} {label}
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex gap-2">
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="flex-none px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-sm font-medium hover:bg-red-100 transition-colors"
+            >
+              {t.delete}
+            </button>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving || !name.trim() || !birthDate}
+            className="flex-1 bg-pink-500 hover:bg-pink-600 disabled:opacity-60 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
+          >
+            {saving ? '...' : t.save}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}

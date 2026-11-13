@@ -6513,6 +6513,12 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     overflow: hidden;
   }
 
+  /* ── 우리아이 성장기록 위젯: 세로 스크롤 보장 ── */
+  .widget-chrome[data-widget-key='baby_growth'] > .widget-scale-root {
+    overflow-y: auto;
+    overflow-x: clip;
+  }
+
   .dashboard-widget-grid:not([data-layout-editor]) .widget-chrome[data-widget-key='piggy'] .content-section.piggy-widget-section {
     display: flex;
     flex-direction: column;

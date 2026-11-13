@@ -217,6 +217,10 @@ const FamilyLogSection = dynamicImport(
   () => import('@/app/features/family-log/components/FamilyLogSection').then(m => ({ default: m.FamilyLogSection })),
   { ssr: false }
 );
+const BabyGrowthSection = dynamicImport(
+  () => import('@/app/features/baby-growth/components/BabyGrowthSection').then(m => ({ default: m.BabyGrowthSection })),
+  { ssr: false }
+);
 const TravelDiaryPageContent = dynamicImport(
   () => import('@/app/features/travel-diary/TravelDiaryPageContent').then(m => ({ default: m.TravelDiaryPageContent })),
   { ssr: false }
@@ -740,6 +744,7 @@ export default function FamilyHub() {
       travel_diary: tdy('section_title'),
       travel_quick_record: tt('quick_record_title'),
       family_log: 'Family Log',
+      baby_growth: lang === 'ko' ? '우리아이 성장기록' : 'Baby Growth',
     }),
     [lang],
   );
@@ -1499,6 +1504,13 @@ export default function FamilyHub() {
       if (prefs?.country_code) setAccountModalCountry(prefs.country_code);
     }).catch(() => undefined);
   }, [isNicknameModalOpen, userId, familyRoleByUserId, lang]);
+
+  // 위젯에서 발행하는 'sfh:open-nickname-modal' 이벤트 — 닉네임/계정 설정 모달 오픈
+  useEffect(() => {
+    const handler = () => setIsNicknameModalOpen(true);
+    window.addEventListener('sfh:open-nickname-modal', handler);
+    return () => window.removeEventListener('sfh:open-nickname-modal', handler);
+  }, []);
 
   // --- [EFFECTS] ---
   
@@ -7347,6 +7359,18 @@ export default function FamilyHub() {
         );
       case 'family_log':
         return <FamilyLogSection currentGroupId={currentGroupId} lang={lang} uiTheme={uiTheme} />;
+      case 'baby_growth':
+        return (
+          <BabyGrowthSection
+            currentGroupId={currentGroupId}
+            userId={userId}
+            lang={lang}
+            uiTheme={uiTheme}
+            isKidsTheme={isKidsTheme}
+            getCurrentKey={getCurrentKey}
+            CryptoService={CryptoService}
+          />
+        );
       case 'travel_diary':
         return (
           <TravelDiaryDashboardSection
@@ -7716,6 +7740,11 @@ export default function FamilyHub() {
                 groupId={currentGroupId}
                 active={isNicknameModalOpen}
               />
+
+              {/* AI API 키 설정 — localStorage 전용, 서버 저장 없음 */}
+              {userId && (
+                <AiApiKeySettings userId={userId} />
+              )}
             </div>
             <div className="modal-actions shrink-0">
               <button 
@@ -8317,5 +8346,163 @@ export default function FamilyHub() {
     ) : null}
     </>
     </OnlinePresenceProvider>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AiApiKeySettings — 닉네임 모달 내 AI API 키 관리 섹션
+// localStorage만 사용, 서버 저장 없음
+// ---------------------------------------------------------------------------
+type _AiApiProvider = 'openai' | 'anthropic';
+
+const AI_LS_KEY = (userId: string, provider: _AiApiProvider) =>
+  `sfh_ai_key_${userId}_${provider}`;
+
+function AiApiKeySettings({ userId }: { userId: string }) {
+  const [activeProvider, setActiveProvider] = React.useState<_AiApiProvider>('openai');
+  const [keyInput, setKeyInput] = React.useState('');
+  const [saved, setSaved] = React.useState(false);
+  const [pinging, setPinging] = React.useState(false);
+  const [pingResult, setPingResult] = React.useState<'ok' | 'fail' | null>(null);
+
+  // 현재 provider의 저장된 키 로드
+  const storedKey = React.useMemo(
+    () => (typeof window !== 'undefined' ? (localStorage.getItem(AI_LS_KEY(userId, activeProvider)) ?? '') : ''),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userId, activeProvider, saved]
+  );
+
+  const handleProviderChange = (prov: _AiApiProvider) => {
+    setActiveProvider(prov);
+    setKeyInput('');
+    setPingResult(null);
+    setSaved(false);
+  };
+
+  const handleSave = () => {
+    if (!keyInput.trim()) return;
+    localStorage.setItem(AI_LS_KEY(userId, activeProvider), keyInput.trim());
+    window.dispatchEvent(new CustomEvent('sfh:ai-key-updated'));
+    setSaved(true);
+    setKeyInput('');
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const handleDelete = () => {
+    localStorage.removeItem(AI_LS_KEY(userId, activeProvider));
+    window.dispatchEvent(new CustomEvent('sfh:ai-key-updated'));
+    setKeyInput('');
+    setPingResult(null);
+    setSaved(false);
+  };
+
+  const handlePing = async () => {
+    const testKey = keyInput.trim() || storedKey;
+    if (!testKey) return;
+    setPinging(true);
+    setPingResult(null);
+    try {
+      const res = await fetch('/api/baby-growth/ai-proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${testKey}`,
+        },
+        body: JSON.stringify({ provider: activeProvider, ping: true }),
+      });
+      setPingResult(res.ok ? 'ok' : 'fail');
+    } catch {
+      setPingResult('fail');
+    } finally {
+      setPinging(false);
+    }
+  };
+
+  return (
+    <div className="form-field">
+      <label className="form-label">🤖 AI API 키 설정</label>
+      <p className="text-xs text-slate-500 mb-3">
+        OpenAI 또는 Anthropic API 키를 등록하면 위젯의 AI 기능을 사용할 수 있습니다.<br />
+        🔒 키는 이 기기의 localStorage에만 저장되며 서버로 전송되지 않습니다.
+      </p>
+
+      {/* Provider 탭 */}
+      <div className="flex gap-2 mb-3">
+        {(['openai', 'anthropic'] as _AiApiProvider[]).map((prov) => (
+          <button
+            key={prov}
+            type="button"
+            onClick={() => handleProviderChange(prov)}
+            className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+              activeProvider === prov
+                ? prov === 'openai'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-orange-500 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {prov === 'openai' ? 'OpenAI' : 'Anthropic'}
+          </button>
+        ))}
+      </div>
+
+      {/* 현재 저장 상태 */}
+      {storedKey ? (
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+          <span className="text-green-600 text-xs font-medium flex-1">
+            ✅ {activeProvider === 'openai' ? 'OpenAI' : 'Anthropic'} 키 등록됨
+            &nbsp;({storedKey.slice(0, 8)}…)
+          </span>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="text-xs text-red-500 hover:text-red-700 font-medium"
+          >
+            삭제
+          </button>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400 mb-2">
+          {activeProvider === 'openai' ? 'OpenAI' : 'Anthropic'} 키가 등록되지 않았습니다.
+        </p>
+      )}
+
+      {/* 키 입력 */}
+      <input
+        type="password"
+        value={keyInput}
+        onChange={(e) => { setKeyInput(e.target.value); setPingResult(null); }}
+        placeholder={activeProvider === 'openai' ? 'sk-...' : 'sk-ant-...'}
+        className="form-input mb-2"
+        autoComplete="off"
+      />
+
+      {/* 액션 버튼 */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handlePing}
+          disabled={pinging || (!keyInput.trim() && !storedKey)}
+          className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 transition-colors"
+        >
+          {pinging ? '테스트 중...' : '연결 테스트'}
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!keyInput.trim()}
+          className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 transition-colors"
+        >
+          {saved ? '✅ 저장됨' : '저장'}
+        </button>
+      </div>
+
+      {/* 테스트 결과 */}
+      {pingResult && (
+        <p className={`mt-1.5 text-xs font-medium ${pingResult === 'ok' ? 'text-green-600' : 'text-red-500'}`}>
+          {pingResult === 'ok' ? '✅ 연결 성공! 키가 유효합니다.' : '❌ 연결 실패. 키를 확인해 주세요.'}
+        </p>
+      )}
+    </div>
   );
 }

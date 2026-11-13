@@ -96,6 +96,7 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
   travel_diary: { icon: BookOpen, bg: 'bg-violet-600',  fg: 'text-white' },
   travel_quick_record: { icon: Navigation, bg: 'bg-emerald-600', fg: 'text-white' },
   family_log: { icon: BookOpen, bg: 'bg-amber-700', fg: 'text-white' },
+  baby_growth: { icon: null, emoji: '🍼', bg: 'bg-pink-400', fg: 'text-white' },
 };
 
 /** 대시보드 위젯 탭 미리보기. 둥근 카드는 모서리를 투명 처리해 두었다. */
@@ -111,6 +112,7 @@ const WIDGET_PREVIEW_IMAGE: Record<DashboardWidgetKey, string> = {
   travel_diary: '/widget-previews/travel-diary.png',
   travel_quick_record: '/widget-previews/travel-quick-record.png',
   family_log: '/widget-previews/family-log.png',
+  baby_growth: '/widget-previews/family-log.png',
 };
 
 /** 모서리가 둥근 카드. 칠판·책·나무 액자는 그림 실루엣을 유지한다. */
