@@ -32,6 +32,28 @@ import {
 import { normalizeRemindOffsets, toDateOnly } from '../remind-offsets';
 import { supabase } from '@/lib/supabase';
 
+function reminderOffsetLine(
+  offsets: unknown,
+  labels: {
+    event_remind_1d: string;
+    event_remind_3d: string;
+    event_remind_1w: string;
+    event_remind_2w: string;
+    event_remind_1m: string;
+  },
+): string | null {
+  const text: Record<number, string> = {
+    1: labels.event_remind_1d,
+    3: labels.event_remind_3d,
+    7: labels.event_remind_1w,
+    14: labels.event_remind_2w,
+    30: labels.event_remind_1m,
+  };
+  const days = normalizeRemindOffsets(offsets);
+  if (days.length === 0) return null;
+  return days.map((day) => text[day]).join(' · ');
+}
+
 function eventDayDismissKey(groupId: string) {
   return `hearth-calendar-event-day-dismissed:${groupId}`;
 }
@@ -1716,7 +1738,9 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                 </div>
                 {eventsOnSelectedDate.length > 0 ? (
                   <div className="calendar-detail-events">
-                    {eventsOnSelectedDate.map((e) => (
+                    {eventsOnSelectedDate.map((e) => {
+                      const reminderLine = reminderOffsetLine(e.remind_offsets, t);
+                      return (
                       <div
                         key={e.id}
                         className="calendar-event-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(124,58,237,0.12)]"
@@ -1726,12 +1750,15 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                             <h5 className="calendar-event-card-title">
                               {e.event_time ? <span className="mr-[0.4em]">{e.event_time}</span> : null}
                               {e.title}
-                              {(e.remind_offsets?.length ?? 0) > 0 ? (
-                                <span className="ml-[0.35em] align-middle" aria-label="알림">
+                              {reminderLine ? (
+                                <span className="ml-[0.35em] align-middle" aria-hidden="true">
                                   🔔
                                 </span>
                               ) : null}
                             </h5>
+                            {reminderLine ? (
+                              <p className="calendar-event-card-meta text-slate-500">{reminderLine}</p>
+                            ) : null}
                             {(e.repeat_type === 'monthly' || e.repeat_type === 'yearly') && (
                               <p className="calendar-event-card-meta text-violet-600">
                                 {e.repeat_type === 'monthly' ? t.event_repeat_monthly : t.event_repeat_yearly}
@@ -1787,7 +1814,8 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                           )}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="calendar-detail-empty">
