@@ -18,4 +18,8 @@ export type FamilyEvent = {
   sticker_emoji?: string | null;
   /** 일정 당일 기준 N일 전 알림. 허용: 1,3,7,14,30. 빈 배열=없음. */
   remind_offsets?: number[];
+  /** HH:MM. 없으면 거주 국가 시간대의 오전 9시. */
+  event_time?: string | null;
+  /** IANA 시간대. 없으면 만든 사람 거주 국가의 기본 시간대. */
+  event_timezone?: string | null;
 };

@@ -7,6 +7,18 @@ import type { FamilyEvent } from '../types';
 import { KIDS_ADD_DECOS } from '../kids-add-decorations';
 import { CALENDAR_STICKER_EMOJIS, CALENDAR_STICKER_GROUPS, normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
 import {
+  defaultZoneForCountry,
+  eventTimeFieldLabel,
+  eventTimeZoneFieldLabel,
+  normalizeEventTime,
+  normalizeEventTimeZone,
+  resolveEventTimeZone,
+  timeBasisHint,
+  timeZoneLabel,
+  timeZoneOptionLabel,
+  timeZoneOptionsForCountry,
+} from '../event-clock';
+import {
   CALENDAR_REMIND_OFFSET_DAYS,
   normalizeRemindOffsets,
   type CalendarRemindOffsetDays,
@@ -34,7 +46,7 @@ function shiftDateStr(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T12:00:00');
   if (isNaN(d.getTime())) return dateStr;
   d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return toDateStr(d);
 }
 
 function toDateStr(d: Date): string {
@@ -52,6 +64,8 @@ export type CalendarEventSubmitPayload = {
   repeat_type: 'none' | 'monthly' | 'yearly';
   sticker_emoji: string | null;
   remind_offsets: number[];
+  event_time: string | null;
+  event_timezone: string | null;
 };
 
 export type CalendarEventModalTranslations = {
@@ -110,6 +124,9 @@ type CalendarEventModalProps = {
   onSubmit: (payload: CalendarEventSubmitPayload) => void;
   /** 채팅 메시지에서 열 때 제목 미리 채우기 */
   prefillTitle?: string;
+  /** 일정을 만드는 사람의 거주 국가. 시간대 목록과 기본 시각의 기준이다. */
+  countryCode?: string | null;
+  lang?: string;
 };
 
 /**
@@ -139,6 +156,8 @@ function CalendarEventForm({
   sanitizeInput,
   onClose,
   onSubmit,
+  countryCode = null,
+  lang = 'ko',
 }: Omit<CalendarEventModalProps, 'open'>) {
   const startDate = editingEvent?.event_date
     ? new Date(editingEvent.event_date + 'T12:00:00')
@@ -153,6 +172,25 @@ function CalendarEventForm({
   const [remindOffsets, setRemindOffsets] = useState<CalendarRemindOffsetDays[]>(() =>
     normalizeRemindOffsets(editingEvent?.remind_offsets),
   );
+  const zoneOptions = timeZoneOptionsForCountry(countryCode);
+  const [eventTime, setEventTime] = useState(() => normalizeEventTime(editingEvent?.event_time) || '');
+  const [eventZone, setEventZone] = useState(() =>
+    resolveEventTimeZone(editingEvent?.event_timezone, countryCode),
+  );
+  useEffect(() => {
+    if (!countryCode) return;
+    const options = timeZoneOptionsForCountry(countryCode);
+    const stored = normalizeEventTimeZone(editingEvent?.event_timezone);
+    if (stored && (options.length <= 1 || options.some((option) => option.id === stored))) {
+      setEventZone(stored);
+      return;
+    }
+    setEventZone((current) =>
+      options.length > 1 && options.some((option) => option.id === current)
+        ? current
+        : defaultZoneForCountry(countryCode),
+    );
+  }, [countryCode, editingEvent]);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiPanelPos, setEmojiPanelPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const emojiAnchorRef = useRef<HTMLButtonElement>(null);
@@ -200,6 +238,10 @@ function CalendarEventForm({
       repeat_type: eventForm.repeat_type,
       sticker_emoji: stickerEmoji,
       remind_offsets: normalizeRemindOffsets(remindOffsets),
+      event_time: normalizeEventTime(eventTime),
+      event_timezone: countryCode
+        ? normalizeEventTimeZone(zoneOptions.length > 1 ? eventZone : defaultZoneForCountry(countryCode))
+        : normalizeEventTimeZone(editingEvent?.event_timezone),
     });
   };
 
@@ -653,6 +695,48 @@ function CalendarEventForm({
               {t.event_repeat_yearly}
             </label>
           </div>
+        </div>
+
+        <div className="mb-5">
+          <label className={`mb-2 block text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
+            {eventTimeFieldLabel(lang)}
+          </label>
+          <input
+            type="time"
+            value={eventTime}
+            onChange={(event) => setEventTime(event.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+          />
+          {zoneOptions.length > 1 ? (
+            <label className="mt-3 block">
+              <span className={`mb-2 block text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
+                {eventTimeZoneFieldLabel(lang)}
+              </span>
+              <select
+                value={eventZone}
+                onChange={(event) => setEventZone(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+              >
+                {zoneOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {timeZoneOptionLabel(option, lang)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <p className="mb-0 mt-2 text-xs leading-snug text-slate-500">
+            {timeBasisHint(
+              lang,
+              countryCode
+                ? timeZoneLabel(
+                    zoneOptions.length > 1 ? eventZone : defaultZoneForCountry(countryCode),
+                    lang,
+                    countryCode,
+                  )
+                : null,
+            )}
+          </p>
         </div>
 
         <div className="mb-5">

@@ -234,8 +234,10 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
           alertPrefs.get(userId) || normalizeAlertPreferences(null),
         );
 
-        // subsequent silent: OS 푸시 생략 (인앱 목록·배지만)
-        if (!isFirst && mode === 'silent') {
+        // subsequent silent: OS 푸시 생략 (인앱 목록·배지만).
+        // 일정 리마인더만 예외: 안 읽은 알림이 있어도 폰으로 보낸다. 소리 설정은 그대로다.
+        const alwaysPushReminder = input.eventType === 'CALENDAR_EVENT_REMINDER';
+        if (!alwaysPushReminder && !isFirst && mode === 'silent') {
           result.skipped += 1;
           continue;
         }

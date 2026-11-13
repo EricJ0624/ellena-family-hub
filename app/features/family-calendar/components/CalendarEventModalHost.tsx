@@ -42,6 +42,8 @@ export function CalendarEventModalHost() {
       translations={snap.translations}
       sanitizeInput={snap.sanitizeInput}
       prefillTitle={snap.prefillTitle}
+      countryCode={snap.countryCode}
+      lang={snap.lang}
       onClose={closeCalendarEventModal}
       onSubmit={handleSubmit}
     />

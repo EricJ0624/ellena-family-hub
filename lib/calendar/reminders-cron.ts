@@ -1,10 +1,11 @@
 import { CURRENT_APP_ID } from '@/lib/apps';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { isReminderFireDue, localDateInZone, resolveEventTimeZone } from '@/app/features/family-calendar/event-clock';
 import {
   CALENDAR_REMIND_OFFSET_DAYS,
-  dueRemindOffsets,
-  isRemindOffsetDue,
+  calendarDaysBetween,
   kstTodayDateStr,
+  normalizeRemindOffsets,
   reminderBody,
   shiftDateStr,
   toDateOnly,
@@ -30,6 +31,9 @@ type ReminderEvent = {
   eventDate: string;
   stickerEmoji: string | null;
   remindOffsets: unknown;
+  eventTime: string | null;
+  eventTimeZone: string | null;
+  creatorCountry: string | null;
 };
 
 function plainReminderTitle(value: unknown): string | null {
@@ -40,6 +44,11 @@ function plainReminderTitle(value: unknown): string | null {
 
 function readSticker(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function daysUntilEvent(eventDate: string, timeZone: string): number {
+  const today = localDateInZone(new Date(), timeZone);
+  return today ? calendarDaysBetween(today, eventDate) : 0;
 }
 
 async function recordDispatch(
@@ -82,12 +91,11 @@ async function dispatchOneCalendarReminder(
     offsetDays: number;
     stickerEmoji: string | null;
     plainTitle?: string | null;
-    today: string;
+    daysUntil?: number;
     dryRun?: boolean;
   },
 ): Promise<DispatchStatus> {
   const dueDate = shiftDateStr(input.eventDate, -input.offsetDays);
-  if (!isRemindOffsetDue(input.eventDate, input.offsetDays, input.today)) return 'skipped';
   if (input.dryRun) return 'notified';
 
   const { error: insertError } = await supabase.from('calendar_reminder_dispatches').insert({
@@ -121,8 +129,8 @@ async function dispatchOneCalendarReminder(
       widgetKey: 'calendar',
       eventType: 'CALENDAR_EVENT_REMINDER',
       title,
-      body: reminderBody(input.eventDate, input.today),
-      url: `/dashboard?focus=calendar&celebrate=${encodeURIComponent(input.eventId)}`,
+      body: reminderBody(input.daysUntil ?? input.offsetDays),
+      url: `/dashboard?focus=calendar&pulseEvent=${encodeURIComponent(input.eventId)}`,
       entityId: input.eventId,
       payload: {
         celebration: true,
@@ -148,10 +156,9 @@ async function dispatchOneCalendarReminder(
 }
 
 export async function runCalendarReminderCron(options?: {
-  fireDate?: string;
   dryRun?: boolean;
 }): Promise<CalendarReminderCronResult> {
-  const fireDate = options?.fireDate || kstTodayDateStr();
+  const fireDate = kstTodayDateStr();
   const dryRun = !!options?.dryRun;
   const result: CalendarReminderCronResult = {
     fireDate,
@@ -165,7 +172,7 @@ export async function runCalendarReminderCron(options?: {
   const supabase = getSupabaseServerClient();
   const { data: events, error } = await supabase
     .from('family_events')
-    .select('id, group_id, event_date, sticker_emoji, remind_offsets')
+    .select('id, group_id, event_date, sticker_emoji, remind_offsets, event_time, event_timezone, created_by')
     .eq('app_id', CURRENT_APP_ID)
     .overlaps('remind_offsets', [...CALENDAR_REMIND_OFFSET_DAYS]);
 
@@ -176,6 +183,10 @@ export async function runCalendarReminderCron(options?: {
 
   const rows = events || [];
   result.scanned = rows.length;
+  const countries = await loadCreatorCountries(
+    supabase,
+    rows.map((event) => event.created_by),
+  );
 
   for (const event of rows) {
     const eventId = String(event.id);
@@ -191,8 +202,13 @@ export async function runCalendarReminderCron(options?: {
       continue;
     }
 
+    const zone = resolveEventTimeZone(
+      event.event_timezone,
+      countries.get(String(event.created_by || '')) || null,
+    );
     const sticker = readSticker(event.sticker_emoji);
-    for (const offsetDays of dueRemindOffsets(event.event_date, event.remind_offsets, fireDate)) {
+    for (const offsetDays of normalizeRemindOffsets(event.remind_offsets)) {
+      if (!isReminderFireDue(eventDate, event.event_time, zone, offsetDays)) continue;
       result.due += 1;
       await recordDispatch(result, `${eventId}/${offsetDays}`, () =>
         dispatchOneCalendarReminder(supabase, {
@@ -201,7 +217,7 @@ export async function runCalendarReminderCron(options?: {
           eventDate,
           offsetDays,
           stickerEmoji: sticker,
-          today: fireDate,
+          daysUntil: daysUntilEvent(eventDate, zone),
           dryRun,
         }),
       );
@@ -216,7 +232,7 @@ export async function loadCalendarReminderEvent(eventId: string): Promise<Remind
   const supabase = getSupabaseServerClient();
   const { data: event, error } = await supabase
     .from('family_events')
-    .select('id, group_id, event_date, sticker_emoji, remind_offsets, app_id')
+    .select('id, group_id, event_date, sticker_emoji, remind_offsets, event_time, event_timezone, created_by, app_id')
     .eq('id', eventId)
     .maybeSingle();
 
@@ -224,6 +240,7 @@ export async function loadCalendarReminderEvent(eventId: string): Promise<Remind
   if (String(event.app_id || '') !== CURRENT_APP_ID) return null;
   const eventDate = toDateOnly(event.event_date);
   if (!eventDate) return null;
+  const countries = await loadCreatorCountries(supabase, [event.created_by]);
 
   return {
     id: String(event.id),
@@ -231,20 +248,38 @@ export async function loadCalendarReminderEvent(eventId: string): Promise<Remind
     eventDate,
     stickerEmoji: readSticker(event.sticker_emoji),
     remindOffsets: event.remind_offsets,
+    eventTime: typeof event.event_time === 'string' ? event.event_time : null,
+    eventTimeZone: typeof event.event_timezone === 'string' ? event.event_timezone : null,
+    creatorCountry: countries.get(String(event.created_by || '')) || null,
   };
 }
 
-/** 저장 직후, 이미 발송일이 된 알림만 보낸다. 아직 전인 알림은 아침 크론에 남긴다. */
+async function loadCreatorCountries(
+  supabase: SupabaseServer,
+  creatorIds: Array<string | null | undefined>,
+): Promise<Map<string, string>> {
+  const ids = [...new Set(creatorIds.map((id) => (id ? String(id) : '')).filter(Boolean))];
+  const countries = new Map<string, string>();
+  if (ids.length === 0) return countries;
+  const { data } = await supabase.from('profiles').select('id, country_code').in('id', ids);
+  for (const profile of data || []) {
+    if (profile.country_code) countries.set(String(profile.id), String(profile.country_code));
+  }
+  return countries;
+}
+
+/** 저장 직후, 이미 알림 시각이 된 것만 보낸다. 아직 전인 알림은 크론에 남긴다. */
 export async function dispatchDueRemindersForEvent(
   event: ReminderEvent,
   plainTitle: unknown,
 ): Promise<Pick<CalendarReminderCronResult, 'due' | 'notified' | 'skipped' | 'errors'>> {
-  const today = kstTodayDateStr();
   const result = { due: 0, notified: 0, skipped: 0, errors: [] as string[] };
   const supabase = getSupabaseServerClient();
   const title = plainReminderTitle(plainTitle);
 
-  for (const offsetDays of dueRemindOffsets(event.eventDate, event.remindOffsets, today)) {
+  const zone = resolveEventTimeZone(event.eventTimeZone, event.creatorCountry);
+  for (const offsetDays of normalizeRemindOffsets(event.remindOffsets)) {
+    if (!isReminderFireDue(event.eventDate, event.eventTime, zone, offsetDays)) continue;
     result.due += 1;
     await recordDispatch(result, String(offsetDays), () =>
       dispatchOneCalendarReminder(supabase, {
@@ -254,7 +289,7 @@ export async function dispatchDueRemindersForEvent(
         offsetDays,
         stickerEmoji: event.stickerEmoji,
         plainTitle: title,
-        today,
+        daysUntil: daysUntilEvent(event.eventDate, zone),
       }),
     );
   }

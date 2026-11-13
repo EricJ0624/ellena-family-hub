@@ -25,10 +25,9 @@ async function handle(req: NextRequest) {
 
   const url = new URL(req.url);
   const dryRun = url.searchParams.get('dryRun') === '1';
-  const fireDate = url.searchParams.get('fireDate') || undefined;
 
   try {
-    const result = await runCalendarReminderCron({ dryRun, fireDate });
+    const result = await runCalendarReminderCron({ dryRun });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

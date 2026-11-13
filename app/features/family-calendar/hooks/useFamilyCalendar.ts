@@ -36,7 +36,18 @@ import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import { dispatchDueCalendarReminderClient, emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyEvent } from '../types';
 import { normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
-import { normalizeRemindOffsets } from '../remind-offsets';
+import { storedEventClock } from '../event-clock';
+import { normalizeRemindOffsets, toDateOnly } from '../remind-offsets';
+
+function calendarDateParts(value: unknown): { eventDate: string; month: string; day: string } {
+  const eventDate = toDateOnly(value == null ? null : String(value)) || toDateOnly(new Date().toISOString()) || '';
+  const parsed = new Date(`${eventDate}T12:00:00`);
+  const month = Number.isNaN(parsed.getTime())
+    ? ''
+    : parsed.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const day = Number.isNaN(parsed.getTime()) ? '' : String(parsed.getDate());
+  return { eventDate, month, day };
+}
 
 interface UseFamilyCalendarProps {
   currentGroupId: string | null;
@@ -55,7 +66,7 @@ function eventsContentSignature(events: ReadonlyArray<FamilyEvent>): string {
   return events
     .map(
       (e) =>
-        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.sticker_emoji ?? ''}:${(e.remind_offsets ?? []).join(',')}`,
+        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.event_time ?? ''}:${e.event_timezone ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.sticker_emoji ?? ''}:${(e.remind_offsets ?? []).join(',')}`,
     )
     .join('|');
 }
@@ -93,6 +104,8 @@ export function useFamilyCalendar({
     repeat_type?: 'none' | 'monthly' | 'yearly';
     sticker_emoji?: string | null;
     remind_offsets?: number[];
+    event_time?: string | null;
+    event_timezone?: string | null;
   }) => {
     // [수정 1] return → throw: 호출부 .catch()가 낙관적 UI를 롤백할 수 있도록
     if (!payload || !payload.title) {
@@ -117,6 +130,7 @@ export function useFamilyCalendar({
       repeat_type: payload.repeat_type || 'none',
       sticker_emoji: normalizeCalendarStickerEmoji(payload.sticker_emoji),
       remind_offsets: remindOffsets,
+      ...storedEventClock(payload),
     };
 
     console.log('ADD_EVENT: family_events 테이블에 저장:', {
@@ -255,6 +269,8 @@ export function useFamilyCalendar({
     repeat_type?: 'none' | 'monthly' | 'yearly';
     sticker_emoji?: string | null;
     remind_offsets?: number[];
+    event_time?: string | null;
+    event_timezone?: string | null;
   }) => {
     if (!payload?.id || !payload.title) {
       throw new Error('UPDATE_EVENT: invalid payload');
@@ -294,6 +310,7 @@ export function useFamilyCalendar({
         repeat_type: payload.repeat_type || 'none',
         sticker_emoji: normalizeCalendarStickerEmoji(payload.sticker_emoji),
         remind_offsets: remindOffsets,
+        ...storedEventClock(payload),
       })
       .eq('id', eventIdStr)
       .eq('group_id', currentGroupId);
@@ -331,7 +348,7 @@ export function useFamilyCalendar({
 
       const { data: eventsData, error: eventsError } = await supabase
         .from('family_events')
-        .select('id, title, description, event_date, end_date, location, created_by, created_at, group_id, repeat_type, sticker_emoji, remind_offsets')
+        .select('id, title, description, event_date, end_date, location, created_by, created_at, group_id, repeat_type, sticker_emoji, remind_offsets, event_time, event_timezone')
         .eq('group_id', currentGroupId)
         .order('event_date', { ascending: true });
 
@@ -339,10 +356,9 @@ export function useFamilyCalendar({
 
       if (!eventsError && eventsData) {
         const formattedEvents: FamilyEvent[] = eventsData.map((event: any) => {
-          const eventDateValue = event.event_date || event.date || event.event_date_time || new Date().toISOString();
-          const eventDate = new Date(eventDateValue);
-          const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-          const day = eventDate.getDate().toString();
+          const { eventDate: eventDateStr, month, day } = calendarDateParts(
+            event.event_date || event.date || event.event_date_time,
+          );
 
           const eventTitleField = event.title || event.event_title || '';
           const eventDescField = event.description || '';
@@ -391,9 +407,6 @@ export function useFamilyCalendar({
             decryptedDesc = eventDescField;
           }
 
-          const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(
-            eventDate.getDate()
-          ).padStart(2, '0')}`;
           const repeatType = event.repeat_type === 'monthly' || event.repeat_type === 'yearly' ? event.repeat_type : 'none';
 
           return {
@@ -403,12 +416,13 @@ export function useFamilyCalendar({
             title: decryptedTitle,
             desc: decryptedDesc,
             event_date: eventDateStr,
-            end_date: event.end_date || undefined,
+            end_date: toDateOnly(event.end_date) || undefined,
             created_by: event.created_by,
             created_at: event.created_at,
             repeat_type: repeatType,
             sticker_emoji: normalizeCalendarStickerEmoji(event.sticker_emoji),
             remind_offsets: normalizeRemindOffsets(event.remind_offsets),
+            ...storedEventClock(event),
           };
         });
 
@@ -468,11 +482,9 @@ export function useFamilyCalendar({
 
         if (ev === 'UPDATE') {
           const updatedEvent = payload.new;
-          const eventDateValue =
-            updatedEvent.event_date || updatedEvent.date || updatedEvent.event_date_time || new Date().toISOString();
-          const eventDate = new Date(eventDateValue);
-          const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-          const day = eventDate.getDate().toString();
+          const { eventDate: eventDateStr, month, day } = calendarDateParts(
+            updatedEvent.event_date || updatedEvent.date || updatedEvent.event_date_time,
+          );
 
           const eventTitleField = updatedEvent.title || updatedEvent.event_title || '';
           const eventDescField = updatedEvent.description || '';
@@ -497,9 +509,6 @@ export function useFamilyCalendar({
             }
           }
 
-          const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(
-            eventDate.getDate()
-          ).padStart(2, '0')}`;
           const repeatType =
             updatedEvent.repeat_type === 'monthly' || updatedEvent.repeat_type === 'yearly'
               ? updatedEvent.repeat_type
@@ -515,10 +524,11 @@ export function useFamilyCalendar({
                   title: decryptedTitle,
                   desc: decryptedDesc,
                   event_date: eventDateStr,
-                  end_date: updatedEvent.end_date || undefined,
+                  end_date: toDateOnly(updatedEvent.end_date) || undefined,
                   repeat_type: repeatType,
                   sticker_emoji: normalizeCalendarStickerEmoji(updatedEvent.sticker_emoji),
                   remind_offsets: normalizeRemindOffsets(updatedEvent.remind_offsets),
+                  ...storedEventClock(updatedEvent),
                 }
               : e,
           );
@@ -547,11 +557,9 @@ export function useFamilyCalendar({
           return;
         }
 
-        const eventDateValue =
-          newEvent.event_date || newEvent.date || newEvent.event_date_time || new Date().toISOString();
-        const eventDate = new Date(eventDateValue);
-        const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-        const day = eventDate.getDate().toString();
+        const { eventDate: eventDateStr, month, day } = calendarDateParts(
+          newEvent.event_date || newEvent.date || newEvent.event_date_time,
+        );
 
         const eventTitleField = newEvent.title || newEvent.event_title || '';
         const eventDescField = newEvent.description || '';
@@ -600,9 +608,6 @@ export function useFamilyCalendar({
           decryptedDesc = eventDescField;
         }
 
-        const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(
-          eventDate.getDate()
-        ).padStart(2, '0')}`;
         const repeatType = newEvent.repeat_type === 'monthly' || newEvent.repeat_type === 'yearly' ? newEvent.repeat_type : 'none';
 
         const existingEventById = latestEvents?.find((e) => String(e.id) === String(newEvent.id));
@@ -629,12 +634,13 @@ export function useFamilyCalendar({
                       title: decryptedTitle,
                       desc: decryptedDesc,
                       event_date: eventDateStr,
-                      end_date: newEvent.end_date || undefined,
+                      end_date: toDateOnly(newEvent.end_date) || undefined,
                       created_by: newEvent.created_by,
                       created_at: newEvent.created_at,
                       repeat_type: repeatType,
                       sticker_emoji: normalizeCalendarStickerEmoji(newEvent.sticker_emoji),
                       remind_offsets: normalizeRemindOffsets(newEvent.remind_offsets),
+                      ...storedEventClock(newEvent),
                     }
                   : e
               )
@@ -658,12 +664,13 @@ export function useFamilyCalendar({
             title: decryptedTitle,
             desc: decryptedDesc,
             event_date: eventDateStr,
-            end_date: newEvent.end_date || undefined,
+            end_date: toDateOnly(newEvent.end_date) || undefined,
             created_by: newEvent.created_by,
             created_at: newEvent.created_at,
             repeat_type: repeatType,
             sticker_emoji: normalizeCalendarStickerEmoji(newEvent.sticker_emoji),
             remind_offsets: normalizeRemindOffsets(newEvent.remind_offsets),
+            ...storedEventClock(newEvent),
           },
           ...latestEvents,
         ]);

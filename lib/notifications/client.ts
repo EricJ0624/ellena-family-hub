@@ -1,4 +1,4 @@
-import { dueRemindOffsets } from '@/app/features/family-calendar/remind-offsets';
+import { normalizeRemindOffsets } from '@/app/features/family-calendar/remind-offsets';
 import { supabase } from '@/lib/supabase';
 import type { NotifiableWidgetKey, NotificationEventType } from './types';
 
@@ -47,7 +47,7 @@ export async function dispatchDueCalendarReminderClient(input: {
 }): Promise<void> {
   try {
     if (!input.eventId || /^\d+$/.test(input.eventId)) return;
-    if (dueRemindOffsets(input.eventDate, input.remindOffsets).length === 0) return;
+    if (normalizeRemindOffsets(input.remindOffsets).length === 0) return;
 
     const {
       data: { session },

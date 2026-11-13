@@ -19,6 +19,8 @@ export type CalendarEventModalSnapshot = {
   onSubmit: (payload: CalendarEventSubmitPayload) => void;
   /** 채팅 메시지에서 열 때 제목 미리 채우기 */
   prefillTitle?: string;
+  countryCode?: string | null;
+  lang?: string;
 };
 
 type Listener = () => void;

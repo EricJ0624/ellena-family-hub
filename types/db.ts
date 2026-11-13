@@ -1140,6 +1140,8 @@ export interface Database {
           created_at: string
           repeat_type: 'none' | 'monthly' | 'yearly' | null
           remind_offsets: number[]
+          event_time: string | null
+          event_timezone: string | null
         }
         Insert: {
           id?: string
@@ -1152,6 +1154,8 @@ export interface Database {
           created_at?: string
           repeat_type?: 'none' | 'monthly' | 'yearly' | null
           remind_offsets?: number[]
+          event_time?: string | null
+          event_timezone?: string | null
         }
         Update: {
           id?: string
@@ -1164,6 +1168,8 @@ export interface Database {
           created_at?: string
           repeat_type?: 'none' | 'monthly' | 'yearly' | null
           remind_offsets?: number[]
+          event_time?: string | null
+          event_timezone?: string | null
         }
         Relationships: [
           {

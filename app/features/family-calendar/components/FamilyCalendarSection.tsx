@@ -22,17 +22,28 @@ import {
   kidsStickerFromTitles,
 } from '../kids-decorations';
 import { firstCalendarStickerEmoji, normalizeCalendarStickerEmoji } from '../calendar-sticker-emoji';
-import { dueRemindOffsets, hasRemindOffsetWaitingForSendHour, msUntilKstSendHour } from '../remind-offsets';
+import {
+  localDateInZone,
+  msUntilNextLocalDate,
+  reminderFireAt,
+  resolveEventTimeZone,
+  visibleReminderFireDay,
+} from '../event-clock';
+import { normalizeRemindOffsets, toDateOnly } from '../remind-offsets';
 import { supabase } from '@/lib/supabase';
 
-function celebrateDismissKey(groupId: string) {
-  return `hearth-calendar-celebrate-dismissed:${groupId}`;
+function eventDayDismissKey(groupId: string) {
+  return `hearth-calendar-event-day-dismissed:${groupId}`;
 }
 
-function readDismissedCelebrateIds(groupId: string): Set<string> {
+function bannerDismissKey(groupId: string) {
+  return `hearth-calendar-reminder-banner-dismissed:${groupId}`;
+}
+
+function readIdSet(storageKey: string): Set<string> {
   if (typeof window === 'undefined') return new Set();
   try {
-    const raw = window.localStorage.getItem(celebrateDismissKey(groupId));
+    const raw = window.localStorage.getItem(storageKey);
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return new Set();
     return new Set(parsed.map((id) => String(id)));
@@ -41,8 +52,16 @@ function readDismissedCelebrateIds(groupId: string): Set<string> {
   }
 }
 
-function writeDismissedCelebrateIds(groupId: string, ids: Set<string>) {
-  window.localStorage.setItem(celebrateDismissKey(groupId), JSON.stringify([...ids]));
+function writeIdSet(storageKey: string, ids: Set<string>) {
+  window.localStorage.setItem(storageKey, JSON.stringify([...ids]));
+}
+
+function eventDayDismissId(eventId: string, eventDate: string) {
+  return `${eventId}:${eventDate}`;
+}
+
+function bannerDismissId(eventId: string, offsetDays: number, fireDate: string) {
+  return `${eventId}:${offsetDays}:${fireDate}`;
 }
 
 function dateFromKey(eventDate: string): Date | null {
@@ -85,57 +104,78 @@ function celebrateFromItems(
   };
 }
 
-function collectSameDayCelebrateItems(
+type ReminderBanner = {
+  eventId: string;
+  offsetDays: number;
+  fireDate: string;
+  eventDate: string;
+  title: string;
+  dateLabel: string;
+  stickerEmoji: string | null;
+};
+
+function eventDayCelebrateItems(
   events: FamilyEvent[],
-  anchorId: string,
-  anchorOffset: number | null,
+  now: Date,
+  zoneFor: (event: FamilyEvent) => string,
   dismissed: Set<string>,
   fallbackTitle: string,
 ): { eventDate: string; items: CelebrateItem[] } | null {
-  if (!isSavedEventId(anchorId)) return null;
-  if (isCelebrateDismissed(dismissed, anchorId, anchorOffset)) return null;
-  const found = events.find((event) => String(event.id) === anchorId);
-  const eventDate = found?.event_date || '';
-  const pool = events.filter((event) => {
-    const id = String(event.id);
-    if (!isSavedEventId(id)) return false;
-    if (eventDate) return event.event_date === eventDate;
-    return id === anchorId;
-  });
-  const items: CelebrateItem[] = [];
-  for (const event of pool) {
-    const id = String(event.id);
-    const due =
-      dueRemindOffsets(event.event_date, event.remind_offsets).find(
-        (days) => !isCelebrateDismissed(dismissed, id, days),
-      ) ?? null;
-    if (due == null && id !== anchorId) continue;
-    items.push({
-      eventId: id,
-      offsetDays: due ?? (id === anchorId ? anchorOffset : null),
+  const groups = new Map<string, CelebrateItem[]>();
+  for (const event of events) {
+    const eventId = String(event.id);
+    if (!isSavedEventId(eventId)) continue;
+    const eventDate = toDateOnly(event.event_date);
+    if (!eventDate) continue;
+    if (localDateInZone(now, zoneFor(event)) !== eventDate) continue;
+    if (dismissed.has(eventDayDismissId(eventId, eventDate))) continue;
+    const list = groups.get(eventDate) ?? [];
+    list.push({
+      eventId,
+      offsetDays: null,
       title: event.title?.trim() || fallbackTitle,
       stickerEmoji: normalizeCalendarStickerEmoji(event.sticker_emoji),
     });
+    groups.set(eventDate, list);
   }
-  if (!items.some((item) => item.eventId === anchorId)) {
-    items.unshift({
-      eventId: anchorId,
-      offsetDays: anchorOffset,
-      title: found?.title?.trim() || fallbackTitle,
-      stickerEmoji: normalizeCalendarStickerEmoji(found?.sticker_emoji),
-    });
-  }
-  return { eventDate, items };
+  const eventDate = [...groups.keys()].sort()[0];
+  if (!eventDate) return null;
+  return { eventDate, items: groups.get(eventDate) ?? [] };
 }
 
-function celebrateOffsetKey(eventId: string, offsetDays: number) {
-  return `${eventId}:${offsetDays}`;
+function sameCelebrateItems(prev: CelebrateItem[], next: CelebrateItem[]) {
+  return (
+    prev.length === next.length &&
+    next.every((item, index) => {
+      const before = prev[index];
+      return (
+        before?.eventId === item.eventId &&
+        before.title === item.title &&
+        before.stickerEmoji === item.stickerEmoji
+      );
+    })
+  );
 }
 
-function isCelebrateDismissed(ids: Set<string>, eventId: string, offsetDays: number | null) {
-  if (ids.has(eventId)) return true;
-  if (offsetDays == null) return false;
-  return ids.has(celebrateOffsetKey(eventId, offsetDays));
+function sameReminderBanners(prev: ReminderBanner[], next: ReminderBanner[]) {
+  return (
+    prev.length === next.length &&
+    next.every((item, index) => {
+      const before = prev[index];
+      return (
+        before?.eventId === item.eventId &&
+        before.offsetDays === item.offsetDays &&
+        before.title === item.title &&
+        before.dateLabel === item.dateLabel &&
+        before.stickerEmoji === item.stickerEmoji
+      );
+    })
+  );
+}
+
+function pulseEventIdFromSearch(search: string): string {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  return params.get('pulseEvent')?.trim() || params.get('celebrate')?.trim() || '';
 }
 
 function isSavedEventId(eventId: string) {
@@ -259,6 +299,83 @@ type CalendarMonthPage = {
   weekRows: number;
 };
 
+function ReminderBannerCard({
+  banner,
+  onOpen,
+  onDismiss,
+}: {
+  banner: ReminderBanner;
+  onOpen: () => void;
+  onDismiss: () => void;
+}) {
+  const startX = useRef<number | null>(null);
+  const dragX = useRef(0);
+  const swiped = useRef(false);
+  const [offsetX, setOffsetX] = useState(0);
+
+  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    swiped.current = false;
+    startX.current = event.clientX;
+    dragX.current = 0;
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* 포인터가 이미 놓인 경우 */
+    }
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (startX.current == null) return;
+    const dx = event.clientX - startX.current;
+    dragX.current = dx;
+    if (Math.abs(dx) > 8) swiped.current = true;
+    setOffsetX(dx);
+  };
+
+  const onPointerUp = () => {
+    if (startX.current == null) return;
+    startX.current = null;
+    if (Math.abs(dragX.current) >= 36) {
+      onDismiss();
+      return;
+    }
+    setOffsetX(0);
+  };
+
+  return (
+    <button
+      type="button"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onClick={(event) => {
+        if (swiped.current) {
+          event.preventDefault();
+          swiped.current = false;
+          return;
+        }
+        onOpen();
+      }}
+      className="flex w-full touch-pan-y items-center gap-[1.6cqmin] rounded-2xl bg-white/95 px-[2.2cqmin] py-[1.3cqmin] text-left shadow-md ring-1 ring-violet-300"
+      style={offsetX === 0 ? undefined : { transform: `translateX(${offsetX}px)` }}
+    >
+      <span className="shrink-0 text-[4.2cqmin] leading-none" aria-hidden>
+        {banner.stickerEmoji || '📅'}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[3.4cqmin] font-bold leading-tight text-violet-900">
+          {banner.title}
+        </span>
+        <span className="block truncate text-[2.8cqmin] font-medium leading-tight text-violet-700">
+          {banner.dateLabel}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 const CalendarMonthGrid = memo(function CalendarMonthGrid({
   calendarPages,
   selectedDate,
@@ -272,6 +389,11 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   onNextMonth,
   onSelectDate,
   onAdd,
+  reminderBanners,
+  onReminderOpen,
+  onReminderDismiss,
+  pulseDateKey,
+  pulseNonce,
 }: {
   calendarPages: CalendarMonthPage[];
   selectedDate: Date | null;
@@ -285,6 +407,11 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   onNextMonth: () => void;
   onSelectDate: (date: Date) => void;
   onAdd: () => void;
+  reminderBanners: ReminderBanner[];
+  onReminderOpen: (banner: ReminderBanner) => void;
+  onReminderDismiss: (banner: ReminderBanner) => void;
+  pulseDateKey: string | null;
+  pulseNonce: number;
 }) {
   const calendarGrid = calendarPages[1] ?? { cells: [], year: 0, month: 0, weekRows: 4 };
   const [rocketTick, setRocketTick] = useState(0);
@@ -482,6 +609,18 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         }
       >
         <div className="section-body calendar-section-body" style={{ gap: monthBg && calendarGrid.month === 0 ? '1cqmin' : '2.2cqmin' }}>
+          {reminderBanners.length > 0 ? (
+            <div className="relative z-[6] flex shrink-0 flex-col gap-[0.8cqmin]">
+              {reminderBanners.map((banner) => (
+                <ReminderBannerCard
+                  key={`${banner.eventId}:${banner.offsetDays}`}
+                  banner={banner}
+                  onOpen={() => onReminderOpen(banner)}
+                  onDismiss={() => onReminderDismiss(banner)}
+                />
+              ))}
+            </div>
+          ) : null}
           <div
             className="calendar-month-block min-h-0"
             style={{ flex: '1 1 0%', minHeight: 0 }}
@@ -577,6 +716,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                   if (cell.type === 'empty') {
                     return <div key={`empty-${i}`} aria-hidden />;
                   }
+                  const dateKey =
+                    cell.date.getFullYear() +
+                    '-' +
+                    String(cell.date.getMonth() + 1).padStart(2, '0') +
+                    '-' +
+                    String(cell.date.getDate()).padStart(2, '0');
+                  const isPulsing = pulseDateKey === dateKey;
                   const isSelected = selectedDate && selectedDate.getTime() === cell.date.getTime();
                   const congratsFrame = isKidsTheme && isKidsCongratsFrame(cell.kidsSticker);
                   const congratsVariant = congratsFrame && cell.kidsSticker
@@ -584,9 +730,10 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                     : null;
                   return (
                     <button
-                      key={cell.day}
+                      key={isPulsing ? `pulse-${pulseNonce}` : cell.day}
                       type="button"
                       onClick={() => onSelectDate(cell.date)}
+                      data-date-key={dateKey}
                       data-congrats={congratsVariant ?? undefined}
                       style={{
                         background: congratsFrame
@@ -625,7 +772,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       }}
                       className={`calendar-day-cell focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60${
                         congratsFrame ? ' calendar-day-cell--congrats' : ''
-                      }`}
+                      }${isPulsing ? ' calendar-day-cell--remind-pulse' : ''}`}
                     >
                       {congratsFrame && cell.kidsSticker ? (
                         <>
@@ -872,18 +1019,25 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     birthdayFrameSrc: string | null;
   };
   const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
+  const [reminderBanners, setReminderBanners] = useState<ReminderBanner[]>([]);
+  const [bannerDismissTick, setBannerDismissTick] = useState(0);
+  const [pulseDateKey, setPulseDateKey] = useState<string | null>(null);
+  const [pulseNonce, setPulseNonce] = useState(0);
   const [sendReadyTick, setSendReadyTick] = useState(0);
-  const dismissedCelebrateIdsRef = useRef<Set<string>>(new Set());
-  const celebrateActiveIdRef = useRef<string | null>(null);
+  const [residenceCountry, setResidenceCountry] = useState<string | null>(null);
+  const [creatorCountries, setCreatorCountries] = useState<Record<string, string>>({});
   const formatLongDateRef = useRef(formatLongDate);
   formatLongDateRef.current = formatLongDate;
+  const pulseDateAfterMonthRef = useRef<string | null>(null);
+  const pendingPulseIdRef = useRef<string | null>(null);
 
-  const clearCelebrateQuery = useCallback(() => {
+  const clearPulseQuery = useCallback(() => {
     if (typeof window === 'undefined') return;
     try {
       const url = new URL(window.location.href);
-      if (!url.searchParams.has('celebrate')) return;
+      if (!url.searchParams.has('celebrate') && !url.searchParams.has('pulseEvent')) return;
       url.searchParams.delete('celebrate');
+      url.searchParams.delete('pulseEvent');
       const next = `${url.pathname}${url.search}${url.hash}`;
       window.history.replaceState(window.history.state, '', next);
     } catch {
@@ -891,174 +1045,154 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     }
   }, []);
 
-  const resolveCelebrateFromEvent = useCallback((eventId: string, offsetDays: number | null) => {
-    if (celebrateActiveIdRef.current) return;
-    const built = collectSameDayCelebrateItems(
-      eventsRef.current,
-      eventId,
-      offsetDays,
-      dismissedCelebrateIdsRef.current,
-      translationsRef.current.section_title_calendar,
-    );
-    if (!built) return;
-    celebrateActiveIdRef.current = built.items.map((item) => item.eventId).join(',');
-    setCelebrate(celebrateFromItems(built, formatLongDateRef.current, ''));
-  }, []);
-
   useEffect(() => {
-    if (!currentGroupId || celebrate || celebrateActiveIdRef.current) return;
-    dismissedCelebrateIdsRef.current = readDismissedCelebrateIds(currentGroupId);
-    const dismissed = dismissedCelebrateIdsRef.current;
-
-    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-    const celebrateId = params?.get('celebrate')?.trim() || '';
-    if (celebrateId && isSavedEventId(celebrateId)) {
-      const linked = eventsRef.current.find((event) => String(event.id) === celebrateId);
-      const due = linked ? dueRemindOffsets(linked.event_date, linked.remind_offsets) : [];
-      const offset = due.find((days) => !isCelebrateDismissed(dismissed, celebrateId, days)) ?? null;
-      const blocked = dismissed.has(celebrateId) || (due.length > 0 && offset == null);
-      if (!blocked) {
-        resolveCelebrateFromEvent(celebrateId, offset);
-        return;
-      }
+    if (!currentGroupId) return;
+    const dismissed = readIdSet(eventDayDismissKey(currentGroupId));
+    const group = eventDayCelebrateItems(
+      events,
+      new Date(),
+      (event) =>
+        resolveEventTimeZone(
+          event.event_timezone,
+          event.created_by ? creatorCountries[event.created_by] : null,
+        ),
+      dismissed,
+      t.section_title_calendar,
+    );
+    if (!group) {
+      setCelebrate((prev) => (prev ? null : prev));
+      return;
     }
-
-    const pending = eventsRef.current.find((event) => {
-      const eventId = String(event.id);
-      if (!isSavedEventId(eventId)) return false;
-      return dueRemindOffsets(event.event_date, event.remind_offsets).some(
-        (days) => !isCelebrateDismissed(dismissed, eventId, days),
-      );
-    });
-    if (!pending) return;
-    const pendingId = String(pending.id);
-    const offset =
-      dueRemindOffsets(pending.event_date, pending.remind_offsets).find(
-        (days) => !isCelebrateDismissed(dismissed, pendingId, days),
-      ) ?? null;
-    resolveCelebrateFromEvent(pendingId, offset);
-  }, [currentGroupId, events, celebrate, resolveCelebrateFromEvent, sendReadyTick]);
-
-  useEffect(() => {
-    const waiting = events.some((event) =>
-      hasRemindOffsetWaitingForSendHour(event.event_date, event.remind_offsets),
+    const next = celebrateFromItems(
+      { eventDate: group.eventDate, items: group.items },
+      formatLongDate,
+      '',
     );
-    if (!waiting) return;
-    const ms = msUntilKstSendHour();
-    if (ms <= 0) return;
-    const id = window.setTimeout(() => setSendReadyTick((tick) => tick + 1), ms);
-    return () => window.clearTimeout(id);
-  }, [events, sendReadyTick]);
+    setCelebrate((prev) => {
+      if (
+        prev &&
+        prev.eventDate === next.eventDate &&
+        prev.eventDateLabel === next.eventDateLabel &&
+        prev.birthdayFrameSrc === next.birthdayFrameSrc &&
+        sameCelebrateItems(prev.items, next.items)
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [currentGroupId, events, creatorCountries, formatLongDate, t.section_title_calendar, sendReadyTick]);
 
   useEffect(() => {
-    if (!currentGroupId || celebrate) return;
+    if (!userId) return;
     let cancelled = false;
-
-    const run = async () => {
-      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      if (params?.get('celebrate')?.trim()) return;
-
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.access_token || cancelled) return;
-        const res = await fetch(
-          `/api/notifications?groupId=${encodeURIComponent(currentGroupId)}&unreadOnly=1&limit=20`,
-          { headers: { Authorization: `Bearer ${session.access_token}` } },
-        );
-        if (!res.ok || cancelled) return;
-        const json = await res.json().catch(() => null);
-        const rows = Array.isArray(json?.data) ? json.data : [];
-        const reminder = rows.find(
-          (row: {
-            event_type?: string;
-            entity_id?: string | null;
-            payload?: { celebration?: boolean; eventId?: string; offsetDays?: number };
-          }) =>
-            row?.event_type === 'CALENDAR_EVENT_REMINDER' &&
-            (row?.payload?.celebration === true || !!row?.entity_id),
-        );
-        if (!reminder || cancelled) return;
-        const eventId =
-          (typeof reminder.entity_id === 'string' && reminder.entity_id) ||
-          (typeof reminder.payload?.eventId === 'string' && reminder.payload.eventId) ||
-          '';
-        const offsetRaw = reminder.payload?.offsetDays;
-        const offsetNum = typeof offsetRaw === 'number' ? offsetRaw : Number(offsetRaw);
-        const offsetDays = Number.isFinite(offsetNum) ? offsetNum : null;
-        if (!eventId || !isSavedEventId(eventId)) return;
-        if (isCelebrateDismissed(dismissedCelebrateIdsRef.current, eventId, offsetDays)) return;
-        resolveCelebrateFromEvent(eventId, offsetDays);
-      } catch {
-        /* ignore */
-      }
-    };
-
-    void run();
+    void supabase
+      .from('profiles')
+      .select('country_code')
+      .eq('id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setResidenceCountry(data?.country_code ? String(data.country_code) : null);
+      });
     return () => {
       cancelled = true;
     };
-  }, [currentGroupId, celebrate, resolveCelebrateFromEvent]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!celebrate) return;
-    const anchor = celebrate.items[0];
-    if (!anchor) return;
-    const built = collectSameDayCelebrateItems(
-      events,
-      anchor.eventId,
-      anchor.offsetDays,
-      dismissedCelebrateIdsRef.current,
-      t.section_title_calendar,
-    );
-    if (!built) return;
-    const next = celebrateFromItems(built, formatLongDate, celebrate.eventDateLabel);
-    const sameItems =
-      next.items.length === celebrate.items.length &&
-      next.items.every((item, index) => {
-        const prev = celebrate.items[index];
-        return (
-          prev?.eventId === item.eventId &&
-          prev.offsetDays === item.offsetDays &&
-          prev.title === item.title &&
-          prev.stickerEmoji === item.stickerEmoji
-        );
+    const ids = [...new Set(events.map((event) => event.created_by).filter((id): id is string => !!id))];
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void supabase
+      .from('profiles')
+      .select('id, country_code')
+      .in('id', ids)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const next: Record<string, string> = {};
+        for (const row of data || []) {
+          if (row.country_code) next[String(row.id)] = String(row.country_code);
+        }
+        setCreatorCountries((prev) => {
+          const prevKeys = Object.keys(prev);
+          const nextKeys = Object.keys(next);
+          if (prevKeys.length === nextKeys.length && nextKeys.every((key) => prev[key] === next[key])) return prev;
+          return next;
+        });
       });
-    if (
-      sameItems &&
-      next.eventDate === celebrate.eventDate &&
-      next.eventDateLabel === celebrate.eventDateLabel &&
-      next.birthdayFrameSrc === celebrate.birthdayFrameSrc
-    ) {
+    return () => {
+      cancelled = true;
+    };
+  }, [events]);
+
+  useEffect(() => {
+    const now = Date.now();
+    let wait = Number.POSITIVE_INFINITY;
+    for (const event of events) {
+      const eventDate = toDateOnly(event.event_date);
+      if (!eventDate) continue;
+      const zone = resolveEventTimeZone(
+        event.event_timezone,
+        event.created_by ? creatorCountries[event.created_by] : null,
+      );
+      for (const offset of normalizeRemindOffsets(event.remind_offsets)) {
+        const fire = reminderFireAt(eventDate, event.event_time, zone, offset);
+        if (!fire) continue;
+        const delta = fire.getTime() - now;
+        if (delta > 0 && delta < wait) wait = delta;
+      }
+      const untilMidnight = msUntilNextLocalDate(new Date(now), zone);
+      if (untilMidnight != null && untilMidnight < wait) wait = untilMidnight;
+    }
+    if (!Number.isFinite(wait)) return;
+    const id = window.setTimeout(() => setSendReadyTick((tick) => tick + 1), Math.min(wait, 2_147_000_000));
+    return () => window.clearTimeout(id);
+  }, [events, creatorCountries, sendReadyTick]);
+
+  useEffect(() => {
+    if (!currentGroupId) {
+      setReminderBanners((prev) => (prev.length === 0 ? prev : []));
       return;
     }
-    setCelebrate(next);
-  }, [events, celebrate, formatLongDate, t.section_title_calendar]);
+    const dismissed = readIdSet(bannerDismissKey(currentGroupId));
+    const next: ReminderBanner[] = [];
+    for (const event of events) {
+      const eventId = String(event.id);
+      if (!isSavedEventId(eventId)) continue;
+      const eventDate = toDateOnly(event.event_date);
+      if (!eventDate) continue;
+      const zone = resolveEventTimeZone(
+        event.event_timezone,
+        event.created_by ? creatorCountries[event.created_by] : null,
+      );
+      for (const offset of normalizeRemindOffsets(event.remind_offsets)) {
+        const fireDate = visibleReminderFireDay(eventDate, event.event_time, zone, offset);
+        if (!fireDate || dismissed.has(bannerDismissId(eventId, offset, fireDate))) continue;
+        const parsed = dateFromKey(eventDate);
+        next.push({
+          eventId,
+          offsetDays: offset,
+          fireDate,
+          eventDate,
+          title: event.title?.trim() || t.section_title_calendar,
+          dateLabel: parsed ? formatLongDate(parsed) : eventDate,
+          stickerEmoji: normalizeCalendarStickerEmoji(event.sticker_emoji),
+        });
+      }
+    }
+    setReminderBanners((prev) => (sameReminderBanners(prev, next) ? prev : next));
+  }, [currentGroupId, events, creatorCountries, formatLongDate, t.section_title_calendar, sendReadyTick, bannerDismissTick]);
 
   const handleCelebrateConfirm = useCallback(async () => {
     const current = celebrate;
-    if (current && current.items.length > 0) {
+    if (current && current.items.length > 0 && currentGroupId) {
+      const dismissed = readIdSet(eventDayDismissKey(currentGroupId));
       for (const item of current.items) {
-        const found = eventsRef.current.find((event) => String(event.id) === item.eventId);
-        const due = found ? dueRemindOffsets(found.event_date, found.remind_offsets) : [];
-        if (due.length > 0) {
-          for (const offset of due) {
-            dismissedCelebrateIdsRef.current.add(celebrateOffsetKey(item.eventId, offset));
-          }
-        } else if (item.offsetDays != null) {
-          dismissedCelebrateIdsRef.current.add(celebrateOffsetKey(item.eventId, item.offsetDays));
-        } else {
-          dismissedCelebrateIdsRef.current.add(item.eventId);
-        }
+        dismissed.add(eventDayDismissId(item.eventId, current.eventDate));
       }
-      if (currentGroupId) {
-        writeDismissedCelebrateIds(currentGroupId, dismissedCelebrateIdsRef.current);
-      }
+      writeIdSet(eventDayDismissKey(currentGroupId), dismissed);
     }
-    celebrateActiveIdRef.current = null;
     setCelebrate(null);
-    clearCelebrateQuery();
+    clearPulseQuery();
 
     if (!currentGroupId || !current) return;
     try {
@@ -1074,7 +1208,6 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         },
         body: JSON.stringify({
           groupId: currentGroupId,
-          // 같은 일정의 여러 offset 리마인더를 한 번에 읽음 처리
           entityIds: current.items.map((item) => item.eventId),
           eventType: 'CALENDAR_EVENT_REMINDER',
         }),
@@ -1082,7 +1215,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     } catch {
       /* ignore */
     }
-  }, [celebrate, clearCelebrateQuery, currentGroupId]);
+  }, [celebrate, clearPulseQuery, currentGroupId]);
 
   const fireConfetti = useCallback(() => {
     import('canvas-confetti').then(({ default: confetti }) => {
@@ -1132,6 +1265,115 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const selectedDateRef = useRef(selectedDate);
   selectedDateRef.current = selectedDate;
+  const calendarMonthRef = useRef(calendarMonth);
+  calendarMonthRef.current = calendarMonth;
+
+  const pulseClearRef = useRef<number | null>(null);
+  const playPulse = useCallback((eventDate: string) => {
+    setPulseDateKey(eventDate);
+    setPulseNonce((nonce) => nonce + 1);
+    if (pulseClearRef.current != null) window.clearTimeout(pulseClearRef.current);
+    pulseClearRef.current = window.setTimeout(() => {
+      pulseClearRef.current = null;
+      setPulseDateKey((current) => (current === eventDate ? null : current));
+    }, 1500);
+  }, []);
+
+  const focusEventDate = useCallback((eventDate: string) => {
+    const parsed = dateFromKey(eventDate);
+    if (!parsed) return;
+    const shown = calendarMonthRef.current;
+    if (shown.getFullYear() !== parsed.getFullYear() || shown.getMonth() !== parsed.getMonth()) {
+      pulseDateAfterMonthRef.current = eventDate;
+      setCalendarMonth(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
+      return;
+    }
+    playPulse(eventDate);
+  }, [playPulse]);
+
+  useEffect(() => {
+    const target = pulseDateAfterMonthRef.current;
+    if (!target) return;
+    const parsed = dateFromKey(target);
+    if (!parsed) return;
+    if (calendarMonth.getFullYear() !== parsed.getFullYear() || calendarMonth.getMonth() !== parsed.getMonth()) return;
+    pulseDateAfterMonthRef.current = null;
+    playPulse(target);
+  }, [calendarMonth, playPulse]);
+
+  const tryPulsePending = useCallback(() => {
+    const eventId = pendingPulseIdRef.current;
+    if (!eventId) return;
+    const event = eventsRef.current.find((item) => String(item.id) === eventId);
+    const eventDate = toDateOnly(event?.event_date);
+    if (!eventDate) return;
+    pendingPulseIdRef.current = null;
+    focusEventDate(eventDate);
+    clearPulseQuery();
+  }, [clearPulseQuery, focusEventDate]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const eventId = pulseEventIdFromSearch(window.location.search);
+    if (eventId && isSavedEventId(eventId)) pendingPulseIdRef.current = eventId;
+    tryPulsePending();
+  }, [events, tryPulsePending]);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; url?: string } | null;
+      if (!data || data.type !== 'NOTIFICATION_OPEN' || typeof data.url !== 'string') return;
+      let parsed: URL;
+      try {
+        parsed = new URL(data.url, window.location.origin);
+      } catch {
+        return;
+      }
+      const eventId = pulseEventIdFromSearch(parsed.search);
+      if (!eventId || !isSavedEventId(eventId)) return;
+      pendingPulseIdRef.current = eventId;
+      tryPulsePending();
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, [tryPulsePending]);
+
+  const markReminderRead = useCallback(async (eventId: string) => {
+    if (!currentGroupId) return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          entityIds: [eventId],
+          eventType: 'CALENDAR_EVENT_REMINDER',
+        }),
+      });
+    } catch {
+      /* ignore */
+    }
+  }, [currentGroupId]);
+
+  const handleReminderOpen = useCallback((banner: ReminderBanner) => {
+    void markReminderRead(banner.eventId);
+    focusEventDate(banner.eventDate);
+  }, [focusEventDate, markReminderRead]);
+
+  const handleReminderDismiss = useCallback((banner: ReminderBanner) => {
+    if (!currentGroupId) return;
+    const dismissed = readIdSet(bannerDismissKey(currentGroupId));
+    dismissed.add(bannerDismissId(banner.eventId, banner.offsetDays, banner.fireDate));
+    writeIdSet(bannerDismissKey(currentGroupId), dismissed);
+    setBannerDismissTick((tick) => tick + 1);
+  }, [currentGroupId]);
 
   const { addEvent, updateEvent, deleteEvent } = useFamilyCalendar({
     currentGroupId,
@@ -1230,6 +1472,8 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       translations: translationsRef.current,
       sanitizeInput: (input, maxLength) => sanitizeInputRef.current(input, maxLength),
       prefillTitle,
+      countryCode: residenceCountry,
+      lang,
       onSubmit: (payload) => submitEventRef.current(payload),
     });
   };
@@ -1261,6 +1505,8 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       editingEvent: event,
       translations: translationsRef.current,
       sanitizeInput: (input, maxLength) => sanitizeInputRef.current(input, maxLength),
+      countryCode: residenceCountry,
+      lang,
       onSubmit: (payload) => submitEventRef.current(payload),
     });
   };
@@ -1282,6 +1528,8 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
               repeat_type: payload.repeat_type,
               sticker_emoji: payload.sticker_emoji,
               remind_offsets: payload.remind_offsets,
+              event_time: payload.event_time,
+              event_timezone: payload.event_timezone,
             }
           : e,
       );
@@ -1305,6 +1553,8 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         repeat_type: payload.repeat_type,
         sticker_emoji: payload.sticker_emoji,
         remind_offsets: payload.remind_offsets,
+        event_time: payload.event_time,
+        event_timezone: payload.event_timezone,
       }).catch((error) => {
         console.error('일정 수정 실패, 복구 중:', error);
         onEventsChange(previousEvents);
@@ -1324,6 +1574,9 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       repeat_type: payload.repeat_type,
       sticker_emoji: payload.sticker_emoji,
       remind_offsets: payload.remind_offsets,
+      event_time: payload.event_time,
+      event_timezone: payload.event_timezone,
+      created_by: userId,
       created_at: new Date(newEventId).toISOString(),
     };
 
@@ -1438,6 +1691,11 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           onNextMonth={handleNextMonth}
           onSelectDate={setSelectedDate}
           onAdd={openEventModal}
+          reminderBanners={reminderBanners}
+          onReminderOpen={handleReminderOpen}
+          onReminderDismiss={handleReminderDismiss}
+          pulseDateKey={pulseDateKey}
+          pulseNonce={pulseNonce}
         />
 
             {selectedDate && (
@@ -1466,6 +1724,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                         <div className="flex items-start justify-between" style={{ gap: '2.5cqmin' }}>
                           <div className="min-w-0 flex-1">
                             <h5 className="calendar-event-card-title">
+                              {e.event_time ? <span className="mr-[0.4em]">{e.event_time}</span> : null}
                               {e.title}
                               {(e.remind_offsets?.length ?? 0) > 0 ? (
                                 <span className="ml-[0.35em] align-middle" aria-label="알림">
