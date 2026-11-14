@@ -260,6 +260,8 @@ export interface BabyPhoto {
   thumbnailUrl: string | null;
   takenAt: string | null; // 촬영일. 없으면 개월을 표시하지 않는다
   monthAge: number | null; // 아기 월령
+  /** 업로드 시각 — 촬영일 없을 때 모음집 일자/주 묶음용 */
+  createdAt: string;
 }
 
 /** 인쇄용 앨범 사진별 편집 (baby_print_albums.photo_edits) */
@@ -270,6 +272,14 @@ export type BabyPrintPhotoEdit = {
   rotation: number;
 };
 
+/** 인쇄 사진 규격 (기본 4×6) */
+export type BabyPrintPhotoSize =
+  | 'mini_2x3'
+  | 'small_3_5x5'
+  | 'std_4x6'
+  | 'large_5x7'
+  | 'xl_8x10';
+
 /** 그룹에 저장된 인쇄용 앨범 편집본 */
 export interface BabyPrintAlbum {
   id: string;
@@ -279,6 +289,8 @@ export interface BabyPrintAlbum {
   title: string;
   bg: 'cream' | 'blush' | 'sage' | 'sky';
   layout: 'grid2' | 'grid3' | 'hero';
+  /** 출력 사진 규격. 없으면 std_4x6 */
+  photo_size?: BabyPrintPhotoSize;
   show_captions: boolean;
   photo_order: string[];
   photo_edits: Record<string, BabyPrintPhotoEdit>;

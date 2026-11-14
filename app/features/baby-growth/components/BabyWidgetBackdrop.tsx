@@ -13,11 +13,10 @@ export function BabyWidgetBackdrop() {
   );
 }
 
-/** 프로필 영역 스티커(위 딸랑이·담요). 카드 스티커는 QuickStatusCards에 둔다. */
+/** 프로필 영역 스티커(담요만). 딸랑이는 성장기록 버튼을 가려서 제거. */
 export function BabyWidgetStickers() {
   return (
     <div className="pointer-events-none absolute inset-0 z-10 overflow-visible" aria-hidden>
-      <Sticker src="/baby-widget/rattle.png?v=5" className="absolute left-[45%] top-[3.5%] w-[9%]" />
       <Sticker src="/baby-widget/blanket.png?v=5" className="absolute left-[62%] top-[2.5%] w-[13%]" />
     </div>
   );

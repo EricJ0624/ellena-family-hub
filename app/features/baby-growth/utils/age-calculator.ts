@@ -32,14 +32,6 @@ export function calcAgeInWeeks(birthDate: string | Date): number {
 }
 
 /**
- * D-Day 문자열 반환 (예: "D+365")
- */
-export function calcDDay(birthDate: string | Date): string {
-  const days = calcAgeInDays(birthDate);
-  return `D+${days}`;
-}
-
-/**
  * 경과 시간을 "n분 전 / n시간 전 / n일 전" 형식으로 반환
  */
 export function formatTimeAgo(

@@ -16,7 +16,7 @@ import { getBabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import type { LangCode } from '@/lib/language-fonts';
 import { getCountryOptions } from '@/lib/countries';
 import type { BabyProfile, BabyDailyLog, BabyRecentStatus, LogType } from '../types';
-import { useBabyGrowth } from '../hooks/useBabyGrowth';
+import { BABY_PROFILE_MAX, useBabyGrowth } from '../hooks/useBabyGrowth';
 import { useBabyLogs, calcRecentStatus } from '../hooks/useBabyLogs';
 import { BabyProfileCard } from './BabyProfileCard';
 import { QuickStatusCards } from './QuickStatusCards';
@@ -25,6 +25,26 @@ import { TodayPhotoSlider } from './TodayPhotoSlider';
 import { BabyAlbumView } from './BabyAlbumView';
 import { BabyWidgetBackdrop, BabyWidgetStickers } from './BabyWidgetBackdrop';
 import { findCurrentOpenSleep, scheduledBedBefore } from '../utils/sleep-schedule';
+
+const ACTIVE_BABY_LS_KEY = 'sfh_baby_active_id';
+
+function readStoredActiveBabyId(groupId: string | null): string | null {
+  if (!groupId || typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(`${ACTIVE_BABY_LS_KEY}:${groupId}`);
+  } catch {
+    return null;
+  }
+}
+
+function storeActiveBabyId(groupId: string | null, babyId: string) {
+  if (!groupId || typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`${ACTIVE_BABY_LS_KEY}:${groupId}`, babyId);
+  } catch {
+    /* ignore */
+  }
+}
 
 // lazy import — 대시보드 초기 로드 성능 보호
 const BabyGrowthNavigator = React.lazy(
@@ -36,10 +56,12 @@ const BabyGrowthNavigator = React.lazy(
 // ---------------------------------------------------------------------------
 function logsSignature(logs: BabyDailyLog[]): string {
   if (logs.length === 0) return 'empty';
-  return logs
+  const head = logs
     .slice(0, 10)
     .map((l) => `${l.id}:${l.logged_at}:${l.sleep_end_at ?? ''}:${l.notes ?? ''}`)
     .join('|');
+  const tail = logs[logs.length - 1];
+  return `${logs.length}|${head}|${tail?.id ?? ''}:${tail?.logged_at ?? ''}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,24 +89,50 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
-  const [profile, setProfile] = useState<BabyProfile | null>(null);
+  const [profiles, setProfiles] = useState<BabyProfile[]>([]);
+  const [slideIndex, setSlideIndex] = useState(0);
   const [logs, setLogs] = useState<BabyDailyLog[]>([]);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [logModalType, setLogModalType] = useState<LogType>('feeding');
   const [addProfileOpen, setAddProfileOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [babyLimitNotice, setBabyLimitNotice] = useState(false);
   const [aiText, setAiText] = useState<string | null>(null);
   const [albumOpen, setAlbumOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
   // 로그 시그니처 ref — 동일 내용 setState 방지
   const logsSigRef = useRef<string>('');
+  const swipeStartRef = useRef<{
+    x: number;
+    y: number;
+    id: number;
+    locked: 'h' | 'v' | null;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+  const slideIndexRef = useRef(0);
+  const slideCountRef = useRef(1);
+  const verticalScrollRef = useRef<HTMLDivElement>(null);
+  const [snapPageHeight, setSnapPageHeight] = useState(0);
+  slideIndexRef.current = slideIndex;
+
+  const canShowAddSlide = profiles.length < BABY_PROFILE_MAX;
+  const slideCount = Math.max(1, profiles.length + (canShowAddSlide ? 1 : 0));
+  slideCountRef.current = slideCount;
+  /** 등록용 초기 페이지(빈 슬롯) */
+  const onAddSlide = canShowAddSlide && slideIndex >= profiles.length;
+  const profile = onAddSlide ? null : (profiles[slideIndex] ?? profiles[0] ?? null);
+  const activeBabyId = profile?.id ?? null;
 
   // ---------------------------------------------------------------------------
   // 콜백 (안정 참조 보장)
   // ---------------------------------------------------------------------------
-  const handleProfileChange = useCallback((p: BabyProfile | null) => {
-    setProfile(p);
+  const handleProfilesChange = useCallback((next: BabyProfile[]) => {
+    setProfiles((prev) => {
+      const prevSig = prev.map((p) => `${p.id}:${p.updated_at}`).join('|');
+      const nextSig = next.map((p) => `${p.id}:${p.updated_at}`).join('|');
+      return prevSig === nextSig ? prev : next;
+    });
   }, []);
 
   const handleLogsChange = useCallback((newLogs: BabyDailyLog[]) => {
@@ -100,8 +148,59 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
   const { addProfile, updateProfile, deleteProfile } = useBabyGrowth({
     currentGroupId,
     userId,
-    onProfileChange: handleProfileChange,
+    onProfilesChange: handleProfilesChange,
   });
+
+  useEffect(() => {
+    setSlideIndex((prev) => {
+      if (profiles.length === 0) return 0;
+      const stored = readStoredActiveBabyId(currentGroupId);
+      const storedIdx = stored ? profiles.findIndex((p) => p.id === stored) : -1;
+      if (prev < profiles.length) {
+        if (profiles[prev]) return prev;
+      }
+      if (prev >= profiles.length && canShowAddSlide) {
+        return profiles.length; // 등록 슬롯 유지
+      }
+      if (storedIdx >= 0) return storedIdx;
+      return 0;
+    });
+  }, [profiles, currentGroupId, canShowAddSlide]);
+
+  useEffect(() => {
+    if (!currentGroupId || !activeBabyId) return;
+    storeActiveBabyId(currentGroupId, activeBabyId);
+  }, [currentGroupId, activeBabyId]);
+
+  useEffect(() => {
+    setAiText(null);
+    logsSigRef.current = '';
+    setLogs([]);
+  }, [activeBabyId]);
+
+  // 세로 스냅 페이지 높이 = 스크롤포트 실측 (화면 비율 유지 + 스크롤 가능)
+  useEffect(() => {
+    if (isMagnified) return;
+    const el = verticalScrollRef.current;
+    if (!el) return;
+    const update = () => {
+      const next = Math.round(el.clientHeight);
+      setSnapPageHeight((prev) => (Math.abs(prev - next) < 2 ? prev : next));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isMagnified, onAddSlide, profile]);
+
+  const goToSlide = useCallback(
+    (index: number) => {
+      const max = slideCount - 1;
+      setSlideIndex(Math.max(0, Math.min(max, index)));
+      setBabyLimitNotice(false);
+    },
+    [slideCount],
+  );
 
   const { addLog, updateLog } = useBabyLogs({
     babyId: profile?.id ?? null,
@@ -109,6 +208,84 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     userId,
     onLogsChange: handleLogsChange,
   });
+
+  const tryOpenAddBaby = useCallback(() => {
+    if (profiles.length >= BABY_PROFILE_MAX) {
+      setBabyLimitNotice(true);
+      return;
+    }
+    setBabyLimitNotice(false);
+    setAddProfileOpen(true);
+  }, [profiles.length]);
+
+  const onBabyPointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // 실제 버튼/입력만 제외 (카드 role=button 위에서도 가로 스와이프 허용)
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('button, a, input, textarea, select')) {
+      swipeStartRef.current = null;
+      return;
+    }
+    suppressClickRef.current = false;
+    swipeStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      id: e.pointerId,
+      locked: null,
+    };
+  }, []);
+
+  const onBabyPointerMove = useCallback((e: React.PointerEvent) => {
+    const start = swipeStartRef.current;
+    if (!start || start.id !== e.pointerId) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (start.locked == null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      start.locked = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'h' : 'v';
+      if (start.locked === 'h') {
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    if (start.locked === 'h') {
+      // 가로 제스처 중에는 세로 스크롤이 끼어들지 않게
+      e.preventDefault();
+    }
+  }, []);
+
+  const onBabyPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const start = swipeStartRef.current;
+      if (!start || start.id !== e.pointerId) return;
+      swipeStartRef.current = null;
+      if (slideCountRef.current < 2) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      const horizontal =
+        start.locked === 'h' || (start.locked == null && Math.abs(dx) > Math.abs(dy) * 1.15);
+      if (!horizontal) return;
+      if (Math.abs(dx) < 36 || Math.abs(dx) <= Math.abs(dy) * 1.1) return;
+      suppressClickRef.current = true;
+      const idx = slideIndexRef.current;
+      if (dx < 0) goToSlide(idx + 1);
+      else goToSlide(idx - 1);
+    },
+    [goToSlide],
+  );
+
+  const onBabyPointerCancel = useCallback((e: React.PointerEvent) => {
+    if (swipeStartRef.current?.id === e.pointerId) swipeStartRef.current = null;
+  }, []);
+
+  const onBabyClickCapture = useCallback((e: React.MouseEvent) => {
+    if (!suppressClickRef.current) return;
+    suppressClickRef.current = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
 
   // ---------------------------------------------------------------------------
   // 파생 상태
@@ -187,58 +364,93 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     return growthNavigator;
   }
 
-  // 대시보드 위젯 뷰 — 상단(프로필+4카드)은 한 화면에 두고, 아래만 스크롤
+  const snapPageStyle =
+    snapPageHeight > 0
+      ? ({ height: snapPageHeight, minHeight: snapPageHeight } as const)
+      : undefined;
+
+  // 대시보드 위젯 뷰 — 가로: 아이 / 등록 슬롯, 세로 스냅: 카드→사진
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-[#fff8f4] text-gray-800">
+    <div
+      className="relative h-full w-full overflow-hidden rounded-2xl bg-[#fff8f4] text-gray-800"
+      style={{ touchAction: 'pan-y' }}
+      onPointerDown={onBabyPointerDown}
+      onPointerMove={onBabyPointerMove}
+      onPointerUp={onBabyPointerUp}
+      onPointerCancel={onBabyPointerCancel}
+      onClickCapture={onBabyClickCapture}
+    >
       <BabyWidgetBackdrop />
-      <div className="relative flex h-full flex-col overflow-hidden px-2 pt-2 pb-3">
-      {!profile ? (
-        <div className="relative z-20 flex min-h-48 flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+      <div
+        ref={verticalScrollRef}
+        className="relative h-full snap-y snap-mandatory overflow-y-auto overflow-x-hidden overscroll-y-contain"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      >
+      {onAddSlide || !profile ? (
+        <div
+          className="relative z-20 flex h-full min-h-48 flex-col items-center justify-center gap-3 px-4 text-center"
+          style={snapPageStyle}
+        >
           <span className="text-4xl">🍼</span>
           <p className="text-sm text-gray-500">{t.no_baby_profile}</p>
           <button
-            onClick={() => setAddProfileOpen(true)}
+            onClick={tryOpenAddBaby}
             className="rounded-full bg-pink-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-pink-600"
           >
             {t.add_baby}
           </button>
+          {babyLimitNotice && (
+            <p className="max-w-xs text-xs leading-relaxed text-rose-500">{t.baby_limit_reached}</p>
+          )}
         </div>
       ) : (
         <>
-          <div className="relative z-[1] shrink-0">
+          <section
+            className="relative z-[1] flex h-full min-h-0 snap-start snap-always flex-col overflow-hidden px-2 pt-2 pb-2"
+            style={snapPageStyle}
+          >
             <BabyWidgetStickers />
-            <BabyProfileCard
-              profile={profile}
-              t={t}
-              onEditClick={() => setEditProfileOpen(true)}
-              onReportClick={() => setDetailOpen(true)}
-            />
-            <div className="relative mt-2">
+            <div className="relative z-20 shrink-0">
+              <BabyProfileCard
+                profile={profile}
+                t={t}
+                onEditClick={() => setEditProfileOpen(true)}
+                onReportClick={() => setDetailOpen(true)}
+              />
+            </div>
+            <div className="relative z-[1] mt-1.5 min-h-0 flex-1">
               <QuickStatusCards
                 status={recentStatus}
                 profile={profile}
                 logs={logs}
                 t={t}
+                fillHeight
                 onCardClick={handleCardClick}
                 onBed={() => { void handleBed(); }}
                 onWake={() => { void handleWake(); }}
               />
             </div>
-          </div>
-          <div className="relative z-[1] mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
+          </section>
+          <section
+            className="relative z-[1] flex h-full min-h-0 snap-start snap-always flex-col gap-1.5 overflow-hidden px-2 pt-2 pb-3"
+            style={snapPageStyle}
+          >
             {aiText && (
-              <div className="relative z-20 line-clamp-2 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+              <div className="relative z-20 shrink-0 line-clamp-2 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
                 🤖 {aiText}
               </div>
             )}
-            <TodayPhotoSlider
-              babyId={profile.id}
-              currentGroupId={currentGroupId}
-              birthDate={profile.birth_date}
-              t={t}
-              onOpen={() => setAlbumOpen(true)}
-            />
-          </div>
+            <div className="min-h-0 flex-1">
+              <TodayPhotoSlider
+                babyId={profile.id}
+                currentGroupId={currentGroupId}
+                birthDate={profile.birth_date}
+                t={t}
+                fillHeight
+                onOpen={() => setAlbumOpen(true)}
+              />
+            </div>
+          </section>
         </>
       )}
       </div>
@@ -265,8 +477,21 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
           currentGroupId={currentGroupId ?? ''}
           lang={lang}
           onSave={async (draft) => {
-            await addProfile({ ...draft, group_id: currentGroupId ?? '' });
-            setAddProfileOpen(false);
+            try {
+              const created = await addProfile({ ...draft, group_id: currentGroupId ?? '' });
+              setAddProfileOpen(false);
+              setBabyLimitNotice(false);
+              storeActiveBabyId(currentGroupId, created.id);
+              // 추가 직전 길이 = 새 아이 인덱스 (profiles state는 다음 렌더에 반영)
+              setSlideIndex(profiles.length);
+            } catch (err) {
+              if (err instanceof Error && err.message === 'BABY_PROFILE_LIMIT') {
+                setAddProfileOpen(false);
+                setBabyLimitNotice(true);
+                return;
+              }
+              throw err;
+            }
           }}
           onClose={() => setAddProfileOpen(false)}
         />
@@ -492,14 +717,14 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
                       type="text"
                       value={countrySearch}
                       onChange={(e) => setCountrySearch(e.target.value)}
-                      placeholder="🔍 국가 검색..."
+                      placeholder={`🔍 ${t.country_search_placeholder}`}
                       className="w-full text-sm bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-1.5 outline-none border border-gray-200 dark:border-gray-700"
                     />
                   </div>
                   {/* 국가 목록 */}
                   <ul className="max-h-48 overflow-y-auto">
                     {filteredCountries.length === 0 ? (
-                      <li className="px-4 py-3 text-xs text-gray-400 text-center">검색 결과 없음</li>
+                      <li className="px-4 py-3 text-xs text-gray-400 text-center">{t.country_search_empty}</li>
                     ) : (
                       filteredCountries.map(({ code, label }) => (
                         <li key={code}>

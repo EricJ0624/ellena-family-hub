@@ -28,26 +28,24 @@ export function BabyProfileCard({ profile, t, onEditClick, onReportClick }: Baby
 
   return (
     <div className="relative z-20 flex w-full items-center gap-3">
-      {/* 아바타 */}
       <div className="relative shrink-0">
         {profile.avatar_url ? (
           <img
             src={profile.avatar_url}
             alt={profile.name}
-            className="w-12 h-12 rounded-full object-cover border-2 border-pink-200"
+            className="h-12 w-12 rounded-full border-2 border-pink-200 object-cover"
           />
         ) : (
-          <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center text-2xl">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pink-100 text-2xl">
             {genderEmoji}
           </div>
         )}
       </div>
 
-      {/* 이름 + 월령 */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="truncate rounded bg-[#fff8f4] font-bold text-base text-gray-900">{profile.name}</span>
-          <span className="text-xs bg-pink-100 text-pink-500 px-2 py-0.5 rounded-full font-medium shrink-0">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate rounded bg-[#fff8f4] text-base font-bold text-gray-900">{profile.name}</span>
+          <span className="shrink-0 rounded-full bg-pink-100 px-2 py-0.5 text-xs font-medium text-pink-500">
             {ageLabel}
           </span>
         </div>
@@ -63,13 +61,12 @@ export function BabyProfileCard({ profile, t, onEditClick, onReportClick }: Baby
         )}
       </div>
 
-      {/* D-Day 뱃지 */}
       <div className="shrink-0 pl-2 text-right">
-        <span className="rounded bg-[#fff8f4] text-lg font-black leading-none text-pink-400">{dday}</span>
+        <span className="text-lg font-black leading-none text-pink-400">{dday}</span>
         {onEditClick && (
           <button
             onClick={onEditClick}
-            className="block text-xs text-pink-400 hover:text-pink-600 mt-0.5 transition-colors"
+            className="mt-0.5 block text-xs text-pink-400 transition-colors hover:text-pink-600"
             aria-label={t.edit_baby}
           >
             ✏️

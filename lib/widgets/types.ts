@@ -41,7 +41,7 @@ export const TRAVEL_DIARY_M_LAYOUT_H = 6;
 export const TRAVEL_QUICK_RECORD_M_LAYOUT_H = 4;
 
 /** Family Log M 기본 높이. 리본 + 카드 2줄 + 하단 버튼이 들어가는 세로. */
-export const FAMILY_LOG_M_LAYOUT_H = 11;
+export const FAMILY_LOG_M_LAYOUT_H = 10;
 
 /** 우리아이 성장기록 M 기본 높이. 전역 M(8)보다 세로 1칸. */
 export const BABY_GROWTH_M_LAYOUT_H = 9;

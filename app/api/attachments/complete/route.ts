@@ -4,6 +4,7 @@ import { requireAttachmentGroupAccess, requireAuthUser } from '@/lib/api-guards'
 import { keyMatchesGroup, withMediaFileUrls } from '@/lib/media-access-token';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { ensureFamilyAlbumItemForDiaryPhoto } from '@/lib/storage-object-refs';
+import { getGroupStorageStats } from '@/lib/storage-quota';
 
 const ALLOWED_ENTITY_TYPES = new Set([
   'chat_message',
@@ -86,6 +87,18 @@ export async function POST(request: NextRequest) {
 
     const memberCheck = await requireAttachmentGroupAccess(user.id, String(groupId), String(entityType));
     if (memberCheck instanceof NextResponse) return memberCheck;
+
+    const { quotaBytes, usedBytes } = await getGroupStorageStats(String(groupId));
+    if (usedBytes + sizeBytes > quotaBytes) {
+      return NextResponse.json(
+        {
+          error: '그룹 저장 용량을 초과했습니다.',
+          details: `현재 사용량 ${(usedBytes / 1024 / 1024 / 1024).toFixed(2)}GB / 한도 ${(quotaBytes / 1024 / 1024 / 1024).toFixed(2)}GB`,
+        },
+        { status: 413 },
+      );
+    }
+
     if (!keyMatchesGroup(String(s3Key), String(groupId))) {
       return NextResponse.json({ error: '이 그룹의 파일이 아닙니다.' }, { status: 403 });
     }

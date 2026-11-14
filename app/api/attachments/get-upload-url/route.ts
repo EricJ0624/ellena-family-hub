@@ -7,6 +7,7 @@ import {
   getS3ClientInstance,
 } from '@/lib/api-helpers';
 import { requireAttachmentGroupAccess, requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { getGroupStorageStats } from '@/lib/storage-quota';
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -49,6 +50,20 @@ export async function POST(request: NextRequest) {
       ? await requireAttachmentGroupAccess(user.id, String(groupId), entity)
       : await requireGroupMember(user.id, String(groupId));
     if (memberCheck instanceof NextResponse) return memberCheck;
+
+    // 원본만 그룹 용량에 합산·검사 (썸네일은 size_bytes 미집계)
+    if (!isThumbnail) {
+      const { quotaBytes, usedBytes } = await getGroupStorageStats(String(groupId));
+      if (usedBytes + fileSize > quotaBytes) {
+        return NextResponse.json(
+          {
+            error: '그룹 저장 용량을 초과했습니다.',
+            details: `현재 사용량 ${(usedBytes / 1024 / 1024 / 1024).toFixed(2)}GB / 한도 ${(quotaBytes / 1024 / 1024 / 1024).toFixed(2)}GB`,
+          },
+          { status: 413 },
+        );
+      }
+    }
 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     if (!bucketName) {

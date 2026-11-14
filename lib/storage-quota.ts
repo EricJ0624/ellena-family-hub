@@ -84,7 +84,11 @@ export async function groupAllowsOriginalUpload(groupId: string): Promise<boolea
 
 export async function getGroupStorageUsedBytes(groupId: string): Promise<number> {
   const supabase = getSupabaseServerClient();
-  const [{ data, error }, { data: sceneRows, error: sceneError }] = await Promise.all([
+  const [
+    { data, error },
+    { data: sceneRows, error: sceneError },
+    { data: attachmentRows, error: attachmentError },
+  ] = await Promise.all([
     supabase
       .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
       .select('original_file_size')
@@ -95,6 +99,11 @@ export async function getGroupStorageUsedBytes(groupId: string): Promise<number>
       .eq('group_id', groupId)
       .eq('scope', 'group')
       .eq('is_active', true),
+    supabase
+      .from(DB_TABLES.ATTACHMENTS)
+      .select('size_bytes')
+      .eq('group_id', groupId)
+      .is('deleted_at', null),
   ]);
 
   if (error) {
@@ -103,13 +112,20 @@ export async function getGroupStorageUsedBytes(groupId: string): Promise<number>
   if (sceneError && sceneError.code !== '42P01') {
     console.error('그림찾기 장면 용량 조회 오류:', sceneError);
   }
+  if (attachmentError) {
+    console.error('첨부 용량 조회 오류:', attachmentError);
+  }
 
   const albumBytes = (data || []).reduce((sum, row) => sum + (row.original_file_size || 0), 0);
   const sceneBytes = (sceneRows || []).reduce(
     (sum, row) => sum + (row.image_size_bytes || 0) + (row.variant_image_size_bytes || 0),
     0,
   );
-  return albumBytes + sceneBytes;
+  const attachmentBytes = (attachmentRows || []).reduce(
+    (sum, row) => sum + (Number(row.size_bytes) || 0),
+    0,
+  );
+  return albumBytes + sceneBytes + attachmentBytes;
 }
 
 export async function getGroupStorageStats(groupId: string): Promise<{

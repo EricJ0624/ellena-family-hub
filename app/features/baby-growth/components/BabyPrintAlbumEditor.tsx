@@ -2,26 +2,87 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '@/lib/supabase';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
-import type { BabyPhoto, BabyPrintAlbum, BabyPrintPhotoEdit } from '../types';
+import type {
+  BabyPhoto,
+  BabyPrintAlbum,
+  BabyPrintPhotoEdit,
+  BabyPrintPhotoSize,
+} from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
+import { exportPrintAlbumPdf } from '../utils/export-print-album-pdf';
+
+type DragZone = 'album' | 'pool';
+type PrintDragData = { photoId: string; zone: DragZone };
+
+/** 포인터 위치 우선 — hero처럼 큰 카드는 closestCenter만 쓰면 대기열에 안 닿음 */
+const printCollisionDetection: CollisionDetection = (args) => {
+  const pointerHits = pointerWithin(args);
+  if (pointerHits.length > 0) {
+    const pool = pointerHits.find((c) => c.id === 'drop-pool');
+    if (pool) return [pool];
+    const poolThumb = pointerHits.find((c) => String(c.id).startsWith('pool-'));
+    if (poolThumb) return [poolThumb];
+    const photos = pointerHits.filter(
+      (c) => c.id !== 'drop-album' && c.id !== 'drop-pool' && !String(c.id).startsWith('pool-'),
+    );
+    if (photos.length > 0) return photos;
+    return pointerHits;
+  }
+  return closestCenter(args);
+};
 
 type PrintBgKey = BabyPrintAlbum['bg'];
 type PrintLayout = BabyPrintAlbum['layout'];
 type PrintFrame = BabyPrintPhotoEdit['frame'];
 type PhotoEdit = BabyPrintPhotoEdit;
-type FlashTarget = 'device' | 'family' | null;
+type FlashTarget = 'family' | null;
 
-type DraftV1 = {
-  v: 1;
-  title: string;
-  bg: PrintBgKey;
-  layout: PrintLayout;
-  showCaptions: boolean;
-  order: string[];
-  edits: Record<string, PhotoEdit>;
+/** 출력 규격 (가로×세로 mm, 세로 인화) */
+const PRINT_PHOTO_SIZES: Record<
+  BabyPrintPhotoSize,
+  { wMm: number; hMm: number; marginMm: number }
+> = {
+  mini_2x3: { wMm: 50.8, hMm: 76.2, marginMm: 3 },
+  small_3_5x5: { wMm: 88.9, hMm: 127, marginMm: 4 },
+  std_4x6: { wMm: 101.6, hMm: 152.4, marginMm: 5 },
+  large_5x7: { wMm: 127, hMm: 177.8, marginMm: 6 },
+  xl_8x10: { wMm: 203.2, hMm: 254, marginMm: 8 },
 };
+
+const PHOTO_SIZE_KEYS: BabyPrintPhotoSize[] = [
+  'mini_2x3',
+  'small_3_5x5',
+  'std_4x6',
+  'large_5x7',
+  'xl_8x10',
+];
+
+function isPhotoSize(v: unknown): v is BabyPrintPhotoSize {
+  return typeof v === 'string' && PHOTO_SIZE_KEYS.includes(v as BabyPrintPhotoSize);
+}
 
 const PRINT_BG: Record<PrintBgKey, { preview: string; print: string; swatch: string }> = {
   cream: {
@@ -67,16 +128,45 @@ const FRAME_LABEL: Record<PrintFrame, string> = {
 const ROTATE_STEP = 15;
 const BG_KEYS = Object.keys(PRINT_BG) as PrintBgKey[];
 
-function draftKey(babyId: string) {
-  return `sfh_baby_print_album_${babyId}`;
-}
-
 function normDeg(deg: number): number {
   return ((Math.round(deg) % 360) + 360) % 360;
 }
 
 function defaultEdit(): PhotoEdit {
-  return { included: true, frame: 'rect', rotation: 0 };
+  // 새 사진은 대기열 — 드래그로 인쇄 앨범에 넣음
+  return { included: false, frame: 'rect', rotation: 0 };
+}
+
+function isIncluded(edits: Record<string, PhotoEdit>, id: string): boolean {
+  return (edits[id] ?? defaultEdit()).included;
+}
+
+/** included 항목들만 상대 순서를 바꾼 뒤 전체 order에 반영 */
+function reorderIncludedIds(
+  order: string[],
+  edits: Record<string, PhotoEdit>,
+  activeId: string,
+  overId: string,
+): string[] {
+  const included = order.filter((id) => isIncluded(edits, id));
+  const oldIndex = included.indexOf(activeId);
+  const newIndex = included.indexOf(overId);
+  if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return order;
+  const nextIncluded = arrayMove(included, oldIndex, newIndex);
+  let i = 0;
+  return order.map((id) => (isIncluded(edits, id) ? nextIncluded[i++]! : id));
+}
+
+function placeIncludedBefore(
+  order: string[],
+  photoId: string,
+  beforeId: string | null,
+): string[] {
+  const without = order.filter((id) => id !== photoId);
+  if (!beforeId) return [...without, photoId];
+  const idx = without.indexOf(beforeId);
+  if (idx < 0) return [...without, photoId];
+  return [...without.slice(0, idx), photoId, ...without.slice(idx)];
 }
 
 function chunkPhotos<T>(items: T[], size: number): T[][] {
@@ -85,10 +175,11 @@ function chunkPhotos<T>(items: T[], size: number): T[][] {
   return pages;
 }
 
+/** 페이지당 장수 — 배치(layout)만 따름. 사진 크기(photoSize)는 용지 mm만 담당. */
 function pageSizeFor(layout: PrintLayout): number {
   if (layout === 'grid3') return 9;
   if (layout === 'hero') return 5;
-  return 6;
+  return 6; // grid2: 2×3
 }
 
 function escapeHtml(value: string): string {
@@ -136,6 +227,7 @@ function runPrintAlbum(opts: {
   items: PrintItem[];
   bg: PrintBgKey;
   layout: PrintLayout;
+  photoSize: BabyPrintPhotoSize;
   showCaptions: boolean;
   monthLabel: (n: number) => string;
 }) {
@@ -152,6 +244,7 @@ function runPrintAlbum(opts: {
     return;
   }
 
+  const paper = PRINT_PHOTO_SIZES[opts.photoSize];
   const size = pageSizeFor(opts.layout);
   const pages = chunkPhotos(opts.items, size);
   const cols = opts.layout === 'grid3' ? 3 : 2;
@@ -191,7 +284,7 @@ function runPrintAlbum(opts: {
   doc.open();
   doc.write(`<!doctype html><html><head><meta charset="utf-8" /><title>${escapeHtml(opts.title)}</title>
 <style>
-  @page { size: A4 portrait; margin: 12mm; }
+  @page { size: ${paper.wMm}mm ${paper.hMm}mm; margin: ${paper.marginMm}mm; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
@@ -246,7 +339,8 @@ function runPrintAlbum(opts: {
   }
   figcaption { font-size: 8.5pt; font-weight: 600; opacity: 0.7; text-align: center; }
   @media print {
-    .page { min-height: auto; height: 273mm; }
+    .page { min-height: auto; height: ${paper.hMm - paper.marginMm * 2}mm; padding: ${paper.marginMm}mm; }
+    h1 { font-size: ${opts.layout === 'grid3' ? '12pt' : '14pt'}; }
   }
 </style></head><body>${pageHtml}</body></html>`);
   doc.close();
@@ -298,14 +392,112 @@ function FramedPhoto({
           src={photo.thumbnailUrl ?? photo.imageUrl}
           alt=""
           className="h-full w-full object-cover"
+          draggable={false}
           style={clip === 'none' ? undefined : { clipPath: clip }}
         />
       </div>
-      {!edit.included ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-[11px] font-bold text-white">
-          —
-        </div>
+    </div>
+  );
+}
+
+function SortableAlbumThumb({
+  photo,
+  edit,
+  selected,
+  showCaption,
+  caption,
+  hero,
+  onSelect,
+}: {
+  photo: BabyPhoto;
+  edit: PhotoEdit;
+  selected: boolean;
+  showCaption: boolean;
+  caption: string | null;
+  hero?: boolean;
+  onSelect: () => void;
+}) {
+  const data: PrintDragData = { photoId: photo.id, zone: 'album' };
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: photo.id,
+    data,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.35 : 1,
+      }}
+      className={`m-0 flex min-w-0 touch-none flex-col gap-1 ${hero ? 'col-span-2' : ''}`}
+    >
+      <button
+        type="button"
+        className="m-0 cursor-grab border-0 bg-transparent p-0 text-left active:cursor-grabbing"
+        onClick={onSelect}
+        {...attributes}
+        {...listeners}
+      >
+        <FramedPhoto photo={photo} edit={edit} selected={selected} />
+      </button>
+      {showCaption && caption ? (
+        <span className="text-center text-[10px] font-semibold text-[#8a7355]">{caption}</span>
       ) : null}
+    </div>
+  );
+}
+
+function PoolThumb({
+  photo,
+  edit,
+  selected,
+  onSelect,
+}: {
+  photo: BabyPhoto;
+  edit: PhotoEdit;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const data: PrintDragData = { photoId: photo.id, zone: 'pool' };
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `pool-${photo.id}`,
+    data,
+  });
+  return (
+    <button
+      type="button"
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.35 : 1,
+      }}
+      className="touch-none cursor-grab border-0 bg-transparent p-0 active:cursor-grabbing"
+      onClick={onSelect}
+      {...attributes}
+      {...listeners}
+    >
+      <FramedPhoto photo={photo} edit={edit} selected={selected} />
+    </button>
+  );
+}
+
+function DropZone({
+  id,
+  className,
+  children,
+}: {
+  id: 'drop-album' | 'drop-pool';
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className ?? ''} ${isOver ? 'ring-2 ring-pink-400 ring-offset-2' : ''}`}
+    >
+      {children}
     </div>
   );
 }
@@ -315,6 +507,7 @@ function applyDraftToState(
     title?: string;
     bg?: string;
     layout?: string;
+    photoSize?: string;
     showCaptions?: boolean;
     order?: string[];
     edits?: Record<string, unknown>;
@@ -325,6 +518,7 @@ function applyDraftToState(
     setTitle: (v: string) => void;
     setBg: (v: PrintBgKey) => void;
     setLayout: (v: PrintLayout) => void;
+    setPhotoSize: (v: BabyPrintPhotoSize) => void;
     setShowCaptions: (v: boolean) => void;
     setOrder: (v: string[]) => void;
     setEdits: (v: Record<string, PhotoEdit>) => void;
@@ -339,6 +533,9 @@ function applyDraftToState(
   }
   if (draft.layout === 'grid2' || draft.layout === 'grid3' || draft.layout === 'hero') {
     setters.setLayout(draft.layout);
+  }
+  if (isPhotoSize(draft.photoSize)) {
+    setters.setPhotoSize(draft.photoSize);
   }
   setters.setShowCaptions(Boolean(draft.showCaptions));
   const parsedEdits: Record<string, PhotoEdit> = {};
@@ -371,15 +568,16 @@ export function BabyPrintAlbumEditor({
   const [title, setTitle] = useState(defaultTitle);
   const [bg, setBg] = useState<PrintBgKey>('cream');
   const [layout, setLayout] = useState<PrintLayout>('grid2');
+  const [photoSize, setPhotoSize] = useState<BabyPrintPhotoSize>('std_4x6');
   const [showCaptions, setShowCaptions] = useState(true);
   const [order, setOrder] = useState<string[]>([]);
   const [edits, setEdits] = useState<Record<string, PhotoEdit>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
   const [flashTarget, setFlashTarget] = useState<FlashTarget>(null);
-  const [hasDraft, setHasDraft] = useState(false);
   const [familyAlbums, setFamilyAlbums] = useState<BabyPrintAlbum[]>([]);
   const [listOpen, setListOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [activeAlbumId, setActiveAlbumId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -432,7 +630,7 @@ export function BabyPrintAlbumEditor({
     const { data, error } = await supabase
       .from('baby_print_albums')
       .select(
-        'id, group_id, baby_id, created_by, title, bg, layout, show_captions, photo_order, photo_edits, created_at, updated_at',
+        'id, group_id, baby_id, created_by, title, bg, layout, photo_size, show_captions, photo_order, photo_edits, created_at, updated_at',
       )
       .eq('group_id', currentGroupId)
       .eq('baby_id', babyId)
@@ -467,6 +665,7 @@ export function BabyPrintAlbumEditor({
       setTitle(defaultTitle);
       setBg('cream');
       setLayout('grid2');
+      setPhotoSize('std_4x6');
       setShowCaptions(true);
       const initial = mergePhotoState(currentPhotos, currentPhotos.map((p) => p.id), {});
       setOrder(initial.order);
@@ -475,11 +674,6 @@ export function BabyPrintAlbumEditor({
       setActiveAlbumId(null);
       setListOpen(false);
       setFlashTarget(null);
-      try {
-        setHasDraft(Boolean(localStorage.getItem(draftKey(babyId))));
-      } catch {
-        setHasDraft(false);
-      }
       void loadFamilyAlbums();
       return;
     }
@@ -510,6 +704,14 @@ export function BabyPrintAlbumEditor({
   const printPages = chunkPhotos(selectedItems, pageSizeFor(layout));
   const gridClass = layout === 'grid3' ? 'grid-cols-3' : 'grid-cols-2';
 
+  const photoSizeLabel = (key: BabyPrintPhotoSize) => {
+    if (key === 'mini_2x3') return t.album_print_size_mini;
+    if (key === 'small_3_5x5') return t.album_print_size_small;
+    if (key === 'large_5x7') return t.album_print_size_large;
+    if (key === 'xl_8x10') return t.album_print_size_xl;
+    return t.album_print_size_std;
+  };
+
   const patchEdit = (id: string, patch: Partial<PhotoEdit>) => {
     setEdits((prev) => {
       const base = prev[id] ?? defaultEdit();
@@ -519,59 +721,66 @@ export function BabyPrintAlbumEditor({
     });
   };
 
-  const move = (id: string, dir: -1 | 1) => {
-    setOrder((prev) => {
-      const idx = prev.indexOf(id);
-      if (idx < 0) return prev;
-      const next = idx + dir;
-      if (next < 0 || next >= prev.length) return prev;
-      const copy = [...prev];
-      const tmp = copy[idx]!;
-      copy[idx] = copy[next]!;
-      copy[next] = tmp;
-      return copy;
-    });
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+  const [dragId, setDragId] = useState<string | null>(null);
 
-  const saveDraft = () => {
-    const draft: DraftV1 = {
-      v: 1,
-      title: title.trim() || defaultTitle,
-      bg,
-      layout,
-      showCaptions,
-      order,
-      edits,
-    };
-    try {
-      localStorage.setItem(draftKey(babyId), JSON.stringify(draft));
-      setHasDraft(true);
-      flash('device');
-    } catch {
-      /* ignore */
-    }
-  };
+  const poolPhotos = useMemo(
+    () => orderedPhotos.filter((p) => !isIncluded(edits, p.id)),
+    [orderedPhotos, edits],
+  );
+  const selectedIds = useMemo(
+    () => order.filter((id) => isIncluded(edits, id)),
+    [order, edits],
+  );
 
-  const loadDraft = () => {
-    try {
-      const raw = localStorage.getItem(draftKey(babyId));
-      if (!raw) return;
-      const draft = JSON.parse(raw) as DraftV1;
-      if (draft?.v !== 1) return;
-      applyDraftToState(draft, photosRef.current, defaultTitle, {
-        setTitle,
-        setBg,
-        setLayout,
-        setShowCaptions,
-        setOrder,
-        setEdits,
-        setActiveId,
-      });
-      setActiveAlbumId(null);
-    } catch {
-      /* ignore */
+  const onDragStart = useCallback((event: DragStartEvent) => {
+    const data = event.active.data.current as PrintDragData | undefined;
+    setDragId(data?.photoId ?? String(event.active.id).replace(/^pool-/, ''));
+  }, []);
+
+  const onDragEnd = useCallback((event: DragEndEvent) => {
+    setDragId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const data = active.data.current as PrintDragData | undefined;
+    const photoId = data?.photoId ?? String(active.id).replace(/^pool-/, '');
+    const fromPool = data?.zone === 'pool' || String(active.id).startsWith('pool-');
+    const overRaw = String(over.id);
+    const overPool = overRaw === 'drop-pool' || overRaw.startsWith('pool-');
+
+    if (fromPool) {
+      if (overPool) return;
+      const beforeId = overRaw === 'drop-album' ? null : overRaw;
+      setEdits((prev) => ({
+        ...prev,
+        [photoId]: { ...(prev[photoId] ?? defaultEdit()), included: true },
+      }));
+      setOrder((prev) => placeIncludedBefore(prev, photoId, beforeId));
+      setActiveId(photoId);
+      return;
     }
-  };
+
+    // 앨범 → 대기(영역 또는 대기 썸네일 위)
+    if (overPool) {
+      setEdits((prev) => ({
+        ...prev,
+        [photoId]: { ...(prev[photoId] ?? defaultEdit()), included: false },
+      }));
+      return;
+    }
+    if (overRaw === 'drop-album') return;
+    if (photoId === overRaw) return;
+    setOrder((prev) => reorderIncludedIds(prev, editsRef.current, photoId, overRaw));
+  }, []);
+
+  const onDragCancel = useCallback(() => {
+    setDragId(null);
+  }, []);
+
+  const dragPhoto = dragId ? photoMap.get(dragId) : null;
+  const dragEdit = dragId ? edits[dragId] ?? defaultEdit() : null;
 
   const saveFamily = async () => {
     if (!currentGroupId || busy) return;
@@ -589,6 +798,7 @@ export function BabyPrintAlbumEditor({
         title: title.trim() || defaultTitle,
         bg,
         layout,
+        photo_size: photoSize,
         show_captions: showCaptions,
         photo_order: order,
         photo_edits: edits,
@@ -626,13 +836,14 @@ export function BabyPrintAlbumEditor({
         title: album.title,
         bg: album.bg,
         layout: album.layout,
+        photoSize: album.photo_size,
         showCaptions: album.show_captions,
         order: album.photo_order,
         edits: album.photo_edits as Record<string, unknown>,
       },
       photosRef.current,
       defaultTitle,
-      { setTitle, setBg, setLayout, setShowCaptions, setOrder, setEdits, setActiveId },
+      { setTitle, setBg, setLayout, setPhotoSize, setShowCaptions, setOrder, setEdits, setActiveId },
     );
     setActiveAlbumId(album.id);
     setListOpen(false);
@@ -664,6 +875,26 @@ export function BabyPrintAlbumEditor({
   const active = activeId ? photoMap.get(activeId) : null;
   const activeEdit = activeId ? edits[activeId] ?? defaultEdit() : null;
 
+  const handleSavePdf = async () => {
+    if (selectedItems.length === 0 || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      await exportPrintAlbumPdf({
+        title: title.trim() || defaultTitle,
+        items: selectedItems,
+        bg,
+        layout,
+        photoSize,
+        showCaptions,
+        monthLabel,
+      });
+    } catch (err) {
+      console.error('[BabyPrintAlbumEditor] pdf:', err);
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   if (!open) return null;
 
   return createPortal(
@@ -671,33 +902,17 @@ export function BabyPrintAlbumEditor({
       <div className="mx-auto flex h-full w-full max-w-4xl flex-col bg-white shadow-2xl sm:my-3 sm:h-[min(94dvh,56rem)] sm:rounded-2xl">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
           <h3 className="m-0 text-sm font-bold text-slate-800">{t.album_print}</h3>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
             {currentGroupId ? (
               <button
                 type="button"
                 onClick={() => setListOpen((v) => !v)}
                 className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700"
               >
-                {t.album_print_family_list}
+                {t.album_print_load}
                 {familyAlbums.length > 0 ? ` (${familyAlbums.length})` : ''}
               </button>
             ) : null}
-            {hasDraft ? (
-              <button
-                type="button"
-                onClick={loadDraft}
-                className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700"
-              >
-                {t.album_print_load}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={saveDraft}
-              className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700"
-            >
-              {flashTarget === 'device' ? t.album_print_saved : t.album_print_device}
-            </button>
             {currentGroupId ? (
               <button
                 type="button"
@@ -707,9 +922,37 @@ export function BabyPrintAlbumEditor({
                 }}
                 className="rounded-full bg-pink-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
               >
-                {flashTarget === 'family' ? t.album_print_saved : t.album_print_save_family}
+                {flashTarget === 'family' ? t.album_print_saved : t.save}
               </button>
             ) : null}
+            <button
+              type="button"
+              disabled={selectedItems.length === 0}
+              onClick={() =>
+                runPrintAlbum({
+                  title: title.trim() || defaultTitle,
+                  items: selectedItems,
+                  bg,
+                  layout,
+                  photoSize,
+                  showCaptions,
+                  monthLabel,
+                })
+              }
+              className="rounded-full bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              {t.album_print_action}
+            </button>
+            <button
+              type="button"
+              disabled={selectedItems.length === 0 || pdfBusy}
+              onClick={() => {
+                void handleSavePdf();
+              }}
+              className="rounded-full bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+            >
+              {pdfBusy ? '...' : t.album_print_download}
+            </button>
             <button
               type="button"
               onClick={onClose}
@@ -824,54 +1067,25 @@ export function BabyPrintAlbumEditor({
               ))}
             </div>
 
-            <div className="ml-auto flex gap-1">
-              <button
-                type="button"
-                onClick={() =>
-                  setEdits((prev) =>
-                    Object.fromEntries(
-                      Object.keys(prev).map((id) => [id, { ...prev[id]!, included: true }]),
-                    ),
-                  )
-                }
-                className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600"
-              >
-                {t.album_print_select_all}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setEdits((prev) =>
-                    Object.fromEntries(
-                      Object.keys(prev).map((id) => [id, { ...prev[id]!, included: false }]),
-                    ),
-                  )
-                }
-                className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600"
-              >
-                {t.album_print_clear}
-              </button>
-              <button
-                type="button"
-                disabled={selectedItems.length === 0}
-                onClick={() =>
-                  runPrintAlbum({
-                    title: title.trim() || defaultTitle,
-                    items: selectedItems,
-                    bg,
-                    layout,
-                    showCaptions,
-                    monthLabel,
-                  })
-                }
-                className="rounded-full bg-amber-500 px-3.5 py-1 text-[11px] font-bold text-white hover:bg-amber-600 disabled:opacity-40"
-              >
-                {t.album_print_action}
-              </button>
+            <span className="text-[11px] font-semibold text-slate-500">{t.album_print_photo_size}</span>
+            <div className="flex flex-wrap gap-1">
+              {PHOTO_SIZE_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPhotoSize(key)}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    photoSize === key ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {photoSizeLabel(key)}
+                </button>
+              ))}
             </div>
+
           </div>
 
-          {active && activeEdit ? (
+          {active && activeEdit?.included ? (
             <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-2.5 py-2">
               <span className="text-[11px] font-semibold text-slate-500">{t.album_print_frame}</span>
               <div className="flex gap-1">
@@ -923,99 +1137,99 @@ export function BabyPrintAlbumEditor({
               >
                 ↻
               </button>
-              <button
-                type="button"
-                onClick={() => move(active.id, -1)}
-                className="rounded-md bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200"
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                onClick={() => move(active.id, 1)}
-                className="rounded-md bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200"
-              >
-                ↓
-              </button>
-              <button
-                type="button"
-                onClick={() => patchEdit(active.id, { included: !activeEdit.included })}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  activeEdit.included
-                    ? 'bg-rose-100 text-rose-700'
-                    : 'bg-emerald-100 text-emerald-700'
-                }`}
-              >
-                {activeEdit.included ? '−' : '+'}
-              </button>
             </div>
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-3 sm:p-4">
-          {selectedItems.length === 0 ? (
-            <p className="py-10 text-center text-sm text-slate-400">{t.album_print_empty}</p>
-          ) : (
-            <div className="mx-auto flex max-w-2xl flex-col gap-4">
-              {printPages.map((page, pageIdx) => (
-                <section
-                  key={`print-page-${pageIdx}`}
-                  className={`overflow-hidden rounded-2xl p-4 shadow-sm ${PRINT_BG[bg].preview}`}
-                >
-                  <div className="mb-3 flex items-baseline justify-between gap-2">
-                    <h4 className="m-0 text-sm font-bold text-[#5c4630]">
-                      {title.trim() || defaultTitle}
-                    </h4>
-                    <span className="text-[10px] font-medium text-[#8a7355]/80">
-                      {pageIdx + 1}/{printPages.length}
-                    </span>
-                  </div>
-                  <div className={`grid gap-2.5 ${gridClass}`}>
-                    {page.map((photo, idx) => (
-                      <button
-                        key={photo.id}
-                        type="button"
-                        onClick={() => setActiveId(photo.id)}
-                        className={`m-0 flex min-w-0 flex-col gap-1 border-0 bg-transparent p-0 text-left ${
-                          layout === 'hero' && idx === 0 ? 'col-span-2' : ''
-                        }`}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={printCollisionDetection}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={onDragCancel}
+        >
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <DropZone
+              id="drop-album"
+              className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-3 sm:p-4"
+            >
+              <SortableContext items={selectedIds} strategy={rectSortingStrategy}>
+                {selectedItems.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-slate-400">{t.album_print_empty}</p>
+                ) : (
+                  <div className="mx-auto flex max-w-2xl flex-col gap-4">
+                    {printPages.map((page, pageIdx) => (
+                      <section
+                        key={`print-page-${pageIdx}`}
+                        className={`overflow-hidden rounded-2xl p-4 shadow-sm ${PRINT_BG[bg].preview}`}
                       >
-                        <FramedPhoto
-                          photo={photo}
-                          edit={photo.edit}
-                          selected={activeId === photo.id}
-                        />
-                        {showCaptions && photo.monthAge !== null ? (
-                          <span className="text-center text-[10px] font-semibold text-[#8a7355]">
-                            {monthLabel(photo.monthAge)}
+                        <div className="mb-3 flex items-baseline justify-between gap-2">
+                          <h4 className="m-0 text-sm font-bold text-[#5c4630]">
+                            {title.trim() || defaultTitle}
+                          </h4>
+                          <span className="text-[10px] font-medium text-[#8a7355]/80">
+                            {pageIdx + 1}/{printPages.length}
                           </span>
-                        ) : null}
-                      </button>
+                        </div>
+                        <div className={`grid gap-2.5 ${gridClass}`}>
+                          {page.map((photo, idx) => (
+                            <SortableAlbumThumb
+                              key={photo.id}
+                              photo={photo}
+                              edit={photo.edit}
+                              selected={activeId === photo.id}
+                              showCaption={showCaptions}
+                              caption={
+                                photo.monthAge !== null ? monthLabel(photo.monthAge) : null
+                              }
+                              hero={layout === 'hero' && idx === 0}
+                              onSelect={() => setActiveId(photo.id)}
+                            />
+                          ))}
+                        </div>
+                      </section>
                     ))}
                   </div>
-                </section>
-              ))}
-            </div>
-          )}
+                )}
+              </SortableContext>
+            </DropZone>
 
-          <div className="mx-auto mt-4 max-w-2xl">
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-              {orderedPhotos.map((photo) => {
-                const edit = edits[photo.id] ?? defaultEdit();
-                return (
-                  <button
-                    key={`tray-${photo.id}`}
-                    type="button"
-                    onClick={() => setActiveId(photo.id)}
-                    className="border-0 bg-transparent p-0"
-                  >
-                    <FramedPhoto photo={photo} edit={edit} selected={activeId === photo.id} />
-                  </button>
-                );
-              })}
-            </div>
+            <DropZone
+              id="drop-pool"
+              className="shrink-0 border-t border-slate-200 bg-white px-3 py-2.5 sm:px-4"
+            >
+              <p className="mb-2 text-[11px] font-semibold text-slate-500">
+                {t.album_print_tray}
+                {poolPhotos.length > 0 ? ` · ${poolPhotos.length}` : ''}
+              </p>
+              {poolPhotos.length === 0 ? (
+                <p className="m-0 py-2 text-center text-[11px] text-slate-400">
+                  {t.album_print_tray_empty}
+                </p>
+              ) : (
+                <div className="grid max-h-36 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6 md:grid-cols-8">
+                  {poolPhotos.map((photo) => (
+                    <PoolThumb
+                      key={`pool-${photo.id}`}
+                      photo={photo}
+                      edit={edits[photo.id] ?? defaultEdit()}
+                      selected={activeId === photo.id}
+                      onSelect={() => setActiveId(photo.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </DropZone>
           </div>
-        </div>
+
+          <DragOverlay dropAnimation={null}>
+            {dragPhoto && dragEdit ? (
+              <div className="w-20 opacity-95 shadow-xl sm:w-24">
+                <FramedPhoto photo={dragPhoto} edit={dragEdit} selected />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
     </div>,
     document.body,
