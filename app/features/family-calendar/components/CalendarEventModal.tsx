@@ -141,7 +141,11 @@ export const CalendarEventModal = memo(function CalendarEventModal({
 }: CalendarEventModalProps) {
   if (!open) return null;
   return (
-    <TopLayerDialog open onClose={onClose}>
+    <TopLayerDialog
+      open
+      onClose={onClose}
+      frameClassName="fixed inset-0 z-[10050] overflow-y-auto overscroll-contain p-4"
+    >
       <CalendarEventForm {...formProps} onClose={onClose} />
     </TopLayerDialog>
   );
@@ -342,7 +346,7 @@ function CalendarEventForm({
 
   return (
       <div
-        className={`relative w-[min(92vw,480px)] rounded-[28px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] ${
+        className={`relative mx-auto w-[min(92vw,480px)] rounded-[28px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] ${
           isKidsTheme ? 'overflow-hidden px-11 pb-16 pt-16' : 'p-6'
         }`}
         style={

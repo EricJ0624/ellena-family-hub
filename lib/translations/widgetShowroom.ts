@@ -48,6 +48,8 @@ export type WidgetShowroomTranslations = {
   howto_calendar_4: string;
   howto_calendar_5: string;
   howto_calendar_6: string;
+  howto_calendar_7: string;
+  howto_calendar_8: string;
   demo_calendar_event: string;
   demo_calendar_desc: string;
   howto_chat_1: string;
@@ -167,6 +169,8 @@ const ko: WidgetShowroomTranslations = {
   howto_calendar_4: '설명도 함께 적어요.',
   howto_calendar_5: '매년 반복을 고르고 추가해요.',
   howto_calendar_6: '생일 스티커와 일정 카드가 올라와요.',
+  howto_calendar_7: '알림 날에는 달력 위에 알림 카드가 떠요.',
+  howto_calendar_8: '일정 당일에는 달력 위젯 화면 전체가 덮여요. 확인을 누를 때까지 유지돼요.',
   demo_calendar_event: '엄마 생일',
   demo_calendar_desc: '축하 드려요 ~',
   howto_chat_1: '채팅창에서 가족 메시지를 확인해요.',
@@ -286,6 +290,8 @@ const en: WidgetShowroomTranslations = {
   howto_calendar_4: 'Add a short note too.',
   howto_calendar_5: 'Choose yearly, then tap Add.',
   howto_calendar_6: 'A birthday sticker and the event card appear.',
+  howto_calendar_7: 'On the reminder day, a reminder card sits on the calendar.',
+  howto_calendar_8: 'On the event day, the reminder covers the whole calendar widget until you tap Got it.',
   demo_calendar_event: "Mom's birthday",
   demo_calendar_desc: 'Congratulations ~',
   howto_chat_1: 'Open family chat and read the messages.',
@@ -406,10 +412,12 @@ const CALENDAR_HOWTO_KEYS = [
   'howto_calendar_4',
   'howto_calendar_5',
   'howto_calendar_6',
+  'howto_calendar_7',
+  'howto_calendar_8',
 ] as const satisfies readonly (keyof WidgetShowroomTranslations)[];
 
-/** 영상 기준 달력 쇼룸: 25일 → 빈 목록 → 제목 → 설명 → 매년 반복 → 스티커 */
-export const CALENDAR_SHOWROOM_STEP_MS = [1800, 2000, 3200, 3200, 2200, 3600] as const;
+/** 달력 쇼룸: 25일 → 빈 목록 → 제목 → 설명 → 매년 반복 → 스티커 → 알림 카드 → 일정 당일 위젯 화면 */
+export const CALENDAR_SHOWROOM_STEP_MS = [1800, 2000, 3200, 3200, 2200, 3600, 3400, 3200] as const;
 
 const CHAT_HOWTO_KEYS = [
   'howto_chat_1',

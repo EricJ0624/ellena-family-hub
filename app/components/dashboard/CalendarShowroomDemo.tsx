@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Calendar, Plus, X } from 'lucide-react';
-import { kidsStickerFromTitles } from '@/app/features/family-calendar/kids-decorations';
+import { CalendarCelebrateOverlay } from '@/app/features/family-calendar/components/CalendarCelebrateOverlay';
+import { isKidsCongratsFrame, kidsStickerFromTitles } from '@/app/features/family-calendar/kids-decorations';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
 import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/memberManagement';
@@ -95,7 +96,7 @@ function ConfettiBurst() {
 
 /**
  * 달력 쇼룸 미리보기. 일정 저장·수정·삭제는 하지 않고, 영상 순서만 보여 준다.
- * 12월 25일 → 빈 목록 → 제목 → 설명 → 매년 반복 → 스티커.
+ * 12월 25일 → 빈 목록 → 제목 → 설명 → 매년 반복 → 스티커 → 알림 카드 → 일정 당일 위젯 화면.
  */
 export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: number }) {
   const dt = (key: Parameters<typeof getDashboardTranslation>[1]) => getDashboardTranslation(lang, key);
@@ -105,8 +106,11 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
   const scene = step >= 2 && step <= 4 ? 'form' : 'board';
   const selected = step >= 1;
   const showEvent = step >= 5;
+  const showReminder = step === 6;
+  const showFull = step === 7;
   const yearly = step >= 4;
   const sticker = kidsStickerFromTitles([title], `${DEMO_YEAR}-12-${DEMO_DAY}`);
+  const birthdayFrame = isKidsCongratsFrame(sticker) ? sticker : null;
   const registeredAt = new Date(2026, 9, 21, 11, 42, 58).toLocaleString(locale);
   const weekDays = [
     dt('calendar_weekday_0'),
@@ -267,8 +271,19 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                 backgroundSize: '100% 100%',
               }}
             >
-              {showEvent ? <ConfettiBurst /> : null}
+              {showEvent && !showReminder && !showFull ? <ConfettiBurst /> : null}
               <div className="relative z-[1]">
+                {showReminder ? (
+                  <div className="mb-2 flex items-center gap-2 rounded-2xl bg-white/95 px-2.5 py-1.5 shadow-md ring-1 ring-violet-300">
+                    <span className="shrink-0 text-lg leading-none" aria-hidden>
+                      🎂
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-bold leading-tight text-violet-900">{title}</span>
+                      <span className="block truncate text-[11px] font-medium leading-tight text-violet-700">{longDate}</span>
+                    </span>
+                  </div>
+                ) : null}
                 <div className="mb-2 flex items-center gap-1.5 px-1">
                   <span className="text-base" aria-hidden>
                     📅
@@ -330,9 +345,22 @@ export function CalendarShowroomDemo({ lang, step }: { lang: LangCode; step: num
                   {dt('event_add_title')}
                 </div>
               </div>
+              {showFull ? (
+                <div className="absolute inset-0 z-30 [container-type:size]">
+                  <CalendarCelebrateOverlay
+                    eventId="showroom-calendar"
+                    title={title}
+                    eventDateLabel={longDate}
+                    stickerEmoji="🎂"
+                    birthdayFrameSrc={birthdayFrame}
+                    confirmLabel={dt('calendar_celebrate_confirm')}
+                    onConfirm={() => {}}
+                  />
+                </div>
+              ) : null}
             </div>
 
-            {selected ? (
+            {selected && !showFull ? (
               <div className="mt-2 rounded-2xl bg-slate-200/90 p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <h4 className="m-0 flex min-w-0 items-center gap-1 text-sm font-bold text-slate-800">

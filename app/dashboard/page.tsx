@@ -421,7 +421,7 @@ function eventsSignature(events: ReadonlyArray<FamilyEvent>): string {
   return events
     .map(
       (e) =>
-        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.sticker_emoji ?? ''}:${e.supabaseId ?? ''}`,
+        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.event_time ?? ''}:${e.event_timezone ?? ''}:${(e.remind_offsets ?? []).join(',')}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.sticker_emoji ?? ''}:${e.supabaseId ?? ''}`,
     )
     .join('|');
 }

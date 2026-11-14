@@ -47,7 +47,7 @@ type Props = {
 
 /**
  * 쇼룸 「미리보기」— 이용법 단계 + 위젯 카드 연출 (실기능 없음).
- * tasks 7 · calendar 6 · chat 6 · piggy 8 · family_log 9 단계 코드 연출, 그 외는 기존 3단계.
+ * tasks 7 · calendar 8 · chat 6 · piggy 8 · family_log 9 단계 코드 연출, 그 외는 기존 3단계.
  */
 export function WidgetShowroomDemoOverlay({
   lang,
