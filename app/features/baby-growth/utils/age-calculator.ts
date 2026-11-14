@@ -2,6 +2,37 @@
  * 아기 월령/주령/D-Day 계산 유틸리티
  */
 
+type FaceStage = 'infant' | 'toddler' | 'child' | 'teen';
+type FaceGender = 'male' | 'female' | 'other';
+
+/** toddler는 🧒로 통일해 영아(👶)·아동(성별 이모지)과 구분 */
+const FACE_EMOJI: Record<FaceStage, Record<FaceGender, string>> = {
+  infant: { male: '👶', female: '👶', other: '👶' },
+  toddler: { male: '🧒', female: '🧒', other: '🧒' },
+  child: { male: '👦', female: '👧', other: '🧒' },
+  teen: { male: '👨', female: '👩', other: '🧑' },
+};
+
+/**
+ * 월령 → 얼굴 단계
+ * infant 0–11개월 / toddler 1–2세 / child 3–12세 / teen 13세+
+ */
+function getBabyFaceStage(months: number): FaceStage {
+  if (!Number.isFinite(months) || months < 12) return 'infant';
+  if (months < 36) return 'toddler';
+  if (months < 156) return 'child';
+  return 'teen';
+}
+
+/** 성별 + 월령 기반 프로필 얼굴 이모지 */
+export function getBabyFaceEmoji(
+  gender: FaceGender | null | undefined,
+  months: number,
+): string {
+  const g: FaceGender = gender === 'male' || gender === 'female' ? gender : 'other';
+  return FACE_EMOJI[getBabyFaceStage(months)][g];
+}
+
 /**
  * 생년월일 기준 경과 일수 (D+n)
  */

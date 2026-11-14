@@ -1,7 +1,12 @@
 'use client';
 
 import React from 'react';
-import { calcAgeInDays, calcAgeInMonths, calcAgeInWeeks } from '../utils/age-calculator';
+import {
+  calcAgeInDays,
+  calcAgeInMonths,
+  calcAgeInWeeks,
+  getBabyFaceEmoji,
+} from '../utils/age-calculator';
 import type { BabyProfile } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 
@@ -23,23 +28,16 @@ export function BabyProfileCard({ profile, t, onEditClick, onReportClick }: Baby
       ? t.age_weeks.replace('{n}', String(weeks))
       : t.age_months.replace('{n}', String(months));
 
-  const genderEmoji =
-    profile.gender === 'male' ? '👦' : profile.gender === 'female' ? '👧' : '🍼';
+  const faceEmoji = getBabyFaceEmoji(profile.gender, months);
 
   return (
     <div className="relative z-20 flex w-full items-center gap-3">
-      <div className="relative shrink-0">
-        {profile.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt={profile.name}
-            className="h-12 w-12 rounded-full border-2 border-pink-200 object-cover"
-          />
-        ) : (
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pink-100 text-2xl">
-            {genderEmoji}
-          </div>
-        )}
+      <div
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-100 text-2xl"
+        role="img"
+        aria-label={profile.name}
+      >
+        {faceEmoji}
       </div>
 
       <div className="min-w-0 flex-1">

@@ -12,7 +12,7 @@ import type { BabyProfile, BabyProfileDraft } from '../types';
 export const BABY_PROFILE_MAX = 3;
 
 const PROFILE_SELECT =
-  'id, group_id, created_by, name, birth_date, gender, avatar_url, country_code, notes, usual_bedtime, usual_wake_time, created_at, updated_at';
+  'id, group_id, created_by, name, birth_date, gender, country_code, notes, usual_bedtime, usual_wake_time, created_at, updated_at';
 
 function profilesSignature(list: BabyProfile[]): string {
   if (list.length === 0) return 'empty';

@@ -46,7 +46,6 @@ export interface BabyProfile {
   name: string;
   birth_date: string; // ISO date 'YYYY-MM-DD'
   gender: BabyGender | null;
-  avatar_url: string | null;
   country_code: string;
   notes: string | null;
   /** 'HH:mm' 또는 'HH:mm:ss'. 없으면 야간 추정 안 함 */
@@ -61,7 +60,6 @@ export interface BabyProfileDraft {
   name: string;
   birth_date: string;
   gender?: BabyGender;
-  avatar_url?: string;
   country_code?: string;
   notes?: string;
   usual_bedtime?: string | null;
