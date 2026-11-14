@@ -211,6 +211,9 @@ export interface BabyVaccination {
   vaccine_key: string;
   scheduled_at: string | null;
   administered_at: string | null;
+  facility_name: string | null;
+  product_name: string | null;
+  custom_label: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
@@ -220,9 +223,12 @@ export interface BabyVaccinationDraft {
   baby_id: string;
   group_id: string;
   vaccine_key: string;
-  scheduled_at?: string;
+  scheduled_at?: string | null;
   administered_at?: string | null;
-  notes?: string;
+  facility_name?: string | null;
+  product_name?: string | null;
+  custom_label?: string | null;
+  notes?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -273,6 +279,10 @@ export interface VaccineDDayView {
   administeredAt: string | null;
   daysUntil: number; // 양수=남음, 0=오늘, 음수=지남
   isDone: boolean;
+  isCustom: boolean;
+  facilityName: string | null;
+  productName: string | null;
+  notes: string | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -4,13 +4,13 @@ export const DASHBOARD_WIDGET_KEYS = [
   'chat',
   'location',
   'album',
+  'baby_growth',
   'travel',
   'piggy',
   'games',
   'travel_diary',
   'travel_quick_record',
   'family_log',
-  'baby_growth',
 ] as const;
 
 export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
@@ -260,6 +260,7 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'calendar', is_enabled: false, display_order: 20, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'chat',     is_enabled: false, display_order: 30, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'piggy',    is_enabled: false, display_order: 40, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'baby_growth',  is_enabled: false,  display_order: 45, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutBabyGrowth },
   { widget_key: 'travel',   is_enabled: false, display_order: 50, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutTravel },
   {
     widget_key: 'travel_diary',
@@ -300,7 +301,6 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'album',    is_enabled: false, display_order: 60, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'location', is_enabled: false, display_order: 70, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutLocation },
   { widget_key: 'games',        is_enabled: false,  display_order: 80, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'baby_growth',  is_enabled: false,  display_order: 59, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutBabyGrowth },
 ];
 
 /** 위젯별 기본 display_order — resetAllLayouts에서 순서 초기화 시 사용 */

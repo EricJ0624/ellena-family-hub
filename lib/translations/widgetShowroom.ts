@@ -35,6 +35,7 @@ export type WidgetShowroomTranslations = {
   blurb_album: string;
   blurb_location: string;
   blurb_games: string;
+  blurb_baby_growth: string;
   howto_tasks_1: string;
   howto_tasks_2: string;
   howto_tasks_3: string;
@@ -122,6 +123,9 @@ export type WidgetShowroomTranslations = {
   howto_games_1: string;
   howto_games_2: string;
   howto_games_3: string;
+  howto_baby_growth_1: string;
+  howto_baby_growth_2: string;
+  howto_baby_growth_3: string;
 };
 
 const ko: WidgetShowroomTranslations = {
@@ -156,6 +160,7 @@ const ko: WidgetShowroomTranslations = {
   blurb_album: '가족 사진을 모아 추억을 나눠요.',
   blurb_location: '서로의 위치를 안전하게 확인해요.',
   blurb_games: '가족과 가벼운 게임으로 즐겨요.',
+  blurb_baby_growth: '성장, 수유·수면, 예방접종을 한곳에서 봐요.',
   howto_tasks_1: '칠판에서 가족 할 일을 확인해요.',
   howto_tasks_2: '추가를 눌러 할 일 내용을 적어요.',
   howto_tasks_3: '누가 할지 정하고 등록해요.',
@@ -243,6 +248,9 @@ const ko: WidgetShowroomTranslations = {
   howto_games_1: '사다리·가위바위보·룰렛을 골라요.',
   howto_games_2: '당번·메뉴 같은 결정을 재미있게 해요.',
   howto_games_3: '가족과 가벼운 게임으로 풀어 보세요.',
+  howto_baby_growth_1: '아기 프로필과 태어난 날을 확인해요.',
+  howto_baby_growth_2: '수유·수면·배변·체온을 바로 기록해요.',
+  howto_baby_growth_3: '예방접종 수첩에 맞은 날과 병원을 남겨요.',
 };
 
 const en: WidgetShowroomTranslations = {
@@ -277,6 +285,7 @@ const en: WidgetShowroomTranslations = {
   blurb_album: 'Collect and share family photos.',
   blurb_location: 'Check each other’s location safely.',
   blurb_games: 'Play light games together.',
+  blurb_baby_growth: 'Track growth, daily care, and vaccines in one place.',
   howto_tasks_1: 'Review family tasks on the board.',
   howto_tasks_2: 'Tap Add and write the task.',
   howto_tasks_3: 'Choose who will do it, then save.',
@@ -364,6 +373,9 @@ const en: WidgetShowroomTranslations = {
   howto_games_1: 'Pick ladder, RPS, or roulette.',
   howto_games_2: 'Decide chores or menus playfully.',
   howto_games_3: 'Light games for the whole family.',
+  howto_baby_growth_1: 'Check the baby profile and birthday.',
+  howto_baby_growth_2: 'Log feeding, sleep, diaper, and temperature.',
+  howto_baby_growth_3: 'Save the shot date and clinic in the vaccine record.',
 };
 
 const widgetShowroom = Object.fromEntries(
@@ -389,7 +401,7 @@ const BLURB_KEY: Record<DashboardWidgetKey, keyof WidgetShowroomTranslations> = 
   album: 'blurb_album',
   location: 'blurb_location',
   games: 'blurb_games',
-  baby_growth: 'blurb_family_log', // baby_growth 전용 번역키 없을 때 family_log 블러브 임시 사용
+  baby_growth: 'blurb_baby_growth',
 };
 
 const TASKS_HOWTO_KEYS = [
@@ -463,7 +475,7 @@ export const FAMILY_LOG_SHOWROOM_STEP_MS = [
 ] as const;
 
 const HOWTO_KEYS: Record<
-  Exclude<DashboardWidgetKey, 'tasks' | 'calendar' | 'chat' | 'piggy' | 'family_log' | 'baby_growth'>,
+  Exclude<DashboardWidgetKey, 'tasks' | 'calendar' | 'chat' | 'piggy' | 'family_log'>,
   [
     keyof WidgetShowroomTranslations,
     keyof WidgetShowroomTranslations,
@@ -480,6 +492,7 @@ const HOWTO_KEYS: Record<
   album: ['howto_album_1', 'howto_album_2', 'howto_album_3'],
   location: ['howto_location_1', 'howto_location_2', 'howto_location_3'],
   games: ['howto_games_1', 'howto_games_2', 'howto_games_3'],
+  baby_growth: ['howto_baby_growth_1', 'howto_baby_growth_2', 'howto_baby_growth_3'],
 };
 
 export function getWidgetShowroomTranslation(
@@ -506,7 +519,7 @@ export function getWidgetShowroomHowtoSteps(lang: LangCode, key: DashboardWidget
   if (key === 'piggy') {
     return PIGGY_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
   }
-  if (key === 'family_log' || key === 'baby_growth') {
+  if (key === 'family_log') {
     return FAMILY_LOG_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
   }
   const [a, b, c] = HOWTO_KEYS[key as keyof typeof HOWTO_KEYS];

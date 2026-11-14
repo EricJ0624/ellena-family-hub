@@ -120,6 +120,16 @@ export type BabyGrowthTranslations = {
   vaccine_done: string;
   vaccine_dday_today: string;
   vaccine_dday_past: string;
+  vaccine_date: string;
+  vaccine_facility: string;
+  vaccine_product: string;
+  vaccine_reaction: string;
+  vaccine_save: string;
+  vaccine_undo: string;
+  vaccine_custom_add: string;
+  vaccine_custom_name: string;
+  vaccine_custom_section: string;
+  vaccine_recommended: string;
 
   // AI 가이드
   ai_title: string;
@@ -286,6 +296,16 @@ const ko: BabyGrowthTranslations = {
   vaccine_done: '접종 완료',
   vaccine_dday_today: '오늘 접종일!',
   vaccine_dday_past: '{n}일 지남',
+  vaccine_date: '접종일',
+  vaccine_facility: '접종 병원',
+  vaccine_product: '제품명',
+  vaccine_reaction: '이상반응',
+  vaccine_save: '저장',
+  vaccine_undo: '완료 취소',
+  vaccine_custom_add: '기타 백신 추가',
+  vaccine_custom_name: '백신 이름',
+  vaccine_custom_section: '기타',
+  vaccine_recommended: '권장일',
 
   ai_title: 'AI 육아 가이드',
   ai_key_placeholder: 'API 키를 입력하세요',
@@ -444,6 +464,16 @@ const en: BabyGrowthTranslations = {
   vaccine_done: 'Done',
   vaccine_dday_today: 'Today!',
   vaccine_dday_past: '{n}d overdue',
+  vaccine_date: 'Date given',
+  vaccine_facility: 'Clinic',
+  vaccine_product: 'Product',
+  vaccine_reaction: 'Reaction',
+  vaccine_save: 'Save',
+  vaccine_undo: 'Undo',
+  vaccine_custom_add: 'Add other vaccine',
+  vaccine_custom_name: 'Vaccine name',
+  vaccine_custom_section: 'Other',
+  vaccine_recommended: 'Recommended',
 
   ai_title: 'AI Parenting Guide',
   ai_key_placeholder: 'Enter your API key',
@@ -602,6 +632,16 @@ const ja: BabyGrowthTranslations = {
   vaccine_done: '完了',
   vaccine_dday_today: '今日！',
   vaccine_dday_past: '{n}日過ぎ',
+  vaccine_date: '接種日',
+  vaccine_facility: '接種した病院',
+  vaccine_product: '製品名',
+  vaccine_reaction: '副反応',
+  vaccine_save: '保存',
+  vaccine_undo: '完了を取り消す',
+  vaccine_custom_add: 'その他のワクチンを追加',
+  vaccine_custom_name: 'ワクチン名',
+  vaccine_custom_section: 'その他',
+  vaccine_recommended: '推奨日',
 
   ai_title: 'AI育児ガイド',
   ai_key_placeholder: 'APIキーを入力',
@@ -763,6 +803,16 @@ const zhCN: BabyGrowthTranslations = {
   vaccine_done: '已接种',
   vaccine_dday_today: '今天！',
   vaccine_dday_past: '已过{n}天',
+  vaccine_date: '接种日期',
+  vaccine_facility: '接种医院',
+  vaccine_product: '产品名',
+  vaccine_reaction: '不良反应',
+  vaccine_save: '保存',
+  vaccine_undo: '取消完成',
+  vaccine_custom_add: '添加其他疫苗',
+  vaccine_custom_name: '疫苗名称',
+  vaccine_custom_section: '其他',
+  vaccine_recommended: '建议日期',
 
   ai_title: 'AI育儿指南',
   ai_key_placeholder: '输入API密钥',
@@ -919,6 +969,16 @@ const zhTW: BabyGrowthTranslations = {
   vaccine_done: '已接種',
   vaccine_dday_today: '今天！',
   vaccine_dday_past: '已過{n}天',
+  vaccine_date: '接種日期',
+  vaccine_facility: '接種醫院',
+  vaccine_product: '產品名',
+  vaccine_reaction: '不良反應',
+  vaccine_save: '儲存',
+  vaccine_undo: '取消完成',
+  vaccine_custom_add: '新增其他疫苗',
+  vaccine_custom_name: '疫苗名稱',
+  vaccine_custom_section: '其他',
+  vaccine_recommended: '建議日期',
 
   ai_title: 'AI育兒指南',
   ai_key_placeholder: '輸入API金鑰',
@@ -1075,6 +1135,16 @@ const es: BabyGrowthTranslations = {
   vaccine_done: 'Completada',
   vaccine_dday_today: '¡Hoy!',
   vaccine_dday_past: '{n}d de retraso',
+  vaccine_date: 'Fecha',
+  vaccine_facility: 'Clínica',
+  vaccine_product: 'Producto',
+  vaccine_reaction: 'Reacción',
+  vaccine_save: 'Guardar',
+  vaccine_undo: 'Deshacer',
+  vaccine_custom_add: 'Añadir otra vacuna',
+  vaccine_custom_name: 'Nombre de la vacuna',
+  vaccine_custom_section: 'Otras',
+  vaccine_recommended: 'Recomendada',
 
   ai_title: 'Guía de crianza IA',
   ai_key_placeholder: 'Introduce tu clave API',
@@ -1231,6 +1301,16 @@ const fr: BabyGrowthTranslations = {
   vaccine_done: 'Fait',
   vaccine_dday_today: 'Aujourd\'hui !',
   vaccine_dday_past: '{n}j de retard',
+  vaccine_date: 'Date',
+  vaccine_facility: 'Cabinet',
+  vaccine_product: 'Produit',
+  vaccine_reaction: 'Réaction',
+  vaccine_save: 'Enregistrer',
+  vaccine_undo: 'Annuler',
+  vaccine_custom_add: 'Ajouter un autre vaccin',
+  vaccine_custom_name: 'Nom du vaccin',
+  vaccine_custom_section: 'Autres',
+  vaccine_recommended: 'Recommandée',
 
   ai_title: 'Guide parental IA',
   ai_key_placeholder: 'Entrez votre clé API',
@@ -1387,6 +1467,16 @@ const de: BabyGrowthTranslations = {
   vaccine_done: 'Erledigt',
   vaccine_dday_today: 'Heute!',
   vaccine_dday_past: '{n}T überfällig',
+  vaccine_date: 'Impfdatum',
+  vaccine_facility: 'Praxis',
+  vaccine_product: 'Produkt',
+  vaccine_reaction: 'Reaktion',
+  vaccine_save: 'Speichern',
+  vaccine_undo: 'Rückgängig',
+  vaccine_custom_add: 'Weitere Impfung',
+  vaccine_custom_name: 'Impfstoffname',
+  vaccine_custom_section: 'Weitere',
+  vaccine_recommended: 'Empfohlen',
 
   ai_title: 'KI-Erziehungsratgeber',
   ai_key_placeholder: 'API-Schlüssel eingeben',
@@ -1543,6 +1633,16 @@ const it: BabyGrowthTranslations = {
   vaccine_done: 'Completato',
   vaccine_dday_today: 'Oggi!',
   vaccine_dday_past: '{n}g di ritardo',
+  vaccine_date: 'Data',
+  vaccine_facility: 'Ambulatorio',
+  vaccine_product: 'Prodotto',
+  vaccine_reaction: 'Reazione',
+  vaccine_save: 'Salva',
+  vaccine_undo: 'Annulla',
+  vaccine_custom_add: 'Aggiungi altro vaccino',
+  vaccine_custom_name: 'Nome del vaccino',
+  vaccine_custom_section: 'Altri',
+  vaccine_recommended: 'Consigliata',
 
   ai_title: 'Guida genitoriale IA',
   ai_key_placeholder: 'Inserisci la chiave API',
@@ -1699,6 +1799,16 @@ const pt: BabyGrowthTranslations = {
   vaccine_done: 'Feita',
   vaccine_dday_today: 'Hoje!',
   vaccine_dday_past: '{n}d atrasada',
+  vaccine_date: 'Data',
+  vaccine_facility: 'Clínica',
+  vaccine_product: 'Produto',
+  vaccine_reaction: 'Reação',
+  vaccine_save: 'Salvar',
+  vaccine_undo: 'Desfazer',
+  vaccine_custom_add: 'Adicionar outra vacina',
+  vaccine_custom_name: 'Nome da vacina',
+  vaccine_custom_section: 'Outras',
+  vaccine_recommended: 'Recomendada',
 
   ai_title: 'Guia parental IA',
   ai_key_placeholder: 'Digite sua chave API',

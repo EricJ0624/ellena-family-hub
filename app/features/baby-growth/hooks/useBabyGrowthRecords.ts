@@ -110,7 +110,7 @@ export function useBabyGrowthRecords({
 
     const { data, error } = await supabase
       .from('baby_vaccinations')
-      .select('id, baby_id, group_id, vaccine_key, scheduled_at, administered_at, notes, created_by, created_at')
+      .select('id, baby_id, group_id, vaccine_key, scheduled_at, administered_at, facility_name, product_name, custom_label, notes, created_by, created_at')
       .eq('baby_id', babyId)
       .order('scheduled_at', { ascending: true });
 

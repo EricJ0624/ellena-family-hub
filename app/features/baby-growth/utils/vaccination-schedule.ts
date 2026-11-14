@@ -7,8 +7,8 @@
  * 각 항목의 recommendedMonths 는 월령 기준 (0=출생 시)
  */
 
-import type { VaccineScheduleItem, VaccineDDayView } from '../types';
-import { daysUntil, toIsoDate } from './age-calculator';
+import type { BabyVaccination, VaccineScheduleItem, VaccineDDayView } from '../types';
+import { daysUntil } from './age-calculator';
 
 // ---------------------------------------------------------------------------
 // 한국 (KR) — 질병관리청
@@ -109,10 +109,18 @@ const SCHEDULES: Record<string, VaccineScheduleItem[]> = {
   JP: JP_SCHEDULE,
 };
 
+/** 생년월일 문자열에 월령을 더한다. 시간대와 무관하게 달력 날짜를 유지한다. */
+function addMonths(isoDate: string, months: number): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate);
+  if (!match) return isoDate;
+  const utc = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1 + months, Number(match[3])));
+  return utc.toISOString().slice(0, 10);
+}
+
 /**
  * 국가 코드에 맞는 접종 일정을 반환 (없으면 KR fallback)
  */
-export function getVaccineSchedule(countryCode: string): VaccineScheduleItem[] {
+function getVaccineSchedule(countryCode: string): VaccineScheduleItem[] {
   return SCHEDULES[countryCode.toUpperCase()] ?? SCHEDULES.KR;
 }
 
@@ -121,34 +129,53 @@ export function getVaccineSchedule(countryCode: string): VaccineScheduleItem[] {
  *
  * @param countryCode - 국가 코드
  * @param birthDate   - 아기 생년월일 'YYYY-MM-DD'
- * @param administered - 완료된 vaccine_key Set
- * @param scheduled   - DB에 저장된 scheduled_at Map (key → ISO date)
+ * @param records     - baby_vaccinations 행
  */
 export function buildVaccineDDayViews(
   countryCode: string,
   birthDate: string,
-  administered: Set<string>,
-  scheduled: Map<string, string>,
+  records: BabyVaccination[],
 ): VaccineDDayView[] {
   const schedule = getVaccineSchedule(countryCode);
-  const birth = new Date(birthDate);
+  const byKey = new Map(records.map((record) => [record.vaccine_key, record]));
 
-  return schedule.map((item) => {
-    // 가장 첫 번째 권장 월령만 기준 (추가 접종은 별도 키)
+  const scheduledViews = schedule.map((item) => {
     const months = item.recommendedMonths[0] ?? 0;
-    const scheduledDate = new Date(birth);
-    scheduledDate.setMonth(scheduledDate.getMonth() + months);
-    const scheduledIso = scheduled.get(item.vaccineKey) ?? toIsoDate(scheduledDate);
-    const isDone = administered.has(item.vaccineKey);
+    const record = byKey.get(item.vaccineKey);
+    const scheduledIso = record?.scheduled_at ?? addMonths(birthDate, months);
+    const administeredAt = record?.administered_at ?? null;
 
     return {
       vaccineKey: item.vaccineKey,
       label: item.label,
       disease: item.disease,
       scheduledAt: scheduledIso,
-      administeredAt: isDone ? scheduledIso : null,
-      daysUntil: isDone ? 0 : daysUntil(scheduledIso),
-      isDone,
+      administeredAt,
+      daysUntil: daysUntil(scheduledIso),
+      isDone: Boolean(administeredAt),
+      isCustom: false,
+      facilityName: record?.facility_name ?? null,
+      productName: record?.product_name ?? null,
+      notes: record?.notes ?? null,
     };
   });
+
+  const scheduleKeys = new Set(schedule.map((item) => item.vaccineKey));
+  const customViews = records
+    .filter((record) => !scheduleKeys.has(record.vaccine_key))
+    .map((record) => ({
+      vaccineKey: record.vaccine_key,
+      label: record.custom_label?.trim() || record.vaccine_key,
+      disease: '',
+      scheduledAt: record.scheduled_at ?? '',
+      administeredAt: record.administered_at,
+      daysUntil: 0,
+      isDone: Boolean(record.administered_at),
+      isCustom: true,
+      facilityName: record.facility_name,
+      productName: record.product_name,
+      notes: record.notes,
+    }));
+
+  return [...scheduledViews, ...customViews];
 }

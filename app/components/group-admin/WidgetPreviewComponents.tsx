@@ -738,6 +738,50 @@ function TravelQuickRecordPreview() {
   );
 }
 
+function BabyGrowthPreview() {
+  const { lang } = useLanguage();
+  const ko = lang === 'ko';
+  const cards = ko
+    ? [
+        ['🍼', '마지막 수유', '13시간 전'],
+        ['😴', '마지막 수면', '기록 없음'],
+        ['🧷', '마지막 배변', '기록 없음'],
+        ['🌡️', '마지막 체온', '기록 없음'],
+      ]
+    : [
+        ['🍼', 'Last feed', '13h ago'],
+        ['😴', 'Last sleep', 'No record'],
+        ['🧷', 'Last diaper', 'No record'],
+        ['🌡️', 'Last temp', 'No record'],
+      ];
+
+  return (
+    <section className="content-section !min-h-0 overflow-hidden rounded-2xl bg-[#fff8f4] p-3 text-gray-800">
+      <div className="flex items-center gap-2">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pink-100 text-xl">👶</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-sm font-bold text-gray-900">{ko ? '우리아이' : 'Baby'}</span>
+            <span className="shrink-0 rounded-full bg-pink-100 px-2 py-0.5 text-[10px] font-medium text-pink-500">
+              {ko ? '4개월' : '4 mo'}
+            </span>
+          </div>
+          <p className="m-0 text-[10px] text-gray-400">2026-06-25</p>
+        </div>
+        <span className="shrink-0 text-sm font-black text-pink-400">D+142</span>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
+        {cards.map(([emoji, label, value]) => (
+          <div key={label} className="rounded-xl bg-white px-2 py-1.5 shadow-sm">
+            <p className="m-0 text-[10px] text-gray-500">{emoji} {label}</p>
+            <p className="m-0 text-xs font-semibold text-gray-800">{value}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNode> = {
   tasks: () => <TasksPreview />,
   calendar: () => <CalendarPreview />,
@@ -750,5 +794,5 @@ export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNod
   travel_diary: () => <TravelDiaryPreview />,
   travel_quick_record: () => <TravelQuickRecordPreview />,
   family_log: () => <FamilyLogPreview />,
-  baby_growth: () => <FamilyLogPreview />,
+  baby_growth: () => <BabyGrowthPreview />,
 };
