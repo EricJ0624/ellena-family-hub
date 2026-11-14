@@ -148,6 +148,7 @@ import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import {
   resolveWidgetGridPlacement,
   buildWidgetGridItemStyle,
+  computeDenseCssRowSlots,
   getSquareCellRowHeight,
   detectGridOverlaps,
   PORTRAIT_COLS,
@@ -1511,6 +1512,15 @@ export default function FamilyHub() {
     window.addEventListener('sfh:open-nickname-modal', handler);
     return () => window.removeEventListener('sfh:open-nickname-modal', handler);
   }, []);
+
+  // 닉네임 모달 닫힘(열림→닫힘) → 가져오기 위저드가 AI 키를 다시 읽도록 알림
+  const nicknameModalWasOpenRef = useRef(false);
+  useEffect(() => {
+    if (nicknameModalWasOpenRef.current && !isNicknameModalOpen) {
+      window.dispatchEvent(new CustomEvent('sfh:ai-key-settings-closed'));
+    }
+    nicknameModalWasOpenRef.current = isNicknameModalOpen;
+  }, [isNicknameModalOpen]);
 
   // --- [EFFECTS] ---
   
@@ -6946,6 +6956,12 @@ export default function FamilyHub() {
     [widgetConfigs],
   );
 
+  /** travel(h=6)·diary(h=8) 등 높이가 달라도 CSS 행이 겹치지 않도록 Y순 밀집 슬롯 */
+  const denseCssRowSlots = useMemo(
+    () => computeDenseCssRowSlots(orderedWidgets, dashboardColumnCount, dashboardIsLandscapeGrid),
+    [orderedWidgets, dashboardColumnCount, dashboardIsLandscapeGrid],
+  );
+
   const chatRoomPinLatestRef = useRef(false);
   const chatWidgetPinLatestRef = useRef(false);
   chatRoomOpenRef.current = chatRoomOpen;
@@ -7365,10 +7381,6 @@ export default function FamilyHub() {
             currentGroupId={currentGroupId}
             userId={userId}
             lang={lang}
-            uiTheme={uiTheme}
-            isKidsTheme={isKidsTheme}
-            getCurrentKey={getCurrentKey}
-            CryptoService={CryptoService}
             isMagnified={expandedWidget === 'baby_growth'}
           />
         );
@@ -7675,10 +7687,10 @@ export default function FamilyHub() {
         }
       >
 
-      {/* Nickname Modal */}
-      {isNicknameModalOpen && (
+      {/* Nickname Modal — body 포털 + z>10030: 일정 가져오기(DashboardScreenPanel) 위에 표시 */}
+      {isNicknameModalOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="modal-overlay fixed inset-0 z-[1100] grid place-items-center overflow-hidden px-4 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]"
+          className="modal-overlay fixed inset-0 z-[10050] grid place-items-center overflow-hidden px-4 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]"
           onClick={() => setIsNicknameModalOpen(false)}
         >
           <div
@@ -7762,7 +7774,8 @@ export default function FamilyHub() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* 공지사항 배너 — app-container의 직접 flex 자식: main-content 위에 상단 고정 */}
@@ -8064,6 +8077,7 @@ export default function FamilyHub() {
                       layoutH: dashboardIsLandscapeGrid
                         ? (cfg.layoutLandscapeH ?? cfg.layoutH)
                         : (cfg.layoutPortraitH ?? cfg.layoutH),
+                      denseCssRowStart: denseCssRowSlots.get(cfg.widget_key),
                     },
                   )}
                 >
@@ -8403,7 +8417,7 @@ function AiApiKeySettings({ userId }: { userId: string }) {
     setPinging(true);
     setPingResult(null);
     try {
-      const res = await fetch('/api/baby-growth/ai-proxy', {
+      const res = await fetch('/api/ai/proxy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

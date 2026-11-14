@@ -17,6 +17,7 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'support_ticket',
   'family_log_card',
   'family_log_receipt',
+  'baby_profile',
 ]);
 
 /* v4 전용이 아닌 일반 UUID(버전·variant 혼용 DB 대비) */

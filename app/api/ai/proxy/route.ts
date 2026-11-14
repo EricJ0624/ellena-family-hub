@@ -1,5 +1,5 @@
 /**
- * /api/baby-growth/ai-proxy — LLM Pass-through Proxy
+ * /api/ai/proxy — 공용 LLM Pass-through Proxy
  *
  * 보안 원칙:
  * - 사용자의 API 키는 Authorization 헤더로 전달받아 메모리에서만 사용
@@ -23,11 +23,9 @@ const DEFAULT_MODEL: Record<AiProvider, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  // 1. 인증 확인 — Supabase 세션
   const authResult = await requireAuthUser(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  // 2. 사용자 API 키 추출 (Authorization: Bearer <key>)
   const authHeader = request.headers.get('Authorization') ?? '';
   const userApiKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
 
@@ -45,9 +43,6 @@ export async function POST(request: NextRequest) {
   const provider = (body.provider as AiProvider) ?? 'openai';
   const isPing = body.ping === true;
 
-  // ---------------------------------------------------------------------------
-  // Ping Test — 최소 토큰으로 API 키 유효성 검증
-  // ---------------------------------------------------------------------------
   if (isPing) {
     try {
       if (provider === 'openai') {
@@ -69,7 +64,6 @@ export async function POST(request: NextRequest) {
         }
         return NextResponse.json({ ok: true });
       } else {
-        // Anthropic ping
         const res = await fetch(ANTHROPIC_ENDPOINT, {
           method: 'POST',
           headers: {
@@ -95,9 +89,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // 실제 생성 요청
-  // ---------------------------------------------------------------------------
   const systemPrompt = (body.systemPrompt as string) ?? '';
   const userPrompt = (body.userPrompt as string) ?? '';
   const useStream = body.stream === true;
@@ -140,9 +131,7 @@ export async function POST(request: NextRequest) {
 
       const json = await upstream.json();
       return NextResponse.json(json);
-
     } else {
-      // Anthropic
       const model = (body.model as string) || DEFAULT_MODEL.anthropic;
       const anthropicBody: Record<string, unknown> = {
         model,

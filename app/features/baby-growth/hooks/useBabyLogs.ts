@@ -14,8 +14,13 @@ import type { BabyDailyLog, BabyDailyLogDraft, BabyRecentStatus } from '../types
 const LOG_SELECT_COLS = [
   'id', 'baby_id', 'group_id', 'log_type', 'logged_at',
   'feeding_type', 'feeding_amount_ml', 'feeding_duration_min',
-  'sleep_end_at', 'diaper_type', 'temperature_celsius',
-  'medication_name', 'medication_dose_mg', 'notes', 'created_by', 'created_at',
+  'breast_left_min', 'breast_right_min', 'solid_ingredients', 'allergy_reaction',
+  'sleep_end_at',
+  'diaper_type', 'diaper_color', 'diaper_consistency',
+  'temperature_celsius',
+  'medication_name', 'medication_dose_mg',
+  'activity_type', 'activity_duration_min', 'pump_amount_ml',
+  'notes', 'created_by', 'created_at',
   'sleep_start_recorded', 'sleep_end_recorded', 'symptom_tags',
 ].join(', ');
 
@@ -157,15 +162,7 @@ export function useBabyLogs({
     logsRt.onLogsChange.current(next);
   }
 
-  async function deleteLog(id: string): Promise<void> {
-    const { error } = await supabase.from('baby_daily_logs').delete().eq('id', id);
-    if (error) throw error;
-    const next = logsRt.logs.current.filter((l) => l.id !== id);
-    logsRt.logs.current = next;
-    logsRt.onLogsChange.current(next);
-  }
-
-  return { addLog, updateLog, deleteLog };
+  return { addLog, updateLog };
 }
 
 // ---------------------------------------------------------------------------

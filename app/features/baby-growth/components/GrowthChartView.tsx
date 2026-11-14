@@ -52,7 +52,7 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
         group_id: currentGroupId ?? '',
         category,
         milestone_key: key,
-        achieved_at: achieved ? new Date().toISOString().split('T')[0] : undefined,
+        achieved_at: achieved ? new Date().toISOString().split('T')[0] : null,
       });
       void fetchMilestones().then(setMilestones);
     },

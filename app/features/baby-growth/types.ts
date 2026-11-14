@@ -196,7 +196,7 @@ export interface BabyMilestoneDraft {
   group_id: string;
   category: MilestoneCategory;
   milestone_key: string;
-  achieved_at?: string;
+  achieved_at?: string | null;
   notes?: string;
 }
 
@@ -221,7 +221,7 @@ export interface BabyVaccinationDraft {
   group_id: string;
   vaccine_key: string;
   scheduled_at?: string;
-  administered_at?: string;
+  administered_at?: string | null;
   notes?: string;
 }
 
@@ -235,15 +235,6 @@ export interface BabyRecentStatus {
   lastSleep: BabyDailyLog | null;
   lastDiaper: BabyDailyLog | null;
   lastTemperature: BabyDailyLog | null;
-}
-
-/** 7일 통계 집계 */
-export interface BabyWeeklyStats {
-  feedingCount: number;
-  feedingTotalMl: number;
-  sleepAvgHours: number;
-  diaperCount: number;
-  avgTemperature: number | null;
 }
 
 /** WHO 성장 곡선 백분위 단일 데이터 포인트 */
@@ -339,12 +330,4 @@ export interface BabyReminder {
   is_dismissed: boolean;
   created_by: string | null;
   created_at: string;
-}
-
-export interface BabyReminderDraft {
-  baby_id: string;
-  group_id: string;
-  reminder_type: ReminderType;
-  remind_at: string;
-  reference_key?: string;
 }

@@ -36,6 +36,7 @@ import {
 import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types';
 import {
   buildWidgetGridItemStyle,
+  computeDenseCssRowSlots,
   detectGridOverlaps,
   getSquareCellRowHeight,
   resolveWidgetGridPlacement,
@@ -208,6 +209,8 @@ interface SortableCardProps {
   onResizeCornerStart: (e: React.PointerEvent) => void;
   /** 12/24열 기준 셀 높이 */
   placementCellRowH: number;
+  /** Y순 밀집 CSS 행 슬롯 (travel/diary 높이 차이 겹침 방지) */
+  denseCssRowStart?: number;
   /** DragOverlay용: 그리드 슬롯은 반투명만 */
   isDragOverlay?: boolean;
 }
@@ -231,6 +234,7 @@ function SortableCard({
   onResizeVStart,
   onResizeCornerStart,
   placementCellRowH,
+  denseCssRowStart,
   isDragOverlay = false,
 }: SortableCardProps) {
   const displayCfg = useMemo(() => {
@@ -273,6 +277,7 @@ function SortableCard({
     layoutW: displayCfg.layoutW ?? null,
     layoutH: displayCfg.layoutH ?? null,
     layoutEditor: true,
+    denseCssRowStart,
   });
 
   const isNarrowCard = colSpan <= 1;
@@ -534,6 +539,11 @@ export function WidgetLayoutEditor({
     () =>
       [...drafts].filter((d) => d.is_enabled).sort((a, b) => a.display_order - b.display_order),
     [drafts],
+  );
+
+  const denseCssRowSlots = useMemo(
+    () => computeDenseCssRowSlots(sortedEnabled, gridColumnCount, isLandscapeGrid),
+    [sortedEnabled, gridColumnCount, isLandscapeGrid],
   );
 
   /** 미리보기: 현재 탭 orientation만 1회 겹침 해소 (양쪽 동시 보정 → 무한 루프 방지) */
@@ -936,6 +946,7 @@ export function WidgetLayoutEditor({
                   liveW={liveW}
                   liveH={liveH}
                   placementCellRowH={placementCellRowH}
+                  denseCssRowStart={denseCssRowSlots.get(cfg.widget_key)}
                   restoreLabel={t.widgets_restore_defaults}
                   reorderAriaLabel={t.widgets_reorder_aria}
                   toggleOnLabel={t.widgets_toggle_on}
@@ -1028,6 +1039,7 @@ export function WidgetLayoutEditor({
                   liveW={liveW}
                   liveH={liveH}
                   placementCellRowH={placementCellRowH}
+                  denseCssRowStart={denseCssRowSlots.get(activeDragKey)}
                   restoreLabel={t.widgets_restore_defaults}
                   reorderAriaLabel={t.widgets_reorder_aria}
                   toggleOnLabel={t.widgets_toggle_on}

@@ -14,7 +14,6 @@ import React, { memo, useState, useCallback, useMemo, useRef, useEffect } from '
 import { createPortal } from 'react-dom';
 import { getBabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import type { LangCode } from '@/lib/language-fonts';
-import type { UiTheme } from '@/lib/ui-theme';
 import { getCountryOptions } from '@/lib/countries';
 import type { BabyProfile, BabyDailyLog, BabyRecentStatus, LogType } from '../types';
 import { useBabyGrowth } from '../hooks/useBabyGrowth';
@@ -24,6 +23,7 @@ import { QuickStatusCards } from './QuickStatusCards';
 import { QuickLogModal } from './QuickLogModal';
 import { TodayPhotoSlider } from './TodayPhotoSlider';
 import { BabyAlbumView } from './BabyAlbumView';
+import { BabyWidgetBackdrop, BabyWidgetStickers } from './BabyWidgetBackdrop';
 import { findCurrentOpenSleep, scheduledBedBefore } from '../utils/sleep-schedule';
 
 // lazy import — 대시보드 초기 로드 성능 보호
@@ -38,7 +38,7 @@ function logsSignature(logs: BabyDailyLog[]): string {
   if (logs.length === 0) return 'empty';
   return logs
     .slice(0, 10)
-    .map((l) => `${l.id}:${l.logged_at}`)
+    .map((l) => `${l.id}:${l.logged_at}:${l.sleep_end_at ?? ''}:${l.notes ?? ''}`)
     .join('|');
 }
 
@@ -49,13 +49,6 @@ interface BabyGrowthSectionProps {
   currentGroupId: string | null;
   userId: string;
   lang: LangCode;
-  uiTheme: UiTheme;
-  isKidsTheme?: boolean;
-  getCurrentKey: () => string;
-  CryptoService: {
-    encrypt: (data: any, key: string) => string;
-    decrypt: (cipher: string, key: string) => any;
-  };
   /** 확대 모달이 열렸을 때 true (WidgetChrome이 전달) */
   isMagnified?: boolean;
 }
@@ -67,10 +60,6 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
   currentGroupId,
   userId,
   lang,
-  uiTheme,
-  isKidsTheme = false,
-  getCurrentKey,
-  CryptoService,
   isMagnified = false,
 }: BabyGrowthSectionProps) {
   const t = useMemo(() => getBabyGrowthTranslations(lang), [lang]);
@@ -186,13 +175,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
         logs={logs}
         currentGroupId={currentGroupId}
         userId={userId}
-        lang={lang}
-        uiTheme={uiTheme}
-        isKidsTheme={isKidsTheme}
-        getCurrentKey={getCurrentKey}
-        CryptoService={CryptoService}
         t={t}
-        onLogsChange={handleLogsChange}
         onAddLog={addLog}
         aiText={aiText}
         onAiTextChange={setAiText}
@@ -206,38 +189,34 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
 
   // 대시보드 위젯 뷰
   return (
-    <div className="flex flex-col gap-2 w-full h-full overflow-y-auto px-1 pt-1 pb-3">
+    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-[#fff8f4] text-gray-800">
+      <div className="relative h-full overflow-y-auto overflow-x-hidden px-2 pt-2 pb-3">
+      <BabyWidgetBackdrop />
+      <BabyWidgetStickers />
+      <div className="relative space-y-2">
       {/* 프로필 없을 때 */}
       {!profile ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-4">
+        <div className="relative z-20 flex min-h-48 flex-col items-center justify-center gap-3 px-4 text-center">
           <span className="text-4xl">🍼</span>
           <p className="text-sm text-gray-500">{t.no_baby_profile}</p>
           <button
             onClick={() => setAddProfileOpen(true)}
-            className="bg-pink-500 hover:bg-pink-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition-colors"
+            className="rounded-full bg-pink-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-pink-600"
           >
             {t.add_baby}
           </button>
         </div>
       ) : (
         <>
-          {/* 프로필 카드 */}
           <BabyProfileCard
             profile={profile}
             t={t}
             onEditClick={() => setEditProfileOpen(true)}
+            onReportClick={() => setDetailOpen(true)}
           />
-          <button
-            type="button"
-            onClick={() => setDetailOpen(true)}
-            className="self-end text-[11px] font-semibold text-pink-500"
-          >
-            {t.report_title}
-          </button>
-
           {/* AI 브리핑 배너 */}
           {aiText && (
-            <div className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl px-3 py-2 leading-relaxed line-clamp-2">
+            <div className="relative z-20 line-clamp-2 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
               🤖 {aiText}
             </div>
           )}
@@ -263,6 +242,8 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
           />
         </>
       )}
+      </div>
+      </div>
 
       {/* 로그 입력 모달 */}
       {logModalOpen && profile && (

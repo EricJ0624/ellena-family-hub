@@ -16,9 +16,10 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'support_ticket',
   'family_log_card',
   'family_log_receipt',
+  'baby_profile',
 ]);
 
-const ALLOWED_FEATURE_TYPES = new Set(['chat', 'piggy', 'travel', 'support', 'family_log']);
+const ALLOWED_FEATURE_TYPES = new Set(['chat', 'piggy', 'travel', 'support', 'family_log', 'baby_growth']);
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',

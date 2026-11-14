@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useBabyAiGuide } from '../hooks/useBabyAiGuide';
 import type { AiMode } from '../hooks/useBabyAiGuide';
 import type { BabyProfile, BabyDailyLog, BabyGrowthRecord } from '../types';
@@ -13,7 +13,7 @@ interface AiGuidePanelProps {
   latestGrowth: BabyGrowthRecord | null;
   t: BabyGrowthTranslations;
   externalText?: string | null;
-  onTextChange?: (text: string) => void;
+  onTextChange?: (text: string | null) => void;
 }
 
 const MODES: { key: AiMode; emoji: string; labelKey: keyof BabyGrowthTranslations }[] = [
@@ -44,12 +44,18 @@ export function AiGuidePanel({
   const [qaQuestion, setQaQuestion] = useState('');
   const [activeMode, setActiveMode] = useState<AiMode>('guide');
 
-  const displayText = externalText ?? result;
+  // externalText가 ''로 고정되면 ?? 가 result를 가리므로, 빈 문자열은 무시
+  const displayText = (externalText && externalText.length > 0) ? externalText : result;
+
+  useEffect(() => {
+    if (!onTextChange) return;
+    if (result) onTextChange(result);
+  }, [result, onTextChange]);
 
   const handleGenerate = async (mode: AiMode) => {
     setActiveMode(mode);
     clearResult();
-    if (onTextChange) onTextChange('');
+    if (onTextChange) onTextChange(null);
     await generate(mode, profile, recentLogs, latestGrowth, {
       qaQuestion: mode === 'qa' ? qaQuestion : undefined,
       stream: true,
@@ -162,7 +168,7 @@ export function AiGuidePanel({
             {displayText}
           </p>
           <button
-            onClick={() => { clearResult(); if (onTextChange) onTextChange(''); }}
+            onClick={() => { clearResult(); if (onTextChange) onTextChange(null); }}
             className="mt-2 text-xs text-gray-400 hover:text-gray-600"
           >
             {t.close}

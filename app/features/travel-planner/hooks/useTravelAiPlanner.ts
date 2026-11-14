@@ -1,14 +1,14 @@
 /**
- * useTravelAiPlanner — 여행 플래너 AI 계획 생성 훅
+ * useTravelAiPlanner — 여행 일정 AI 생성 (일정 가져오기 위저드용)
  *
  * 보안 원칙:
- * - API 키는 useBabyAiGuide와 동일한 localStorage 패턴 사용: sfh_ai_key_{userId}_{provider}
- * - 모든 LLM 호출은 /api/baby-growth/ai-proxy 를 통과 (범용 LLM 프록시)
+ * - API 키는 localStorage: sfh_ai_key_{userId}_{provider}
+ * - LLM 호출은 /api/ai/proxy 통과
  * - 키는 서버에 저장되지 않음
  */
 
 import { useState, useCallback } from 'react';
-import type { TravelTrip } from '@/lib/modules/travel-planner/types';
+import type { ParsedImportItem } from '@/lib/modules/travel-planner/itinerary-import-types';
 
 // ---------------------------------------------------------------------------
 // 타입
@@ -16,7 +16,13 @@ import type { TravelTrip } from '@/lib/modules/travel-planner/types';
 
 export type AiProvider = 'openai' | 'anthropic';
 
-/** AI가 생성한 기타 일정 항목 */
+export interface TravelAiDraft {
+  title: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+}
+
 export interface AiItineraryItem {
   day_date: string;
   title: string;
@@ -25,7 +31,6 @@ export interface AiItineraryItem {
   end_time?: string;
 }
 
-/** AI가 생성한 숙소 항목 */
 export interface AiAccommodationItem {
   name: string;
   check_in_date: string;
@@ -36,7 +41,6 @@ export interface AiAccommodationItem {
   memo?: string;
 }
 
-/** AI가 생성한 먹거리 항목 */
 export interface AiDiningItem {
   name: string;
   day_date: string;
@@ -46,7 +50,6 @@ export interface AiDiningItem {
   address?: string;
 }
 
-/** AI가 생성한 교통 항목 */
 export interface AiTransportItem {
   transport_type: 'air' | 'train' | 'car' | 'bike';
   day_date: string;
@@ -57,7 +60,6 @@ export interface AiTransportItem {
   memo?: string;
 }
 
-/** AI가 생성한 전체 여행 계획 */
 export interface AiTravelPlan {
   itineraries: AiItineraryItem[];
   accommodations: AiAccommodationItem[];
@@ -66,7 +68,7 @@ export interface AiTravelPlan {
 }
 
 // ---------------------------------------------------------------------------
-// 상수 / 유틸
+// localStorage
 // ---------------------------------------------------------------------------
 
 const LS_KEY = (userId: string, provider: AiProvider) =>
@@ -81,69 +83,122 @@ export function getStoredAiKey(userId: string): { key: string; provider: AiProvi
   return null;
 }
 
+/** AI JSON → 가져오기 위저드 ParsedImportItem[] */
+export function aiTravelPlanToImportItems(plan: AiTravelPlan): ParsedImportItem[] {
+  const items: ParsedImportItem[] = [];
+  let n = 0;
+  const id = () => `ai-${Date.now()}-${n++}`;
+
+  for (const a of plan.accommodations) {
+    if (!a.name?.trim() || !a.check_in_date) continue;
+    items.push({
+      id: id(),
+      kind: 'accommodation',
+      title: a.name.trim(),
+      check_in_date: a.check_in_date,
+      check_out_date: a.check_out_date || a.check_in_date,
+      day_date: a.check_in_date,
+      address: a.address ?? null,
+      description: a.memo ?? null,
+    });
+  }
+
+  for (const t of plan.transports) {
+    if (!t.day_date) continue;
+    const title =
+      t.departure && t.arrival
+        ? `${t.departure} → ${t.arrival}`
+        : t.memo?.trim() || t.transport_type;
+    items.push({
+      id: id(),
+      kind: 'transport',
+      title,
+      day_date: t.day_date,
+      start_time: t.start_time ?? null,
+      end_time: t.end_time ?? null,
+      transport_type: t.transport_type,
+      departure: t.departure ?? null,
+      arrival: t.arrival ?? null,
+      description: t.memo ?? null,
+    });
+  }
+
+  for (const d of plan.dining) {
+    if (!d.name?.trim() || !d.day_date) continue;
+    items.push({
+      id: id(),
+      kind: 'dining',
+      title: d.name.trim(),
+      day_date: d.day_date,
+      start_time: d.time_at ?? null,
+      address: d.address ?? null,
+      description: d.memo ?? d.category ?? null,
+    });
+  }
+
+  for (const i of plan.itineraries) {
+    if (!i.title?.trim() || !i.day_date) continue;
+    items.push({
+      id: id(),
+      kind: 'other',
+      title: i.title.trim(),
+      day_date: i.day_date,
+      start_time: i.start_time ?? null,
+      end_time: i.end_time ?? null,
+      description: i.description ?? null,
+    });
+  }
+
+  return items;
+}
+
 // ---------------------------------------------------------------------------
-// 프롬프트 빌더
+// 프롬프트
 // ---------------------------------------------------------------------------
 
 function buildTravelPrompt(
-  trip: TravelTrip,
-  options: {
-    theme: string;
-    notes: string;
-    participantCount: number;
-    isKorean: boolean;
-  },
+  draft: TravelAiDraft,
+  options: { theme: string; notes: string; isKorean: boolean },
 ): { systemPrompt: string; userPrompt: string } {
-  const { theme, notes, participantCount, isKorean } = options;
+  const { theme, notes, isKorean } = options;
 
   const schema = `{
   "itineraries": [{ "day_date": "YYYY-MM-DD", "title": "장소/일정명", "description": "설명(선택)", "start_time": "HH:MM(선택)", "end_time": "HH:MM(선택)" }],
-  "accommodations": [{ "name": "숙소명", "check_in_date": "YYYY-MM-DD", "check_out_date": "YYYY-MM-DD", "check_in_time": "HH:MM(선택)", "address": "주소(선택)", "memo": "메모(선택)" }],
+  "accommodations": [{ "name": "숙소명", "check_in_date": "YYYY-MM-DD", "check_out_date": "YYYY-MM-DD", "address": "주소(선택)", "memo": "메모(선택)" }],
   "dining": [{ "name": "식당명", "day_date": "YYYY-MM-DD", "time_at": "HH:MM(선택)", "category": "한식/일식 등(선택)", "address": "주소(선택)" }],
   "transports": [{ "transport_type": "air|train|car|bike", "day_date": "YYYY-MM-DD", "departure": "출발지(선택)", "arrival": "도착지(선택)", "start_time": "HH:MM(선택)", "memo": "메모(선택)" }]
 }`;
 
   const systemPrompt = isKorean
     ? `당신은 전문 가족 여행 플래너입니다. 주어진 여행 정보를 바탕으로 상세한 여행 계획을 JSON 형식으로만 반환하세요.
-JSON 외의 텍스트(설명, 인사말 등)를 절대 포함하지 마세요. 반드시 아래 스키마를 따르세요:
+JSON 외의 텍스트를 절대 포함하지 마세요. 스키마:
 ${schema}
-- 모든 날짜는 여행 기간(start_date ~ end_date) 내에 있어야 합니다.
-- 선택(선택) 표시 필드는 생략 가능합니다.
+- 모든 날짜는 여행 기간 내에 있어야 합니다.
 - 반드시 유효한 JSON만 반환하세요.`
-    : `You are a professional family travel planner. Return ONLY a JSON travel plan with no other text. Use this exact schema:
+    : `You are a professional family travel planner. Return ONLY JSON. Schema:
 ${schema}
-- All dates must be within the trip duration (start_date ~ end_date).
-- Fields marked (선택) are optional.
-- Return ONLY valid JSON, no explanation text.`;
+- All dates within trip duration.
+- Return ONLY valid JSON.`;
 
   const tripLines = [
-    `여행 제목: ${trip.title}`,
-    trip.destination ? `목적지: ${trip.destination}` : null,
-    `여행 기간: ${trip.start_date} ~ ${trip.end_date}`,
-    participantCount > 0 ? `참가 인원: ${participantCount}명` : null,
+    draft.title ? `여행 제목: ${draft.title}` : null,
+    draft.destination ? `목적지: ${draft.destination}` : null,
+    `여행 기간: ${draft.start_date} ~ ${draft.end_date}`,
     theme ? `여행 테마: ${theme}` : null,
     notes ? `요청 사항: ${notes}` : null,
   ].filter(Boolean).join('\n');
 
   const userPrompt = isKorean
     ? `다음 여행 정보를 바탕으로 상세한 여행 계획을 JSON으로 작성해 주세요.\n\n${tripLines}\n\n주의: 반드시 JSON만 반환하세요.`
-    : `Create a detailed travel plan in JSON for the following trip.\n\n${tripLines}\n\nIMPORTANT: Return ONLY valid JSON, no explanation text.`;
+    : `Create a detailed travel plan in JSON.\n\n${tripLines}\n\nIMPORTANT: Return ONLY valid JSON.`;
 
   return { systemPrompt, userPrompt };
 }
 
-// ---------------------------------------------------------------------------
-// JSON 파서
-// ---------------------------------------------------------------------------
-
 function parseAiTravelPlan(text: string): AiTravelPlan | null {
   let jsonText = text.trim();
-
-  // ```json ... ``` 펜스 제거
   const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenceMatch) jsonText = fenceMatch[1].trim();
-
-  // 순수 JSON 블록 추출 (앞뒤 텍스트가 있는 경우)
   const braceMatch = jsonText.match(/\{[\s\S]*\}/);
   if (braceMatch) jsonText = braceMatch[0];
 
@@ -166,15 +221,13 @@ function parseAiTravelPlan(text: string): AiTravelPlan | null {
 
 interface UseTravelAiPlannerProps {
   userId: string;
-  /** hasApiKey 재계산 트리거 (isOpen 등이 바뀔 때마다 호출) */
   hasApiKeyRevision?: number;
 }
 
 export function useTravelAiPlanner({ userId, hasApiKeyRevision }: UseTravelAiPlannerProps) {
-  // hasApiKeyRevision 이 바뀔 때마다 최신 localStorage 상태 반영
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const keyInfo = getStoredAiKey(userId);
-  void hasApiKeyRevision; // 의존성 트리거용
+  void hasApiKeyRevision;
 
   const [generating, setGenerating] = useState(false);
   const [plan, setPlan] = useState<AiTravelPlan | null>(null);
@@ -187,19 +240,21 @@ export function useTravelAiPlanner({ userId, hasApiKeyRevision }: UseTravelAiPla
 
   const generate = useCallback(
     async (
-      trip: TravelTrip,
-      options: {
-        theme: string;
-        notes: string;
-        participantCount: number;
-        isKorean: boolean;
-      },
-    ) => {
-      // 호출 시점에 최신 키 재읽기 (저장 후 즉시 사용 가능하도록)
+      draft: TravelAiDraft,
+      options: { theme: string; notes: string; isKorean: boolean },
+    ): Promise<AiTravelPlan | null> => {
       const currentKeyInfo = getStoredAiKey(userId);
       if (!currentKeyInfo) {
         setError('API 키가 필요합니다. 계정 설정에서 API 키를 등록해 주세요.');
-        return;
+        return null;
+      }
+      if (!draft.start_date || !draft.end_date) {
+        setError('여행 시작일·종료일을 입력해 주세요.');
+        return null;
+      }
+      if (!draft.destination.trim()) {
+        setError('목적지를 입력해 주세요.');
+        return null;
       }
 
       setGenerating(true);
@@ -207,9 +262,9 @@ export function useTravelAiPlanner({ userId, hasApiKeyRevision }: UseTravelAiPla
       setPlan(null);
 
       try {
-        const { systemPrompt, userPrompt } = buildTravelPrompt(trip, options);
+        const { systemPrompt, userPrompt } = buildTravelPrompt(draft, options);
 
-        const res = await fetch('/api/baby-growth/ai-proxy', {
+        const res = await fetch('/api/ai/proxy', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -238,11 +293,13 @@ export function useTravelAiPlanner({ userId, hasApiKeyRevision }: UseTravelAiPla
         const parsed = parseAiTravelPlan(text);
         if (parsed) {
           setPlan(parsed);
-        } else {
-          setError('AI 응답을 JSON으로 파싱하지 못했습니다. 다시 시도해 주세요.');
+          return parsed;
         }
+        setError('AI 응답을 JSON으로 파싱하지 못했습니다. 다시 시도해 주세요.');
+        return null;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'AI 응답을 받지 못했습니다.');
+        return null;
       } finally {
         setGenerating(false);
       }

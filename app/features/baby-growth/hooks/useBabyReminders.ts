@@ -8,18 +8,16 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
-import type { BabyReminder, BabyReminderDraft } from '../types';
+import type { BabyReminder } from '../types';
 
 interface UseBabyRemindersProps {
   babyId: string | null;
   currentGroupId: string | null;
-  userId: string;
 }
 
 export function useBabyReminders({
   babyId,
   currentGroupId,
-  userId,
 }: UseBabyRemindersProps) {
   const [reminders, setReminders] = useState<BabyReminder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,30 +50,11 @@ export function useBabyReminders({
     }
   }, [babyId, currentGroupId]);
 
-  const createReminder = useCallback(async (draft: BabyReminderDraft): Promise<BabyReminder> => {
-    if (!currentGroupId || !babyId) throw new Error('babyId 또는 groupId 없음');
-    const { data, error } = await supabase
-      .from('baby_reminders')
-      .insert({ ...draft, baby_id: babyId, group_id: currentGroupId, created_by: userId })
-      .select()
-      .single();
-    if (error) throw error;
-    const row = data as unknown as BabyReminder;
-    setReminders((prev) => [...prev, row].sort((a, b) => a.remind_at.localeCompare(b.remind_at)));
-    return row;
-  }, [babyId, currentGroupId, userId]);
-
   const dismissReminder = useCallback(async (id: string): Promise<void> => {
     const { error } = await supabase
       .from('baby_reminders')
       .update({ is_dismissed: true })
       .eq('id', id);
-    if (error) throw error;
-    setReminders((prev) => prev.filter((r) => r.id !== id));
-  }, []);
-
-  const deleteReminder = useCallback(async (id: string): Promise<void> => {
-    const { error } = await supabase.from('baby_reminders').delete().eq('id', id);
     if (error) throw error;
     setReminders((prev) => prev.filter((r) => r.id !== id));
   }, []);
@@ -90,8 +69,6 @@ export function useBabyReminders({
     loading,
     nextReminderDays,
     fetchReminders,
-    createReminder,
     dismissReminder,
-    deleteReminder,
   };
 }

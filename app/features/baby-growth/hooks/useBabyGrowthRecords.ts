@@ -63,11 +63,6 @@ export function useBabyGrowthRecords({
     return data as BabyGrowthRecord;
   }, [babyId, currentGroupId, userId]);
 
-  const deleteGrowthRecord = useCallback(async (id: string): Promise<void> => {
-    const { error } = await supabase.from('baby_growth_records').delete().eq('id', id);
-    if (error) throw error;
-  }, []);
-
   // ---------------------------------------------------------------------------
   // Milestones
   // ---------------------------------------------------------------------------
@@ -192,7 +187,6 @@ export function useBabyGrowthRecords({
   return {
     fetchGrowthRecords,
     addGrowthRecord,
-    deleteGrowthRecord,
     fetchMilestones,
     upsertMilestone,
     fetchVaccinations,

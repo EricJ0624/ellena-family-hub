@@ -3,7 +3,7 @@
  *
  * 보안 원칙:
  * - API 키는 localStorage에만 저장 (우리 서버 DB에 저장 안 함)
- * - 모든 LLM 호출은 /api/baby-growth/ai-proxy 를 통과 (CORS 우회, 서버 메모리서만 키 사용)
+ * - 모든 LLM 호출은 /api/ai/proxy 를 통과 (CORS 우회, 서버 메모리서만 키 사용)
  * - localStorage key: sfh_ai_key_{userId}_{provider}  (앱 전체 공통 키)
  */
 
@@ -99,7 +99,7 @@ function serializeLogs(logs: BabyDailyLog[], hours: number): string {
   return lines.join('\n') || '(해당 기간 기록 없음)';
 }
 
-export function buildPromptPayload(
+function buildPromptPayload(
   baby: BabyProfile,
   logs: BabyDailyLog[],
   latestGrowth: BabyGrowthRecord | null,
@@ -260,7 +260,7 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
       setPinging(true);
       setPingResult(null);
       try {
-        const res = await fetch('/api/baby-growth/ai-proxy', {
+        const res = await fetch('/api/ai/proxy', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -314,7 +314,7 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
 
         const useStream = options?.stream ?? true;
 
-        const res = await fetch('/api/baby-growth/ai-proxy', {
+        const res = await fetch('/api/ai/proxy', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

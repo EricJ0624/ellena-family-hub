@@ -3,8 +3,6 @@
 import React, { useState } from 'react';
 import type { BabyProfile, BabyDailyLog, BabyDailyLogDraft, BabyGrowthRecord } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
-import type { LangCode } from '@/lib/language-fonts';
-import type { UiTheme } from '@/lib/ui-theme';
 import { MedicalReportView } from './MedicalReportView';
 import { GrowthChartView } from './GrowthChartView';
 import { BabyAlbumView } from './BabyAlbumView';
@@ -38,19 +36,10 @@ interface BabyGrowthNavigatorProps {
   logs: BabyDailyLog[];
   currentGroupId: string | null;
   userId: string;
-  lang: LangCode;
-  uiTheme: UiTheme;
-  isKidsTheme: boolean;
-  getCurrentKey: () => string;
-  CryptoService: {
-    encrypt: (data: unknown, key: string) => string;
-    decrypt: (cipher: string, key: string) => unknown;
-  };
   t: BabyGrowthTranslations;
-  onLogsChange: (logs: BabyDailyLog[]) => void;
   onAddLog?: (draft: BabyDailyLogDraft) => Promise<unknown>;
   aiText: string | null;
-  onAiTextChange: (text: string) => void;
+  onAiTextChange: (text: string | null) => void;
 }
 
 export function BabyGrowthNavigator({
@@ -86,7 +75,6 @@ export function BabyGrowthNavigator({
   const { reminders, fetchReminders, dismissReminder } = useBabyReminders({
     babyId: profile.id,
     currentGroupId,
-    userId,
   });
   React.useEffect(() => {
     void fetchReminders();
@@ -130,7 +118,7 @@ export function BabyGrowthNavigator({
       </nav>
 
       {/* 탭 컨텐츠 */}
-      <div className="flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === 'home' && (
           <div className="h-full overflow-y-auto">
             <DailyLogStats logs={logs} t={t} />

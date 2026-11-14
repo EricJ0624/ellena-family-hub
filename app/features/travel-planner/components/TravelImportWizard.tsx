@@ -27,6 +27,10 @@ import type {
   ParsedDayTitle,
   ParsedImportItem,
 } from '@/lib/modules/travel-planner/itinerary-import-types';
+import {
+  useTravelAiPlanner,
+  aiTravelPlanToImportItems,
+} from '@/app/features/travel-planner/hooks/useTravelAiPlanner';
 
 const KIND_OPTIONS: ImportItemKind[] = [
   'accommodation',
@@ -34,6 +38,17 @@ const KIND_OPTIONS: ImportItemKind[] = [
   'attraction',
   'transport',
   'other',
+];
+
+const AI_THEME_OPTIONS = [
+  { value: '', label: '선택 안 함' },
+  { value: '가족여행', label: '가족여행' },
+  { value: '자연/힐링', label: '자연/힐링' },
+  { value: '맛집 투어', label: '맛집 투어' },
+  { value: '문화/역사', label: '문화/역사' },
+  { value: '액티비티', label: '액티비티' },
+  { value: '도시 관광', label: '도시 관광' },
+  { value: '휴양/리조트', label: '휴양/리조트' },
 ];
 
 export function TravelImportWizard({
@@ -67,6 +82,17 @@ export function TravelImportWizard({
   const [submitting, setSubmitting] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
 
+  const [userId, setUserId] = useState('');
+  const [keyRevision, setKeyRevision] = useState(0);
+  const [aiTheme, setAiTheme] = useState('');
+  const [aiNotes, setAiNotes] = useState('');
+
+  const isKorean = lang === 'ko' || lang.startsWith('ko');
+  const { hasApiKey, generating, error: aiError, generate, clearPlan } = useTravelAiPlanner({
+    userId,
+    hasApiKeyRevision: keyRevision,
+  });
+
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
@@ -76,6 +102,26 @@ export function TravelImportWizard({
       'Content-Type': 'application/json',
     };
   }, [lang]);
+
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => {
+      const id = data.session?.user?.id ?? '';
+      if (id) setUserId(id);
+    });
+  }, []);
+
+  // 닉네임 모달에서 키 등록 후 닫히면 localStorage 재읽기
+  useEffect(() => {
+    const refresh = () => setKeyRevision((n) => n + 1);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('sfh:ai-key-settings-closed', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('sfh:ai-key-settings-closed', refresh);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +159,11 @@ export function TravelImportWizard({
     }
   };
 
+  const openAccountSettings = () => {
+    window.dispatchEvent(new CustomEvent('sfh:open-nickname-modal'));
+    setKeyRevision((n) => n + 1);
+  };
+
   const handleAnalyze = () => {
     if (!pasteText.trim()) {
       alert(tt('import_no_text'));
@@ -131,6 +182,31 @@ export function TravelImportWizard({
     setFormStartDate(meta.start_date || '');
     setFormEndDate(meta.end_date || '');
     setFormBudget(meta.budget != null ? String(meta.budget) : '');
+    setStep('trip');
+  };
+
+  const handleAiGenerate = async () => {
+    clearPlan();
+    const plan = await generate(
+      {
+        title: formTitle.trim() || formDestination.trim() || '가족 여행',
+        destination: formDestination.trim(),
+        start_date: formStartDate,
+        end_date: formEndDate,
+      },
+      { theme: aiTheme, notes: aiNotes, isKorean },
+    );
+    if (!plan) return;
+    const parsed = aiTravelPlanToImportItems(plan);
+    if (parsed.length === 0) {
+      alert(tt('import_parse_empty'));
+      return;
+    }
+    setItems(parsed);
+    setDayTitles([]);
+    if (!formTitle.trim()) {
+      setFormTitle(formDestination.trim() ? `${formDestination.trim()} 여행` : '가족 여행');
+    }
     setStep('trip');
   };
 
@@ -259,6 +335,7 @@ export function TravelImportWizard({
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-4 p-4 pb-8">
         {step === 'paste' && (
           <>
+            {/* 1) 붙여넣기 본 흐름 — API 없이도 바로 사용 */}
             <div className="flex gap-2">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
                 <MessageSquare className="h-4 w-4" />
@@ -307,6 +384,92 @@ export function TravelImportWizard({
             >
               {tt('import_analyze_button')}
             </button>
+
+            {/* 2) 붙여넣기 박스 아래 — API 연결은 선택 안내 */}
+            {userId && !hasApiKey && (
+              <p className="m-0 text-center text-sm text-slate-600">
+                <button
+                  type="button"
+                  onClick={openAccountSettings}
+                  className="cursor-pointer border-0 bg-transparent p-0 text-sm font-semibold text-violet-700 underline underline-offset-2 hover:text-violet-900"
+                >
+                  사용자 AI API를 연결해 보세요
+                </button>
+                <span className="text-slate-500"> — 연결하면 이 창에서 바로 일정을 생성할 수 있습니다.</span>
+              </p>
+            )}
+
+            {/* API 키 있음 — 붙여넣기 아래에서도 바로 생성 가능 */}
+            {hasApiKey && (
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-4 shadow-sm">
+                <p className="m-0 mb-3 text-sm font-semibold text-indigo-800">🤖 AI로 여행 계획 짜기</p>
+                <label className="mb-1 block text-xs font-medium text-slate-600">{tt('label_destination')} *</label>
+                <input
+                  value={formDestination}
+                  onChange={(e) => setFormDestination(e.target.value)}
+                  placeholder="예: 제주도"
+                  className="mb-2 box-border min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                />
+                <div className="mb-2 grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">{tt('label_start_date')} *</label>
+                    <input
+                      type="date"
+                      value={formStartDate}
+                      onChange={(e) => setFormStartDate(e.target.value)}
+                      className="box-border min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">{tt('label_end_date')} *</label>
+                    <input
+                      type="date"
+                      value={formEndDate}
+                      onChange={(e) => setFormEndDate(e.target.value)}
+                      className="box-border min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">여행 테마</label>
+                <select
+                  value={aiTheme}
+                  onChange={(e) => setAiTheme(e.target.value)}
+                  className="mb-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                >
+                  {AI_THEME_OPTIONS.map((opt) => (
+                    <option key={opt.value || 'none'} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  추가 요청사항 <span className="font-normal text-slate-400">(선택)</span>
+                </label>
+                <textarea
+                  value={aiNotes}
+                  onChange={(e) => setAiNotes(e.target.value)}
+                  placeholder="예: 아이 동반, 무리하지 않는 일정…"
+                  rows={2}
+                  maxLength={300}
+                  className="mb-3 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                />
+                {aiError && (
+                  <p className="mb-2 m-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {aiError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleAiGenerate()}
+                  disabled={generating || !formDestination.trim() || !formStartDate || !formEndDate}
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-indigo-600 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {generating ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />AI가 계획을 생성 중…</>
+                  ) : (
+                    <>✨ AI 여행 계획 생성</>
+                  )}
+                </button>
+              </div>
+            )}
           </>
         )}
 

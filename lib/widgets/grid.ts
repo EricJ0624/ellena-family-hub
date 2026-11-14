@@ -383,7 +383,8 @@ export function resolveWidgetScaleFactors(
 
 /**
  * layout_y(0-based) + layout_h → CSS grid 행 슬롯(1-based).
- * layout_y는 0,8,16… 처럼 h 단위 누적값 — CSS rowStart = round(y/h)+1, span은 1만 사용.
+ * @deprecated 위젯마다 h가 다르면(travel=6, 전역 M=8) round(y/h)가 충돌한다.
+ * 신규 경로는 computeDenseCssRowSlots 사용.
  */
 export function layoutYHToCssGridRowStart(
   gridRowStart: number | undefined,
@@ -395,16 +396,61 @@ export function layoutYHToCssGridRowStart(
 }
 
 /**
+ * 활성 위젯의 layout_y 순으로 CSS 행 슬롯(1-based)을 부여한다.
+ * - 같은 Y → 같은 슬롯 (가로 나란히)
+ * - 다른 Y → 다음 슬롯 (travel h=6 / diary h=8 처럼 h가 달라도 충돌하지 않음)
+ * layout_y가 없는 위젯은 맵에 넣지 않음(auto-flow).
+ */
+export function computeDenseCssRowSlots(
+  widgets: readonly WidgetConfigDraft[],
+  columnCount: number,
+  isLandscape = false,
+): Map<DashboardWidgetKey, number> {
+  type Entry = { key: DashboardWidgetKey; y: number; colStart: number };
+  const entries: Entry[] = [];
+
+  for (const cfg of widgets) {
+    if (!cfg.is_enabled) continue;
+    const effectiveY = isLandscape
+      ? (cfg.layoutLandscapeY ?? cfg.layoutY)
+      : (cfg.layoutPortraitY ?? cfg.layoutY);
+    if (effectiveY == null || !Number.isFinite(effectiveY)) continue;
+
+    const placement = resolveWidgetGridPlacement(cfg, columnCount, isLandscape);
+    entries.push({
+      key: cfg.widget_key,
+      y: effectiveY,
+      colStart: placement.gridColumnStart ?? 1,
+    });
+  }
+
+  entries.sort(
+    (a, b) => a.y - b.y || a.colStart - b.colStart || a.key.localeCompare(b.key),
+  );
+
+  const map = new Map<DashboardWidgetKey, number>();
+  let slot = 0;
+  let prevY: number | null = null;
+  for (const e of entries) {
+    if (prevY === null || Math.abs(e.y - prevY) > 0.01) {
+      slot += 1;
+      prevY = e.y;
+    }
+    map.set(e.key, slot);
+  }
+  return map;
+}
+
+/**
  * resolveWidgetGridPlacement → CSS gridColumn/gridRow.
- * 공통: layout y/h → CSS 행 슬롯(span 1) + minHeight(layout_h×cellRowH).
- * gap-3는 위젯 사이만; games·칠판(tasks)은 height:auto·--*-min-h로 내용 증가 시 행 성장.
- * tasks(default/highend_glass)도 다른 위젯과 동일하게 --widget-min-h / --widget-scale-box-h 사용.
+ * denseCssRowStart가 있으면 그걸 쓰고, 없으면 레거시 y/h 슬롯(폴백).
+ * minHeight(layout_h×cellRowH). gap-3는 위젯 사이만.
  */
 export function buildWidgetGridItemStyle(
   widgetKey: DashboardWidgetKey,
   placement: WidgetGridPlacement,
   cellRowH: number,
-  scaleContext?: WidgetGridScaleContext,
+  scaleContext?: WidgetGridScaleContext & { denseCssRowStart?: number },
 ): WidgetGridItemStyle {
   const { colSpan, rowSpan, gridColumnStart, gridRowStart } = placement;
   const gridColumn = gridColumnStart
@@ -412,7 +458,10 @@ export function buildWidgetGridItemStyle(
     : `span ${colSpan}`;
 
   const minPx = cellRowH > 0 ? cellRowH * rowSpan : 0;
-  const cssRowStart = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
+  const denseRow = scaleContext?.denseCssRowStart;
+  const legacyRow = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
+  const cssRowStart =
+    denseRow != null && denseRow >= 1 ? denseRow : legacyRow;
   const gridRow = cssRowStart != null
     ? `${cssRowStart} / span 1`
     : 'span 1';
@@ -480,14 +529,17 @@ export function detectGridOverlaps(
   isLandscape = false,
 ): Array<[string, string]> {
   const placed: GridPlacedWidget[] = [];
+  const denseSlots = computeDenseCssRowSlots(widgets, columnCount, isLandscape);
 
   for (const cfg of widgets) {
     const { colSpan, rowSpan, gridColumnStart, gridRowStart } =
       resolveWidgetGridPlacement(cfg, columnCount, isLandscape);
-    if (gridColumnStart == null || gridRowStart == null) continue;
+    // dense 슬롯이 있으면 maxRows 클램프에 걸려 gridRowStart가 비어도 배치로 본다.
+    const denseRow = denseSlots.get(cfg.widget_key);
+    if (gridColumnStart == null) continue;
+    if (denseRow == null && gridRowStart == null) continue;
 
-    const cssRowStart = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
-    const rowStart = cssRowStart ?? gridRowStart;
+    const rowStart = denseRow ?? layoutYHToCssGridRowStart(gridRowStart, rowSpan) ?? gridRowStart!;
     const rowEnd = rowStart + 1;
 
     placed.push({

@@ -2,11 +2,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { supabase } from '@/lib/supabase';
-import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { uploadFeatureAttachments } from '@/lib/feature-attachments-client';
-import { extractExifDate } from '../utils/exif-parser';
-import { calcAgeInMonths } from '../utils/age-calculator';
+import { listBabyPhotos } from '../utils/list-baby-photos';
 import type { BabyPhoto } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 
@@ -36,46 +33,22 @@ export function BabyAlbumView({
 
   const load = async () => {
     if (!currentGroupId) return;
-    const session = await waitForSupabaseSession(supabase);
-    if (!session?.access_token) return;
 
-    const { data, error } = await supabase
-      .from('attachments')
-      .select('id, image_url, thumbnail_url, created_at')
-      .eq('group_id', currentGroupId)
-      .eq('feature_type', 'baby_growth')
-      .like('mime_type', 'image/%')
-      .order('created_at', { ascending: false })
-      .limit(200);
+    const photos = await listBabyPhotos({
+      groupId: currentGroupId,
+      babyId,
+      birthDate,
+      limit: 200,
+    });
 
-    if (error || !data) {
-      setLoading(false);
-      return;
-    }
-
-    const birth = new Date(birthDate);
     const map = new Map<number, BabyPhoto[]>();
-
-    for (const row of data as any[]) {
-      const takenAt = row.created_at;
-      const taken = new Date(takenAt);
-      const months = Math.max(
-        0,
-        Math.floor((taken.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.4))
-      );
-      const photo: BabyPhoto = {
-        id: row.id,
-        imageUrl: row.image_url ?? '',
-        thumbnailUrl: row.thumbnail_url ?? null,
-        takenAt,
-        monthAge: months,
-      };
+    for (const photo of photos) {
+      const months = photo.monthAge ?? 0;
       const existing = map.get(months) ?? [];
       existing.push(photo);
       map.set(months, existing);
     }
 
-    // 최신 월령부터 정렬
     const sorted = new Map([...map.entries()].sort((a, b) => b[0] - a[0]));
     setGrouped(sorted);
     setLoading(false);
@@ -93,9 +66,6 @@ export function BabyAlbumView({
 
     for (const file of files) {
       try {
-        // EXIF 날짜 추출 — 사용하지 않더라도 나중 UI 확장 위해 보관
-        await extractExifDate(file);
-
         await uploadFeatureAttachments({
           groupId: currentGroupId,
           featureType: 'baby_growth',
@@ -108,7 +78,6 @@ export function BabyAlbumView({
       }
     }
 
-    // 목록 갱신
     await load();
     setUploading(false);
     e.target.value = '';
@@ -166,7 +135,7 @@ export function BabyAlbumView({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,video/*"
+          accept="image/*"
           multiple
           className="hidden"
           onChange={handleFileChange}
@@ -231,30 +200,8 @@ export function BabyAlbumView({
 }
 
 function PhotoThumb({ photo }: { photo: BabyPhoto }) {
-  const isVideo =
-    photo.imageUrl.includes('.mp4') ||
-    photo.imageUrl.includes('.mov') ||
-    photo.imageUrl.includes('.webm');
-
-  if (isVideo) {
-    return (
-      <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800">
-        <video
-          src={photo.imageUrl}
-          className="w-full h-full object-cover"
-          muted
-          autoPlay
-          loop
-          playsInline
-        />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="bg-black/50 text-white text-xs rounded-full px-2 py-0.5">▶ 1s</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={photo.thumbnailUrl ?? photo.imageUrl}
       alt=""

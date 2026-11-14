@@ -74,8 +74,8 @@ export function QuickStatusCards({ status, profile, logs, t, onCardClick, onBed,
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2 w-full">
-      {cards.map((card) => {
+    <div className="relative w-full">
+      {cards.map((card, index) => {
         const value = card.getValue(status);
         return (
           <div
@@ -84,22 +84,30 @@ export function QuickStatusCards({ status, profile, logs, t, onCardClick, onBed,
             tabIndex={0}
             onClick={() => onCardClick(card.key)}
             onKeyDown={(e) => { if (e.key === 'Enter') onCardClick(card.key); }}
-            className="flex flex-col items-start gap-1 p-2.5 rounded-xl bg-white/60 dark:bg-white/10 border border-gray-100 dark:border-white/10 hover:bg-pink-50 dark:hover:bg-pink-900/20 active:scale-95 transition-all text-left min-h-[68px] cursor-pointer"
+            className={`group relative inline-block w-[calc(50%-0.25rem)] cursor-pointer align-top text-left ${
+              index % 2 === 0 ? 'mr-2' : ''
+            } ${index < cards.length - 2 ? 'mb-2' : ''}`}
           >
-            <div className="flex items-center gap-1.5">
+            <div
+              className={`pointer-events-none absolute inset-0 z-0 rounded-2xl border shadow-sm group-hover:bg-pink-50 ${
+                value ? 'border-white bg-white' : 'border-white/80 bg-white/90'
+              }`}
+            />
+            <div className="relative z-20 flex min-h-[68px] flex-col items-start gap-1 p-2.5">
+            <div className="flex w-fit items-center gap-1.5 rounded bg-white group-hover:bg-pink-50">
               <span className="text-base">{card.emoji}</span>
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              <span className="text-xs font-medium text-gray-500">
                 {card.label}
               </span>
             </div>
             <span
-              className={`text-xs font-semibold leading-snug ${
-                value ? 'text-gray-700 dark:text-gray-200' : 'text-gray-300 dark:text-gray-600'
+              className={`w-fit rounded bg-white text-xs font-semibold leading-snug group-hover:bg-pink-50 ${
+                value ? 'text-gray-800' : 'text-gray-400'
               }`}
             >
               {value ?? t.no_record}
             </span>
-            <span className="text-[10px] text-pink-400 font-medium mt-auto">
+            <span className="mt-auto w-fit rounded bg-white text-[10px] font-medium text-pink-400 group-hover:bg-pink-50">
               {t.record_now} +
             </span>
             {card.key === 'sleep' && (onBed || onWake) && (
@@ -124,6 +132,7 @@ export function QuickStatusCards({ status, profile, logs, t, onCardClick, onBed,
                 )}
               </span>
             )}
+            </div>
           </div>
         );
       })}

@@ -52,7 +52,7 @@ export function VaccinationSchedule({
       group_id: currentGroupId ?? '',
       vaccine_key: view.vaccineKey,
       scheduled_at: view.scheduledAt,
-      administered_at: newDone ? new Date().toISOString().split('T')[0] : undefined,
+      administered_at: newDone ? new Date().toISOString().split('T')[0] : null,
     });
     setViews((prev) =>
       prev.map((v) =>
@@ -73,7 +73,7 @@ export function VaccinationSchedule({
   const done = views.filter((v) => v.isDone);
 
   return (
-    <div className="flex flex-col gap-4 p-4 overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
       <h2 className="text-base font-bold">{t.vaccine_title}</h2>
 
       {/* 지난 접종 */}
@@ -86,7 +86,7 @@ export function VaccinationSchedule({
       {/* 예정 접종 */}
       {upcoming.length > 0 && (
         <Section title="📅 예정" color="blue">
-          {upcoming.slice(0, 10).map((v) => <VaccineRow key={v.vaccineKey} view={v} t={t} onToggle={handleToggleDone} />)}
+          {upcoming.map((v) => <VaccineRow key={v.vaccineKey} view={v} t={t} onToggle={handleToggleDone} />)}
         </Section>
       )}
 
