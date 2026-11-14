@@ -7369,6 +7369,7 @@ export default function FamilyHub() {
             isKidsTheme={isKidsTheme}
             getCurrentKey={getCurrentKey}
             CryptoService={CryptoService}
+            isMagnified={expandedWidget === 'baby_growth'}
           />
         );
       case 'travel_diary':

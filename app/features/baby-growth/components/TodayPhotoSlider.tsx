@@ -12,6 +12,7 @@ interface TodayPhotoSliderProps {
   currentGroupId: string | null;
   birthDate: string | null;
   t: BabyGrowthTranslations;
+  onOpen?: () => void;
 }
 
 export function TodayPhotoSlider({
@@ -19,6 +20,7 @@ export function TodayPhotoSlider({
   currentGroupId,
   birthDate,
   t,
+  onOpen,
 }: TodayPhotoSliderProps) {
   const [photos, setPhotos] = useState<BabyPhoto[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -79,16 +81,25 @@ export function TodayPhotoSlider({
 
   if (photos.length === 0) {
     return (
-      <div className="w-full h-28 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center text-xs text-gray-400">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="w-full h-28 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center text-xs text-gray-400"
+      >
         {t.no_photos}
-      </div>
+      </button>
     );
   }
 
   const photo = photos[currentIdx];
 
   return (
-    <div className="w-full relative overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800" style={{ aspectRatio: '16/9' }}>
+    <div
+      className="w-full relative overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 cursor-pointer"
+      style={{ aspectRatio: '16/9' }}
+      onClick={onOpen}
+      role={onOpen ? 'button' : undefined}
+    >
       <img
         key={photo.id}
         src={photo.thumbnailUrl ?? photo.imageUrl}

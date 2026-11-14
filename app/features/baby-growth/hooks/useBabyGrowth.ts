@@ -41,7 +41,7 @@ export function useBabyGrowth({ currentGroupId, userId, onProfileChange }: UseBa
 
       const { data, error } = await supabase
         .from('baby_profiles')
-        .select('id, group_id, created_by, name, birth_date, gender, avatar_url, country_code, notes, created_at, updated_at')
+        .select('id, group_id, created_by, name, birth_date, gender, avatar_url, country_code, notes, usual_bedtime, usual_wake_time, created_at, updated_at')
         .eq('group_id', gid)
         .order('created_at', { ascending: true })
         .limit(1)
@@ -114,20 +114,32 @@ export function useBabyGrowth({ currentGroupId, userId, onProfileChange }: UseBa
       .select()
       .single();
     if (error) throw error;
-    return data as BabyProfile;
+    const row = data as BabyProfile;
+    babyGrowthRt.profile.current = row;
+    babyGrowthRt.onProfileChange.current(row);
+    return row;
   }
 
   async function updateProfile(id: string, patch: Partial<BabyProfileDraft>): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('baby_profiles')
       .update({ ...patch, updated_at: new Date().toISOString() })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id, group_id, created_by, name, birth_date, gender, avatar_url, country_code, notes, usual_bedtime, usual_wake_time, created_at, updated_at')
+      .single();
     if (error) throw error;
+    const row = data as BabyProfile;
+    babyGrowthRt.profile.current = row;
+    babyGrowthRt.onProfileChange.current(row);
   }
 
   async function deleteProfile(id: string): Promise<void> {
     const { error } = await supabase.from('baby_profiles').delete().eq('id', id);
     if (error) throw error;
+    if (babyGrowthRt.profile.current?.id === id) {
+      babyGrowthRt.profile.current = null;
+      babyGrowthRt.onProfileChange.current(null);
+    }
   }
 
   return { addProfile, updateProfile, deleteProfile };

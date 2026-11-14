@@ -11,6 +11,8 @@ interface QuickLogModalProps {
   babyId: string;
   currentGroupId: string;
   t: BabyGrowthTranslations;
+  onBed?: () => Promise<void>;
+  onWake?: () => Promise<void>;
   onSave: (draft: BabyDailyLogDraft) => Promise<void>;
   onClose: () => void;
 }
@@ -121,6 +123,8 @@ export function QuickLogModal({
   babyId,
   currentGroupId,
   t,
+  onBed,
+  onWake,
   onSave,
   onClose,
 }: QuickLogModalProps) {
@@ -185,7 +189,13 @@ export function QuickLogModal({
           if (feedingDurationMin) draft.feeding_duration_min = Number(feedingDurationMin);
         }
       } else if (activeTab === 'sleep') {
-        if (sleepEnd) draft.sleep_end_at = new Date(sleepEnd).toISOString();
+        draft.sleep_start_recorded = Boolean(sleepStart);
+        if (sleepEnd) {
+          draft.sleep_end_at = new Date(sleepEnd).toISOString();
+          draft.sleep_end_recorded = true;
+        } else {
+          draft.sleep_end_recorded = false;
+        }
       } else if (activeTab === 'diaper') {
         draft.diaper_type = diaperType;
         if (diaperColor) draft.diaper_color = diaperColor;
@@ -342,6 +352,54 @@ export function QuickLogModal({
           {/* ── 수면 ── */}
           {activeTab === 'sleep' && (
             <>
+              <div className="grid grid-cols-2 gap-2">
+                {onBed && (
+                  <button
+                    type="button"
+                    onClick={() => { void onBed().then(onClose); }}
+                    className="py-2 rounded-xl text-sm font-semibold bg-indigo-500 text-white"
+                  >
+                    {t.sleep_bed_btn}
+                  </button>
+                )}
+                {onWake && (
+                  <button
+                    type="button"
+                    onClick={() => { void onWake().then(onClose); }}
+                    className="py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white"
+                  >
+                    {t.sleep_wake_btn}
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { min: 30, label: t.sleep_nap_30 },
+                  { min: 60, label: t.sleep_nap_60 },
+                  { min: 90, label: t.sleep_nap_90 },
+                ].map(({ min, label }) => (
+                  <button
+                    key={min}
+                    type="button"
+                    onClick={() => {
+                      const end = new Date();
+                      const start = new Date(end.getTime() - min * 60_000);
+                      void onSave({
+                        baby_id: babyId,
+                        group_id: currentGroupId,
+                        log_type: 'sleep',
+                        logged_at: start.toISOString(),
+                        sleep_end_at: end.toISOString(),
+                        sleep_start_recorded: true,
+                        sleep_end_recorded: true,
+                      });
+                    }}
+                    className="px-2.5 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-800"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <Field label={t.sleep_start}>
                 <DatetimeInput value={sleepStart} onChange={setSleepStart} />
               </Field>

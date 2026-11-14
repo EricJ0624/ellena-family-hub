@@ -43,6 +43,9 @@ export const TRAVEL_QUICK_RECORD_M_LAYOUT_H = 4;
 /** Family Log M 기본 높이. 리본 + 카드 2줄 + 하단 버튼이 들어가는 세로. */
 export const FAMILY_LOG_M_LAYOUT_H = 11;
 
+/** 우리아이 성장기록 M 기본 높이. 전역 M(8)보다 세로 1칸. */
+export const BABY_GROWTH_M_LAYOUT_H = 9;
+
 /**
  * Family Location M 기본 높이. 전역 M(8)보다 높여 세로 나무 프레임(481×519)에 맞춤.
  * 12열 풀폭 기준 약 정사각보다 약간 김.
@@ -233,6 +236,13 @@ const _layoutFamilyLog = {
   layoutLandscapeH: FAMILY_LOG_M_LAYOUT_H,
 } as const;
 
+const _layoutBabyGrowth = {
+  ..._layoutM,
+  layoutH: BABY_GROWTH_M_LAYOUT_H,
+  layoutPortraitH: BABY_GROWTH_M_LAYOUT_H,
+  layoutLandscapeH: BABY_GROWTH_M_LAYOUT_H,
+} as const;
+
 const _layoutLocation = {
   ..._layoutM,
   layoutH: LOCATION_M_LAYOUT_H,
@@ -290,7 +300,7 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'album',    is_enabled: false, display_order: 60, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'location', is_enabled: false, display_order: 70, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutLocation },
   { widget_key: 'games',        is_enabled: false,  display_order: 80, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'baby_growth',  is_enabled: false,  display_order: 59, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'baby_growth',  is_enabled: false,  display_order: 59, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutBabyGrowth },
 ];
 
 /** 위젯별 기본 display_order — resetAllLayouts에서 순서 초기화 시 사용 */

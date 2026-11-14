@@ -1,13 +1,18 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import type { BabyDailyLog, BabyCheckup } from '../types';
+import React, { useMemo, useState } from 'react';
+import type { BabyCheckup, BabyDailyLog, BabyDailyLogDraft } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
+
+const SYMPTOM_CHIPS = ['열', '구토', '설사', '발진', '기침', '콧물', '보챔'] as const;
 
 interface MedicalReportViewProps {
   logs: BabyDailyLog[];
   t: BabyGrowthTranslations;
   checkups?: BabyCheckup[];
+  babyId?: string;
+  groupId?: string;
+  onAddLog?: (draft: BabyDailyLogDraft) => Promise<unknown>;
 }
 
 interface TempPoint {
@@ -23,7 +28,11 @@ interface MedEvent {
   dose: number | null;
 }
 
-export function MedicalReportView({ logs, t, checkups }: MedicalReportViewProps) {
+export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog }: MedicalReportViewProps) {
+  const [tags, setTags] = useState<string[]>([]);
+  const [symptomNote, setSymptomNote] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [savingSymptom, setSavingSymptom] = useState(false);
   const tempLogs = useMemo(
     () =>
       logs
@@ -55,9 +64,115 @@ export function MedicalReportView({ logs, t, checkups }: MedicalReportViewProps)
     dose: l.medication_dose_mg,
   }));
 
+  const symptomLogs = logs.filter((l) => l.log_type === 'symptom').slice(0, 20);
+
+  const summaryText = [
+    t.report_title,
+    tempPoints.length ? `체온: ${tempPoints.map((p) => `${p.label} ${p.value}°C`).join(', ')}` : '체온 기록 없음',
+    medEvents.length ? `투약: ${medEvents.map((e) => `${e.label} ${e.name}${e.dose != null ? ` ${e.dose}mg` : ''}`).join(', ')}` : '투약 기록 없음',
+    symptomLogs.length
+      ? `증상: ${symptomLogs.map((l) => `${formatTime(l.logged_at)} ${l.symptom_tags ?? ''} ${l.notes ?? ''}`).join(' / ')}`
+      : '증상 기록 없음',
+  ].join('\n');
+
+  const copySummary = async () => {
+    try {
+      await navigator.clipboard.writeText(summaryText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const shareSummary = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: t.report_title, text: summaryText });
+        return;
+      } catch {
+        /* 사용자가 공유를 닫은 경우 복사로 폴백하지 않음 */
+        return;
+      }
+    }
+    await copySummary();
+  };
+
+  const saveSymptom = async () => {
+    if (!onAddLog || !babyId || !groupId || (tags.length === 0 && !symptomNote.trim())) return;
+    setSavingSymptom(true);
+    try {
+      await onAddLog({
+        baby_id: babyId,
+        group_id: groupId,
+        log_type: 'symptom',
+        logged_at: new Date().toISOString(),
+        symptom_tags: tags.join(','),
+        notes: symptomNote.trim() || undefined,
+      });
+      setTags([]);
+      setSymptomNote('');
+    } finally {
+      setSavingSymptom(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5 p-4 overflow-y-auto">
-      <h2 className="text-base font-bold">{t.report_title}</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-bold">{t.report_title}</h2>
+        <div className="flex gap-1">
+          <button type="button" onClick={() => void copySummary()} className="text-[11px] px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800">
+            {copied ? t.report_copied : t.report_copy}
+          </button>
+          <button type="button" onClick={() => void shareSummary()} className="text-[11px] px-2 py-1 rounded-lg bg-pink-500 text-white">
+            {t.report_share}
+          </button>
+        </div>
+      </div>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t.symptom_title}</h3>
+        <div className="flex flex-wrap gap-1.5">
+          {SYMPTOM_CHIPS.map((chip) => {
+            const on = tags.includes(chip);
+            return (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => setTags((prev) => on ? prev.filter((x) => x !== chip) : [...prev, chip])}
+                className={`px-2.5 py-1 rounded-full text-xs ${on ? 'bg-rose-500 text-white' : 'bg-gray-100 dark:bg-gray-800'}`}
+              >
+                {chip}
+              </button>
+            );
+          })}
+        </div>
+        <textarea
+          value={symptomNote}
+          onChange={(e) => setSymptomNote(e.target.value)}
+          rows={2}
+          placeholder={t.symptom_note}
+          className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+        />
+        <button
+          type="button"
+          disabled={savingSymptom || !onAddLog}
+          onClick={() => void saveSymptom()}
+          className="w-full py-2 rounded-xl text-sm font-semibold bg-rose-500 text-white disabled:opacity-50"
+        >
+          {t.symptom_save}
+        </button>
+        {symptomLogs.length > 0 && (
+          <ul className="space-y-1">
+            {symptomLogs.map((l) => (
+              <li key={l.id} className="text-xs text-gray-600 dark:text-gray-300">
+                {formatTime(l.logged_at)} · {l.symptom_tags || l.notes}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* 체온 그래프 */}
       <section>

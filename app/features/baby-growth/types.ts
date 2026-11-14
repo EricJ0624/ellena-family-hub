@@ -14,7 +14,8 @@ export type LogType =
   | 'diaper'
   | 'temperature'
   | 'medication'
-  | 'activity';
+  | 'activity'
+  | 'symptom';
 
 export type ActivityType = 'bath' | 'tummy_time' | 'pumping' | 'other';
 
@@ -48,6 +49,9 @@ export interface BabyProfile {
   avatar_url: string | null;
   country_code: string;
   notes: string | null;
+  /** 'HH:mm' 또는 'HH:mm:ss'. 없으면 야간 추정 안 함 */
+  usual_bedtime: string | null;
+  usual_wake_time: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +64,8 @@ export interface BabyProfileDraft {
   avatar_url?: string;
   country_code?: string;
   notes?: string;
+  usual_bedtime?: string | null;
+  usual_wake_time?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,8 +88,12 @@ export interface BabyDailyLog {
   // feeding — 이유식 재료·알레르기
   solid_ingredients: string | null;
   allergy_reaction: string | null;
-  // sleep
+  // sleep — 실기록 여부. null이면 기존 행(둘 다 실기록으로 간주)
+  sleep_start_recorded: boolean | null;
+  sleep_end_recorded: boolean | null;
   sleep_end_at: string | null;
+  // symptom
+  symptom_tags: string | null;
   // diaper
   diaper_type: DiaperType | null;
   diaper_color: string | null;
@@ -118,6 +128,10 @@ export interface BabyDailyLogDraft {
   allergy_reaction?: string;
   // sleep
   sleep_end_at?: string;
+  sleep_start_recorded?: boolean;
+  sleep_end_recorded?: boolean;
+  // symptom
+  symptom_tags?: string;
   // diaper
   diaper_type?: DiaperType;
   diaper_color?: string;

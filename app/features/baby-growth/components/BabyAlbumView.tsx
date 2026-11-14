@@ -30,7 +30,8 @@ export function BabyAlbumView({
   const [grouped, setGrouped] = useState<GroupedPhotos>(new Map());
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [comingSoonOpen, setComingSoonOpen] = useState(false); // CTA 모달
+  const [slideshow, setSlideshow] = useState(false);
+  const [slideIdx, setSlideIdx] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -113,6 +114,17 @@ export function BabyAlbumView({
     e.target.value = '';
   };
 
+  const allPhotos = [...grouped.values()].flat();
+  const photoCount = allPhotos.length;
+
+  useEffect(() => {
+    if (!slideshow || photoCount === 0) return;
+    const timer = setInterval(() => {
+      setSlideIdx((i) => (i + 1) % photoCount);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [slideshow, photoCount]);
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center text-xs text-gray-400">
@@ -121,8 +133,17 @@ export function BabyAlbumView({
     );
   }
 
-  // 전체 사진 수
-  const totalPhotos = [...grouped.values()].reduce((s, arr) => s + arr.length, 0);
+  const printAlbum = () => {
+    const win = window.open('', '_blank', 'noopener,noreferrer');
+    if (!win) return;
+    const imgs = allPhotos
+      .map((p) => `<img src="${p.imageUrl}" alt="" style="width:100%;max-width:720px;display:block;margin:0 auto 12px;border-radius:12px" />`)
+      .join('');
+    win.document.write(`<!doctype html><html><head><title>${t.album_print}</title></head><body style="margin:0;padding:16px;font-family:sans-serif"><h1>${t.album_title}</h1>${imgs}</body></html>`);
+    win.document.close();
+    win.focus();
+    win.print();
+  };
 
   return (
     <div className="flex flex-col gap-4 p-4 overflow-y-auto">
@@ -152,46 +173,38 @@ export function BabyAlbumView({
         />
       </div>
 
-      {/* 1초 영상 / 포토북 CTA — 사진 10장 이상 시 표시 */}
-      {totalPhotos >= 10 && (
+      {allPhotos.length > 0 && (
         <div className="flex gap-2">
           <button
-            onClick={() => setComingSoonOpen(true)}
+            type="button"
+            onClick={() => { setSlideIdx(0); setSlideshow(true); }}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-indigo-500 text-white text-xs font-semibold shadow-sm"
           >
-            🎬 추억 영상 만들기
+            🎬 {t.album_slideshow}
           </button>
           <button
-            onClick={() => setComingSoonOpen(true)}
+            type="button"
+            onClick={printAlbum}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-semibold shadow-sm"
           >
-            📖 포토북 주문
+            📖 {t.album_print}
           </button>
         </div>
       )}
 
-      {/* Coming Soon 모달 */}
-      {comingSoonOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
-          onClick={() => setComingSoonOpen(false)}
-        >
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-xs w-full mx-4 text-center">
-            <div className="text-4xl mb-3">🚀</div>
-            <h3 className="text-base font-bold mb-2">준비 중입니다</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              1초 영상 모음집과 포토북 인쇄 기능은 곧 제공될 예정입니다.
-              <br />사진을 계속 모아두세요! 📸
-            </p>
-            <button
-              onClick={() => setComingSoonOpen(false)}
-              className="bg-pink-500 text-white text-sm font-semibold px-6 py-2 rounded-xl"
-            >
-              확인
-            </button>
+      {slideshow && allPhotos[slideIdx] && createPortal(
+        <div className="fixed inset-0 z-[10000] bg-black flex flex-col" onClick={() => setSlideshow(false)}>
+          <div className="flex items-center justify-between px-4 py-3 text-white text-sm">
+            <span>{t.album_slideshow}</span>
+            <span>{slideIdx + 1}/{allPhotos.length}</span>
           </div>
+          <img
+            src={allPhotos[slideIdx].imageUrl}
+            alt=""
+            className="flex-1 min-h-0 w-full object-contain"
+          />
         </div>,
-        document.body
+        document.body,
       )}
 
       {grouped.size === 0 ? (

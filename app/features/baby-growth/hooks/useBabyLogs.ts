@@ -16,6 +16,7 @@ const LOG_SELECT_COLS = [
   'feeding_type', 'feeding_amount_ml', 'feeding_duration_min',
   'sleep_end_at', 'diaper_type', 'temperature_celsius',
   'medication_name', 'medication_dose_mg', 'notes', 'created_by', 'created_at',
+  'sleep_start_recorded', 'sleep_end_recorded', 'symptom_tags',
 ].join(', ');
 
 // ---------------------------------------------------------------------------
@@ -89,7 +90,9 @@ export function useBabyLogs({
             };
             const current = logsRt.logs.current;
             if (payload.eventType === 'INSERT') {
-              publish([payload.new as BabyDailyLog, ...current].slice(0, limit));
+              const row = payload.new as BabyDailyLog;
+              const without = current.filter((l) => l.id !== row.id);
+              publish([row, ...without].slice(0, limit));
             } else if (payload.eventType === 'UPDATE') {
               publish(current.map((l) => (l.id === payload.new.id ? (payload.new as BabyDailyLog) : l)));
             } else if (payload.eventType === 'DELETE') {
@@ -132,17 +135,34 @@ export function useBabyLogs({
       .select()
       .single();
     if (error) throw error;
-    return data as BabyDailyLog;
+    const row = data as BabyDailyLog;
+    const without = logsRt.logs.current.filter((l) => l.id !== row.id);
+    const next = [row, ...without].slice(0, limit);
+    logsRt.logs.current = next;
+    logsRt.onLogsChange.current(next);
+    return row;
   }
 
   async function updateLog(id: string, patch: Partial<BabyDailyLogDraft>): Promise<void> {
-    const { error } = await supabase.from('baby_daily_logs').update(patch).eq('id', id);
+    const { data, error } = await supabase
+      .from('baby_daily_logs')
+      .update(patch)
+      .eq('id', id)
+      .select(LOG_SELECT_COLS)
+      .single();
     if (error) throw error;
+    const row = data as unknown as BabyDailyLog;
+    const next = logsRt.logs.current.map((l) => (l.id === id ? row : l));
+    logsRt.logs.current = next;
+    logsRt.onLogsChange.current(next);
   }
 
   async function deleteLog(id: string): Promise<void> {
     const { error } = await supabase.from('baby_daily_logs').delete().eq('id', id);
     if (error) throw error;
+    const next = logsRt.logs.current.filter((l) => l.id !== id);
+    logsRt.logs.current = next;
+    logsRt.onLogsChange.current(next);
   }
 
   return { addLog, updateLog, deleteLog };

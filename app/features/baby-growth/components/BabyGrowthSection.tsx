@@ -23,6 +23,8 @@ import { BabyProfileCard } from './BabyProfileCard';
 import { QuickStatusCards } from './QuickStatusCards';
 import { QuickLogModal } from './QuickLogModal';
 import { TodayPhotoSlider } from './TodayPhotoSlider';
+import { BabyAlbumView } from './BabyAlbumView';
+import { findCurrentOpenSleep, scheduledBedBefore } from '../utils/sleep-schedule';
 
 // lazy import — 대시보드 초기 로드 성능 보호
 const BabyGrowthNavigator = React.lazy(
@@ -83,6 +85,8 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
   const [addProfileOpen, setAddProfileOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [aiText, setAiText] = useState<string | null>(null);
+  const [albumOpen, setAlbumOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // 로그 시그니처 ref — 동일 내용 setState 방지
   const logsSigRef = useRef<string>('');
@@ -110,7 +114,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     onProfileChange: handleProfileChange,
   });
 
-  const { addLog } = useBabyLogs({
+  const { addLog, updateLog } = useBabyLogs({
     babyId: profile?.id ?? null,
     currentGroupId,
     userId,
@@ -137,31 +141,67 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     [addLog]
   );
 
+  const handleBed = useCallback(async () => {
+    if (!profile || !currentGroupId) return;
+    const open = findCurrentOpenSleep(logs, new Date(), profile.usual_wake_time);
+    if (open) return;
+    await addLog({
+      baby_id: profile.id,
+      group_id: currentGroupId,
+      log_type: 'sleep',
+      logged_at: new Date().toISOString(),
+      sleep_start_recorded: true,
+      sleep_end_recorded: false,
+    });
+  }, [profile, currentGroupId, logs, addLog]);
+
+  const handleWake = useCallback(async () => {
+    if (!profile || !currentGroupId) return;
+    const now = new Date();
+    const open = findCurrentOpenSleep(logs, now, profile.usual_wake_time);
+    if (open) {
+      await updateLog(open.id, { sleep_end_at: now.toISOString(), sleep_end_recorded: true });
+      return;
+    }
+    const bed = profile.usual_bedtime ? scheduledBedBefore(now, profile.usual_bedtime) : null;
+    await addLog({
+      baby_id: profile.id,
+      group_id: currentGroupId,
+      log_type: 'sleep',
+      logged_at: (bed ?? new Date(now.getTime() - 60 * 60_000)).toISOString(),
+      sleep_end_at: now.toISOString(),
+      sleep_start_recorded: false,
+      sleep_end_recorded: true,
+    });
+  }, [profile, currentGroupId, logs, addLog, updateLog]);
+
   // ---------------------------------------------------------------------------
   // 렌더
   // ---------------------------------------------------------------------------
 
-  // 확대 모달 뷰
-  if (isMagnified && profile) {
-    return (
-      <React.Suspense fallback={<div className="flex-1 flex items-center justify-center text-xs text-gray-400">{t.loading}</div>}>
-        <BabyGrowthNavigator
-          profile={profile}
-          logs={logs}
-          currentGroupId={currentGroupId}
-          userId={userId}
-          lang={lang}
-          uiTheme={uiTheme}
-          isKidsTheme={isKidsTheme}
-          getCurrentKey={getCurrentKey}
-          CryptoService={CryptoService}
-          t={t}
-          onLogsChange={handleLogsChange}
-          aiText={aiText}
-          onAiTextChange={setAiText}
-        />
-      </React.Suspense>
-    );
+  const growthNavigator = profile ? (
+    <React.Suspense fallback={<div className="flex-1 flex items-center justify-center text-xs text-gray-400">{t.loading}</div>}>
+      <BabyGrowthNavigator
+        profile={profile}
+        logs={logs}
+        currentGroupId={currentGroupId}
+        userId={userId}
+        lang={lang}
+        uiTheme={uiTheme}
+        isKidsTheme={isKidsTheme}
+        getCurrentKey={getCurrentKey}
+        CryptoService={CryptoService}
+        t={t}
+        onLogsChange={handleLogsChange}
+        onAddLog={addLog}
+        aiText={aiText}
+        onAiTextChange={setAiText}
+      />
+    </React.Suspense>
+  ) : null;
+
+  if (isMagnified && growthNavigator) {
+    return growthNavigator;
   }
 
   // 대시보드 위젯 뷰
@@ -187,6 +227,13 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
             t={t}
             onEditClick={() => setEditProfileOpen(true)}
           />
+          <button
+            type="button"
+            onClick={() => setDetailOpen(true)}
+            className="self-end text-[11px] font-semibold text-pink-500"
+          >
+            {t.report_title}
+          </button>
 
           {/* AI 브리핑 배너 */}
           {aiText && (
@@ -198,8 +245,12 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
           {/* 퀵 상태 카드 */}
           <QuickStatusCards
             status={recentStatus}
+            profile={profile}
+            logs={logs}
             t={t}
             onCardClick={handleCardClick}
+            onBed={() => { void handleBed(); }}
+            onWake={() => { void handleWake(); }}
           />
 
           {/* 오늘의 포토 슬라이드 */}
@@ -208,6 +259,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
             currentGroupId={currentGroupId}
             birthDate={profile.birth_date}
             t={t}
+            onOpen={() => setAlbumOpen(true)}
           />
         </>
       )}
@@ -220,6 +272,8 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
           babyId={profile.id}
           currentGroupId={currentGroupId ?? ''}
           t={t}
+          onBed={handleBed}
+          onWake={handleWake}
           onSave={handleLogSave}
           onClose={() => setLogModalOpen(false)}
         />
@@ -257,6 +311,38 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
           onClose={() => setEditProfileOpen(false)}
         />
       )}
+
+      {detailOpen && profile && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-white dark:bg-gray-950 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="text-sm font-bold">{t.widget_title}</h2>
+            <button type="button" onClick={() => setDetailOpen(false)} className="text-sm text-gray-500">{t.close}</button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {growthNavigator}
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {albumOpen && profile && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-white dark:bg-gray-950 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="text-sm font-bold">{t.album_title}</h2>
+            <button type="button" onClick={() => setAlbumOpen(false)} className="text-sm text-gray-500">{t.close}</button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <BabyAlbumView
+              babyId={profile.id}
+              currentGroupId={currentGroupId}
+              birthDate={profile.birth_date}
+              userId={userId}
+              t={t}
+            />
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 });
@@ -269,7 +355,7 @@ interface AddBabyModalProps {
   currentGroupId: string;
   lang: LangCode;
   initial?: BabyProfile;
-  onSave: (draft: { name: string; birth_date: string; gender?: 'male' | 'female' | 'other'; country_code?: string }) => Promise<void>;
+  onSave: (draft: { name: string; birth_date: string; gender?: 'male' | 'female' | 'other'; country_code?: string; usual_bedtime?: string | null; usual_wake_time?: string | null }) => Promise<void>;
   onDelete?: () => Promise<void>;
   onClose: () => void;
 }
@@ -279,6 +365,8 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
   const [birthDate, setBirthDate] = useState(initial?.birth_date ?? '');
   const [gender, setGender] = useState<'male' | 'female' | 'other'>(initial?.gender ?? 'female');
   const [countryCode, setCountryCode] = useState(initial?.country_code ?? 'KR');
+  const [usualBedtime, setUsualBedtime] = useState(initial?.usual_bedtime?.slice(0, 5) ?? '');
+  const [usualWake, setUsualWake] = useState(initial?.usual_wake_time?.slice(0, 5) ?? '');
   const [countrySearch, setCountrySearch] = useState('');
   const [countryOpen, setCountryOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -316,7 +404,14 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
     if (!name.trim() || !birthDate) return;
     setSaving(true);
     try {
-      await onSave({ name: name.trim(), birth_date: birthDate, gender, country_code: countryCode });
+      await onSave({
+        name: name.trim(),
+        birth_date: birthDate,
+        gender,
+        country_code: countryCode,
+        usual_bedtime: usualBedtime || null,
+        usual_wake_time: usualWake || null,
+      });
     } catch (err) {
       console.error('[AddBabyModal] 저장 오류:', err);
     } finally {
@@ -372,6 +467,27 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
                   {t[`gender_${g}` as keyof typeof t] as string}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.usual_bedtime}</label>
+              <input
+                type="time"
+                value={usualBedtime}
+                onChange={(e) => setUsualBedtime(e.target.value)}
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.usual_wake_time}</label>
+              <input
+                type="time"
+                value={usualWake}
+                onChange={(e) => setUsualWake(e.target.value)}
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
             </div>
           </div>
 

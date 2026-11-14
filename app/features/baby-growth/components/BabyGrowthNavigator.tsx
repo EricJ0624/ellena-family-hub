@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { BabyProfile, BabyDailyLog, BabyGrowthRecord } from '../types';
+import type { BabyProfile, BabyDailyLog, BabyDailyLogDraft, BabyGrowthRecord } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import type { LangCode } from '@/lib/language-fonts';
 import type { UiTheme } from '@/lib/ui-theme';
@@ -48,6 +48,7 @@ interface BabyGrowthNavigatorProps {
   };
   t: BabyGrowthTranslations;
   onLogsChange: (logs: BabyDailyLog[]) => void;
+  onAddLog?: (draft: BabyDailyLogDraft) => Promise<unknown>;
   aiText: string | null;
   onAiTextChange: (text: string) => void;
 }
@@ -58,6 +59,7 @@ export function BabyGrowthNavigator({
   currentGroupId,
   userId,
   t,
+  onAddLog,
   aiText,
   onAiTextChange,
 }: BabyGrowthNavigatorProps) {
@@ -132,7 +134,14 @@ export function BabyGrowthNavigator({
         {activeTab === 'home' && (
           <div className="h-full overflow-y-auto">
             <DailyLogStats logs={logs} t={t} />
-            <MedicalReportView logs={logs} t={t} checkups={checkups} />
+            <MedicalReportView
+              logs={logs}
+              t={t}
+              checkups={checkups}
+              babyId={profile.id}
+              groupId={currentGroupId ?? ''}
+              onAddLog={onAddLog}
+            />
           </div>
         )}
 
