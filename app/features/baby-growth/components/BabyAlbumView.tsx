@@ -11,17 +11,15 @@ interface BabyAlbumViewProps {
   babyId: string;
   currentGroupId: string | null;
   birthDate: string;
-  userId: string;
   t: BabyGrowthTranslations;
 }
 
-type GroupedPhotos = Map<number, BabyPhoto[]>; // key = monthAge
+type GroupedPhotos = Map<number | 'none', BabyPhoto[]>;
 
 export function BabyAlbumView({
   babyId,
   currentGroupId,
   birthDate,
-  userId: _userId,
   t,
 }: BabyAlbumViewProps) {
   const [grouped, setGrouped] = useState<GroupedPhotos>(new Map());
@@ -41,15 +39,21 @@ export function BabyAlbumView({
       limit: 200,
     });
 
-    const map = new Map<number, BabyPhoto[]>();
+    const map = new Map<number | 'none', BabyPhoto[]>();
     for (const photo of photos) {
-      const months = photo.monthAge ?? 0;
+      const months = photo.monthAge === null ? 'none' : photo.monthAge;
       const existing = map.get(months) ?? [];
       existing.push(photo);
       map.set(months, existing);
     }
 
-    const sorted = new Map([...map.entries()].sort((a, b) => b[0] - a[0]));
+    const sorted = new Map(
+      [...map.entries()].sort((a, b) => {
+        if (a[0] === 'none') return 1;
+        if (b[0] === 'none') return -1;
+        return b[0] - a[0];
+      }),
+    );
     setGrouped(sorted);
     setLoading(false);
   };
@@ -184,9 +188,11 @@ export function BabyAlbumView({
       ) : (
         [...grouped.entries()].map(([months, photos]) => (
           <section key={months}>
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-              {t.album_month_label.replace('{n}', String(months))}
-            </h3>
+            {months !== 'none' && (
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                {t.album_month_label.replace('{n}', String(months))}
+              </h3>
+            )}
             <div className="grid grid-cols-3 gap-1.5">
               {photos.map((photo) => (
                 <PhotoThumb key={photo.id} photo={photo} />

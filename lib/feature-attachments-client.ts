@@ -1,3 +1,4 @@
+import { readExifTakenAt } from '@/lib/read-exif-taken-at';
 import { supabase } from '@/lib/supabase';
 
 export type FeatureEntityType =
@@ -183,6 +184,7 @@ export async function uploadFeatureAttachment(params: {
   contentSha256?: string;
 }) {
   const { groupId, featureType, entityType, entityId, signal, onProgress, contentSha256 } = params;
+  const takenAt = featureType === 'baby_growth' ? await readExifTakenAt(params.file) : null;
   const normalizedIn = ensureImageFileWithKnownMime(params.file);
   const file = await compressImageAuto(normalizedIn);
   const validationError = validateAttachmentFile(file);
@@ -241,6 +243,7 @@ export async function uploadFeatureAttachment(params: {
       thumbnailS3Key,
       thumbnailUrl,
       contentSha256: contentSha256 || undefined,
+      takenAt,
     }),
   });
   const completeJson = await completeRes.json().catch(() => ({}));

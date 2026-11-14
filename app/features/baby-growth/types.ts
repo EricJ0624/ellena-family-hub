@@ -258,7 +258,7 @@ export interface BabyPhoto {
   id: string;
   imageUrl: string;
   thumbnailUrl: string | null;
-  takenAt: string | null; // EXIF 또는 created_at
+  takenAt: string | null; // 촬영일. 없으면 개월을 표시하지 않는다
   monthAge: number | null; // 아기 월령
 }
 

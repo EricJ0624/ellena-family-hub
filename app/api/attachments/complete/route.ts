@@ -29,6 +29,13 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/heif',
 ]);
 
+function takenAtIso(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
 function normalizeClientMime(m: string): string {
   const s = String(m || '').trim().toLowerCase();
   if (s === 'image/jpg') return 'image/jpeg';
@@ -57,6 +64,7 @@ export async function POST(request: NextRequest) {
       thumbnailS3Key,
       thumbnailUrl,
       contentSha256,
+      takenAt,
     } = body ?? {};
 
     if (!groupId || !featureType || !entityType || !entityId || !originalFilename || !mimeType || !sizeBytes || !s3Key || !imageUrl) {
@@ -101,6 +109,7 @@ export async function POST(request: NextRequest) {
         image_url: String(imageUrl),
         thumbnail_s3_key: thumbnailS3Key ? String(thumbnailS3Key) : null,
         thumbnail_url: thumbnailUrl ? String(thumbnailUrl) : null,
+        taken_at: takenAtIso(takenAt),
       })
       .select('*')
       .single();

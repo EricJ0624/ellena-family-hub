@@ -317,7 +317,6 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
               babyId={profile.id}
               currentGroupId={currentGroupId}
               birthDate={profile.birth_date}
-              userId={userId}
               t={t}
             />
           </div>

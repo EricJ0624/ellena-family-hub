@@ -20,46 +20,58 @@ function monthAgeAt(birthDate: string, takenAt: string): number {
   return Math.max(0, months);
 }
 
-/** baby_growth 첨부 사진 목록 (삭제분·타 아기 제외) */
+type AttachmentRow = {
+  id: string;
+  image_url: string | null;
+  thumbnail_url: string | null;
+  mime_type: string | null;
+  feature_type: string | null;
+  created_at: string;
+  taken_at: string | null;
+};
+
+/** baby_growth 첨부 사진 목록. 표시 주소는 첨부 API가 발급한 짧은 주소를 쓴다. */
 export async function listBabyPhotos(opts: ListBabyPhotosOptions): Promise<BabyPhoto[]> {
   const session = await waitForSupabaseSession(supabase);
   if (!session?.access_token) return [];
 
-  let q = supabase
-    .from('attachments')
-    .select('id, image_url, thumbnail_url, created_at')
-    .eq('group_id', opts.groupId)
-    .eq('feature_type', 'baby_growth')
-    .eq('entity_id', opts.babyId)
-    .is('deleted_at', null)
-    .like('mime_type', 'image/%')
-    .order('created_at', { ascending: false })
-    .limit(opts.limit ?? 200);
-
-  if (opts.todayOnly) {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    q = q.gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString());
-  }
-
-  const { data, error } = await q;
-  if (error || !data) return [];
-
-  return data.map((row: {
-    id: string;
-    image_url: string | null;
-    thumbnail_url: string | null;
-    created_at: string;
-  }) => {
-    const takenAt = row.created_at;
-    return {
-      id: row.id,
-      imageUrl: row.image_url ?? row.thumbnail_url ?? '',
-      thumbnailUrl: row.thumbnail_url ?? null,
-      takenAt,
-      monthAge: opts.birthDate ? monthAgeAt(opts.birthDate, takenAt) : null,
-    } satisfies BabyPhoto;
+  const params = new URLSearchParams({
+    groupId: opts.groupId,
+    entityType: 'baby_profile',
+    entityId: opts.babyId,
   });
+  const response = await fetch(`/api/attachments?${params}`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) return [];
+  const json = (await response.json().catch(() => ({}))) as { data?: AttachmentRow[] };
+  const rows = Array.isArray(json.data) ? json.data : [];
+
+  const todayStart = opts.todayOnly ? new Date() : null;
+  if (todayStart) todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = opts.todayOnly ? new Date() : null;
+  if (todayEnd) todayEnd.setHours(23, 59, 59, 999);
+
+  const photos = rows
+    .filter((row) => {
+      if (row.feature_type && row.feature_type !== 'baby_growth') return false;
+      if (!row.mime_type?.startsWith('image/')) return false;
+      if (!row.image_url || row.image_url === 'expired') return false;
+      if (!todayStart || !todayEnd) return true;
+      const uploadedAt = new Date(row.created_at).getTime();
+      return uploadedAt >= todayStart.getTime() && uploadedAt <= todayEnd.getTime();
+    })
+    .map((row) => {
+      const shotAt = row.taken_at && !Number.isNaN(new Date(row.taken_at).getTime()) ? row.taken_at : null;
+      return {
+        id: row.id,
+        imageUrl: row.image_url ?? '',
+        thumbnailUrl: row.thumbnail_url?.startsWith('/api/media/file') ? row.thumbnail_url : null,
+        takenAt: shotAt,
+        monthAge: shotAt && opts.birthDate ? monthAgeAt(opts.birthDate, shotAt) : null,
+      } satisfies BabyPhoto;
+    })
+    .reverse();
+
+  return photos.slice(0, opts.limit ?? 200);
 }

@@ -156,7 +156,6 @@ export function BabyGrowthNavigator({
             babyId={profile.id}
             currentGroupId={currentGroupId}
             birthDate={profile.birth_date}
-            userId={userId}
             t={t}
           />
         )}
