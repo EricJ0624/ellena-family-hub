@@ -83,14 +83,15 @@ function sanitizeDraftLayoutForSave(d: WidgetConfigDraft): Pick<
   };
 }
 
-/** 예전 전역 M 높이(8)로 저장된 travel만 새 기본 높이로 맞춘다. 커스텀 높이는 유지. */
+/** 예전 전역 M(8)·이전 travel 기본(6)만 새 기본 높이로 맞춘다. 커스텀 높이는 유지. */
 function adoptTravelDefaultHeight(h: number | null): number | null {
-  return h === WIDGET_LAYOUT_PRESETS.M.h ? TRAVEL_M_LAYOUT_H : h;
+  if (h === WIDGET_LAYOUT_PRESETS.M.h || h === 6) return TRAVEL_M_LAYOUT_H;
+  return h;
 }
 
-/** travel(6)/전역 M(8)/이전 짧은 기본(4) → 현재 기본 높이로 채택. 커스텀은 유지. */
+/** travel 기본(7·이전 6)/전역 M(8)/이전 짧은 기본(4) → 현재 기본 높이로 채택. 커스텀은 유지. */
 function adoptTravelQuickRecordDefaultHeight(h: number | null): number | null {
-  if (h === WIDGET_LAYOUT_PRESETS.M.h || h === TRAVEL_M_LAYOUT_H || h === 4) {
+  if (h === WIDGET_LAYOUT_PRESETS.M.h || h === TRAVEL_M_LAYOUT_H || h === 6 || h === 4) {
     return TRAVEL_QUICK_RECORD_M_LAYOUT_H;
   }
   return h;

@@ -132,7 +132,7 @@ export function FamilyLogShowroomDemo({ lang, step }: { lang: LangCode; step: nu
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.22 }}
-            className="family-log-widget flex min-h-[16rem] flex-col overflow-hidden rounded-[1.25rem] bg-[#fbf6ec] shadow-lg"
+            className="family-log-widget flex min-h-[16rem] flex-col overflow-hidden rounded-2xl bg-[#fbf6ec] shadow-lg"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={BG_SRC} alt="" draggable={false} className="block h-auto w-full" />

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { uploadFeatureAttachments } from '@/lib/feature-attachments-client';
-import { listBabyPhotos } from '../utils/list-baby-photos';
+import { deleteAttachment, uploadFeatureAttachments } from '@/lib/feature-attachments-client';
+import { listBabyPhotos, notifyBabyPhotosChanged } from '../utils/list-baby-photos';
 import type { BabyPhoto } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
+import { BabyPrintAlbumEditor } from './BabyPrintAlbumEditor';
 
 interface BabyAlbumViewProps {
   babyId: string;
@@ -25,8 +26,11 @@ export function BabyAlbumView({
   const [grouped, setGrouped] = useState<GroupedPhotos>(new Map());
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [slideshow, setSlideshow] = useState(false);
   const [slideIdx, setSlideIdx] = useState(0);
+  const [printOpen, setPrintOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -83,12 +87,39 @@ export function BabyAlbumView({
     }
 
     await load();
+    notifyBabyPhotosChanged(babyId);
     setUploading(false);
     e.target.value = '';
   };
 
-  const allPhotos = [...grouped.values()].flat();
+  const handleDelete = async (photo: BabyPhoto) => {
+    if (!currentGroupId || deletingId) return;
+    if (!window.confirm(t.delete_photo_confirm)) return;
+    setDeletingId(photo.id);
+    setDeleteError(null);
+    try {
+      await deleteAttachment(currentGroupId, photo.id);
+      notifyBabyPhotosChanged(babyId);
+      await load();
+    } catch (err) {
+      console.error('[BabyAlbumView] 삭제 오류:', err);
+      setDeleteError(err instanceof Error ? err.message : t.delete);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const allPhotos = useMemo(() => [...grouped.values()].flat(), [grouped]);
   const photoCount = allPhotos.length;
+
+  useEffect(() => {
+    if (photoCount === 0) {
+      setSlideshow(false);
+      setPrintOpen(false);
+      return;
+    }
+    if (slideIdx >= photoCount) setSlideIdx(photoCount - 1);
+  }, [photoCount, slideIdx]);
 
   useEffect(() => {
     if (!slideshow || photoCount === 0) return;
@@ -106,25 +137,11 @@ export function BabyAlbumView({
     );
   }
 
-  const printAlbum = () => {
-    const win = window.open('', '_blank', 'noopener,noreferrer');
-    if (!win) return;
-    const imgs = allPhotos
-      .map((p) => `<img src="${p.imageUrl}" alt="" style="width:100%;max-width:720px;display:block;margin:0 auto 12px;border-radius:12px" />`)
-      .join('');
-    win.document.write(`<!doctype html><html><head><title>${t.album_print}</title></head><body style="margin:0;padding:16px;font-family:sans-serif"><h1>${t.album_title}</h1>${imgs}</body></html>`);
-    win.document.close();
-    win.focus();
-    win.print();
-  };
-
   return (
     <div className="flex flex-col gap-4 p-4 overflow-y-auto">
-      {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-bold">{t.album_title}</h2>
-          {/* 가족 공유 뱃지 */}
           <span className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">
             👨‍👩‍👧 그룹 공유 중
           </span>
@@ -146,6 +163,8 @@ export function BabyAlbumView({
         />
       </div>
 
+      {deleteError && <p className="text-xs text-red-500">{deleteError}</p>}
+
       {allPhotos.length > 0 && (
         <div className="flex gap-2">
           <button
@@ -157,7 +176,7 @@ export function BabyAlbumView({
           </button>
           <button
             type="button"
-            onClick={printAlbum}
+            onClick={() => setPrintOpen(true)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-semibold shadow-sm"
           >
             📖 {t.album_print}
@@ -165,16 +184,32 @@ export function BabyAlbumView({
         </div>
       )}
 
+      <BabyPrintAlbumEditor
+        open={printOpen}
+        onClose={() => setPrintOpen(false)}
+        babyId={babyId}
+        currentGroupId={currentGroupId}
+        photos={allPhotos}
+        defaultTitle={t.album_title}
+        t={t}
+      />
+
       {slideshow && allPhotos[slideIdx] && createPortal(
-        <div className="fixed inset-0 z-[10000] bg-black flex flex-col" onClick={() => setSlideshow(false)}>
-          <div className="flex items-center justify-between px-4 py-3 text-white text-sm">
-            <span>{t.album_slideshow}</span>
+        <div className="fixed inset-0 z-[10000] flex flex-col bg-black">
+          <div className="flex items-center justify-between px-4 py-3 text-sm text-white">
             <span>{slideIdx + 1}/{allPhotos.length}</span>
+            <button
+              type="button"
+              onClick={() => setSlideshow(false)}
+              className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold"
+            >
+              {t.close}
+            </button>
           </div>
           <img
             src={allPhotos[slideIdx].imageUrl}
             alt=""
-            className="flex-1 min-h-0 w-full object-contain"
+            className="min-h-0 w-full flex-1 object-contain"
           />
         </div>,
         document.body,
@@ -195,7 +230,13 @@ export function BabyAlbumView({
             )}
             <div className="grid grid-cols-3 gap-1.5">
               {photos.map((photo) => (
-                <PhotoThumb key={photo.id} photo={photo} />
+                <PhotoThumb
+                  key={photo.id}
+                  photo={photo}
+                  label={t.delete}
+                  deleting={deletingId === photo.id}
+                  onDelete={() => { void handleDelete(photo); }}
+                />
               ))}
             </div>
           </section>
@@ -205,14 +246,34 @@ export function BabyAlbumView({
   );
 }
 
-function PhotoThumb({ photo }: { photo: BabyPhoto }) {
+function PhotoThumb({
+  photo,
+  label,
+  deleting,
+  onDelete,
+}: {
+  photo: BabyPhoto;
+  label: string;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={photo.thumbnailUrl ?? photo.imageUrl}
-      alt=""
-      loading="lazy"
-      className="aspect-square w-full rounded-lg object-cover"
-    />
+    <div className="relative">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.thumbnailUrl ?? photo.imageUrl}
+        alt=""
+        loading="lazy"
+        className="aspect-square w-full rounded-lg object-cover"
+      />
+      <button
+        type="button"
+        disabled={deleting}
+        onClick={onDelete}
+        className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white disabled:opacity-50"
+      >
+        {label}
+      </button>
+    </div>
   );
 }

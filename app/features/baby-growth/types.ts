@@ -262,6 +262,30 @@ export interface BabyPhoto {
   monthAge: number | null; // 아기 월령
 }
 
+/** 인쇄용 앨범 사진별 편집 (baby_print_albums.photo_edits) */
+export type BabyPrintPhotoEdit = {
+  included: boolean;
+  frame: 'rect' | 'round' | 'diamond' | 'heart' | 'hex';
+  /** 0~359 도 */
+  rotation: number;
+};
+
+/** 그룹에 저장된 인쇄용 앨범 편집본 */
+export interface BabyPrintAlbum {
+  id: string;
+  group_id: string;
+  baby_id: string;
+  created_by: string | null;
+  title: string;
+  bg: 'cream' | 'blush' | 'sage' | 'sky';
+  layout: 'grid2' | 'grid3' | 'hero';
+  show_captions: boolean;
+  photo_order: string[];
+  photo_edits: Record<string, BabyPrintPhotoEdit>;
+  created_at: string;
+  updated_at: string;
+}
+
 /** 국가별 예방접종 스케줄 항목 */
 export interface VaccineScheduleItem {
   vaccineKey: string;

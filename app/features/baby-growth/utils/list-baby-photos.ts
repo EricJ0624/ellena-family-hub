@@ -30,6 +30,13 @@ type AttachmentRow = {
   taken_at: string | null;
 };
 
+export const BABY_PHOTOS_CHANGED = 'sfh:baby-photos-changed';
+
+export function notifyBabyPhotosChanged(babyId: string) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(BABY_PHOTOS_CHANGED, { detail: { babyId } }));
+}
+
 /** baby_growth 첨부 사진 목록. 표시 주소는 첨부 API가 발급한 짧은 주소를 쓴다. */
 export async function listBabyPhotos(opts: ListBabyPhotosOptions): Promise<BabyPhoto[]> {
   const session = await waitForSupabaseSession(supabase);

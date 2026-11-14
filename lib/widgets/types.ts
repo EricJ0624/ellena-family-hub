@@ -32,7 +32,7 @@ export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }>
 };
 
 /** Travel planner M 기본 높이. 전역 M(8)보다 낮고 너비(12)는 유지. */
-export const TRAVEL_M_LAYOUT_H = 6;
+export const TRAVEL_M_LAYOUT_H = 7;
 
 /** 여행 다이어리 M 기본 높이. 스크랩북 비율 유지하되 초기 빈 여백을 줄임. */
 export const TRAVEL_DIARY_M_LAYOUT_H = 6;

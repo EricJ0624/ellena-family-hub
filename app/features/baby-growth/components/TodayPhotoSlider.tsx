@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import type { BabyPhoto } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
-import { listBabyPhotos } from '../utils/list-baby-photos';
+import { BABY_PHOTOS_CHANGED, listBabyPhotos } from '../utils/list-baby-photos';
 
 interface TodayPhotoSliderProps {
   babyId: string | null;
@@ -42,7 +42,16 @@ export function TodayPhotoSlider({
     };
 
     void load();
-    return () => { cancelled = true; };
+    const onChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ babyId?: string }>).detail;
+      if (detail?.babyId && detail.babyId !== babyId) return;
+      void load();
+    };
+    window.addEventListener(BABY_PHOTOS_CHANGED, onChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(BABY_PHOTOS_CHANGED, onChanged);
+    };
   }, [babyId, currentGroupId, birthDate]);
 
   // 자동 슬라이드

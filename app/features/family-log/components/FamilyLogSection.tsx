@@ -479,7 +479,7 @@ export function FamilyLogSection({ currentGroupId, lang, uiTheme }: Props) {
     <section
       className={
         illustrated
-          ? 'family-log-widget flex h-full min-h-0 flex-col overflow-hidden bg-[#fbf6ec]'
+          ? 'family-log-widget flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-[#fbf6ec]'
           : 'content-section family-log-widget'
       }
     >
