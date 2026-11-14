@@ -22,9 +22,17 @@ interface CheckupViewProps {
   currentGroupId: string | null;
   userId: string;
   t: BabyGrowthTranslations;
+  /** 부모(진료 리포트 등)와 검진 목록을 맞출 때 사용 */
+  onCheckupsChange?: (checkups: BabyCheckup[]) => void;
 }
 
-export function CheckupView({ babyId, currentGroupId, userId, t }: CheckupViewProps) {
+export function CheckupView({
+  babyId,
+  currentGroupId,
+  userId,
+  t,
+  onCheckupsChange,
+}: CheckupViewProps) {
   const { fetchCheckups, addCheckup, updateCheckup, deleteCheckup } = useBabyGrowthRecords({
     babyId,
     currentGroupId,
@@ -36,25 +44,40 @@ export function CheckupView({ babyId, currentGroupId, userId, t }: CheckupViewPr
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<BabyCheckup | null>(null);
 
+  const publish = (next: BabyCheckup[]) => {
+    setCheckups(next);
+    onCheckupsChange?.(next);
+  };
+
   const load = async () => {
     setLoading(true);
     const data = await fetchCheckups();
-    setCheckups(data);
+    publish(data);
     setLoading(false);
   };
 
   useEffect(() => {
-    load();
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [babyId]);
 
   const handleSave = async (draft: BabyCheckupDraft) => {
     if (editTarget) {
       const updated = await updateCheckup(editTarget.id, draft);
-      setCheckups((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      setCheckups((prev) => {
+        const next = prev.map((c) => (c.id === updated.id ? updated : c));
+        onCheckupsChange?.(next);
+        return next;
+      });
     } else {
       const created = await addCheckup(draft);
-      setCheckups((prev) => [...prev, created].sort((a, b) => a.checkup_date.localeCompare(b.checkup_date)));
+      setCheckups((prev) => {
+        const next = [...prev, created].sort((a, b) =>
+          a.checkup_date.localeCompare(b.checkup_date),
+        );
+        onCheckupsChange?.(next);
+        return next;
+      });
     }
     setAddOpen(false);
     setEditTarget(null);
@@ -63,15 +86,19 @@ export function CheckupView({ babyId, currentGroupId, userId, t }: CheckupViewPr
   const handleDelete = async (id: string) => {
     if (!confirm('검진 기록을 삭제하시겠습니까?')) return;
     await deleteCheckup(id);
-    setCheckups((prev) => prev.filter((c) => c.id !== id));
+    setCheckups((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      onCheckupsChange?.(next);
+      return next;
+    });
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-12 text-sm text-gray-400">{t.loading ?? '로딩 중...'}</div>;
+    return <div className="flex items-center justify-center py-12 text-sm text-gray-400">{t.loading}</div>;
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 overflow-y-auto">
+    <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-bold">{t.checkup_title}</h2>
         <button

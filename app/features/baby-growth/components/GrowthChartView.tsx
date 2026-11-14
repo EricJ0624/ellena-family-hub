@@ -75,6 +75,7 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
               label={t.weight_kg}
               value={`${latestRecord.weight_kg}kg`}
               percentile={estimatePercentile(latestRecord.weight_kg, ageMonths, 'weight', profile.gender ?? 'other')}
+              t={t}
             />
           )}
           {latestRecord.height_cm != null && (
@@ -83,10 +84,11 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
               label={t.height_cm}
               value={`${latestRecord.height_cm}cm`}
               percentile={estimatePercentile(latestRecord.height_cm, ageMonths, 'height', profile.gender ?? 'other')}
+              t={t}
             />
           )}
           {latestRecord.head_cm != null && (
-            <MetricBadge emoji="🧠" label={t.head_cm} value={`${latestRecord.head_cm}cm`} />
+            <MetricBadge emoji="🧠" label={t.head_cm} value={`${latestRecord.head_cm}cm`} t={t} />
           )}
         </div>
       )}
@@ -159,16 +161,38 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
 // ---------------------------------------------------------------------------
 // MetricBadge
 // ---------------------------------------------------------------------------
+function percentilePeerLabel(
+  percentile: number,
+  t: BabyGrowthTranslations,
+): string {
+  if (percentile <= 3) return t.percentile_peer_very_small;
+  if (percentile <= 15) return t.percentile_peer_small;
+  if (percentile <= 50) return t.percentile_peer_average;
+  if (percentile <= 85) return t.percentile_peer_large;
+  return t.percentile_peer_very_large;
+}
+
 function MetricBadge({
-  emoji, label, value, percentile,
-}: { emoji: string; label: string; value: string; percentile?: number }) {
+  emoji, label, value, percentile, t,
+}: {
+  emoji: string;
+  label: string;
+  value: string;
+  percentile?: number;
+  t: BabyGrowthTranslations;
+}) {
   return (
     <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-center">
       <span className="text-xl">{emoji}</span>
       <span className="text-sm font-bold">{value}</span>
       <span className="text-[10px] text-gray-500">{label}</span>
       {percentile != null && (
-        <span className="text-[10px] text-green-600 font-medium">P{percentile}</span>
+        <>
+          <span className="text-[10px] leading-tight text-green-700 font-medium">
+            {percentilePeerLabel(percentile, t)}
+          </span>
+          <span className="text-[9px] text-green-600/70 font-medium">P{percentile}</span>
+        </>
       )}
     </div>
   );

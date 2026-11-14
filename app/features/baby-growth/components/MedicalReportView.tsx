@@ -118,7 +118,7 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
   };
 
   return (
-    <div className="flex flex-col gap-5 p-4 overflow-y-auto">
+    <div className="flex flex-col gap-5 p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-bold">{t.report_title}</h2>
         <div className="flex gap-1">

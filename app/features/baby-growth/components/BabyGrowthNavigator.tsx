@@ -55,7 +55,7 @@ export function BabyGrowthNavigator({
   const [activeTab, setActiveTab] = useState<TabKey>('home');
 
   // 최신 성장 기록 (AI 패널용)
-  const { fetchGrowthRecords, fetchCheckups } = useBabyGrowthRecords({
+  const { fetchGrowthRecords } = useBabyGrowthRecords({
     babyId: profile.id,
     currentGroupId,
     userId,
@@ -65,11 +65,8 @@ export function BabyGrowthNavigator({
     void fetchGrowthRecords().then((recs) => setLatestGrowth(recs[recs.length - 1] ?? null));
   }, [fetchGrowthRecords]);
 
-  // 검진 목록 (MedicalReportView에 전달)
+  // 검진 목록 — CheckupView가 로드/저장 시 갱신해 진료 리포트와 맞춤
   const [checkups, setCheckups] = React.useState<import('../types').BabyCheckup[]>([]);
-  React.useEffect(() => {
-    void fetchCheckups().then(setCheckups);
-  }, [fetchCheckups]);
 
   // 알림 배너
   const { reminders, fetchReminders, dismissReminder } = useBabyReminders({
@@ -122,14 +119,6 @@ export function BabyGrowthNavigator({
         {activeTab === 'home' && (
           <div className="h-full overflow-y-auto">
             <DailyLogStats logs={logs} t={t} />
-            <MedicalReportView
-              logs={logs}
-              t={t}
-              checkups={checkups}
-              babyId={profile.id}
-              groupId={currentGroupId ?? ''}
-              onAddLog={onAddLog}
-            />
           </div>
         )}
 
@@ -143,12 +132,23 @@ export function BabyGrowthNavigator({
         )}
 
         {activeTab === 'health' && (
-          <CheckupView
-            babyId={profile.id}
-            currentGroupId={currentGroupId}
-            userId={userId}
-            t={t}
-          />
+          <div className="h-full overflow-y-auto">
+            <CheckupView
+              babyId={profile.id}
+              currentGroupId={currentGroupId}
+              userId={userId}
+              t={t}
+              onCheckupsChange={setCheckups}
+            />
+            <MedicalReportView
+              logs={logs}
+              t={t}
+              checkups={checkups}
+              babyId={profile.id}
+              groupId={currentGroupId ?? ''}
+              onAddLog={onAddLog}
+            />
+          </div>
         )}
 
         {activeTab === 'album' && (

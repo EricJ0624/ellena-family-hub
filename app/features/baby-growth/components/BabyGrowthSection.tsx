@@ -187,16 +187,13 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     return growthNavigator;
   }
 
-  // 대시보드 위젯 뷰
+  // 대시보드 위젯 뷰 — 상단(프로필+4카드)은 한 화면에 두고, 아래만 스크롤
   return (
     <div className="relative h-full w-full overflow-hidden rounded-2xl bg-[#fff8f4] text-gray-800">
-      <div className="relative h-full overflow-y-auto overflow-x-hidden px-2 pt-2 pb-3">
       <BabyWidgetBackdrop />
-      <BabyWidgetStickers />
-      <div className="relative space-y-2">
-      {/* 프로필 없을 때 */}
+      <div className="relative flex h-full flex-col overflow-hidden px-2 pt-2 pb-3">
       {!profile ? (
-        <div className="relative z-20 flex min-h-48 flex-col items-center justify-center gap-3 px-4 text-center">
+        <div className="relative z-20 flex min-h-48 flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
           <span className="text-4xl">🍼</span>
           <p className="text-sm text-gray-500">{t.no_baby_profile}</p>
           <button
@@ -208,41 +205,42 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
         </div>
       ) : (
         <>
-          <BabyProfileCard
-            profile={profile}
-            t={t}
-            onEditClick={() => setEditProfileOpen(true)}
-            onReportClick={() => setDetailOpen(true)}
-          />
-          {/* AI 브리핑 배너 */}
-          {aiText && (
-            <div className="relative z-20 line-clamp-2 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-              🤖 {aiText}
+          <div className="relative z-[1] shrink-0">
+            <BabyWidgetStickers />
+            <BabyProfileCard
+              profile={profile}
+              t={t}
+              onEditClick={() => setEditProfileOpen(true)}
+              onReportClick={() => setDetailOpen(true)}
+            />
+            <div className="relative mt-2">
+              <QuickStatusCards
+                status={recentStatus}
+                profile={profile}
+                logs={logs}
+                t={t}
+                onCardClick={handleCardClick}
+                onBed={() => { void handleBed(); }}
+                onWake={() => { void handleWake(); }}
+              />
             </div>
-          )}
-
-          {/* 퀵 상태 카드 */}
-          <QuickStatusCards
-            status={recentStatus}
-            profile={profile}
-            logs={logs}
-            t={t}
-            onCardClick={handleCardClick}
-            onBed={() => { void handleBed(); }}
-            onWake={() => { void handleWake(); }}
-          />
-
-          {/* 오늘의 포토 슬라이드 */}
-          <TodayPhotoSlider
-            babyId={profile.id}
-            currentGroupId={currentGroupId}
-            birthDate={profile.birth_date}
-            t={t}
-            onOpen={() => setAlbumOpen(true)}
-          />
+          </div>
+          <div className="relative z-[1] mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden">
+            {aiText && (
+              <div className="relative z-20 line-clamp-2 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                🤖 {aiText}
+              </div>
+            )}
+            <TodayPhotoSlider
+              babyId={profile.id}
+              currentGroupId={currentGroupId}
+              birthDate={profile.birth_date}
+              t={t}
+              onOpen={() => setAlbumOpen(true)}
+            />
+          </div>
         </>
       )}
-      </div>
       </div>
 
       {/* 로그 입력 모달 */}

@@ -114,6 +114,11 @@ export type BabyGrowthTranslations = {
   measured_at: string;
   add_measurement: string;
   who_percentile: string;
+  percentile_peer_very_small: string;
+  percentile_peer_small: string;
+  percentile_peer_average: string;
+  percentile_peer_large: string;
+  percentile_peer_very_large: string;
   no_growth_data: string;
 
   // 마일스톤
@@ -312,6 +317,11 @@ const ko: BabyGrowthTranslations = {
   measured_at: '측정일',
   add_measurement: '성장 측정 추가',
   who_percentile: 'WHO 성장 곡선',
+  percentile_peer_very_small: '또래 중에서도 작은 편',
+  percentile_peer_small: '또래 중 조금 작은 편',
+  percentile_peer_average: '또래 평균이에요',
+  percentile_peer_large: '또래 중 조금 큰 편',
+  percentile_peer_very_large: '또래 중에서도 큰 편',
   no_growth_data: '성장 기록이 없습니다.',
 
   milestone_title: '발달 마일스톤',
@@ -499,6 +509,11 @@ const en: BabyGrowthTranslations = {
   measured_at: 'Measured On',
   add_measurement: 'Add Measurement',
   who_percentile: 'WHO Growth Chart',
+  percentile_peer_very_small: 'Smaller among peers',
+  percentile_peer_small: 'A bit smaller among peers',
+  percentile_peer_average: 'About average for peers',
+  percentile_peer_large: 'A bit bigger among peers',
+  percentile_peer_very_large: 'Bigger among peers',
   no_growth_data: 'No growth records.',
 
   milestone_title: 'Developmental Milestones',
@@ -686,6 +701,11 @@ const ja: BabyGrowthTranslations = {
   measured_at: '測定日',
   add_measurement: '成長測定を追加',
   who_percentile: 'WHO成長曲線',
+  percentile_peer_very_small: '同年代でも小さめ',
+  percentile_peer_small: '同年代で少し小さめ',
+  percentile_peer_average: '同年代の平均です',
+  percentile_peer_large: '同年代で少し大きめ',
+  percentile_peer_very_large: '同年代でも大きめ',
   no_growth_data: '成長記録がありません。',
 
   milestone_title: '発達マイルストーン',
@@ -876,6 +896,11 @@ const zhCN: BabyGrowthTranslations = {
   measured_at: '测量日期',
   add_measurement: '添加测量',
   who_percentile: 'WHO生长曲线',
+  percentile_peer_very_small: '同龄中偏小',
+  percentile_peer_small: '同龄中略小',
+  percentile_peer_average: '同龄平均水平',
+  percentile_peer_large: '同龄中略大',
+  percentile_peer_very_large: '同龄中偏大',
   no_growth_data: '暂无生长记录。',
 
   milestone_title: '发育里程碑',
@@ -1061,6 +1086,11 @@ const zhTW: BabyGrowthTranslations = {
   measured_at: '測量日期',
   add_measurement: '新增測量',
   who_percentile: 'WHO生長曲線',
+  percentile_peer_very_small: '同齡中偏小',
+  percentile_peer_small: '同齡中略小',
+  percentile_peer_average: '同齡平均水平',
+  percentile_peer_large: '同齡中略大',
+  percentile_peer_very_large: '同齡中偏大',
   no_growth_data: '暫無生長記錄。',
 
   milestone_title: '發育里程碑',
@@ -1246,6 +1276,11 @@ const es: BabyGrowthTranslations = {
   measured_at: 'Fecha de medición',
   add_measurement: 'Añadir medición',
   who_percentile: 'Curva OMS',
+  percentile_peer_very_small: 'Más pequeño entre pares',
+  percentile_peer_small: 'Un poco más pequeño entre pares',
+  percentile_peer_average: 'Promedio entre pares',
+  percentile_peer_large: 'Un poco más grande entre pares',
+  percentile_peer_very_large: 'Más grande entre pares',
   no_growth_data: 'Sin registros de crecimiento.',
 
   milestone_title: 'Hitos del desarrollo',
@@ -1431,6 +1466,11 @@ const fr: BabyGrowthTranslations = {
   measured_at: 'Date de mesure',
   add_measurement: 'Ajouter une mesure',
   who_percentile: 'Courbe OMS',
+  percentile_peer_very_small: 'Plus petit parmi les pairs',
+  percentile_peer_small: 'Un peu plus petit parmi les pairs',
+  percentile_peer_average: 'Dans la moyenne des pairs',
+  percentile_peer_large: 'Un peu plus grand parmi les pairs',
+  percentile_peer_very_large: 'Plus grand parmi les pairs',
   no_growth_data: 'Aucune donnée de croissance.',
 
   milestone_title: 'Étapes du développement',
@@ -1616,6 +1656,11 @@ const de: BabyGrowthTranslations = {
   measured_at: 'Messdatum',
   add_measurement: 'Messung hinzufügen',
   who_percentile: 'WHO-Wachstumskurve',
+  percentile_peer_very_small: 'Unter Gleichaltrigen eher klein',
+  percentile_peer_small: 'Unter Gleichaltrigen etwas kleiner',
+  percentile_peer_average: 'Durchschnitt unter Gleichaltrigen',
+  percentile_peer_large: 'Unter Gleichaltrigen etwas größer',
+  percentile_peer_very_large: 'Unter Gleichaltrigen eher groß',
   no_growth_data: 'Keine Wachstumsdaten.',
 
   milestone_title: 'Entwicklungsmeilensteine',
@@ -1801,6 +1846,11 @@ const it: BabyGrowthTranslations = {
   measured_at: 'Data di misurazione',
   add_measurement: 'Aggiungi misurazione',
   who_percentile: 'Curva OMS',
+  percentile_peer_very_small: 'Più piccolo tra i coetanei',
+  percentile_peer_small: 'Un po’ più piccolo tra i coetanei',
+  percentile_peer_average: 'Nella media tra i coetanei',
+  percentile_peer_large: 'Un po’ più grande tra i coetanei',
+  percentile_peer_very_large: 'Più grande tra i coetanei',
   no_growth_data: 'Nessun dato di crescita.',
 
   milestone_title: 'Traguardi dello sviluppo',
@@ -1986,6 +2036,11 @@ const pt: BabyGrowthTranslations = {
   measured_at: 'Data da medição',
   add_measurement: 'Adicionar medição',
   who_percentile: 'Curva OMS',
+  percentile_peer_very_small: 'Menor entre os da mesma idade',
+  percentile_peer_small: 'Um pouco menor entre os da mesma idade',
+  percentile_peer_average: 'Na média entre os da mesma idade',
+  percentile_peer_large: 'Um pouco maior entre os da mesma idade',
+  percentile_peer_very_large: 'Maior entre os da mesma idade',
   no_growth_data: 'Sem dados de crescimento.',
 
   milestone_title: 'Marcos do desenvolvimento',
