@@ -1066,7 +1066,9 @@ export function BabyPrintAlbumEditor({
 
   const wasOpenRef = useRef(false);
   const albumBoxRef = useRef<HTMLDivElement | null>(null);
+  const [pageFitEl, setPageFitEl] = useState<HTMLDivElement | null>(null);
   const [albumBoxH, setAlbumBoxH] = useState(0);
+  const [albumBoxW, setAlbumBoxW] = useState(0);
   const [frameSlotRatio, setFrameSlotRatio] = useState(1);
   const onFrameSlot = useCallback((width: number, height: number) => {
     if (width < 8 || height < 8) return;
@@ -1110,7 +1112,7 @@ export function BabyPrintAlbumEditor({
     };
   }, []);
 
-  // 바깥 페이지 높이는 앨범 칸에 고정. 세로 배율은 안쪽 프레임만 키운다.
+  // 페이지는 앨범 칸 안에 두고, 가로는 그 칸의 max-w-2xl 너비까지만 잰다.
   useEffect(() => {
     if (!open) return;
     const el = albumBoxRef.current;
@@ -1120,12 +1122,16 @@ export function BabyPrintAlbumEditor({
       const pad = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
       const next = Math.max(0, Math.round(el.clientHeight - pad));
       setAlbumBoxH((prev) => (Math.abs(prev - next) < 2 ? prev : next));
+      if (!pageFitEl) return;
+      const nextW = Math.round(pageFitEl.clientWidth);
+      setAlbumBoxW((prev) => (Math.abs(prev - nextW) < 2 ? prev : nextW));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
+    if (pageFitEl) ro.observe(pageFitEl);
     return () => ro.disconnect();
-  }, [open, frameEditMode, listOpen]);
+  }, [open, frameEditMode, listOpen, pageFitEl]);
 
   const loadFamilyAlbums = useCallback(async () => {
     if (!currentGroupId || !babyId) {
@@ -1210,6 +1216,20 @@ export function BabyPrintAlbumEditor({
   }, [orderedPhotos, edits]);
 
   const printPages = chunkPhotos(selectedItems, pageSizeFor(layout));
+  const paper = PRINT_PHOTO_SIZES[photoSize];
+  const paperRatio = paper.wMm / paper.hMm;
+  let pageW = 0;
+  let pageH = 0;
+  if (albumBoxH > 0 && albumBoxW > 0) {
+    const widthFromHeight = albumBoxH * paperRatio;
+    if (widthFromHeight <= albumBoxW) {
+      pageH = albumBoxH;
+      pageW = widthFromHeight;
+    } else {
+      pageW = albumBoxW;
+      pageH = albumBoxW / paperRatio;
+    }
+  }
   const gridClass =
     layout === 'grid1' ? 'grid-cols-1' : layout === 'grid3' ? 'grid-cols-3' : 'grid-cols-2';
 
@@ -1691,7 +1711,7 @@ export function BabyPrintAlbumEditor({
                   className="h-2 min-w-[5.5rem] flex-1 touch-manipulation accent-slate-800"
                   aria-label={t.album_print_frame_width}
                 />
-                <span className="w-9 text-[10px] font-semibold tabular-nums text-slate-500">
+                <span className="w-10 shrink-0 text-right text-[10px] font-semibold tabular-nums text-slate-500">
                   {Math.round(editFrameScaleX(activeEdit) * 100)}%
                 </span>
               </div>
@@ -1713,7 +1733,7 @@ export function BabyPrintAlbumEditor({
                   className="h-2 min-w-[5.5rem] flex-1 touch-manipulation accent-slate-800"
                   aria-label={t.album_print_frame_height}
                 />
-                <span className="w-10 text-right text-[10px] font-semibold tabular-nums text-slate-500">
+                <span className="w-10 shrink-0 text-right text-[10px] font-semibold tabular-nums text-slate-500">
                   {Math.round((frameY / frameYMax) * 100)}%
                 </span>
               </div>
@@ -1838,7 +1858,10 @@ export function BabyPrintAlbumEditor({
                 {selectedItems.length === 0 ? (
                   <p className="py-10 text-center text-sm text-slate-400">{t.album_print_empty}</p>
                 ) : (
-                  <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
+                  <div
+                    ref={setPageFitEl}
+                    className="mx-auto flex w-full max-w-2xl flex-col items-center gap-2"
+                  >
                     {printPages.map((page, pageIdx) => {
                       return (
                       <section
@@ -1846,7 +1869,11 @@ export function BabyPrintAlbumEditor({
                         className={`flex shrink-0 flex-col overflow-hidden rounded-2xl p-2 shadow-sm sm:p-3 ${
                           PRINT_BG[bg].preview
                         }`}
-                        style={albumBoxH > 0 ? { height: albumBoxH } : undefined}
+                        style={
+                          pageW > 0
+                            ? { width: Math.round(pageW), height: Math.round(pageH) }
+                            : undefined
+                        }
                       >
                         <div className="mb-2 flex shrink-0 items-baseline justify-between gap-2">
                           <h4 className="m-0 text-sm font-bold text-[#5c4630]">
