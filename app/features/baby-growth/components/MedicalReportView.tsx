@@ -146,18 +146,18 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">
           {t.report_timeline_title}
         </h3>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {columns.map((col) => (
-            <div
-              key={col.key}
-              className="flex w-[9.5rem] shrink-0 flex-col rounded-xl border border-rose-100 bg-rose-50/60 p-2 dark:border-rose-900/40 dark:bg-rose-950/20"
-            >
-              <p className="m-0 mb-1.5 text-center text-xs font-bold text-rose-600 dark:text-rose-300">
-                {col.emoji} {col.title}
-              </p>
-              {col.items.length === 0 ? (
-                <p className="m-0 text-center text-[10px] text-gray-400">{t.no_record}</p>
-              ) : (
+        {columns.length === 0 ? (
+          <p className="m-0 text-center text-[10px] text-gray-400">{t.no_record}</p>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {columns.map((col) => (
+              <div
+                key={col.key}
+                className="flex w-[9.5rem] shrink-0 flex-col rounded-xl border border-rose-100 bg-rose-50/60 p-2 dark:border-rose-900/40 dark:bg-rose-950/20"
+              >
+                <p className="m-0 mb-1.5 text-center text-xs font-bold text-rose-600 dark:text-rose-300">
+                  {col.emoji} {col.title}
+                </p>
                 <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
                   {col.items.map((item) => (
                     <li
@@ -169,10 +169,10 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
                     </li>
                   ))}
                 </ul>
-              )}
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {checkups && checkups.length > 0 && (
@@ -284,10 +284,11 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
         text: l.notes?.trim() || chip,
       }))
       .sort((a, b) => a.at - b.at);
+    if (items.length === 0) continue;
     columns.push({ key: chip, title: chip, emoji: BABY_SYMPTOM_EMOJI[chip], items });
   }
 
-  return columns;
+  return columns.filter((col) => col.items.length > 0);
 }
 
 function formatTime(iso: string): string {

@@ -614,6 +614,9 @@ function FramedPhoto({
 }) {
   const frameRot = editFrameRotation(edit);
   const box = frameBoxPercent(editFrameScaleX(edit), editFrameScaleY(edit), pageGrow);
+  const heightRatio =
+    editFrameScaleY(edit) / Math.max(pageGrow, 1);
+  const frameInset = `${((1 - heightRatio) / 2) * 100}%`;
   return (
     <div
       className={`relative overflow-hidden ${
@@ -621,13 +624,15 @@ function FramedPhoto({
       } ${selected ? 'ring-2 ring-amber-500 ring-offset-1' : ''}`}
     >
       <div
-        className={`absolute left-1/2 top-1/2 overflow-hidden bg-white/70 shadow-sm ${
+        className={`absolute left-1/2 overflow-hidden bg-white/70 shadow-sm ${
           edit.frame === 'rect' ? 'rounded-xl' : ''
         } ${selected ? '' : 'border border-white/80'}`}
         style={{
           width: box.width,
-          height: box.height,
-          transform: `translate(-50%, -50%) rotate(${frameRot}deg)`,
+          top: frameInset,
+          bottom: frameInset,
+          height: 'auto',
+          transform: `translateX(-50%) rotate(${frameRot}deg)`,
           ...frameMaskStyle(edit.frame),
         }}
       >
@@ -868,7 +873,7 @@ function SortableAlbumThumb({
         transition,
         opacity: isDragging ? 0.35 : 1,
       }}
-      className={`m-0 flex min-h-0 min-w-0 flex-col gap-1 ${hero ? 'col-span-2' : ''}`}
+      className={`m-0 flex h-full min-h-0 min-w-0 flex-col gap-1 ${hero ? 'col-span-2' : ''}`}
     >
       <div className="relative min-h-0 flex-1">
         <div
@@ -945,16 +950,24 @@ function DropZone({
   className,
   disabled,
   children,
+  boxRef,
 }: {
   id: 'drop-album' | 'drop-pool';
   className?: string;
   disabled?: boolean;
   children: React.ReactNode;
+  boxRef?: React.Ref<HTMLDivElement>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id, disabled: Boolean(disabled) });
+  const setRefs = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    if (!boxRef) return;
+    if (typeof boxRef === 'function') boxRef(node);
+    else boxRef.current = node;
+  };
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       className={`${className ?? ''} ${
         !disabled && isOver ? 'ring-2 ring-pink-400 ring-offset-2' : ''
       }`}
@@ -1051,6 +1064,8 @@ export function BabyPrintAlbumEditor({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const wasOpenRef = useRef(false);
+  const albumBoxRef = useRef<HTMLDivElement | null>(null);
+  const [albumBoxH, setAlbumBoxH] = useState(0);
   const photosRef = useRef(photos);
   const orderRef = useRef(order);
   const editsRef = useRef(edits);
@@ -1087,6 +1102,21 @@ export function BabyPrintAlbumEditor({
       if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
     };
   }, []);
+
+  // 앨범 칸 실측. 스마트폰은 높이 %가 풀리지 않아 프레임 세로가 페이지를 못 따라간다.
+  useEffect(() => {
+    if (!open) return;
+    const el = albumBoxRef.current;
+    if (!el) return;
+    const update = () => {
+      const next = Math.round(el.clientHeight);
+      setAlbumBoxH((prev) => (Math.abs(prev - next) < 2 ? prev : next));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, frameEditMode, listOpen]);
 
   const loadFamilyAlbums = useCallback(async () => {
     if (!currentGroupId || !babyId) {
@@ -1792,6 +1822,7 @@ export function BabyPrintAlbumEditor({
             <DropZone
               id="drop-album"
               disabled={frameEditMode}
+              boxRef={albumBoxRef}
               className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-2 sm:p-3"
             >
               <SortableContext items={selectedIds} strategy={rectSortingStrategy}>
@@ -1800,10 +1831,14 @@ export function BabyPrintAlbumEditor({
                 ) : (
                   <div
                     className="mx-auto flex w-full max-w-2xl flex-col gap-2"
-                    style={{
-                      height: `${Math.max(albumGrow, 1) * 100}%`,
-                      minHeight: '100%',
-                    }}
+                    style={
+                      albumBoxH > 0
+                        ? {
+                            height: Math.round(albumBoxH * Math.max(albumGrow, 1)),
+                            minHeight: albumBoxH,
+                          }
+                        : { minHeight: '100%' }
+                    }
                   >
                     {printPages.map((page, pageIdx) => {
                       const pageGrow = Math.max(
@@ -1816,7 +1851,7 @@ export function BabyPrintAlbumEditor({
                         className={`flex min-h-0 flex-col overflow-hidden rounded-2xl p-2 shadow-sm sm:p-3 ${
                           PRINT_BG[bg].preview
                         }`}
-                        style={{ flex: `${pageGrow} 1 0%` }}
+                        style={{ flex: `${pageGrow} 1 0px` }}
                       >
                         <div className="mb-2 flex shrink-0 items-baseline justify-between gap-2">
                           <h4 className="m-0 text-sm font-bold text-[#5c4630]">
