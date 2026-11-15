@@ -207,6 +207,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     currentGroupId,
     userId,
     onLogsChange: handleLogsChange,
+    limit: 120,
   });
 
   const tryOpenAddBaby = useCallback(() => {

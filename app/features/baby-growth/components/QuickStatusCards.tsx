@@ -24,6 +24,21 @@ interface CardConfig {
   label: string;
   emoji: string;
   getValue: (status: BabyRecentStatus) => string | null;
+  getAvg: (status: BabyRecentStatus) => string | null;
+}
+
+function feedingAvgLine(status: BabyRecentStatus, t: BabyGrowthTranslations): string | null {
+  const a = status.averages;
+  if (a.feedingCount7d <= 0) return null;
+  const parts: string[] = [];
+  if (a.feedingAvgMl != null) {
+    parts.push(t.avg_feeding_ml.replace('{n}', String(a.feedingAvgMl)));
+  }
+  if (a.feedingAvgBreastMin != null) {
+    parts.push(t.avg_feeding_min.replace('{n}', String(a.feedingAvgBreastMin)));
+  }
+  parts.push(t.avg_count.replace('{n}', String(a.feedingCount7d)));
+  return `${t.avg_7d} ${parts.join(' · ')}`;
 }
 
 /** 카드별 장식. 카드 면(z-5) 위·글자(z-20) 아래. */
@@ -76,11 +91,17 @@ export function QuickStatusCards({
       key: 'feeding',
       label: t.last_feeding,
       emoji: '🍼',
-      getValue: (s) =>
-        s.lastFeeding
-          ? formatTimeAgo(s.lastFeeding.logged_at, t) +
-            (s.lastFeeding.feeding_amount_ml ? ` · ${s.lastFeeding.feeding_amount_ml}ml` : '')
-          : null,
+      getValue: (s) => {
+        if (!s.lastFeeding) return null;
+        const ago = formatTimeAgo(s.lastFeeding.logged_at, t);
+        const ml = s.lastFeeding.feeding_amount_ml;
+        const breast =
+          (s.lastFeeding.breast_left_min ?? 0) + (s.lastFeeding.breast_right_min ?? 0);
+        if (ml) return `${ago} · ${ml}ml`;
+        if (breast > 0) return `${ago} · ${breast}분`;
+        return ago;
+      },
+      getAvg: (s) => feedingAvgLine(s, t),
     },
     {
       key: 'sleep',
@@ -90,6 +111,10 @@ export function QuickStatusCards({
         const text = describeLastSleep(profile, logs, t);
         return text === t.no_record ? null : text;
       },
+      getAvg: (s) =>
+        s.averages.sleepAvgMin7d != null
+          ? t.avg_sleep_min.replace('{n}', String(s.averages.sleepAvgMin7d))
+          : null,
     },
     {
       key: 'diaper',
@@ -104,7 +129,25 @@ export function QuickStatusCards({
           dry: t.diaper_dry,
         };
         const typeName = s.lastDiaper.diaper_type ? (typeMap[s.lastDiaper.diaper_type] ?? '') : '';
-        return formatTimeAgo(s.lastDiaper.logged_at, t) + (typeName ? ` · ${typeName}` : '');
+        const consistencyKey = s.lastDiaper.diaper_consistency
+          ? (`diaper_consistency_${s.lastDiaper.diaper_consistency}` as keyof BabyGrowthTranslations)
+          : null;
+        const consistencyLabel =
+          consistencyKey && typeof t[consistencyKey] === 'string'
+            ? (t[consistencyKey] as string)
+            : '';
+        const bits = [
+          formatTimeAgo(s.lastDiaper.logged_at, t),
+          typeName,
+          consistencyLabel,
+        ].filter(Boolean);
+        return bits.join(' · ');
+      },
+      getAvg: (s) => {
+        if (s.averages.diaperCount7d <= 0) return null;
+        return t.avg_diaper_count
+          .replace('{today}', String(s.averages.diaperCountToday))
+          .replace('{n}', String(s.averages.diaperCount7d));
       },
     },
     {
@@ -116,6 +159,10 @@ export function QuickStatusCards({
           ? (s.lastTemperature.temperature_celsius != null
               ? `${s.lastTemperature.temperature_celsius}°C · `
               : '') + formatTimeAgo(s.lastTemperature.logged_at, t)
+          : null,
+      getAvg: (s) =>
+        s.averages.tempAvgC7d != null
+          ? t.avg_temp_c.replace('{n}', String(s.averages.tempAvgC7d))
           : null,
     },
   ];
@@ -145,6 +192,7 @@ export function QuickStatusCards({
       >
         {cards.map((card) => {
           const value = card.getValue(status);
+          const avg = card.getAvg(status);
           return (
             <div
               key={card.key}
@@ -177,19 +225,28 @@ export function QuickStatusCards({
                     {card.label}
                   </span>
                 </div>
-                {/* shrink-0 + leading-normal: fillHeight flex 압축·line-clamp가 한글 하단을 자르지 않게 */}
-                <span
-                  className={`line-clamp-2 w-full shrink-0 text-xs font-semibold leading-normal ${
-                    value ? 'text-gray-800' : 'text-gray-400'
-                  }`}
-                >
-                  {value ?? t.no_record}
-                </span>
-                <span className="w-fit shrink-0 text-[10px] font-medium leading-normal text-pink-400">
-                  {t.record_now} +
-                </span>
+                {/* 본문은 줄어들 수 있게 — 하단 취침/기상 버튼 공간 우선 */}
+                <div className="min-h-0 w-full flex-1 overflow-hidden">
+                  <span
+                    className={`line-clamp-2 w-full text-xs font-semibold leading-normal ${
+                      value ? 'text-gray-800' : 'text-gray-400'
+                    }`}
+                  >
+                    {value ?? t.no_record}
+                  </span>
+                  {avg ? (
+                    <span className="mt-0.5 line-clamp-1 w-full text-[10px] font-medium leading-normal text-gray-500">
+                      {avg}
+                    </span>
+                  ) : null}
+                  {!(card.key === 'sleep' && showSleepActions) ? (
+                    <span className="mt-0.5 inline-block text-[10px] font-medium leading-normal text-pink-400">
+                      {t.record_now} +
+                    </span>
+                  ) : null}
+                </div>
                 {card.key === 'sleep' && showSleepActions ? (
-                  <span className="mt-auto flex w-full shrink-0 gap-1">
+                  <span className="mt-0.5 flex w-full shrink-0 gap-1">
                     {onBed && (
                       <button
                         type="button"
@@ -210,7 +267,7 @@ export function QuickStatusCards({
                     )}
                   </span>
                 ) : (
-                  <span className={`mt-auto w-full shrink-0 ${showSleepActions ? 'h-[26px]' : ''}`} aria-hidden />
+                  <span className={`w-full shrink-0 ${showSleepActions ? 'h-[26px]' : ''}`} aria-hidden />
                 )}
               </div>
             </div>

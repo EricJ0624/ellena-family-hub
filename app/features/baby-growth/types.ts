@@ -233,12 +233,24 @@ export interface BabyVaccinationDraft {
 // 집계/뷰 타입
 // ---------------------------------------------------------------------------
 
+/** 최근 7일 카드용 평균·횟수 */
+export interface BabyLogAverages {
+  feedingCount7d: number;
+  feedingAvgMl: number | null;
+  feedingAvgBreastMin: number | null;
+  diaperCountToday: number;
+  diaperCount7d: number;
+  sleepAvgMin7d: number | null;
+  tempAvgC7d: number | null;
+}
+
 /** 대시보드 위젯용 최근 상태 요약 */
 export interface BabyRecentStatus {
   lastFeeding: BabyDailyLog | null;
   lastSleep: BabyDailyLog | null;
   lastDiaper: BabyDailyLog | null;
   lastTemperature: BabyDailyLog | null;
+  averages: BabyLogAverages;
 }
 
 /** WHO 성장 곡선 백분위 단일 데이터 포인트 */

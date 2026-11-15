@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import type { BabyDailyLog, BabyDailyLogDraft, BabyRecentStatus } from '../types';
+import { calcLogAverages } from '../utils/calc-log-averages';
 
 const LOG_SELECT_COLS = [
   'id', 'baby_id', 'group_id', 'log_type', 'logged_at',
@@ -176,5 +177,6 @@ export function calcRecentStatus(logs: BabyDailyLog[]): BabyRecentStatus {
     lastSleep: findLast('sleep'),
     lastDiaper: findLast('diaper'),
     lastTemperature: findLast('temperature'),
+    averages: calcLogAverages(logs),
   };
 }

@@ -36,6 +36,13 @@ export type BabyGrowthTranslations = {
   last_temperature: string;
   no_record: string;
   record_now: string;
+  avg_7d: string;
+  avg_feeding_ml: string;
+  avg_feeding_min: string;
+  avg_count: string;
+  avg_diaper_count: string;
+  avg_sleep_min: string;
+  avg_temp_c: string;
   minutes_ago: string;
   hours_ago: string;
   days_ago: string;
@@ -71,6 +78,8 @@ export type BabyGrowthTranslations = {
   report_copy: string;
   report_copied: string;
   report_share: string;
+  report_timeline_title: string;
+  nav_vaccine: string;
   album_collections: string;
   album_collection_empty: string;
   album_collection_count: string;
@@ -114,6 +123,13 @@ export type BabyGrowthTranslations = {
   diaper_dirty: string;
   diaper_mixed: string;
   diaper_dry: string;
+  diaper_consistency_watery: string;
+  diaper_consistency_soft: string;
+  diaper_consistency_normal: string;
+  diaper_consistency_firm: string;
+  diaper_consistency_loose: string;
+  diaper_consistency_other: string;
+  diaper_other_notes_hint: string;
   temperature_celsius: string;
   medication_name: string;
   medication_dose_mg: string;
@@ -122,9 +138,6 @@ export type BabyGrowthTranslations = {
 
   // 병원 리포트
   report_title: string;
-  temperature_chart: string;
-  medication_timeline: string;
-  no_temperature_data: string;
 
   // 성장 곡선
   growth_title: string;
@@ -276,6 +289,13 @@ const ko: BabyGrowthTranslations = {
   last_temperature: '마지막 체온',
   no_record: '기록 없음',
   record_now: '지금 기록',
+  avg_7d: '7일',
+  avg_feeding_ml: '평균 {n}ml',
+  avg_feeding_min: '평균 {n}분',
+  avg_count: '{n}회',
+  avg_diaper_count: '오늘 {today}회 · 7일 {n}회',
+  avg_sleep_min: '7일 평균 {n}분',
+  avg_temp_c: '7일 평균 {n}°C',
   minutes_ago: '{n}분 전',
   hours_ago: '{n}시간 전',
   days_ago: '{n}일 전',
@@ -310,6 +330,8 @@ const ko: BabyGrowthTranslations = {
   report_copy: '의사 요약 복사',
   report_copied: '복사됨',
   report_share: '공유',
+  report_timeline_title: '증상별 기록',
+  nav_vaccine: '예방접종',
   album_collections: '모음집',
   album_collection_empty: '연관 사진이 충분하지 않습니다. (같은 날 2장, 같은 주 3장, 같은 월령 2장 이상)',
   album_collection_count: '{n}장',
@@ -352,6 +374,13 @@ const ko: BabyGrowthTranslations = {
   diaper_dirty: '대변',
   diaper_mixed: '소변+대변',
   diaper_dry: '없음',
+  diaper_consistency_watery: '묽음',
+  diaper_consistency_soft: '무른변',
+  diaper_consistency_normal: '보통',
+  diaper_consistency_firm: '딱딱',
+  diaper_consistency_loose: '설사',
+  diaper_consistency_other: '기타',
+  diaper_other_notes_hint: '예: 혈변, 점액 등',
   temperature_celsius: '체온 (℃)',
   medication_name: '약 이름',
   medication_dose_mg: '용량 (mg)',
@@ -359,9 +388,6 @@ const ko: BabyGrowthTranslations = {
   log_saved: '기록이 저장되었습니다.',
 
   report_title: '병원 진료 리포트',
-  temperature_chart: '체온 변화',
-  medication_timeline: '해열제 복용 타임라인',
-  no_temperature_data: '체온 기록이 없습니다.',
 
   growth_title: '성장 발달',
   weight_kg: '몸무게 (kg)',
@@ -494,6 +520,13 @@ const en: BabyGrowthTranslations = {
   last_temperature: 'Last Temp',
   no_record: 'No record',
   record_now: 'Record',
+  avg_7d: '7d',
+  avg_feeding_ml: 'avg {n}ml',
+  avg_feeding_min: 'avg {n}min',
+  avg_count: '{n}x',
+  avg_diaper_count: 'today {today} · 7d {n}',
+  avg_sleep_min: '7d avg {n}min',
+  avg_temp_c: '7d avg {n}°C',
   minutes_ago: '{n}m ago',
   hours_ago: '{n}h ago',
   days_ago: '{n}d ago',
@@ -528,6 +561,8 @@ const en: BabyGrowthTranslations = {
   report_copy: 'Copy doctor summary',
   report_copied: 'Copied',
   report_share: 'Share',
+  report_timeline_title: 'By symptom',
+  nav_vaccine: 'Vaccines',
   album_collections: 'Memories',
   album_collection_empty: 'Not enough related photos yet. (2+ same day, 3+ same week, 2+ same month age)',
   album_collection_count: '{n} photos',
@@ -570,6 +605,13 @@ const en: BabyGrowthTranslations = {
   diaper_dirty: 'Dirty',
   diaper_mixed: 'Both',
   diaper_dry: 'Dry',
+  diaper_consistency_watery: 'Watery',
+  diaper_consistency_soft: 'Soft stool',
+  diaper_consistency_normal: 'Normal',
+  diaper_consistency_firm: 'Firm',
+  diaper_consistency_loose: 'Diarrhea',
+  diaper_consistency_other: 'Other',
+  diaper_other_notes_hint: 'e.g. blood, mucus',
   temperature_celsius: 'Temperature (℃)',
   medication_name: 'Medicine Name',
   medication_dose_mg: 'Dose (mg)',
@@ -577,9 +619,6 @@ const en: BabyGrowthTranslations = {
   log_saved: 'Log saved.',
 
   report_title: 'Medical Report',
-  temperature_chart: 'Temperature Chart',
-  medication_timeline: 'Medication Timeline',
-  no_temperature_data: 'No temperature records.',
 
   growth_title: 'Growth & Development',
   weight_kg: 'Weight (kg)',
@@ -712,6 +751,13 @@ const ja: BabyGrowthTranslations = {
   last_temperature: '最後の体温',
   no_record: '記録なし',
   record_now: '今記録',
+  avg_7d: '7日',
+  avg_feeding_ml: '平均 {n}ml',
+  avg_feeding_min: '平均 {n}分',
+  avg_count: '{n}回',
+  avg_diaper_count: '今日 {today}回 · 7日 {n}回',
+  avg_sleep_min: '7日平均 {n}分',
+  avg_temp_c: '7日平均 {n}°C',
   minutes_ago: '{n}分前',
   hours_ago: '{n}時間前',
   days_ago: '{n}日前',
@@ -746,6 +792,8 @@ const ja: BabyGrowthTranslations = {
   report_copy: '医師向け要約をコピー',
   report_copied: 'コピーしました',
   report_share: '共有',
+  report_timeline_title: '症状別記録',
+  nav_vaccine: '予防接種',
   album_collections: 'コレクション',
   album_collection_empty: '関連写真が足りません。(同日2枚、同週3枚、同月齢2枚以上)',
   album_collection_count: '{n}枚',
@@ -788,6 +836,13 @@ const ja: BabyGrowthTranslations = {
   diaper_dirty: 'うんち',
   diaper_mixed: '両方',
   diaper_dry: 'なし',
+  diaper_consistency_watery: 'ゆるい',
+  diaper_consistency_soft: 'やわらか',
+  diaper_consistency_normal: '普通',
+  diaper_consistency_firm: 'かたい',
+  diaper_consistency_loose: '下痢',
+  diaper_consistency_other: 'その他',
+  diaper_other_notes_hint: '例: 血便、粘液など',
   temperature_celsius: '体温 (℃)',
   medication_name: '薬の名前',
   medication_dose_mg: '用量 (mg)',
@@ -795,9 +850,6 @@ const ja: BabyGrowthTranslations = {
   log_saved: '記録が保存されました。',
 
   report_title: '医療レポート',
-  temperature_chart: '体温変化',
-  medication_timeline: '解熱剤タイムライン',
-  no_temperature_data: '体温記録がありません。',
 
   growth_title: '成長発達',
   weight_kg: '体重 (kg)',
@@ -933,6 +985,13 @@ const zhCN: BabyGrowthTranslations = {
   last_temperature: '上次体温',
   no_record: '无记录',
   record_now: '立即记录',
+  avg_7d: '7天',
+  avg_feeding_ml: '平均 {n}ml',
+  avg_feeding_min: '平均 {n}分钟',
+  avg_count: '{n}次',
+  avg_diaper_count: '今天 {today}次 · 7天 {n}次',
+  avg_sleep_min: '7天平均 {n}分钟',
+  avg_temp_c: '7天平均 {n}°C',
   minutes_ago: '{n}分钟前',
   hours_ago: '{n}小时前',
   days_ago: '{n}天前',
@@ -967,6 +1026,8 @@ const zhCN: BabyGrowthTranslations = {
   report_copy: '复制医生摘要',
   report_copied: '已复制',
   report_share: '分享',
+  report_timeline_title: '按症状记录',
+  nav_vaccine: '预防接种',
   album_collections: '精选集',
   album_collection_empty: '相关照片不足。（同日2张、同周3张、同月龄2张以上）',
   album_collection_count: '{n}张',
@@ -1009,6 +1070,13 @@ const zhCN: BabyGrowthTranslations = {
   diaper_dirty: '大便',
   diaper_mixed: '两者都有',
   diaper_dry: '干净',
+  diaper_consistency_watery: '稀便',
+  diaper_consistency_soft: '软便',
+  diaper_consistency_normal: '正常',
+  diaper_consistency_firm: '硬便',
+  diaper_consistency_loose: '腹泻',
+  diaper_consistency_other: '其他',
+  diaper_other_notes_hint: '例: 血便、粘液等',
   temperature_celsius: '体温 (℃)',
   medication_name: '药品名称',
   medication_dose_mg: '剂量 (mg)',
@@ -1016,9 +1084,6 @@ const zhCN: BabyGrowthTranslations = {
   log_saved: '记录已保存。',
 
   report_title: '医疗报告',
-  temperature_chart: '体温变化',
-  medication_timeline: '退烧药服用记录',
-  no_temperature_data: '暂无体温记录。',
 
   growth_title: '生长发育',
   weight_kg: '体重 (kg)',
@@ -1149,6 +1214,13 @@ const zhTW: BabyGrowthTranslations = {
   last_temperature: '上次體溫',
   no_record: '無記錄',
   record_now: '立即記錄',
+  avg_7d: '7天',
+  avg_feeding_ml: '平均 {n}ml',
+  avg_feeding_min: '平均 {n}分鐘',
+  avg_count: '{n}次',
+  avg_diaper_count: '今天 {today}次 · 7天 {n}次',
+  avg_sleep_min: '7天平均 {n}分鐘',
+  avg_temp_c: '7天平均 {n}°C',
   minutes_ago: '{n}分鐘前',
   hours_ago: '{n}小時前',
   days_ago: '{n}天前',
@@ -1183,6 +1255,8 @@ const zhTW: BabyGrowthTranslations = {
   report_copy: '複製醫師摘要',
   report_copied: '已複製',
   report_share: '分享',
+  report_timeline_title: '依症狀記錄',
+  nav_vaccine: '預防接種',
   album_collections: '精選集',
   album_collection_empty: '相關照片不足。（同日2張、同週3張、同月齡2張以上）',
   album_collection_count: '{n}張',
@@ -1225,6 +1299,13 @@ const zhTW: BabyGrowthTranslations = {
   diaper_dirty: '大便',
   diaper_mixed: '兩者都有',
   diaper_dry: '乾淨',
+  diaper_consistency_watery: '稀便',
+  diaper_consistency_soft: '軟便',
+  diaper_consistency_normal: '正常',
+  diaper_consistency_firm: '硬便',
+  diaper_consistency_loose: '腹瀉',
+  diaper_consistency_other: '其他',
+  diaper_other_notes_hint: '例: 血便、黏液等',
   temperature_celsius: '體溫 (℃)',
   medication_name: '藥品名稱',
   medication_dose_mg: '劑量 (mg)',
@@ -1232,9 +1313,6 @@ const zhTW: BabyGrowthTranslations = {
   log_saved: '記錄已儲存。',
 
   report_title: '醫療報告',
-  temperature_chart: '體溫變化',
-  medication_timeline: '退燒藥服用記錄',
-  no_temperature_data: '暫無體溫記錄。',
 
   growth_title: '生長發育',
   weight_kg: '體重 (kg)',
@@ -1365,6 +1443,13 @@ const es: BabyGrowthTranslations = {
   last_temperature: 'Última temp.',
   no_record: 'Sin registro',
   record_now: 'Registrar',
+  avg_7d: '7d',
+  avg_feeding_ml: 'media {n}ml',
+  avg_feeding_min: 'media {n}min',
+  avg_count: '{n}x',
+  avg_diaper_count: 'hoy {today} · 7d {n}',
+  avg_sleep_min: '7d media {n}min',
+  avg_temp_c: '7d media {n}°C',
   minutes_ago: 'hace {n} min',
   hours_ago: 'hace {n} h',
   days_ago: 'hace {n} días',
@@ -1399,6 +1484,8 @@ const es: BabyGrowthTranslations = {
   report_copy: 'Copiar resumen',
   report_copied: 'Copiado',
   report_share: 'Compartir',
+  report_timeline_title: 'Por síntoma',
+  nav_vaccine: 'Vacunas',
   album_collections: 'Recuerdos',
   album_collection_empty: 'No hay suficientes fotos relacionadas. (2+ mismo día, 3+ misma semana, 2+ misma edad en meses)',
   album_collection_count: '{n} fotos',
@@ -1441,6 +1528,13 @@ const es: BabyGrowthTranslations = {
   diaper_dirty: 'Sucio',
   diaper_mixed: 'Ambos',
   diaper_dry: 'Seco',
+  diaper_consistency_watery: 'Acuosa',
+  diaper_consistency_soft: 'Blanda',
+  diaper_consistency_normal: 'Normal',
+  diaper_consistency_firm: 'Firme',
+  diaper_consistency_loose: 'Diarrea',
+  diaper_consistency_other: 'Otro',
+  diaper_other_notes_hint: 'ej. sangre, moco',
   temperature_celsius: 'Temperatura (℃)',
   medication_name: 'Medicamento',
   medication_dose_mg: 'Dosis (mg)',
@@ -1448,9 +1542,6 @@ const es: BabyGrowthTranslations = {
   log_saved: 'Registro guardado.',
 
   report_title: 'Informe médico',
-  temperature_chart: 'Gráfica de temperatura',
-  medication_timeline: 'Historial de medicación',
-  no_temperature_data: 'Sin registros de temperatura.',
 
   growth_title: 'Crecimiento y desarrollo',
   weight_kg: 'Peso (kg)',
@@ -1581,6 +1672,13 @@ const fr: BabyGrowthTranslations = {
   last_temperature: 'Dernière temp.',
   no_record: 'Aucun enregistrement',
   record_now: 'Enregistrer',
+  avg_7d: '7j',
+  avg_feeding_ml: 'moy. {n}ml',
+  avg_feeding_min: 'moy. {n}min',
+  avg_count: '{n}x',
+  avg_diaper_count: 'auj. {today} · 7j {n}',
+  avg_sleep_min: '7j moy. {n}min',
+  avg_temp_c: '7j moy. {n}°C',
   minutes_ago: 'il y a {n} min',
   hours_ago: 'il y a {n} h',
   days_ago: 'il y a {n} j',
@@ -1615,6 +1713,8 @@ const fr: BabyGrowthTranslations = {
   report_copy: 'Copier le résumé',
   report_copied: 'Copié',
   report_share: 'Partager',
+  report_timeline_title: 'Par symptôme',
+  nav_vaccine: 'Vaccins',
   album_collections: 'Souvenirs',
   album_collection_empty: 'Pas assez de photos liées. (2+ même jour, 3+ même semaine, 2+ même âge en mois)',
   album_collection_count: '{n} photos',
@@ -1657,6 +1757,13 @@ const fr: BabyGrowthTranslations = {
   diaper_dirty: 'Sale',
   diaper_mixed: 'Les deux',
   diaper_dry: 'Sèche',
+  diaper_consistency_watery: 'Liquide',
+  diaper_consistency_soft: 'Molle',
+  diaper_consistency_normal: 'Normale',
+  diaper_consistency_firm: 'Ferme',
+  diaper_consistency_loose: 'Diarrhée',
+  diaper_consistency_other: 'Autre',
+  diaper_other_notes_hint: 'ex. sang, mucus',
   temperature_celsius: 'Température (℃)',
   medication_name: 'Médicament',
   medication_dose_mg: 'Dose (mg)',
@@ -1664,9 +1771,6 @@ const fr: BabyGrowthTranslations = {
   log_saved: 'Enregistrement sauvegardé.',
 
   report_title: 'Rapport médical',
-  temperature_chart: 'Courbe de température',
-  medication_timeline: 'Historique des médicaments',
-  no_temperature_data: 'Aucune donnée de température.',
 
   growth_title: 'Croissance et développement',
   weight_kg: 'Poids (kg)',
@@ -1797,6 +1901,13 @@ const de: BabyGrowthTranslations = {
   last_temperature: 'Letzte Temp.',
   no_record: 'Kein Eintrag',
   record_now: 'Jetzt erfassen',
+  avg_7d: '7T',
+  avg_feeding_ml: 'Ø {n}ml',
+  avg_feeding_min: 'Ø {n}Min',
+  avg_count: '{n}x',
+  avg_diaper_count: 'heute {today} · 7T {n}',
+  avg_sleep_min: '7T Ø {n}Min',
+  avg_temp_c: '7T Ø {n}°C',
   minutes_ago: 'vor {n} Min.',
   hours_ago: 'vor {n} Std.',
   days_ago: 'vor {n} Tagen',
@@ -1831,6 +1942,8 @@ const de: BabyGrowthTranslations = {
   report_copy: 'Arztbericht kopieren',
   report_copied: 'Kopiert',
   report_share: 'Teilen',
+  report_timeline_title: 'Nach Symptom',
+  nav_vaccine: 'Impfung',
   album_collections: 'Erinnerungen',
   album_collection_empty: 'Nicht genug verwandte Fotos. (2+ gleicher Tag, 3+ gleiche Woche, 2+ gleiches Monatsalter)',
   album_collection_count: '{n} Fotos',
@@ -1873,6 +1986,13 @@ const de: BabyGrowthTranslations = {
   diaper_dirty: 'Schmutzig',
   diaper_mixed: 'Beides',
   diaper_dry: 'Trocken',
+  diaper_consistency_watery: 'Wässrig',
+  diaper_consistency_soft: 'Weich',
+  diaper_consistency_normal: 'Normal',
+  diaper_consistency_firm: 'Fest',
+  diaper_consistency_loose: 'Durchfall',
+  diaper_consistency_other: 'Sonstiges',
+  diaper_other_notes_hint: 'z. B. Blut, Schleim',
   temperature_celsius: 'Temperatur (℃)',
   medication_name: 'Medikament',
   medication_dose_mg: 'Dosis (mg)',
@@ -1880,9 +2000,6 @@ const de: BabyGrowthTranslations = {
   log_saved: 'Eintrag gespeichert.',
 
   report_title: 'Medizinischer Bericht',
-  temperature_chart: 'Temperaturverlauf',
-  medication_timeline: 'Medikamentenverlauf',
-  no_temperature_data: 'Keine Temperaturdaten.',
 
   growth_title: 'Wachstum & Entwicklung',
   weight_kg: 'Gewicht (kg)',
@@ -2013,6 +2130,13 @@ const it: BabyGrowthTranslations = {
   last_temperature: 'Ultima temp.',
   no_record: 'Nessun record',
   record_now: 'Registra ora',
+  avg_7d: '7g',
+  avg_feeding_ml: 'media {n}ml',
+  avg_feeding_min: 'media {n}min',
+  avg_count: '{n}x',
+  avg_diaper_count: 'oggi {today} · 7g {n}',
+  avg_sleep_min: '7g media {n}min',
+  avg_temp_c: '7g media {n}°C',
   minutes_ago: '{n} min fa',
   hours_ago: '{n} ore fa',
   days_ago: '{n} giorni fa',
@@ -2047,6 +2171,8 @@ const it: BabyGrowthTranslations = {
   report_copy: 'Copia riepilogo',
   report_copied: 'Copiato',
   report_share: 'Condividi',
+  report_timeline_title: 'Per sintomo',
+  nav_vaccine: 'Vaccini',
   album_collections: 'Ricordi',
   album_collection_empty: 'Foto correlate insufficienti. (2+ stesso giorno, 3+ stessa settimana, 2+ stessa età in mesi)',
   album_collection_count: '{n} foto',
@@ -2089,6 +2215,13 @@ const it: BabyGrowthTranslations = {
   diaper_dirty: 'Sporco',
   diaper_mixed: 'Entrambi',
   diaper_dry: 'Asciutto',
+  diaper_consistency_watery: 'Acquosa',
+  diaper_consistency_soft: 'Molle',
+  diaper_consistency_normal: 'Normale',
+  diaper_consistency_firm: 'Soda',
+  diaper_consistency_loose: 'Diarrea',
+  diaper_consistency_other: 'Altro',
+  diaper_other_notes_hint: 'es. sangue, muco',
   temperature_celsius: 'Temperatura (℃)',
   medication_name: 'Farmaco',
   medication_dose_mg: 'Dose (mg)',
@@ -2096,9 +2229,6 @@ const it: BabyGrowthTranslations = {
   log_saved: 'Record salvato.',
 
   report_title: 'Rapporto medico',
-  temperature_chart: 'Andamento temperatura',
-  medication_timeline: 'Storico farmaci',
-  no_temperature_data: 'Nessun dato di temperatura.',
 
   growth_title: 'Crescita e sviluppo',
   weight_kg: 'Peso (kg)',
@@ -2229,6 +2359,13 @@ const pt: BabyGrowthTranslations = {
   last_temperature: 'Última temp.',
   no_record: 'Sem registro',
   record_now: 'Registrar agora',
+  avg_7d: '7d',
+  avg_feeding_ml: 'média {n}ml',
+  avg_feeding_min: 'média {n}min',
+  avg_count: '{n}x',
+  avg_diaper_count: 'hoje {today} · 7d {n}',
+  avg_sleep_min: '7d média {n}min',
+  avg_temp_c: '7d média {n}°C',
   minutes_ago: 'há {n} min',
   hours_ago: 'há {n} h',
   days_ago: 'há {n} dias',
@@ -2263,6 +2400,8 @@ const pt: BabyGrowthTranslations = {
   report_copy: 'Copiar resumo',
   report_copied: 'Copiado',
   report_share: 'Partilhar',
+  report_timeline_title: 'Por sintoma',
+  nav_vaccine: 'Vacinas',
   album_collections: 'Memórias',
   album_collection_empty: 'Fotos relacionadas insuficientes. (2+ mesmo dia, 3+ mesma semana, 2+ mesma idade em meses)',
   album_collection_count: '{n} fotos',
@@ -2305,6 +2444,13 @@ const pt: BabyGrowthTranslations = {
   diaper_dirty: 'Suja',
   diaper_mixed: 'Ambos',
   diaper_dry: 'Seca',
+  diaper_consistency_watery: 'Aquosa',
+  diaper_consistency_soft: 'Mole',
+  diaper_consistency_normal: 'Normal',
+  diaper_consistency_firm: 'Firme',
+  diaper_consistency_loose: 'Diarreia',
+  diaper_consistency_other: 'Outro',
+  diaper_other_notes_hint: 'ex. sangue, muco',
   temperature_celsius: 'Temperatura (℃)',
   medication_name: 'Medicamento',
   medication_dose_mg: 'Dose (mg)',
@@ -2312,9 +2458,6 @@ const pt: BabyGrowthTranslations = {
   log_saved: 'Registro salvo.',
 
   report_title: 'Relatório médico',
-  temperature_chart: 'Gráfico de temperatura',
-  medication_timeline: 'Histórico de medicamentos',
-  no_temperature_data: 'Sem dados de temperatura.',
 
   growth_title: 'Crescimento e desenvolvimento',
   weight_kg: 'Peso (kg)',

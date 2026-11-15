@@ -16,13 +16,13 @@ import { useBabyReminders } from '../hooks/useBabyReminders';
 
 type TabKey = 'home' | 'growth' | 'health' | 'album' | 'vaccine' | 'ai';
 
-const TABS: { key: TabKey; emoji: string; label: string }[] = [
-  { key: 'home',    emoji: '🏠', label: '홈' },
-  { key: 'growth',  emoji: '📈', label: '성장' },
-  { key: 'health',  emoji: '🏥', label: '건강' },
-  { key: 'album',   emoji: '📷', label: '앨범' },
-  { key: 'vaccine', emoji: '💉', label: '접종' },
-  { key: 'ai',      emoji: '🤖', label: 'AI' },
+const TABS: { key: TabKey; emoji: string; labelKey: keyof BabyGrowthTranslations | null; labelFallback: string }[] = [
+  { key: 'home',    emoji: '🏠', labelKey: null, labelFallback: '홈' },
+  { key: 'growth',  emoji: '📈', labelKey: null, labelFallback: '성장' },
+  { key: 'health',  emoji: '🏥', labelKey: null, labelFallback: '건강' },
+  { key: 'album',   emoji: '📷', labelKey: null, labelFallback: '앨범' },
+  { key: 'vaccine', emoji: '💉', labelKey: 'nav_vaccine', labelFallback: '예방접종' },
+  { key: 'ai',      emoji: '🤖', labelKey: null, labelFallback: 'AI' },
 ];
 
 const REMINDER_TAB_MAP: Record<string, TabKey> = {
@@ -109,7 +109,7 @@ export function BabyGrowthNavigator({
             }`}
           >
             <span className="text-base">{tab.emoji}</span>
-            {tab.label}
+            {tab.labelKey ? (t[tab.labelKey] as string) : tab.labelFallback}
           </button>
         ))}
       </nav>

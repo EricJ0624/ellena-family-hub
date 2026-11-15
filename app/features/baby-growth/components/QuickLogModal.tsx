@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { LogType, BabyDailyLogDraft, FeedingType, DiaperType, ActivityType } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
+import { BABY_SYMPTOM_CHIPS } from '../utils/symptom-chips';
 
 interface QuickLogModalProps {
   isOpen: boolean;
@@ -108,11 +109,12 @@ const DIAPER_COLORS = [
 ];
 
 const DIAPER_CONSISTENCY = [
-  { value: 'watery',  label: '묽음' },
-  { value: 'soft',    label: '보통' },
-  { value: 'firm',    label: '딱딱' },
-  { value: 'loose',   label: '설사' },
-];
+  'normal',
+  'soft',
+  'firm',
+  'loose',
+  'other',
+] as const;
 
 // ---------------------------------------------------------------------------
 // 메인 컴포넌트
@@ -153,12 +155,23 @@ export function QuickLogModal({
   // medication
   const [medName, setMedName] = useState('');
   const [medDose, setMedDose] = useState('');
+  // illness symptoms (체온 탭에서 함께 기록)
+  const [symptomTags, setSymptomTags] = useState<string[]>([]);
+  const [symptomNote, setSymptomNote] = useState('');
   // activity
   const [activityType, setActivityType] = useState<ActivityType>('bath');
   const [activityDurationMin, setActivityDurationMin] = useState('');
   const [pumpAmountMl, setPumpAmountMl] = useState('');
   // shared
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setActiveTab(defaultLogType);
+    setSymptomTags([]);
+    setSymptomNote('');
+    setSavedMsg(false);
+  }, [isOpen, defaultLogType]);
 
   if (!isOpen) return null;
 
@@ -167,51 +180,97 @@ export function QuickLogModal({
     setSaving(true);
     try {
       const now = new Date().toISOString();
-      const draft: BabyDailyLogDraft = {
-        baby_id: babyId,
-        group_id: currentGroupId,
-        log_type: activeTab,
-        logged_at: sleepStart ? new Date(sleepStart).toISOString() : now,
-        notes: notes.trim() || undefined,
-      };
 
-      if (activeTab === 'feeding') {
-        draft.feeding_type = feedingType;
-        if (feedingType === 'breast_left' || feedingType === 'breast_right' || feedingType === 'mixed') {
-          if (breastLeftMin > 0) draft.breast_left_min = breastLeftMin;
-          if (breastRightMin > 0) draft.breast_right_min = breastRightMin;
-        } else if (feedingType === 'solid') {
-          if (feedingAmountMl) draft.feeding_amount_ml = Number(feedingAmountMl);
-          if (solidIngredients.trim()) draft.solid_ingredients = solidIngredients.trim();
-          if (allergyReaction.trim()) draft.allergy_reaction = allergyReaction.trim();
-        } else {
-          if (feedingAmountMl) draft.feeding_amount_ml = Number(feedingAmountMl);
-          if (feedingDurationMin) draft.feeding_duration_min = Number(feedingDurationMin);
+      if (activeTab === 'temperature') {
+        const jobs: Array<() => Promise<void>> = [];
+        if (tempCelsius) {
+          jobs.push(() =>
+            onSave({
+              baby_id: babyId,
+              group_id: currentGroupId,
+              log_type: 'temperature',
+              logged_at: now,
+              temperature_celsius: Number(tempCelsius),
+            }),
+          );
         }
-      } else if (activeTab === 'sleep') {
-        draft.sleep_start_recorded = Boolean(sleepStart);
-        if (sleepEnd) {
-          draft.sleep_end_at = new Date(sleepEnd).toISOString();
-          draft.sleep_end_recorded = true;
-        } else {
-          draft.sleep_end_recorded = false;
+        if (medName.trim()) {
+          jobs.push(() =>
+            onSave({
+              baby_id: babyId,
+              group_id: currentGroupId,
+              log_type: 'medication',
+              logged_at: now,
+              medication_name: medName.trim(),
+              medication_dose_mg: medDose ? Number(medDose) : undefined,
+            }),
+          );
         }
-      } else if (activeTab === 'diaper') {
-        draft.diaper_type = diaperType;
-        if (diaperColor) draft.diaper_color = diaperColor;
-        if (diaperConsistency) draft.diaper_consistency = diaperConsistency;
-      } else if (activeTab === 'temperature') {
-        if (tempCelsius) draft.temperature_celsius = Number(tempCelsius);
-      } else if (activeTab === 'medication') {
-        if (medName.trim()) draft.medication_name = medName.trim();
-        if (medDose) draft.medication_dose_mg = Number(medDose);
-      } else if (activeTab === 'activity') {
-        draft.activity_type = activityType;
-        if (activityDurationMin) draft.activity_duration_min = Number(activityDurationMin);
-        if (activityType === 'pumping' && pumpAmountMl) draft.pump_amount_ml = Number(pumpAmountMl);
+        if (symptomTags.length > 0 || symptomNote.trim()) {
+          jobs.push(() =>
+            onSave({
+              baby_id: babyId,
+              group_id: currentGroupId,
+              log_type: 'symptom',
+              logged_at: now,
+              symptom_tags: symptomTags.join(','),
+              notes: symptomNote.trim() || undefined,
+            }),
+          );
+        }
+        if (jobs.length === 0) return;
+        // 순차 저장 — Realtime/상태 갱신 충돌 완화
+        for (const job of jobs) await job();
+      } else {
+        const draft: BabyDailyLogDraft = {
+          baby_id: babyId,
+          group_id: currentGroupId,
+          log_type: activeTab,
+          logged_at: sleepStart ? new Date(sleepStart).toISOString() : now,
+          notes: notes.trim() || undefined,
+        };
+
+        if (activeTab === 'feeding') {
+          draft.feeding_type = feedingType;
+          if (feedingType === 'breast_left' || feedingType === 'breast_right') {
+            if (breastLeftMin > 0) draft.breast_left_min = breastLeftMin;
+            if (breastRightMin > 0) draft.breast_right_min = breastRightMin;
+          } else if (feedingType === 'mixed') {
+            if (breastLeftMin > 0) draft.breast_left_min = breastLeftMin;
+            if (breastRightMin > 0) draft.breast_right_min = breastRightMin;
+            if (feedingAmountMl) draft.feeding_amount_ml = Number(feedingAmountMl);
+          } else if (feedingType === 'solid') {
+            if (feedingAmountMl) draft.feeding_amount_ml = Number(feedingAmountMl);
+            if (solidIngredients.trim()) draft.solid_ingredients = solidIngredients.trim();
+            if (allergyReaction.trim()) draft.allergy_reaction = allergyReaction.trim();
+          } else {
+            if (feedingAmountMl) draft.feeding_amount_ml = Number(feedingAmountMl);
+            if (feedingDurationMin) draft.feeding_duration_min = Number(feedingDurationMin);
+          }
+        } else if (activeTab === 'sleep') {
+          draft.sleep_start_recorded = Boolean(sleepStart);
+          if (sleepEnd) {
+            draft.sleep_end_at = new Date(sleepEnd).toISOString();
+            draft.sleep_end_recorded = true;
+          } else {
+            draft.sleep_end_recorded = false;
+          }
+        } else if (activeTab === 'diaper') {
+          draft.diaper_type = diaperType;
+          if (diaperColor) draft.diaper_color = diaperColor;
+          if (diaperConsistency) draft.diaper_consistency = diaperConsistency;
+        } else if (activeTab === 'medication') {
+          if (medName.trim()) draft.medication_name = medName.trim();
+          if (medDose) draft.medication_dose_mg = Number(medDose);
+        } else if (activeTab === 'activity') {
+          draft.activity_type = activityType;
+          if (activityDurationMin) draft.activity_duration_min = Number(activityDurationMin);
+          if (activityType === 'pumping' && pumpAmountMl) draft.pump_amount_ml = Number(pumpAmountMl);
+        }
+
+        await onSave(draft);
       }
 
-      await onSave(draft);
       setSavedMsg(true);
       setTimeout(() => {
         setSavedMsg(false);
@@ -335,8 +394,8 @@ export function QuickLogModal({
                 </>
               )}
 
-              {/* 분유/혼합 — 양/시간 */}
-              {(feedingType === 'bottle') && (
+              {/* 분유 — 양/시간 */}
+              {feedingType === 'bottle' && (
                 <>
                   <Field label={t.feeding_amount_ml}>
                     <NumberInput value={feedingAmountMl} onChange={setFeedingAmountMl} placeholder="ex) 120" />
@@ -345,6 +404,13 @@ export function QuickLogModal({
                     <NumberInput value={feedingDurationMin} onChange={setFeedingDurationMin} placeholder="ex) 15" />
                   </Field>
                 </>
+              )}
+
+              {/* 혼합 — 모유 시간 + 선택 수유량(ml) */}
+              {feedingType === 'mixed' && (
+                <Field label={t.feeding_amount_ml}>
+                  <NumberInput value={feedingAmountMl} onChange={setFeedingAmountMl} placeholder="ex) 60" />
+                </Field>
               )}
             </>
           )}
@@ -454,20 +520,26 @@ export function QuickLogModal({
                   </Field>
                   <Field label={t.diaper_consistency}>
                     <div className="flex gap-2 flex-wrap">
-                      {DIAPER_CONSISTENCY.map((c) => (
-                        <button
-                          key={c.value}
-                          type="button"
-                          onClick={() => setDiaperConsistency(diaperConsistency === c.value ? '' : c.value)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                            diaperConsistency === c.value
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-gray-100 dark:bg-gray-800 text-gray-600'
-                          }`}
-                        >
-                          {c.label}
-                        </button>
-                      ))}
+                      {DIAPER_CONSISTENCY.map((value) => {
+                        const labelKey =
+                          `diaper_consistency_${value}` as keyof BabyGrowthTranslations;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() =>
+                              setDiaperConsistency(diaperConsistency === value ? '' : value)
+                            }
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                              diaperConsistency === value
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600'
+                            }`}
+                          >
+                            {t[labelKey] as string}
+                          </button>
+                        );
+                      })}
                     </div>
                   </Field>
                 </>
@@ -475,19 +547,65 @@ export function QuickLogModal({
             </>
           )}
 
-          {/* ── 체온 ── */}
+          {/* ── 체온(+투약·증상) — 아픈 날 한곳에서 기록 ── */}
           {activeTab === 'temperature' && (
-            <Field label={t.temperature_celsius}>
-              <NumberInput
-                value={tempCelsius}
-                onChange={setTempCelsius}
-                placeholder="ex) 37.2"
-                step="0.1"
-              />
-            </Field>
+            <>
+              <Field label={t.temperature_celsius}>
+                <NumberInput
+                  value={tempCelsius}
+                  onChange={setTempCelsius}
+                  placeholder="ex) 37.2"
+                  step="0.1"
+                />
+              </Field>
+              <Field label={t.log_medication}>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={medName}
+                    onChange={(e) => setMedName(e.target.value)}
+                    placeholder={t.medication_name}
+                    className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                  />
+                  <NumberInput value={medDose} onChange={setMedDose} placeholder="ex) 80" />
+                </div>
+              </Field>
+              <Field label={t.symptom_title}>
+                <div className="flex flex-wrap gap-1.5">
+                  {BABY_SYMPTOM_CHIPS.map((chip) => {
+                    const on = symptomTags.includes(chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() =>
+                          setSymptomTags((prev) =>
+                            on ? prev.filter((x) => x !== chip) : [...prev, chip],
+                          )
+                        }
+                        className={`rounded-full px-2.5 py-1 text-xs ${
+                          on ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-800'
+                        }`}
+                      >
+                        {chip}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+              <Field label={t.symptom_note}>
+                <textarea
+                  value={symptomNote}
+                  onChange={(e) => setSymptomNote(e.target.value)}
+                  rows={2}
+                  placeholder={t.symptom_note}
+                  className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+                />
+              </Field>
+            </>
           )}
 
-          {/* ── 투약 ── */}
+          {/* ── 투약 (단독 탭) ── */}
           {activeTab === 'medication' && (
             <>
               <Field label={t.medication_name}>
@@ -542,15 +660,22 @@ export function QuickLogModal({
             </>
           )}
 
-          {/* ── 메모 ── */}
-          <Field label={t.notes}>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2 resize-none"
-            />
-          </Field>
+          {/* ── 메모 (체온 탭은 증상 메모로 대체) ── */}
+          {activeTab !== 'temperature' && (
+            <Field label={t.notes}>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                placeholder={
+                  activeTab === 'diaper' && diaperConsistency === 'other'
+                    ? t.diaper_other_notes_hint
+                    : undefined
+                }
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2 resize-none"
+              />
+            </Field>
+          )}
         </div>
 
         {/* 저장 버튼 */}

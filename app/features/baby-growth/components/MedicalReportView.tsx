@@ -3,8 +3,14 @@
 import React, { useMemo, useState } from 'react';
 import type { BabyCheckup, BabyDailyLog, BabyDailyLogDraft } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
+import { BABY_SYMPTOM_CHIPS, BABY_SYMPTOM_EMOJI } from '../utils/symptom-chips';
 
-const SYMPTOM_CHIPS = ['열', '구토', '설사', '발진', '기침', '콧물', '보챔'] as const;
+type TimelineItem = {
+  id: string;
+  at: number;
+  label: string;
+  text: string;
+};
 
 interface MedicalReportViewProps {
   logs: BabyDailyLog[];
@@ -15,65 +21,24 @@ interface MedicalReportViewProps {
   onAddLog?: (draft: BabyDailyLogDraft) => Promise<unknown>;
 }
 
-interface TempPoint {
-  time: string;
-  label: string;
-  value: number;
-}
-
-interface MedEvent {
-  time: string;
-  label: string;
-  name: string;
-  dose: number | null;
-}
-
 export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog }: MedicalReportViewProps) {
   const [tags, setTags] = useState<string[]>([]);
   const [symptomNote, setSymptomNote] = useState('');
   const [copied, setCopied] = useState(false);
   const [savingSymptom, setSavingSymptom] = useState(false);
-  const tempLogs = useMemo(
-    () =>
-      logs
-        .filter((l) => l.log_type === 'temperature' && l.temperature_celsius != null)
-        .slice(0, 48)
-        .reverse(),
-    [logs]
-  );
 
-  const medLogs = useMemo(
-    () =>
-      logs
-        .filter((l) => l.log_type === 'medication' && l.medication_name)
-        .slice(0, 20)
-        .reverse(),
-    [logs]
-  );
+  const columns = useMemo(() => buildSymptomColumns(logs, t), [logs, t]);
 
-  const tempPoints: TempPoint[] = tempLogs.map((l) => ({
-    time: l.logged_at,
-    label: formatTime(l.logged_at),
-    value: l.temperature_celsius!,
-  }));
-
-  const medEvents: MedEvent[] = medLogs.map((l) => ({
-    time: l.logged_at,
-    label: formatTime(l.logged_at),
-    name: l.medication_name!,
-    dose: l.medication_dose_mg,
-  }));
-
-  const symptomLogs = logs.filter((l) => l.log_type === 'symptom').slice(0, 20);
-
-  const summaryText = [
-    t.report_title,
-    tempPoints.length ? `체온: ${tempPoints.map((p) => `${p.label} ${p.value}°C`).join(', ')}` : '체온 기록 없음',
-    medEvents.length ? `투약: ${medEvents.map((e) => `${e.label} ${e.name}${e.dose != null ? ` ${e.dose}mg` : ''}`).join(', ')}` : '투약 기록 없음',
-    symptomLogs.length
-      ? `증상: ${symptomLogs.map((l) => `${formatTime(l.logged_at)} ${l.symptom_tags ?? ''} ${l.notes ?? ''}`).join(' / ')}`
-      : '증상 기록 없음',
-  ].join('\n');
+  const summaryText = useMemo(() => {
+    const lines = [t.report_title];
+    for (const col of columns) {
+      if (col.items.length === 0) continue;
+      lines.push(
+        `${col.title}: ${col.items.map((i) => `${i.label} ${i.text}`).join(', ')}`,
+      );
+    }
+    return lines.join('\n');
+  }, [columns, t.report_title]);
 
   const copySummary = async () => {
     try {
@@ -91,7 +56,6 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
         await navigator.share({ title: t.report_title, text: summaryText });
         return;
       } catch {
-        /* 사용자가 공유를 닫은 경우 복사로 폴백하지 않음 */
         return;
       }
     }
@@ -122,10 +86,18 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-bold">{t.report_title}</h2>
         <div className="flex gap-1">
-          <button type="button" onClick={() => void copySummary()} className="text-[11px] px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800">
+          <button
+            type="button"
+            onClick={() => void copySummary()}
+            className="rounded-lg bg-gray-100 px-2 py-1 text-[11px] dark:bg-gray-800"
+          >
             {copied ? t.report_copied : t.report_copy}
           </button>
-          <button type="button" onClick={() => void shareSummary()} className="text-[11px] px-2 py-1 rounded-lg bg-pink-500 text-white">
+          <button
+            type="button"
+            onClick={() => void shareSummary()}
+            className="rounded-lg bg-pink-500 px-2 py-1 text-[11px] text-white"
+          >
             {t.report_share}
           </button>
         </div>
@@ -134,14 +106,18 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">{t.symptom_title}</h3>
         <div className="flex flex-wrap gap-1.5">
-          {SYMPTOM_CHIPS.map((chip) => {
+          {BABY_SYMPTOM_CHIPS.map((chip) => {
             const on = tags.includes(chip);
             return (
               <button
                 key={chip}
                 type="button"
-                onClick={() => setTags((prev) => on ? prev.filter((x) => x !== chip) : [...prev, chip])}
-                className={`px-2.5 py-1 rounded-full text-xs ${on ? 'bg-rose-500 text-white' : 'bg-gray-100 dark:bg-gray-800'}`}
+                onClick={() =>
+                  setTags((prev) => (on ? prev.filter((x) => x !== chip) : [...prev, chip]))
+                }
+                className={`rounded-full px-2.5 py-1 text-xs ${
+                  on ? 'bg-rose-500 text-white' : 'bg-gray-100 dark:bg-gray-800'
+                }`}
               >
                 {chip}
               </button>
@@ -153,76 +129,71 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
           onChange={(e) => setSymptomNote(e.target.value)}
           rows={2}
           placeholder={t.symptom_note}
-          className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
         />
         <button
           type="button"
           disabled={savingSymptom || !onAddLog}
           onClick={() => void saveSymptom()}
-          className="w-full py-2 rounded-xl text-sm font-semibold bg-rose-500 text-white disabled:opacity-50"
+          className="w-full rounded-xl bg-rose-500 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {t.symptom_save}
         </button>
-        {symptomLogs.length > 0 && (
-          <ul className="space-y-1">
-            {symptomLogs.map((l) => (
-              <li key={l.id} className="text-xs text-gray-600 dark:text-gray-300">
-                {formatTime(l.logged_at)} · {l.symptom_tags || l.notes}
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
 
-      {/* 체온 그래프 */}
-      <section>
-        <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-          🌡️ {t.temperature_chart}
+      {/* 증상별 가로 칸 + 세로 시간순 */}
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+          {t.report_timeline_title}
         </h3>
-        {tempPoints.length === 0 ? (
-          <p className="text-xs text-gray-400">{t.no_temperature_data}</p>
-        ) : (
-          <TempLineChart points={tempPoints} />
-        )}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {columns.map((col) => (
+            <div
+              key={col.key}
+              className="flex w-[9.5rem] shrink-0 flex-col rounded-xl border border-rose-100 bg-rose-50/60 p-2 dark:border-rose-900/40 dark:bg-rose-950/20"
+            >
+              <p className="m-0 mb-1.5 text-center text-xs font-bold text-rose-600 dark:text-rose-300">
+                {col.emoji} {col.title}
+              </p>
+              {col.items.length === 0 ? (
+                <p className="m-0 text-center text-[10px] text-gray-400">{t.no_record}</p>
+              ) : (
+                <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                  {col.items.map((item) => (
+                    <li
+                      key={item.id}
+                      className="rounded-lg bg-white/90 px-1.5 py-1 text-[10px] leading-snug text-gray-700 shadow-sm dark:bg-gray-900/70 dark:text-gray-200"
+                    >
+                      <span className="font-semibold text-pink-500">{item.label}</span>
+                      <span className="mt-0.5 block">{item.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
 
-      {/* 해열제 타임라인 */}
-      {medEvents.length > 0 && (
-        <section>
-          <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-            💊 {t.medication_timeline}
-          </h3>
-          <div className="space-y-2">
-            {medEvents.map((ev, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20">
-                <div className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium">{ev.name}</span>
-                  {ev.dose != null && (
-                    <span className="text-xs text-gray-500 ml-1">{ev.dose}mg</span>
-                  )}
-                </div>
-                <span className="text-xs text-gray-400 shrink-0">{ev.label}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 영유아 검진 요약 */}
       {checkups && checkups.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
+          <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-400">
             🏥 {t.checkup_title}
           </h3>
           <div className="space-y-2">
             {checkups.slice(-5).map((c) => (
-              <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-teal-50 dark:bg-teal-900/20">
-                <span className="text-xs font-bold bg-teal-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">
+              <div
+                key={c.id}
+                className="flex items-center gap-3 rounded-xl bg-teal-50 p-3 dark:bg-teal-900/20"
+              >
+                <span className="whitespace-nowrap rounded-full bg-teal-500 px-2 py-0.5 text-xs font-bold text-white">
                   {c.checkup_type}
                 </span>
-                <span className="text-xs text-gray-600 dark:text-gray-400 flex-1">
-                  {new Date(c.checkup_date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                <span className="flex-1 text-xs text-gray-600 dark:text-gray-400">
+                  {new Date(c.checkup_date).toLocaleDateString('ko-KR', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
                 </span>
                 <div className="flex gap-2 text-xs text-gray-500">
                   {c.weight_kg != null && <span>{c.weight_kg}kg</span>}
@@ -237,98 +208,86 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
   );
 }
 
-// ---------------------------------------------------------------------------
-// 간단한 SVG 꺾은선 그래프 (외부 라이브러리 미사용)
-// ---------------------------------------------------------------------------
-function TempLineChart({ points }: { points: TempPoint[] }) {
-  const W = 320;
-  const H = 120;
-  const PADDING = { top: 16, right: 8, bottom: 24, left: 32 };
+function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
+  const typeMap: Record<string, string> = {
+    wet: t.diaper_wet,
+    dirty: t.diaper_dirty,
+    mixed: t.diaper_mixed,
+    dry: t.diaper_dry,
+  };
 
-  const values = points.map((p) => p.value);
-  const minV = Math.max(35, Math.min(...values) - 0.5);
-  const maxV = Math.min(42, Math.max(...values) + 0.5);
-  const range = maxV - minV || 1;
+  const feverItems: TimelineItem[] = [];
+  for (const l of logs) {
+    if (l.log_type === 'temperature' && l.temperature_celsius != null) {
+      feverItems.push({
+        id: `t-${l.id}`,
+        at: new Date(l.logged_at).getTime(),
+        label: formatTime(l.logged_at),
+        text: `${l.temperature_celsius}°C`,
+      });
+    }
+    if (l.log_type === 'medication' && l.medication_name) {
+      feverItems.push({
+        id: `m-${l.id}`,
+        at: new Date(l.logged_at).getTime(),
+        label: formatTime(l.logged_at),
+        text: `${l.medication_name}${l.medication_dose_mg != null ? ` ${l.medication_dose_mg}mg` : ''}`,
+      });
+    }
+  }
+  feverItems.sort((a, b) => a.at - b.at);
 
-  const toX = (i: number) =>
-    PADDING.left + (i / Math.max(points.length - 1, 1)) * (W - PADDING.left - PADDING.right);
-  const toY = (v: number) =>
-    PADDING.top + (1 - (v - minV) / range) * (H - PADDING.top - PADDING.bottom);
+  const diarrheaItems: TimelineItem[] = logs
+    .filter((l) => l.log_type === 'diaper')
+    .map((l) => {
+      const typeName = l.diaper_type ? (typeMap[l.diaper_type] ?? '') : '';
+      const cKey = l.diaper_consistency
+        ? (`diaper_consistency_${l.diaper_consistency}` as keyof BabyGrowthTranslations)
+        : null;
+      const cLabel =
+        cKey && typeof t[cKey] === 'string' ? (t[cKey] as string) : l.diaper_consistency ?? '';
+      return {
+        id: `d-${l.id}`,
+        at: new Date(l.logged_at).getTime(),
+        label: formatTime(l.logged_at),
+        text: [typeName, cLabel].filter(Boolean).join(' · ') || t.log_diaper,
+      };
+    })
+    .sort((a, b) => a.at - b.at);
 
-  const pathD = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${toX(i).toFixed(1)} ${toY(p.value).toFixed(1)}`)
-    .join(' ');
+  const otherChips = BABY_SYMPTOM_CHIPS.filter((c) => c !== '열' && c !== '설사');
 
-  // 발열 기준선 (38.0°C)
-  const feverY = toY(38.0);
+  const columns: {
+    key: string;
+    title: string;
+    emoji: string;
+    items: TimelineItem[];
+  }[] = [
+    { key: 'fever', title: '열', emoji: BABY_SYMPTOM_EMOJI['열'], items: feverItems },
+    { key: 'diarrhea', title: '설사', emoji: BABY_SYMPTOM_EMOJI['설사'], items: diarrheaItems },
+  ];
 
-  return (
-    <div className="overflow-x-auto">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width={W}
-        height={H}
-        className="text-blue-500"
-        style={{ minWidth: W }}
-        aria-label="체온 그래프"
-      >
-        {/* 발열 기준선 */}
-        {feverY > PADDING.top && feverY < H - PADDING.bottom && (
-          <>
-            <line
-              x1={PADDING.left}
-              y1={feverY}
-              x2={W - PADDING.right}
-              y2={feverY}
-              stroke="#f97316"
-              strokeWidth={1}
-              strokeDasharray="4 2"
-              opacity={0.6}
-            />
-            <text x={PADDING.left - 2} y={feverY - 3} fontSize={9} fill="#f97316" textAnchor="end">
-              38°
-            </text>
-          </>
-        )}
+  for (const chip of otherChips) {
+    const items = logs
+      .filter(
+        (l) =>
+          l.log_type === 'symptom' &&
+          (l.symptom_tags ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .includes(chip),
+      )
+      .map((l) => ({
+        id: `s-${chip}-${l.id}`,
+        at: new Date(l.logged_at).getTime(),
+        label: formatTime(l.logged_at),
+        text: l.notes?.trim() || chip,
+      }))
+      .sort((a, b) => a.at - b.at);
+    columns.push({ key: chip, title: chip, emoji: BABY_SYMPTOM_EMOJI[chip], items });
+  }
 
-        {/* Y축 레이블 */}
-        {[minV, (minV + maxV) / 2, maxV].map((v) => (
-          <text
-            key={v}
-            x={PADDING.left - 4}
-            y={toY(v) + 4}
-            fontSize={9}
-            fill="#9ca3af"
-            textAnchor="end"
-          >
-            {v.toFixed(1)}
-          </text>
-        ))}
-
-        {/* 꺾은선 */}
-        <path d={pathD} fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" />
-
-        {/* 데이터 점 + 시간 레이블 */}
-        {points.map((p, i) => (
-          <g key={i}>
-            <circle cx={toX(i)} cy={toY(p.value)} r={3} fill="currentColor" />
-            {/* 첫/마지막 레이블만 표시 */}
-            {(i === 0 || i === points.length - 1) && (
-              <text
-                x={toX(i)}
-                y={H - 4}
-                fontSize={8}
-                fill="#9ca3af"
-                textAnchor="middle"
-              >
-                {p.label}
-              </text>
-            )}
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
+  return columns;
 }
 
 function formatTime(iso: string): string {
