@@ -16,6 +16,7 @@ import {
   TRAVEL_M_LAYOUT_H,
   TRAVEL_QUICK_RECORD_M_LAYOUT_H,
   FAMILY_LOG_M_LAYOUT_H,
+  BABY_GROWTH_M_LAYOUT_H,
   LOCATION_M_LAYOUT_H,
   WIDGET_DEFAULT_SIZE,
   WIDGET_DEFAULT_ORDER,
@@ -73,6 +74,9 @@ export function getPresetLayout(
   }
   if (key === 'family_log' && size === 'M') {
     preset.h = FAMILY_LOG_M_LAYOUT_H;
+  }
+  if (key === 'baby_growth' && size === 'M') {
+    preset.h = BABY_GROWTH_M_LAYOUT_H;
   }
   if (key === 'location' && size === 'M') {
     preset.h = LOCATION_M_LAYOUT_H;

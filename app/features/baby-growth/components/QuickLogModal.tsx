@@ -484,7 +484,13 @@ export function QuickLogModal({
                     <button
                       key={v}
                       type="button"
-                      onClick={() => setDiaperType(v)}
+                      onClick={() => {
+                        setDiaperType(v);
+                        if (v !== 'dirty' && v !== 'mixed') {
+                          setDiaperColor('');
+                          setDiaperConsistency('');
+                        }
+                      }}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                         diaperType === v
                           ? 'bg-pink-500 text-white'
@@ -497,6 +503,7 @@ export function QuickLogModal({
                 </div>
               </Field>
 
+              {/* 대변·소변+대변: 색/성상(보통·무른·딱딱·설사·기타) */}
               {(diaperType === 'dirty' || diaperType === 'mixed') && (
                 <>
                   <Field label={t.diaper_color}>

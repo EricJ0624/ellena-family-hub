@@ -43,8 +43,8 @@ export const TRAVEL_QUICK_RECORD_M_LAYOUT_H = 4;
 /** Family Log M 기본 높이. 리본 + 카드 영역 + 하단 버튼용 세로. */
 export const FAMILY_LOG_M_LAYOUT_H = 9;
 
-/** 우리아이 성장기록 M 기본 높이. 전역 M(8)보다 세로 1칸. */
-export const BABY_GROWTH_M_LAYOUT_H = 9;
+/** 우리아이 성장기록 M 기본 높이. 전역 M(8)보다 세로 3칸. */
+export const BABY_GROWTH_M_LAYOUT_H = 11;
 
 /**
  * Family Location M 기본 높이. 전역 M(8)보다 높여 세로 나무 프레임(481×519)에 맞춤.

@@ -277,9 +277,21 @@ export interface BabyPhoto {
 /** 인쇄용 앨범 사진별 편집 (baby_print_albums.photo_edits) */
 export type BabyPrintPhotoEdit = {
   included: boolean;
-  frame: 'rect' | 'round' | 'diamond' | 'heart' | 'hex';
-  /** 0~359 도 */
+  frame: 'rect' | 'round' | 'diamond' | 'heart' | 'heart_soft' | 'hex';
+  /** 사진(안쪽) 회전 0~359. 프레임과 독립 */
   rotation: number;
+  /** 프레임(마스크) 회전 0~359. 없으면 0 */
+  frameRotation?: number;
+  /** 셀 대비 프레임 가로 비율 0.4~1. 없으면 1 */
+  frameScaleX?: number;
+  /** 셀 대비 프레임 세로 비율 0.4~4. 없으면 1 */
+  frameScaleY?: number;
+  /** 0.35~4. 1=cover(프레임 채움), 1 미만=축소(블러 배경). 없으면 1 */
+  zoom?: number;
+  /** object-position X% (0~100). 없으면 50 */
+  focusX?: number;
+  /** object-position Y% (0~100). 없으면 50 */
+  focusY?: number;
 };
 
 /** 인쇄 사진 규격 (기본 4×6) */
@@ -298,7 +310,7 @@ export interface BabyPrintAlbum {
   created_by: string | null;
   title: string;
   bg: 'cream' | 'blush' | 'sage' | 'sky';
-  layout: 'grid2' | 'grid3' | 'hero';
+  layout: 'grid1' | 'grid2' | 'grid3' | 'hero';
   /** 출력 사진 규격. 없으면 std_4x6 */
   photo_size?: BabyPrintPhotoSize;
   show_captions: boolean;

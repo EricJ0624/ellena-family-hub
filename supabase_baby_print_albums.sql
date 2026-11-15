@@ -19,7 +19,7 @@ create table if not exists public.baby_print_albums (
   constraint baby_print_albums_bg_check
     check (bg in ('cream', 'blush', 'sage', 'sky')),
   constraint baby_print_albums_layout_check
-    check (layout in ('grid2', 'grid3', 'hero'))
+    check (layout in ('grid1', 'grid2', 'grid3', 'hero'))
 );
 
 create index if not exists idx_baby_print_albums_group_baby

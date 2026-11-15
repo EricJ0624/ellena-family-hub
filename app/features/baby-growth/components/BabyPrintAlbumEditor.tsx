@@ -33,6 +33,13 @@ import type {
 } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import { exportPrintAlbumPdf } from '../utils/export-print-album-pdf';
+import {
+  FRAME_SCALE_MIN,
+  FRAME_SCALE_X_MAX,
+  FRAME_SCALE_Y_MAX,
+  chunkPhotos,
+  pageSizeFor,
+} from '../utils/print-frame-box';
 
 type DragZone = 'album' | 'pool';
 type PrintDragData = { photoId: string; zone: DragZone };
@@ -107,34 +114,186 @@ const PRINT_BG: Record<PrintBgKey, { preview: string; print: string; swatch: str
   },
 };
 
+/** 각진 하트 — 적은 점의 polygon */
+const HEART_ANGULAR_CLIP =
+  'polygon(50% 88%, 12% 52%, 8% 28%, 22% 10%, 40% 12%, 50% 28%, 60% 12%, 78% 10%, 92% 28%, 88% 52%)';
+
+/**
+ * 부드러운 하트 — objectBoundingBox(0~1) cubic path.
+ * CSS `path()`는 픽셀 좌표라 SVG clipPath를 쓴다.
+ */
+const HEART_SOFT_PATH =
+  'M0.5 0.92 C0.5 0.92 0.02 0.58 0.02 0.32 C0.02 0.14 0.16 0.04 0.31 0.04 C0.4 0.04 0.46 0.09 0.5 0.16 C0.54 0.09 0.6 0.04 0.69 0.04 C0.84 0.04 0.98 0.14 0.98 0.32 C0.98 0.58 0.5 0.92 0.5 0.92 Z';
+
 const FRAME_CLIP: Record<PrintFrame, string> = {
   rect: 'none',
   round: 'circle(50% at 50% 50%)',
   diamond: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
-  heart:
-    'polygon(50% 88%, 12% 52%, 8% 28%, 22% 10%, 40% 12%, 50% 28%, 60% 12%, 78% 10%, 92% 28%, 88% 52%)',
+  heart: HEART_ANGULAR_CLIP,
+  heart_soft: `url(#print-heart-soft-clip)`,
   hex: 'polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
 };
 
-const FRAME_KEYS: PrintFrame[] = ['rect', 'round', 'diamond', 'heart', 'hex'];
-const FRAME_LABEL: Record<PrintFrame, string> = {
-  rect: '▭',
-  round: '○',
-  diamond: '◇',
-  heart: '♥',
-  hex: '⬡',
-};
+const FRAME_KEYS: PrintFrame[] = ['rect', 'round', 'diamond', 'heart', 'heart_soft', 'hex'];
+
+function FrameShapeIcon({ frame, className }: { frame: PrintFrame; className?: string }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    className: className ?? 'h-4 w-4',
+    fill: 'none' as const,
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    'aria-hidden': true as const,
+  };
+  switch (frame) {
+    case 'rect':
+      return (
+        <svg {...common}>
+          <rect x="4" y="6" width="16" height="12" rx="1.5" />
+        </svg>
+      );
+    case 'round':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="7.5" />
+        </svg>
+      );
+    case 'diamond':
+      return (
+        <svg {...common}>
+          <path d="M12 3.5 L20.5 12 L12 20.5 L3.5 12 Z" />
+        </svg>
+      );
+    case 'heart':
+      // 각진 하트 — 직선 세그먼트
+      return (
+        <svg {...common}>
+          <path d="M12 19.5 L4.5 12.2 L3.8 8.2 L7.2 4.8 L10.5 5.2 L12 8.2 L13.5 5.2 L16.8 4.8 L20.2 8.2 L19.5 12.2 Z" />
+        </svg>
+      );
+    case 'heart_soft':
+      // 부드러운 하트
+      return (
+        <svg {...common}>
+          <path
+            d="M12 20.2 C12 20.2 3.2 14.2 3.2 8.8 C3.2 5.9 5.4 4 7.9 4 C9.6 4 11 5 12 6.4 C13 5 14.4 4 16.1 4 C18.6 4 20.8 5.9 20.8 8.8 C20.8 14.2 12 20.2 12 20.2 Z"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case 'hex':
+      return (
+        <svg {...common}>
+          <path d="M12 3.2 L19.2 7.2 L19.2 16.8 L12 20.8 L4.8 16.8 L4.8 7.2 Z" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
 
 const ROTATE_STEP = 15;
+/** 축소 하한 — 인물 맞춤(프레임보다 작게). 빈 칸은 같은 사진 블러로 채움 */
+const ZOOM_MIN = 0.35;
+/** cover(프레임 채움) 기준점 */
+const ZOOM_COVER = 1;
+/** 확대 상한 */
+const ZOOM_MAX = 4;
+const ZOOM_STEP = 0.08;
 const BG_KEYS = Object.keys(PRINT_BG) as PrintBgKey[];
 
 function normDeg(deg: number): number {
   return ((Math.round(deg) % 360) + 360) % 360;
 }
 
+function clampNum(n: number, min: number, max: number): number {
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, n));
+}
+
+function editZoom(edit: PhotoEdit): number {
+  return clampNum(edit.zoom ?? 1, ZOOM_MIN, ZOOM_MAX);
+}
+
+function editFocusX(edit: PhotoEdit): number {
+  return clampNum(edit.focusX ?? 50, 0, 100);
+}
+
+function editFocusY(edit: PhotoEdit): number {
+  return clampNum(edit.focusY ?? 50, 0, 100);
+}
+
+function editFrameRotation(edit: PhotoEdit): number {
+  return typeof edit.frameRotation === 'number' && Number.isFinite(edit.frameRotation)
+    ? normDeg(edit.frameRotation)
+    : 0;
+}
+
+function editFrameScaleX(edit: PhotoEdit): number {
+  return clampNum(edit.frameScaleX ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_X_MAX);
+}
+
+function editFrameScaleY(edit: PhotoEdit): number {
+  return clampNum(edit.frameScaleY ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
+}
+
+function frameBoxPercent(
+  scaleX: number,
+  scaleY: number,
+  pageGrow = 1,
+): { width: string; height: string } {
+  const grow = Math.max(pageGrow, 1);
+  return { width: `${scaleX * 100}%`, height: `${(scaleY / grow) * 100}%` };
+}
+
+/** 프레임 마스크 — 사진은 움직이고 창(하트 등)은 고정 */
+function frameMaskStyle(frame: PrintFrame): React.CSSProperties {
+  const clip =
+    frame === 'heart_soft' ? 'url(#print-heart-soft-clip)' : FRAME_CLIP[frame];
+  return clip === 'none' ? {} : { clipPath: clip };
+}
+
+/**
+ * 팬/줌 — zoom 1은 프레임 cover.
+ * zoom이 1보다 작으면 cover보다 줄어 잘렸던 원본이 보이고, 빈 칸만 블러.
+ */
+function photoFitStyle(edit: PhotoEdit): React.CSSProperties {
+  const zoom = editZoom(edit);
+  const fx = editFocusX(edit);
+  const fy = editFocusY(edit);
+  const size = `${zoom * 100}%`;
+  return {
+    position: 'absolute',
+    zIndex: 1,
+    left: `${fx}%`,
+    top: `${fy}%`,
+    width: 'auto',
+    height: 'auto',
+    minWidth: size,
+    minHeight: size,
+    maxWidth: 'none',
+    maxHeight: 'none',
+    transform: 'translate(-50%, -50%)',
+    willChange: 'left, top, min-width, min-height',
+  };
+}
+
+/** 드롭 시 프레임 cover 기본 맞춤 */
+function coverFitPatch(): Pick<PhotoEdit, 'zoom' | 'focusX' | 'focusY'> {
+  return { zoom: ZOOM_COVER, focusX: 50, focusY: 50 };
+}
+
 function defaultEdit(): PhotoEdit {
   // 새 사진은 대기열 — 드래그로 인쇄 앨범에 넣음
-  return { included: false, frame: 'rect', rotation: 0 };
+  return {
+    included: false,
+    frame: 'rect',
+    rotation: 0,
+    frameRotation: 0,
+    frameScaleX: 1,
+    frameScaleY: 1,
+    ...coverFitPatch(),
+  };
 }
 
 function isIncluded(edits: Record<string, PhotoEdit>, id: string): boolean {
@@ -169,17 +328,10 @@ function placeIncludedBefore(
   return [...without.slice(0, idx), photoId, ...without.slice(idx)];
 }
 
-function chunkPhotos<T>(items: T[], size: number): T[][] {
-  const pages: T[][] = [];
-  for (let i = 0; i < items.length; i += size) pages.push(items.slice(i, i + size));
-  return pages;
-}
-
-/** 페이지당 장수 — 배치(layout)만 따름. 사진 크기(photoSize)는 용지 mm만 담당. */
-function pageSizeFor(layout: PrintLayout): number {
-  if (layout === 'grid3') return 9;
-  if (layout === 'hero') return 5;
-  return 6; // grid2: 2×3
+function colsFor(layout: PrintLayout): number {
+  if (layout === 'grid1') return 1;
+  if (layout === 'grid3') return 3;
+  return 2;
 }
 
 function escapeHtml(value: string): string {
@@ -196,7 +348,37 @@ function parsePhotoEdit(raw: unknown): PhotoEdit {
   const frame = FRAME_KEYS.includes(e.frame as PrintFrame) ? (e.frame as PrintFrame) : 'rect';
   const rotation =
     typeof e.rotation === 'number' && Number.isFinite(e.rotation) ? normDeg(e.rotation) : 0;
-  return { included: e.included !== false, frame, rotation };
+  const frameRotation =
+    typeof e.frameRotation === 'number' && Number.isFinite(e.frameRotation)
+      ? normDeg(e.frameRotation)
+      : 0;
+  const frameScaleX =
+    typeof e.frameScaleX === 'number' && Number.isFinite(e.frameScaleX)
+      ? clampNum(e.frameScaleX, FRAME_SCALE_MIN, FRAME_SCALE_X_MAX)
+      : 1;
+  const frameScaleY =
+    typeof e.frameScaleY === 'number' && Number.isFinite(e.frameScaleY)
+      ? clampNum(e.frameScaleY, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX)
+      : 1;
+  const zoom =
+    typeof e.zoom === 'number' && Number.isFinite(e.zoom)
+      ? clampNum(e.zoom, ZOOM_MIN, ZOOM_MAX)
+      : 1;
+  const focusX =
+    typeof e.focusX === 'number' && Number.isFinite(e.focusX) ? clampNum(e.focusX, 0, 100) : 50;
+  const focusY =
+    typeof e.focusY === 'number' && Number.isFinite(e.focusY) ? clampNum(e.focusY, 0, 100) : 50;
+  return {
+    included: e.included !== false,
+    frame,
+    rotation,
+    frameRotation,
+    frameScaleX,
+    frameScaleY,
+    zoom,
+    focusX,
+    focusY,
+  };
 }
 
 function photosKey(photos: BabyPhoto[]): string {
@@ -247,7 +429,7 @@ function runPrintAlbum(opts: {
   const paper = PRINT_PHOTO_SIZES[opts.photoSize];
   const size = pageSizeFor(opts.layout);
   const pages = chunkPhotos(opts.items, size);
-  const cols = opts.layout === 'grid3' ? 3 : 2;
+  const cols = colsFor(opts.layout);
 
   const pageHtml = pages
     .map((page, pageIdx) => {
@@ -257,15 +439,37 @@ function runPrintAlbum(opts: {
             opts.showCaptions && photo.monthAge !== null
               ? escapeHtml(opts.monthLabel(photo.monthAge))
               : '';
-          const clip = FRAME_CLIP[photo.edit.frame];
-          const clipStyle = clip === 'none' ? '' : `clip-path:${clip};`;
+          const clip =
+            photo.edit.frame === 'heart_soft'
+              ? 'url(#print-heart-soft-clip)'
+              : FRAME_CLIP[photo.edit.frame];
+          const zoom = editZoom(photo.edit);
+          const fx = editFocusX(photo.edit);
+          const fy = editFocusY(photo.edit);
+          const fRot = editFrameRotation(photo.edit);
+          const box = frameBoxPercent(editFrameScaleX(photo.edit), editFrameScaleY(photo.edit));
+          const maskStyle = clip === 'none' ? '' : `clip-path:${clip};`;
+          const src = escapeHtml(photo.imageUrl);
+          const fitStyle =
+            `position:absolute;z-index:1;left:${fx}%;top:${fy}%;` +
+            `width:auto;height:auto;min-width:${zoom * 100}%;min-height:${zoom * 100}%;` +
+            `max-width:none;max-height:none;transform:translate(-50%,-50%);`;
+          const blurStyle =
+            `position:absolute;inset:0;z-index:0;width:100%;height:100%;` +
+            `object-fit:cover;transform:scale(1.2);filter:blur(2.5mm);`;
           const radius =
             photo.edit.frame === 'rect' ? 'border-radius:4mm;' : 'border-radius:0;';
           const heroClass = opts.layout === 'hero' && idx === 0 ? ' cell--hero' : '';
+          const frameBox =
+            `width:${box.width};height:${box.height};` +
+            `transform:translate(-50%,-50%) rotate(${fRot}deg);${radius}${maskStyle}`;
           return `<figure class="cell${heroClass}">
-  <div class="frame" style="${radius}">
-    <div class="spin" style="transform:rotate(${photo.edit.rotation}deg)">
-      <img src="${escapeHtml(photo.imageUrl)}" alt="" style="${clipStyle}" />
+  <div class="frame-slot">
+    <div class="frame" style="${frameBox}">
+      <div class="spin" style="transform:rotate(${photo.edit.rotation}deg)">
+        <img src="${src}" alt="" aria-hidden="true" style="${blurStyle}" />
+        <img src="${src}" alt="" style="${fitStyle}" />
+      </div>
     </div>
   </div>
   ${caption ? `<figcaption>${caption}</figcaption>` : ''}
@@ -308,6 +512,7 @@ function runPrintAlbum(opts: {
   h1 { margin: 0; font-size: 18pt; font-weight: 700; letter-spacing: -0.02em; }
   header span { font-size: 10pt; opacity: 0.55; }
   .grid { flex: 1; display: grid; gap: 5mm; align-content: stretch; min-height: 0; }
+  .grid--1 { grid-template-columns: 1fr; grid-auto-rows: 1fr; }
   .grid--2 { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
   .grid--3 { grid-template-columns: 1fr 1fr 1fr; grid-auto-rows: 1fr; }
   .grid--hero {
@@ -316,33 +521,46 @@ function runPrintAlbum(opts: {
   }
   .cell--hero { grid-column: 1 / -1; }
   .cell { margin: 0; display: flex; flex-direction: column; gap: 2mm; min-height: 0; }
-  .frame {
+  .frame-slot {
     flex: 1;
     min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .frame {
+    position: absolute;
+    left: 50%;
+    top: 50%;
     overflow: hidden;
     background: rgba(255,255,255,0.72);
     box-shadow: 0 1.2mm 3.5mm rgba(74, 63, 53, 0.12);
     border: 0.35mm solid rgba(255,255,255,0.9);
   }
   .spin {
+    position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
   }
   .spin img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
     display: block;
+    max-width: none;
+    max-height: none;
   }
   figcaption { font-size: 8.5pt; font-weight: 600; opacity: 0.7; text-align: center; }
   @media print {
     .page { min-height: auto; height: ${paper.hMm - paper.marginMm * 2}mm; padding: ${paper.marginMm}mm; }
     h1 { font-size: ${opts.layout === 'grid3' ? '12pt' : '14pt'}; }
   }
-</style></head><body>${pageHtml}</body></html>`);
+</style></head><body>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <defs>
+    <clipPath id="print-heart-soft-clip" clipPathUnits="objectBoundingBox">
+      <path d="${HEART_SOFT_PATH}" />
+    </clipPath>
+  </defs>
+</svg>
+${pageHtml}</body></html>`);
   doc.close();
 
   const imgs = Array.from(doc.images);
@@ -367,35 +585,118 @@ function runPrintAlbum(opts: {
   });
 }
 
+function SoftHeartClipDefs() {
+  return (
+    <svg width={0} height={0} className="absolute" aria-hidden>
+      <defs>
+        <clipPath id="print-heart-soft-clip" clipPathUnits="objectBoundingBox">
+          <path d={HEART_SOFT_PATH} />
+        </clipPath>
+      </defs>
+    </svg>
+  );
+}
+
 function FramedPhoto({
   photo,
   edit,
   selected,
+  fill,
+  pageGrow = 1,
 }: {
   photo: BabyPhoto;
   edit: PhotoEdit;
   selected?: boolean;
+  /** 미리보기 그리드 셀을 채움 (aspect-square 대신) */
+  fill?: boolean;
+  /** 페이지를 이 배율만큼 키운 뒤의 칸 높이 기준 */
+  pageGrow?: number;
 }) {
-  const clip = FRAME_CLIP[edit.frame];
+  const frameRot = editFrameRotation(edit);
+  const box = frameBoxPercent(editFrameScaleX(edit), editFrameScaleY(edit), pageGrow);
   return (
     <div
-      className={`relative aspect-square overflow-hidden bg-white/70 shadow-sm ${
-        edit.frame === 'rect' ? 'rounded-xl' : ''
-      } ${selected ? 'ring-2 ring-amber-500' : 'border border-white/80'}`}
+      className={`relative overflow-hidden ${
+        fill ? 'h-full min-h-0 w-full' : 'aspect-square'
+      } ${selected ? 'ring-2 ring-amber-500 ring-offset-1' : ''}`}
     >
       <div
-        className="flex h-full w-full items-center justify-center transition-transform duration-200 ease-out"
-        style={{ transform: `rotate(${edit.rotation}deg)` }}
+        className={`absolute left-1/2 top-1/2 overflow-hidden bg-white/70 shadow-sm ${
+          edit.frame === 'rect' ? 'rounded-xl' : ''
+        } ${selected ? '' : 'border border-white/80'}`}
+        style={{
+          width: box.width,
+          height: box.height,
+          transform: `translate(-50%, -50%) rotate(${frameRot}deg)`,
+          ...frameMaskStyle(edit.frame),
+        }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={photo.thumbnailUrl ?? photo.imageUrl}
-          alt=""
-          className="h-full w-full object-cover"
-          draggable={false}
-          style={clip === 'none' ? undefined : { clipPath: clip }}
-        />
+        <div
+          className="relative h-full w-full overflow-hidden"
+          style={{ transform: `rotate(${edit.rotation}deg)` }}
+        >
+          {/* zoom 1 미만 여백: 같은 사진으로 프레임을 채운 블러 배경 */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.thumbnailUrl ?? photo.imageUrl}
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-0 h-full w-full max-w-none object-cover select-none"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            style={
+              {
+                filter: 'blur(18px)',
+                transform: 'scale(1.2)',
+                WebkitUserDrag: 'none',
+                userSelect: 'none',
+              } as React.CSSProperties
+            }
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.thumbnailUrl ?? photo.imageUrl}
+            alt=""
+            className="pointer-events-none max-w-none select-none"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            style={
+              {
+                ...photoFitStyle(edit),
+                WebkitUserDrag: 'none',
+                userSelect: 'none',
+              } as React.CSSProperties
+            }
+          />
+        </div>
       </div>
+    </div>
+  );
+}
+
+/** 대기열 — 편집 프레임 없이 원본 썸네일만 */
+function PlainPhotoThumb({
+  photo,
+  selected,
+}: {
+  photo: BabyPhoto;
+  selected?: boolean;
+}) {
+  return (
+    <div
+      className={`relative aspect-square overflow-hidden rounded-xl bg-slate-100 shadow-sm ${
+        selected ? 'ring-2 ring-amber-500' : 'border border-slate-200'
+      }`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.thumbnailUrl ?? photo.imageUrl}
+        alt=""
+        className="pointer-events-none h-full w-full object-cover select-none"
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
+        style={{ WebkitUserDrag: 'none', userSelect: 'none' } as React.CSSProperties}
+      />
     </div>
   );
 }
@@ -407,7 +708,10 @@ function SortableAlbumThumb({
   showCaption,
   caption,
   hero,
+  frameEditMode,
+  pageGrow = 1,
   onSelect,
+  onFitChange,
 }: {
   photo: BabyPhoto;
   edit: PhotoEdit;
@@ -415,13 +719,147 @@ function SortableAlbumThumb({
   showCaption: boolean;
   caption: string | null;
   hero?: boolean;
+  /** true: 팬/줌만 / false: DnD 정렬 */
+  frameEditMode: boolean;
+  pageGrow?: number;
   onSelect: () => void;
+  onFitChange: (patch: Partial<PhotoEdit>) => void;
 }) {
   const data: PrintDragData = { photoId: photo.id, zone: 'album' };
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: photo.id,
     data,
+    disabled: frameEditMode,
   });
+
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const panLast = useRef<{ x: number; y: number } | null>(null);
+  const pinchStart = useRef<{ dist: number; zoom: number } | null>(null);
+  /** 제스처 중 focus/zoom 즉시 누적 (리렌더 전 stale state 방지) */
+  const liveFit = useRef({
+    zoom: editZoom(edit),
+    focusX: editFocusX(edit),
+    focusY: editFocusY(edit),
+  });
+
+  useEffect(() => {
+    if (pointers.current.size > 0) return;
+    liveFit.current = {
+      zoom: editZoom(edit),
+      focusX: editFocusX(edit),
+      focusY: editFocusY(edit),
+    };
+  }, [edit.zoom, edit.focusX, edit.focusY]);
+
+  // 편집 모드에서만 휠 줌
+  useEffect(() => {
+    const el = surfaceRef.current;
+    if (!el || !frameEditMode) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY > 0 ? -ZOOM_STEP * 2 : ZOOM_STEP * 2;
+      liveFit.current.zoom = clampNum(liveFit.current.zoom + delta, ZOOM_MIN, ZOOM_MAX);
+      onFitChange({ zoom: liveFit.current.zoom });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [frameEditMode, onFitChange]);
+
+  const pointerDistance = () => {
+    const pts = [...pointers.current.values()];
+    if (pts.length < 2) return 0;
+    const a = pts[0]!;
+    const b = pts[1]!;
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!frameEditMode) return;
+    if (!selected) onSelect();
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size >= 2) {
+      panLast.current = null;
+      pinchStart.current = {
+        dist: pointerDistance(),
+        zoom: liveFit.current.zoom,
+      };
+    } else {
+      pinchStart.current = null;
+      panLast.current = { x: e.clientX, y: e.clientY };
+    }
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!frameEditMode || !pointers.current.has(e.pointerId)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointers.current.size >= 2 && pinchStart.current) {
+      const dist = pointerDistance();
+      if (dist > 0 && pinchStart.current.dist > 0) {
+        const ratio = dist / pinchStart.current.dist;
+        liveFit.current.zoom = clampNum(
+          pinchStart.current.zoom * ratio,
+          ZOOM_MIN,
+          ZOOM_MAX,
+        );
+        onFitChange({ zoom: liveFit.current.zoom });
+      }
+      return;
+    }
+
+    if (!panLast.current) return;
+    const dx = e.clientX - panLast.current.x;
+    const dy = e.clientY - panLast.current.y;
+    panLast.current = { x: e.clientX, y: e.clientY };
+    const rect = e.currentTarget.getBoundingClientRect();
+    const w = Math.max(rect.width, 1);
+    const h = Math.max(rect.height, 1);
+    // 손가락 따라 사진 박스 이동 (left/top %)
+    liveFit.current.focusX = clampNum(
+      liveFit.current.focusX + (dx / w) * 100,
+      0,
+      100,
+    );
+    liveFit.current.focusY = clampNum(
+      liveFit.current.focusY + (dy / h) * 100,
+      0,
+      100,
+    );
+    onFitChange({
+      focusX: liveFit.current.focusX,
+      focusY: liveFit.current.focusY,
+    });
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!frameEditMode) return;
+    pointers.current.delete(e.pointerId);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    if (pointers.current.size < 2) pinchStart.current = null;
+    if (pointers.current.size === 1) {
+      const only = [...pointers.current.values()][0]!;
+      panLast.current = { x: only.x, y: only.y };
+    } else {
+      panLast.current = null;
+    }
+  };
+
+  const blockNativeDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -430,19 +868,36 @@ function SortableAlbumThumb({
         transition,
         opacity: isDragging ? 0.35 : 1,
       }}
-      className={`m-0 flex min-w-0 touch-none flex-col gap-1 ${hero ? 'col-span-2' : ''}`}
+      className={`m-0 flex min-h-0 min-w-0 flex-col gap-1 ${hero ? 'col-span-2' : ''}`}
     >
-      <button
-        type="button"
-        className="m-0 cursor-grab border-0 bg-transparent p-0 text-left active:cursor-grabbing"
-        onClick={onSelect}
-        {...attributes}
-        {...listeners}
-      >
-        <FramedPhoto photo={photo} edit={edit} selected={selected} />
-      </button>
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={surfaceRef}
+          role="presentation"
+          draggable={false}
+          onDragStart={blockNativeDrag}
+          onClick={() => onSelect()}
+          onPointerDown={frameEditMode ? onPointerDown : undefined}
+          onPointerMove={frameEditMode ? onPointerMove : undefined}
+          onPointerUp={frameEditMode ? onPointerUp : undefined}
+          onPointerCancel={frameEditMode ? onPointerUp : undefined}
+          className={`h-full min-h-0 touch-none select-none ${
+            frameEditMode
+              ? selected
+                ? 'cursor-grab active:cursor-grabbing'
+                : 'cursor-pointer'
+              : 'cursor-grab active:cursor-grabbing'
+          }`}
+          style={{ WebkitUserDrag: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
+          {...(frameEditMode ? {} : { ...attributes, ...listeners })}
+        >
+          <FramedPhoto photo={photo} edit={edit} selected={selected} fill pageGrow={pageGrow} />
+        </div>
+      </div>
       {showCaption && caption ? (
-        <span className="text-center text-[10px] font-semibold text-[#8a7355]">{caption}</span>
+        <span className="shrink-0 text-center text-[10px] font-semibold text-[#8a7355]">
+          {caption}
+        </span>
       ) : null}
     </div>
   );
@@ -450,19 +905,20 @@ function SortableAlbumThumb({
 
 function PoolThumb({
   photo,
-  edit,
   selected,
+  disabled,
   onSelect,
 }: {
   photo: BabyPhoto;
-  edit: PhotoEdit;
   selected: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }) {
   const data: PrintDragData = { photoId: photo.id, zone: 'pool' };
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `pool-${photo.id}`,
     data,
+    disabled: Boolean(disabled),
   });
   return (
     <button
@@ -470,14 +926,16 @@ function PoolThumb({
       ref={setNodeRef}
       style={{
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.35 : 1,
+        opacity: isDragging ? 0.35 : disabled ? 0.55 : 1,
       }}
-      className="touch-none cursor-grab border-0 bg-transparent p-0 active:cursor-grabbing"
+      className={`border-0 bg-transparent p-0 ${
+        disabled ? 'cursor-default' : 'touch-none cursor-grab active:cursor-grabbing'
+      }`}
       onClick={onSelect}
       {...attributes}
-      {...listeners}
+      {...(disabled ? {} : listeners)}
     >
-      <FramedPhoto photo={photo} edit={edit} selected={selected} />
+      <PlainPhotoThumb photo={photo} selected={selected} />
     </button>
   );
 }
@@ -485,17 +943,21 @@ function PoolThumb({
 function DropZone({
   id,
   className,
+  disabled,
   children,
 }: {
   id: 'drop-album' | 'drop-pool';
   className?: string;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
+  const { setNodeRef, isOver } = useDroppable({ id, disabled: Boolean(disabled) });
   return (
     <div
       ref={setNodeRef}
-      className={`${className ?? ''} ${isOver ? 'ring-2 ring-pink-400 ring-offset-2' : ''}`}
+      className={`${className ?? ''} ${
+        !disabled && isOver ? 'ring-2 ring-pink-400 ring-offset-2' : ''
+      }`}
     >
       {children}
     </div>
@@ -531,7 +993,12 @@ function applyDraftToState(
   if (draft.bg === 'cream' || draft.bg === 'blush' || draft.bg === 'sage' || draft.bg === 'sky') {
     setters.setBg(draft.bg);
   }
-  if (draft.layout === 'grid2' || draft.layout === 'grid3' || draft.layout === 'hero') {
+  if (
+    draft.layout === 'grid1' ||
+    draft.layout === 'grid2' ||
+    draft.layout === 'grid3' ||
+    draft.layout === 'hero'
+  ) {
     setters.setLayout(draft.layout);
   }
   if (isPhotoSize(draft.photoSize)) {
@@ -568,6 +1035,8 @@ export function BabyPrintAlbumEditor({
   const [title, setTitle] = useState(defaultTitle);
   const [bg, setBg] = useState<PrintBgKey>('cream');
   const [layout, setLayout] = useState<PrintLayout>('grid2');
+  /** true: 프레임 안 맞춤 / false: 넣고 빼기·순서 */
+  const [frameEditMode, setFrameEditMode] = useState(false);
   const [photoSize, setPhotoSize] = useState<BabyPrintPhotoSize>('std_4x6');
   const [showCaptions, setShowCaptions] = useState(true);
   const [order, setOrder] = useState<string[]>([]);
@@ -702,7 +1171,12 @@ export function BabyPrintAlbumEditor({
   }, [orderedPhotos, edits]);
 
   const printPages = chunkPhotos(selectedItems, pageSizeFor(layout));
-  const gridClass = layout === 'grid3' ? 'grid-cols-3' : 'grid-cols-2';
+  const albumGrow = printPages.reduce((sum, page) => {
+    const pageGrow = Math.max(1, ...page.map((photo) => editFrameScaleY(photo.edit)));
+    return sum + pageGrow;
+  }, 0);
+  const gridClass =
+    layout === 'grid1' ? 'grid-cols-1' : layout === 'grid3' ? 'grid-cols-3' : 'grid-cols-2';
 
   const photoSizeLabel = (key: BabyPrintPhotoSize) => {
     if (key === 'mini_2x3') return t.album_print_size_mini;
@@ -717,6 +1191,16 @@ export function BabyPrintAlbumEditor({
       const base = prev[id] ?? defaultEdit();
       const next = { ...base, ...patch };
       if (typeof next.rotation === 'number') next.rotation = normDeg(next.rotation);
+      if (typeof next.frameRotation === 'number') next.frameRotation = normDeg(next.frameRotation);
+      if (typeof next.frameScaleX === 'number') {
+        next.frameScaleX = clampNum(next.frameScaleX, FRAME_SCALE_MIN, FRAME_SCALE_X_MAX);
+      }
+      if (typeof next.frameScaleY === 'number') {
+        next.frameScaleY = clampNum(next.frameScaleY, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
+      }
+      if (typeof next.zoom === 'number') next.zoom = clampNum(next.zoom, ZOOM_MIN, ZOOM_MAX);
+      if (typeof next.focusX === 'number') next.focusX = clampNum(next.focusX, 0, 100);
+      if (typeof next.focusY === 'number') next.focusY = clampNum(next.focusY, 0, 100);
       return { ...prev, [id]: next };
     });
   };
@@ -725,6 +1209,7 @@ export function BabyPrintAlbumEditor({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragFromPool, setDragFromPool] = useState(false);
 
   const poolPhotos = useMemo(
     () => orderedPhotos.filter((p) => !isIncluded(edits, p.id)),
@@ -735,13 +1220,20 @@ export function BabyPrintAlbumEditor({
     [order, edits],
   );
 
+  const frameEditModeRef = useRef(frameEditMode);
+  frameEditModeRef.current = frameEditMode;
+
   const onDragStart = useCallback((event: DragStartEvent) => {
+    if (frameEditModeRef.current) return;
     const data = event.active.data.current as PrintDragData | undefined;
     setDragId(data?.photoId ?? String(event.active.id).replace(/^pool-/, ''));
+    setDragFromPool(data?.zone === 'pool' || String(event.active.id).startsWith('pool-'));
   }, []);
 
   const onDragEnd = useCallback((event: DragEndEvent) => {
     setDragId(null);
+    setDragFromPool(false);
+    if (frameEditModeRef.current) return;
     const { active, over } = event;
     if (!over) return;
     const data = active.data.current as PrintDragData | undefined;
@@ -753,9 +1245,14 @@ export function BabyPrintAlbumEditor({
     if (fromPool) {
       if (overPool) return;
       const beforeId = overRaw === 'drop-album' ? null : overRaw;
+      // 드롭 시 cover 기본 맞춤(zoom 1·가운데)으로 프레임에 맞춤
       setEdits((prev) => ({
         ...prev,
-        [photoId]: { ...(prev[photoId] ?? defaultEdit()), included: true },
+        [photoId]: {
+          ...(prev[photoId] ?? defaultEdit()),
+          included: true,
+          ...coverFitPatch(),
+        },
       }));
       setOrder((prev) => placeIncludedBefore(prev, photoId, beforeId));
       setActiveId(photoId);
@@ -777,6 +1274,7 @@ export function BabyPrintAlbumEditor({
 
   const onDragCancel = useCallback(() => {
     setDragId(null);
+    setDragFromPool(false);
   }, []);
 
   const dragPhoto = dragId ? photoMap.get(dragId) : null;
@@ -899,7 +1397,8 @@ export function BabyPrintAlbumEditor({
 
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex flex-col bg-black/50">
-      <div className="mx-auto flex h-full w-full max-w-4xl flex-col bg-white shadow-2xl sm:my-3 sm:h-[min(94dvh,56rem)] sm:rounded-2xl">
+      <SoftHeartClipDefs />
+      <div className="mx-auto flex h-full w-full max-w-[100rem] flex-col bg-white shadow-2xl sm:my-2 sm:h-[calc(100dvh-1rem)] sm:w-[min(98vw,100rem)] sm:rounded-2xl">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
           <h3 className="m-0 text-sm font-bold text-slate-800">{t.album_print}</h3>
           <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -1024,6 +1523,20 @@ export function BabyPrintAlbumEditor({
               />
               {t.album_print_captions}
             </label>
+            <button
+              type="button"
+              title={t.album_print_edit_mode_hint}
+              aria-pressed={frameEditMode}
+              onClick={() => setFrameEditMode((v) => !v)}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                frameEditMode
+                  ? 'bg-pink-500 text-white'
+                  : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {t.album_print_edit_mode}
+              {frameEditMode ? ' ON' : ' OFF'}
+            </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -1049,6 +1562,7 @@ export function BabyPrintAlbumEditor({
             <div className="flex gap-1">
               {(
                 [
+                  ['grid1', t.album_print_layout_1],
                   ['grid2', t.album_print_layout_2],
                   ['grid3', t.album_print_layout_3],
                   ['hero', t.album_print_layout_hero],
@@ -1085,61 +1599,187 @@ export function BabyPrintAlbumEditor({
 
           </div>
 
-          {active && activeEdit?.included ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-2.5 py-2">
-              <span className="text-[11px] font-semibold text-slate-500">{t.album_print_frame}</span>
-              <div className="flex gap-1">
-                {FRAME_KEYS.map((frame) => (
-                  <button
-                    key={frame}
-                    type="button"
-                    onClick={() => patchEdit(active.id, { frame })}
-                    className={`h-7 w-7 rounded-md text-sm ${
-                      activeEdit.frame === frame
-                        ? 'bg-slate-800 text-white'
-                        : 'bg-white text-slate-700 ring-1 ring-slate-200'
-                    }`}
-                  >
-                    {FRAME_LABEL[frame]}
-                  </button>
-                ))}
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          {frameEditMode && active && activeEdit?.included ? (
+            <aside className="flex max-h-36 shrink-0 flex-col gap-2 overflow-y-auto border-b border-slate-100 bg-slate-50 px-3 py-2 lg:max-h-none lg:w-80 lg:border-b-0 lg:border-r lg:py-3">
+              <span className="text-[10px] text-slate-500">{t.album_print_fit_hint}</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold text-slate-500">{t.album_print_frame}</span>
+                <div className="flex gap-1">
+                  {FRAME_KEYS.map((frame) => (
+                    <button
+                      key={frame}
+                      type="button"
+                      title={
+                        frame === 'heart'
+                          ? '각진 하트'
+                          : frame === 'heart_soft'
+                            ? '부드러운 하트'
+                            : frame
+                      }
+                      aria-label={
+                        frame === 'heart'
+                          ? '각진 하트'
+                          : frame === 'heart_soft'
+                            ? '부드러운 하트'
+                            : frame
+                      }
+                      onClick={() => patchEdit(active.id, { frame })}
+                      className={`inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-md ${
+                        activeEdit.frame === frame
+                          ? 'bg-slate-800 text-white'
+                          : 'bg-white text-slate-700 ring-1 ring-slate-200'
+                      }`}
+                    >
+                      <FrameShapeIcon frame={frame} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <span className="w-16 shrink-0 text-[10px] font-semibold text-slate-500">
+                  {t.album_print_frame_width}
+                </span>
+                <input
+                  type="range"
+                  min={FRAME_SCALE_MIN}
+                  max={FRAME_SCALE_X_MAX}
+                  step={0.01}
+                  value={editFrameScaleX(activeEdit)}
+                  onChange={(e) =>
+                    patchEdit(active.id, { frameScaleX: Number(e.target.value) })
+                  }
+                  className="h-2 min-w-[5.5rem] flex-1 touch-manipulation accent-slate-800"
+                  aria-label={t.album_print_frame_width}
+                />
+                <span className="w-9 text-[10px] font-semibold tabular-nums text-slate-500">
+                  {Math.round(editFrameScaleX(activeEdit) * 100)}%
+                </span>
+              </div>
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <span className="w-16 shrink-0 text-[10px] font-semibold text-slate-500">
+                  {t.album_print_frame_height}
+                </span>
+                <input
+                  type="range"
+                  min={FRAME_SCALE_MIN}
+                  max={FRAME_SCALE_Y_MAX}
+                  step={0.01}
+                  value={editFrameScaleY(activeEdit)}
+                  onChange={(e) =>
+                    patchEdit(active.id, { frameScaleY: Number(e.target.value) })
+                  }
+                  className="h-2 min-w-[5.5rem] flex-1 touch-manipulation accent-slate-800"
+                  aria-label={t.album_print_frame_height}
+                />
+                <span className="w-10 text-right text-[10px] font-semibold tabular-nums text-slate-500">
+                  {Math.round(editFrameScaleY(activeEdit) * 100)}%
+                </span>
+              </div>
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <span className="w-16 shrink-0 text-[10px] font-semibold text-slate-500">
+                  {t.album_print_frame_rotate}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    patchEdit(active.id, {
+                      frameRotation: editFrameRotation(activeEdit) - ROTATE_STEP,
+                    })
+                  }
+                  className="rounded-md bg-white px-2.5 py-1.5 text-xs font-bold touch-manipulation ring-1 ring-slate-200"
+                  aria-label={`${t.album_print_frame_rotate} ccw`}
+                >
+                  ↺
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={359}
+                  step={1}
+                  value={editFrameRotation(activeEdit)}
+                  onChange={(e) =>
+                    patchEdit(active.id, { frameRotation: Number(e.target.value) })
+                  }
+                  className="h-2 min-w-[5.5rem] flex-1 touch-manipulation accent-slate-800"
+                  aria-label={t.album_print_frame_rotate}
+                />
+                <span className="w-8 text-[10px] font-semibold tabular-nums text-slate-500">
+                  {editFrameRotation(activeEdit)}°
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    patchEdit(active.id, {
+                      frameRotation: editFrameRotation(activeEdit) + ROTATE_STEP,
+                    })
+                  }
+                  className="rounded-md bg-white px-2.5 py-1.5 text-xs font-bold touch-manipulation ring-1 ring-slate-200"
+                  aria-label={`${t.album_print_frame_rotate} cw`}
+                >
+                  ↻
+                </button>
+              </div>
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <span className="w-16 shrink-0 text-[10px] font-semibold text-slate-500">
+                  {t.album_print_photo_rotate}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    patchEdit(active.id, { rotation: activeEdit.rotation - ROTATE_STEP })
+                  }
+                  className="rounded-md bg-white px-2.5 py-1.5 text-xs font-bold touch-manipulation ring-1 ring-slate-200"
+                  aria-label={`${t.album_print_photo_rotate} ccw`}
+                >
+                  ↺
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={359}
+                  step={1}
+                  value={activeEdit.rotation}
+                  onChange={(e) => patchEdit(active.id, { rotation: Number(e.target.value) })}
+                  className="h-2 min-w-[5.5rem] flex-1 touch-manipulation accent-slate-800"
+                  aria-label={t.album_print_photo_rotate}
+                />
+                <span className="w-8 text-[10px] font-semibold tabular-nums text-slate-500">
+                  {activeEdit.rotation}°
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    patchEdit(active.id, { rotation: activeEdit.rotation + ROTATE_STEP })
+                  }
+                  className="rounded-md bg-white px-2.5 py-1.5 text-xs font-bold touch-manipulation ring-1 ring-slate-200"
+                  aria-label={`${t.album_print_photo_rotate} cw`}
+                >
+                  ↻
+                </button>
               </div>
               <button
                 type="button"
                 onClick={() =>
-                  patchEdit(active.id, { rotation: activeEdit.rotation - ROTATE_STEP })
+                  patchEdit(active.id, {
+                    zoom: 1,
+                    focusX: 50,
+                    focusY: 50,
+                    frameScaleX: 1,
+                    frameScaleY: 1,
+                    rotation: 0,
+                    frameRotation: 0,
+                  })
                 }
-                className="rounded-md bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200"
-                aria-label="ccw"
+                className="self-start rounded-full bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 touch-manipulation ring-1 ring-slate-200"
+                title={t.album_print_fit_hint}
               >
-                ↺
+                {t.album_print_fit_reset}
               </button>
-              <input
-                type="range"
-                min={0}
-                max={359}
-                step={1}
-                value={activeEdit.rotation}
-                onChange={(e) => patchEdit(active.id, { rotation: Number(e.target.value) })}
-                className="h-2 w-28 accent-slate-800"
-                aria-label="rotation"
-              />
-              <span className="w-8 text-[10px] font-semibold tabular-nums text-slate-500">
-                {activeEdit.rotation}°
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  patchEdit(active.id, { rotation: activeEdit.rotation + ROTATE_STEP })
-                }
-                className="rounded-md bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200"
-                aria-label="cw"
-              >
-                ↻
-              </button>
-            </div>
+            </aside>
           ) : null}
-        </div>
 
         <DndContext
           sensors={sensors}
@@ -1148,22 +1788,37 @@ export function BabyPrintAlbumEditor({
           onDragEnd={onDragEnd}
           onDragCancel={onDragCancel}
         >
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <DropZone
               id="drop-album"
-              className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-3 sm:p-4"
+              disabled={frameEditMode}
+              className="min-h-0 flex-1 overflow-y-auto bg-slate-100 p-2 sm:p-3"
             >
               <SortableContext items={selectedIds} strategy={rectSortingStrategy}>
                 {selectedItems.length === 0 ? (
                   <p className="py-10 text-center text-sm text-slate-400">{t.album_print_empty}</p>
                 ) : (
-                  <div className="mx-auto flex max-w-2xl flex-col gap-4">
-                    {printPages.map((page, pageIdx) => (
+                  <div
+                    className="mx-auto flex w-full max-w-2xl flex-col gap-2"
+                    style={{
+                      height: `${Math.max(albumGrow, 1) * 100}%`,
+                      minHeight: '100%',
+                    }}
+                  >
+                    {printPages.map((page, pageIdx) => {
+                      const pageGrow = Math.max(
+                        1,
+                        ...page.map((photo) => editFrameScaleY(photo.edit)),
+                      );
+                      return (
                       <section
                         key={`print-page-${pageIdx}`}
-                        className={`overflow-hidden rounded-2xl p-4 shadow-sm ${PRINT_BG[bg].preview}`}
+                        className={`flex min-h-0 flex-col overflow-hidden rounded-2xl p-2 shadow-sm sm:p-3 ${
+                          PRINT_BG[bg].preview
+                        }`}
+                        style={{ flex: `${pageGrow} 1 0%` }}
                       >
-                        <div className="mb-3 flex items-baseline justify-between gap-2">
+                        <div className="mb-2 flex shrink-0 items-baseline justify-between gap-2">
                           <h4 className="m-0 text-sm font-bold text-[#5c4630]">
                             {title.trim() || defaultTitle}
                           </h4>
@@ -1171,7 +1826,10 @@ export function BabyPrintAlbumEditor({
                             {pageIdx + 1}/{printPages.length}
                           </span>
                         </div>
-                        <div className={`grid gap-2.5 ${gridClass}`}>
+                        <div
+                          className={`grid min-h-0 flex-1 gap-2 ${gridClass}`}
+                          style={{ gridAutoRows: 'minmax(0, 1fr)' }}
+                        >
                           {page.map((photo, idx) => (
                             <SortableAlbumThumb
                               key={photo.id}
@@ -1183,12 +1841,16 @@ export function BabyPrintAlbumEditor({
                                 photo.monthAge !== null ? monthLabel(photo.monthAge) : null
                               }
                               hero={layout === 'hero' && idx === 0}
+                              frameEditMode={frameEditMode}
+                              pageGrow={pageGrow}
                               onSelect={() => setActiveId(photo.id)}
+                              onFitChange={(patch) => patchEdit(photo.id, patch)}
                             />
                           ))}
                         </div>
                       </section>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </SortableContext>
@@ -1196,11 +1858,13 @@ export function BabyPrintAlbumEditor({
 
             <DropZone
               id="drop-pool"
+              disabled={frameEditMode}
               className="shrink-0 border-t border-slate-200 bg-white px-3 py-2.5 sm:px-4"
             >
               <p className="mb-2 text-[11px] font-semibold text-slate-500">
                 {t.album_print_tray}
                 {poolPhotos.length > 0 ? ` · ${poolPhotos.length}` : ''}
+                {frameEditMode ? ` · ${t.album_print_edit_mode} ON` : ''}
               </p>
               {poolPhotos.length === 0 ? (
                 <p className="m-0 py-2 text-center text-[11px] text-slate-400">
@@ -1212,8 +1876,8 @@ export function BabyPrintAlbumEditor({
                     <PoolThumb
                       key={`pool-${photo.id}`}
                       photo={photo}
-                      edit={edits[photo.id] ?? defaultEdit()}
                       selected={activeId === photo.id}
+                      disabled={frameEditMode}
                       onSelect={() => setActiveId(photo.id)}
                     />
                   ))}
@@ -1223,13 +1887,18 @@ export function BabyPrintAlbumEditor({
           </div>
 
           <DragOverlay dropAnimation={null}>
-            {dragPhoto && dragEdit ? (
+            {dragPhoto ? (
               <div className="w-20 opacity-95 shadow-xl sm:w-24">
-                <FramedPhoto photo={dragPhoto} edit={dragEdit} selected />
+                {dragFromPool || !dragEdit ? (
+                  <PlainPhotoThumb photo={dragPhoto} selected />
+                ) : (
+                  <FramedPhoto photo={dragPhoto} edit={dragEdit} selected />
+                )}
               </div>
             ) : null}
           </DragOverlay>
         </DndContext>
+        </div>
       </div>
     </div>,
     document.body,

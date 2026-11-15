@@ -235,7 +235,7 @@ export function QuickStatusCards({
                     {value ?? t.no_record}
                   </span>
                   {avg ? (
-                    <span className="mt-0.5 line-clamp-1 w-full text-[10px] font-medium leading-normal text-gray-500">
+                    <span className="mt-0.5 line-clamp-2 w-full text-[10px] font-medium leading-normal text-gray-500">
                       {avg}
                     </span>
                   ) : null}

@@ -483,6 +483,10 @@ export function buildWidgetGridItemStyle(
       style.maxHeight = minPx;
       style.overflow = 'hidden';
       style['--editor-preview-h'] = `${previewPx}px`;
+    } else if (widgetKey === 'baby_growth') {
+      // 세로(앱·폰 프레임)는 그리드 칸이 height:auto라 min-height만으로는 카드가 안 커진다.
+      // 가로(PC)와 같이 layout 높이로 칸을 고정한다.
+      style.height = minPx;
     }
     style['--widget-min-h'] = `${minPx}px`;
     style['--widget-scale-box-h'] = `${inEditor ? previewPx : minPx}px`;

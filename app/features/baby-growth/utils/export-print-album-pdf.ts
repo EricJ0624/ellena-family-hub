@@ -2,6 +2,13 @@
 
 import { jsPDF } from 'jspdf';
 import type { BabyPhoto, BabyPrintAlbum, BabyPrintPhotoEdit, BabyPrintPhotoSize } from '../types';
+import {
+  FRAME_SCALE_MIN,
+  FRAME_SCALE_X_MAX,
+  FRAME_SCALE_Y_MAX,
+  chunkPhotos,
+  pageSizeFor,
+} from './print-frame-box';
 
 type PrintBgKey = BabyPrintAlbum['bg'];
 type PrintLayout = BabyPrintAlbum['layout'];
@@ -24,18 +31,6 @@ const PRINT_BG: Record<PrintBgKey, string> = {
   sage: '#e4eee0',
   sky: '#e2eef6',
 };
-
-function pageSizeFor(layout: PrintLayout): number {
-  if (layout === 'grid3') return 9;
-  if (layout === 'hero') return 5;
-  return 6;
-}
-
-function chunkPhotos<T>(items: T[], size: number): T[][] {
-  const pages: T[][] = [];
-  for (let i = 0; i < items.length; i += size) pages.push(items.slice(i, i + size));
-  return pages;
-}
 
 async function loadImageDataUrl(src: string): Promise<string> {
   try {
@@ -72,6 +67,12 @@ async function loadImageDataUrl(src: string): Promise<string> {
   }
 }
 
+function clampNum(n: number, min: number, max: number): number {
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, n));
+}
+
+/** 에디터와 동일: zoom 1=cover, 1 미만은 cover보다 작게(원본이 더 보임). 빈 칸만 블러 */
 function drawCover(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
@@ -79,27 +80,52 @@ function drawCover(
   y: number,
   w: number,
   h: number,
+  focusX = 50,
+  focusY = 50,
+  zoom = 1,
 ) {
-  const ir = img.naturalWidth / img.naturalHeight;
-  const cr = w / h;
-  let dw = w;
-  let dh = h;
-  let dx = x;
-  let dy = y;
-  if (ir > cr) {
-    dh = h;
-    dw = h * ir;
-    dx = x + (w - dw) / 2;
-  } else {
-    dw = w;
-    dh = w / ir;
-    dy = y + (h - dh) / 2;
-  }
+  const ir = img.naturalWidth / Math.max(1, img.naturalHeight);
+  const z = clampNum(zoom, 0.35, 4);
+  const fx = clampNum(focusX, 0, 100) / 100;
+  const fy = clampNum(focusY, 0, 100) / 100;
+
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-  ctx.drawImage(img, dx, dy, dw, dh);
+
+  if (z < 1) {
+    const cr = w / Math.max(1, h);
+    let bdw: number;
+    let bdh: number;
+    if (ir > cr) {
+      bdh = h * 1.2;
+      bdw = bdh * ir;
+    } else {
+      bdw = w * 1.2;
+      bdh = bdw / ir;
+    }
+    ctx.save();
+    ctx.filter = 'blur(12px)';
+    ctx.drawImage(img, x + (w - bdw) / 2, y + (h - bdh) / 2, bdw, bdh);
+    ctx.restore();
+  }
+
+  const cr = w / Math.max(1, h);
+  let coverW: number;
+  let coverH: number;
+  if (ir > cr) {
+    coverH = h;
+    coverW = h * ir;
+  } else {
+    coverW = w;
+    coverH = w / ir;
+  }
+  const dw = coverW * z;
+  const dh = coverH * z;
+  const cx = x + w * fx;
+  const cy = y + h * fy;
+  ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
   ctx.restore();
 }
 
@@ -150,6 +176,69 @@ export async function saveBlobLocally(blob: Blob, fileName: string): Promise<voi
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+type PrintFrame = BabyPrintPhotoEdit['frame'];
+
+/** 프레임 중심이 원점인 상태에서 마스크 경로. 에디터 clip-path와 같은 비율. */
+function traceFrame(ctx: CanvasRenderingContext2D, frame: PrintFrame, w: number, h: number) {
+  const px = (u: number) => -w / 2 + u * w;
+  const py = (v: number) => -h / 2 + v * h;
+  ctx.beginPath();
+  if (frame === 'round') {
+    ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+    return;
+  }
+  if (frame === 'diamond') {
+    ctx.moveTo(px(0.5), py(0));
+    ctx.lineTo(px(1), py(0.5));
+    ctx.lineTo(px(0.5), py(1));
+    ctx.lineTo(px(0), py(0.5));
+    ctx.closePath();
+    return;
+  }
+  if (frame === 'hex') {
+    const pts: Array<[number, number]> = [
+      [0.5, 0],
+      [0.93, 0.25],
+      [0.93, 0.75],
+      [0.5, 1],
+      [0.07, 0.75],
+      [0.07, 0.25],
+    ];
+    pts.forEach(([u, v], i) => (i === 0 ? ctx.moveTo(px(u), py(v)) : ctx.lineTo(px(u), py(v))));
+    ctx.closePath();
+    return;
+  }
+  if (frame === 'heart') {
+    const pts: Array<[number, number]> = [
+      [0.5, 0.88],
+      [0.12, 0.52],
+      [0.08, 0.28],
+      [0.22, 0.1],
+      [0.4, 0.12],
+      [0.5, 0.28],
+      [0.6, 0.12],
+      [0.78, 0.1],
+      [0.92, 0.28],
+      [0.88, 0.52],
+    ];
+    pts.forEach(([u, v], i) => (i === 0 ? ctx.moveTo(px(u), py(v)) : ctx.lineTo(px(u), py(v))));
+    ctx.closePath();
+    return;
+  }
+  if (frame === 'heart_soft') {
+    ctx.moveTo(px(0.5), py(0.92));
+    ctx.bezierCurveTo(px(0.5), py(0.92), px(0.02), py(0.58), px(0.02), py(0.32));
+    ctx.bezierCurveTo(px(0.02), py(0.14), px(0.16), py(0.04), px(0.31), py(0.04));
+    ctx.bezierCurveTo(px(0.4), py(0.04), px(0.46), py(0.09), px(0.5), py(0.16));
+    ctx.bezierCurveTo(px(0.54), py(0.09), px(0.6), py(0.04), px(0.69), py(0.04));
+    ctx.bezierCurveTo(px(0.84), py(0.04), px(0.98), py(0.14), px(0.98), py(0.32));
+    ctx.bezierCurveTo(px(0.98), py(0.58), px(0.5), py(0.92), px(0.5), py(0.92));
+    ctx.closePath();
+    return;
+  }
+  ctx.rect(-w / 2, -h / 2, w, h);
+}
+
 function cellRects(
   layout: PrintLayout,
   count: number,
@@ -178,7 +267,7 @@ function cellRects(
     }
     return rects.slice(0, count);
   }
-  const cols = layout === 'grid3' ? 3 : 2;
+  const cols = layout === 'grid1' ? 1 : layout === 'grid3' ? 3 : 2;
   const rows = Math.ceil(count / cols) || 1;
   const cellW = (w - gap * (cols - 1)) / cols;
   const cellH = (h - gap * (rows - 1)) / rows;
@@ -268,16 +357,37 @@ export async function exportPrintAlbumPdf(opts: {
       const pw = rect.w * sx;
       const ph = photoH * sy;
 
-      ctx.fillStyle = 'rgba(255,255,255,0.72)';
-      ctx.fillRect(px, py, pw, ph);
-
       try {
         const dataUrl = await loadImageDataUrl(photo.imageUrl);
         const img = await dataUrlToImage(dataUrl);
+        const fw =
+          pw * clampNum(photo.edit.frameScaleX ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_X_MAX);
+        const fh =
+          ph * clampNum(photo.edit.frameScaleY ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
+        const frameRot = ((photo.edit.frameRotation ?? 0) * Math.PI) / 180;
+        const photoRot = (photo.edit.rotation * Math.PI) / 180;
         ctx.save();
+        ctx.beginPath();
+        ctx.rect(px, py, pw, ph);
+        ctx.clip();
         ctx.translate(px + pw / 2, py + ph / 2);
-        ctx.rotate((photo.edit.rotation * Math.PI) / 180);
-        drawCover(ctx, img, -pw / 2, -ph / 2, pw, ph);
+        ctx.rotate(frameRot);
+        traceFrame(ctx, photo.edit.frame, fw, fh);
+        ctx.fillStyle = 'rgba(255,255,255,0.72)';
+        ctx.fill();
+        ctx.clip();
+        ctx.rotate(photoRot);
+        drawCover(
+          ctx,
+          img,
+          -fw / 2,
+          -fh / 2,
+          fw,
+          fh,
+          photo.edit.focusX ?? 50,
+          photo.edit.focusY ?? 50,
+          photo.edit.zoom ?? 1,
+        );
         ctx.restore();
       } catch {
         ctx.fillStyle = '#ccc';

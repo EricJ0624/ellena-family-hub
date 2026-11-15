@@ -6,6 +6,7 @@ import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import {
   DASHBOARD_WIDGET_KEYS,
   DEFAULT_WIDGET_CONFIGS,
+  BABY_GROWTH_M_LAYOUT_H,
   FAMILY_LOG_M_LAYOUT_H,
   TRAVEL_M_LAYOUT_H,
   TRAVEL_QUICK_RECORD_M_LAYOUT_H,
@@ -110,6 +111,25 @@ function adoptFamilyLogDefaultHeight(h: number | null): number | null {
   return h;
 }
 
+/** 전역 M(8)·이전 baby_growth 기본(9·10) → 현재 기본. 커스텀 높이는 유지. */
+function adoptBabyGrowthDefaultHeight(h: number | null): number | null {
+  if (h === WIDGET_LAYOUT_PRESETS.M.h || h === 9 || h === 10) {
+    return BABY_GROWTH_M_LAYOUT_H;
+  }
+  return h;
+}
+
+function adoptWidgetDefaultHeight(
+  key: DashboardWidgetKey,
+  h: number | null,
+): number | null {
+  if (key === 'travel') return adoptTravelDefaultHeight(h);
+  if (key === 'travel_quick_record') return adoptTravelQuickRecordDefaultHeight(h);
+  if (key === 'family_log') return adoptFamilyLogDefaultHeight(h);
+  if (key === 'baby_growth') return adoptBabyGrowthDefaultHeight(h);
+  return h;
+}
+
 function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const rowMap = new Map<DashboardWidgetKey, WidgetConfigRow>();
   for (const row of rows) rowMap.set(row.widget_key, row);
@@ -117,16 +137,8 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const sorted = DEFAULT_WIDGET_CONFIGS.map((base) => {
     const found = rowMap.get(base.widget_key);
     if (!found) return { ...base };
-    const isTravel = found.widget_key === 'travel';
-    const isQuick = found.widget_key === 'travel_quick_record';
-    const isFamilyLog = found.widget_key === 'family_log';
-    const adoptH = (raw: number | null | undefined) => {
-      const clamped = clampNumeric(raw, 0.001, 9999);
-      if (isTravel) return adoptTravelDefaultHeight(clamped);
-      if (isQuick) return adoptTravelQuickRecordDefaultHeight(clamped);
-      if (isFamilyLog) return adoptFamilyLogDefaultHeight(clamped);
-      return clamped;
-    };
+    const adoptH = (raw: number | null | undefined) =>
+      adoptWidgetDefaultHeight(found.widget_key, clampNumeric(raw, 0.001, 9999));
     return {
       widget_key: found.widget_key,
       is_enabled: found.is_enabled,
@@ -165,6 +177,16 @@ function cacheKey(groupId: string): string {
   return `${WIDGET_CONFIG_CACHE_PREFIX}${groupId}`;
 }
 
+/** 캐시에 남은 이전 기본 높이(baby 8·9·10 등)도 서버 로드와 같이 현재 기본으로 맞춘다. */
+function adoptDraftDefaultHeights(drafts: WidgetConfigDraft[]): WidgetConfigDraft[] {
+  return drafts.map((d) => ({
+    ...d,
+    layoutH: adoptWidgetDefaultHeight(d.widget_key, d.layoutH),
+    layoutPortraitH: adoptWidgetDefaultHeight(d.widget_key, d.layoutPortraitH),
+    layoutLandscapeH: adoptWidgetDefaultHeight(d.widget_key, d.layoutLandscapeH),
+  }));
+}
+
 export function readWidgetConfigCache(groupId: string): WidgetConfigDraft[] | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -173,7 +195,7 @@ export function readWidgetConfigCache(groupId: string): WidgetConfigDraft[] | nu
       const raw = storage.getItem(cacheKey(groupId));
       if (!raw) continue;
       const parsed = JSON.parse(raw) as WidgetConfigDraft[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return adoptDraftDefaultHeights(parsed);
     }
     return null;
   } catch {
