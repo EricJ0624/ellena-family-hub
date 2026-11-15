@@ -116,18 +116,18 @@ const PRINT_BG: Record<PrintBgKey, { preview: string; print: string; swatch: str
 
 /** 각진 하트 — 적은 점의 polygon */
 const HEART_ANGULAR_CLIP =
-  'polygon(50% 88%, 12% 52%, 8% 28%, 22% 10%, 40% 12%, 50% 28%, 60% 12%, 78% 10%, 92% 28%, 88% 52%)';
+  'polygon(50% 100%, 12% 53.85%, 8% 23.08%, 22% 0%, 40% 2.56%, 50% 23.08%, 60% 2.56%, 78% 0%, 92% 23.08%, 88% 53.85%)';
 
 /**
  * 부드러운 하트 — objectBoundingBox(0~1) cubic path.
  * CSS `path()`는 픽셀 좌표라 SVG clipPath를 쓴다.
  */
 const HEART_SOFT_PATH =
-  'M0.5 0.92 C0.5 0.92 0.02 0.58 0.02 0.32 C0.02 0.14 0.16 0.04 0.31 0.04 C0.4 0.04 0.46 0.09 0.5 0.16 C0.54 0.09 0.6 0.04 0.69 0.04 C0.84 0.04 0.98 0.14 0.98 0.32 C0.98 0.58 0.5 0.92 0.5 0.92 Z';
+  'M0.5 1 C0.5 1 0.02 0.614 0.02 0.318 C0.02 0.114 0.16 0 0.31 0 C0.4 0 0.46 0.057 0.5 0.136 C0.54 0.057 0.6 0 0.69 0 C0.84 0 0.98 0.114 0.98 0.318 C0.98 0.614 0.5 1 0.5 1 Z';
 
 const FRAME_CLIP: Record<PrintFrame, string> = {
   rect: 'none',
-  round: 'circle(50% at 50% 50%)',
+  round: 'ellipse(50% 50% at 50% 50%)',
   diamond: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
   heart: HEART_ANGULAR_CLIP,
   heart_soft: `url(#print-heart-soft-clip)`,
@@ -607,25 +607,23 @@ function FramedPhoto({
   const frameRot = editFrameRotation(edit);
   const scaleX = editFrameScaleX(edit);
   const scaleY = editFrameScaleY(edit);
-  // 세로는 칸 높이가 아니라 프레임 가로의 배수. 바깥 페이지는 그대로다.
-  const heightFromWidth = `${(scaleY / Math.max(scaleX, 0.01)) * 100}%`;
   return (
     <div
-      className={`overflow-hidden ${
+      className={`flex items-center justify-center overflow-hidden ${
         fill ? 'absolute inset-0' : 'relative aspect-square'
       } ${selected ? 'ring-2 ring-amber-500 ring-offset-1' : ''}`}
     >
       <div
-        className={`absolute left-1/2 top-1/2 overflow-hidden bg-white/70 shadow-sm ${
+        className={`relative shrink-0 overflow-hidden bg-white/70 shadow-sm ${
           edit.frame === 'rect' ? 'rounded-xl' : ''
         } ${selected ? '' : 'border border-white/80'}`}
         style={{
           width: `${scaleX * 100}%`,
-          transform: `translate(-50%, -50%) rotate(${frameRot}deg)`,
+          transform: `rotate(${frameRot}deg)`,
           ...frameMaskStyle(edit.frame),
         }}
       >
-        <div style={{ paddingTop: heightFromWidth }} />
+        <div style={{ paddingTop: `${(scaleY / Math.max(scaleX, 0.01)) * 100}%` }} />
         <div
           className="absolute inset-0 overflow-hidden"
           style={{ transform: `rotate(${edit.rotation}deg)` }}
@@ -706,6 +704,7 @@ function SortableAlbumThumb({
   frameEditMode,
   onSelect,
   onFitChange,
+  onFrameSlot,
 }: {
   photo: BabyPhoto;
   edit: PhotoEdit;
@@ -717,6 +716,7 @@ function SortableAlbumThumb({
   frameEditMode: boolean;
   onSelect: () => void;
   onFitChange: (patch: Partial<PhotoEdit>) => void;
+  onFrameSlot?: (width: number, height: number) => void;
 }) {
   const data: PrintDragData = { photoId: photo.id, zone: 'album' };
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -726,6 +726,7 @@ function SortableAlbumThumb({
   });
 
   const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const slotRef = useRef<HTMLDivElement | null>(null);
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const panLast = useRef<{ x: number; y: number } | null>(null);
   const pinchStart = useRef<{ dist: number; zoom: number } | null>(null);
@@ -735,6 +736,18 @@ function SortableAlbumThumb({
     focusX: editFocusX(edit),
     focusY: editFocusY(edit),
   });
+
+  useEffect(() => {
+    const el = slotRef.current;
+    if (!el || !selected || !onFrameSlot) return;
+    const update = () => {
+      onFrameSlot(el.clientWidth, el.clientHeight);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [selected, onFrameSlot]);
 
   useEffect(() => {
     if (pointers.current.size > 0) return;
@@ -863,7 +876,7 @@ function SortableAlbumThumb({
       }}
       className={`m-0 flex h-full min-h-0 min-w-0 flex-col gap-1 ${hero ? 'col-span-2' : ''}`}
     >
-      <div className="relative min-h-0 flex-1">
+      <div ref={slotRef} className="relative min-h-0 flex-1">
         <div
           ref={surfaceRef}
           role="presentation"
@@ -1054,6 +1067,12 @@ export function BabyPrintAlbumEditor({
   const wasOpenRef = useRef(false);
   const albumBoxRef = useRef<HTMLDivElement | null>(null);
   const [albumBoxH, setAlbumBoxH] = useState(0);
+  const [frameSlotRatio, setFrameSlotRatio] = useState(1);
+  const onFrameSlot = useCallback((width: number, height: number) => {
+    if (width < 8 || height < 8) return;
+    const next = Math.ceil((height / width) * 100) / 100;
+    setFrameSlotRatio((prev) => (Math.abs(prev - next) < 0.01 ? prev : next));
+  }, []);
   const photosRef = useRef(photos);
   const orderRef = useRef(order);
   const editsRef = useRef(edits);
@@ -1388,6 +1407,8 @@ export function BabyPrintAlbumEditor({
 
   const active = activeId ? photoMap.get(activeId) : null;
   const activeEdit = activeId ? edits[activeId] ?? defaultEdit() : null;
+  const frameYMax = Math.max(FRAME_SCALE_MIN, frameSlotRatio);
+  const frameY = activeEdit ? Math.min(editFrameScaleY(activeEdit), frameYMax) : frameYMax;
 
   const handleSavePdf = async () => {
     if (selectedItems.length === 0 || pdfBusy) return;
@@ -1681,17 +1702,19 @@ export function BabyPrintAlbumEditor({
                 <input
                   type="range"
                   min={FRAME_SCALE_MIN}
-                  max={FRAME_SCALE_Y_MAX}
+                  max={frameYMax}
                   step={0.01}
-                  value={editFrameScaleY(activeEdit)}
+                  value={frameY}
                   onChange={(e) =>
-                    patchEdit(active.id, { frameScaleY: Number(e.target.value) })
+                    patchEdit(active.id, {
+                      frameScaleY: Math.min(Number(e.target.value), frameYMax),
+                    })
                   }
                   className="h-2 min-w-[5.5rem] flex-1 touch-manipulation accent-slate-800"
                   aria-label={t.album_print_frame_height}
                 />
                 <span className="w-10 text-right text-[10px] font-semibold tabular-nums text-slate-500">
-                  {Math.round(editFrameScaleY(activeEdit) * 100)}%
+                  {Math.round((frameY / frameYMax) * 100)}%
                 </span>
               </div>
               <div className="flex w-full flex-wrap items-center gap-2">
@@ -1849,6 +1872,7 @@ export function BabyPrintAlbumEditor({
                               }
                               hero={layout === 'hero' && idx === 0}
                               frameEditMode={frameEditMode}
+                              onFrameSlot={activeId === photo.id ? onFrameSlot : undefined}
                               onSelect={() => setActiveId(photo.id)}
                               onFitChange={(patch) => patchEdit(photo.id, patch)}
                             />

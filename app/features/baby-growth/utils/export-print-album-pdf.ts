@@ -210,29 +210,29 @@ function traceFrame(ctx: CanvasRenderingContext2D, frame: PrintFrame, w: number,
   }
   if (frame === 'heart') {
     const pts: Array<[number, number]> = [
-      [0.5, 0.88],
-      [0.12, 0.52],
-      [0.08, 0.28],
-      [0.22, 0.1],
-      [0.4, 0.12],
-      [0.5, 0.28],
-      [0.6, 0.12],
-      [0.78, 0.1],
-      [0.92, 0.28],
-      [0.88, 0.52],
+      [0.5, 1],
+      [0.12, 0.5385],
+      [0.08, 0.2308],
+      [0.22, 0],
+      [0.4, 0.0256],
+      [0.5, 0.2308],
+      [0.6, 0.0256],
+      [0.78, 0],
+      [0.92, 0.2308],
+      [0.88, 0.5385],
     ];
     pts.forEach(([u, v], i) => (i === 0 ? ctx.moveTo(px(u), py(v)) : ctx.lineTo(px(u), py(v))));
     ctx.closePath();
     return;
   }
   if (frame === 'heart_soft') {
-    ctx.moveTo(px(0.5), py(0.92));
-    ctx.bezierCurveTo(px(0.5), py(0.92), px(0.02), py(0.58), px(0.02), py(0.32));
-    ctx.bezierCurveTo(px(0.02), py(0.14), px(0.16), py(0.04), px(0.31), py(0.04));
-    ctx.bezierCurveTo(px(0.4), py(0.04), px(0.46), py(0.09), px(0.5), py(0.16));
-    ctx.bezierCurveTo(px(0.54), py(0.09), px(0.6), py(0.04), px(0.69), py(0.04));
-    ctx.bezierCurveTo(px(0.84), py(0.04), px(0.98), py(0.14), px(0.98), py(0.32));
-    ctx.bezierCurveTo(px(0.98), py(0.58), px(0.5), py(0.92), px(0.5), py(0.92));
+    ctx.moveTo(px(0.5), py(1));
+    ctx.bezierCurveTo(px(0.5), py(1), px(0.02), py(0.614), px(0.02), py(0.318));
+    ctx.bezierCurveTo(px(0.02), py(0.114), px(0.16), py(0), px(0.31), py(0));
+    ctx.bezierCurveTo(px(0.4), py(0), px(0.46), py(0.057), px(0.5), py(0.136));
+    ctx.bezierCurveTo(px(0.54), py(0.057), px(0.6), py(0), px(0.69), py(0));
+    ctx.bezierCurveTo(px(0.84), py(0), px(0.98), py(0.114), px(0.98), py(0.318));
+    ctx.bezierCurveTo(px(0.98), py(0.614), px(0.5), py(1), px(0.5), py(1));
     ctx.closePath();
     return;
   }
