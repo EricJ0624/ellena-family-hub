@@ -350,11 +350,11 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const frameWidthClass =
     frameStyle === 'polaroid_modern'
       ? isPortraitPhoto
-        ? 'max-w-[360px] md:max-w-[380px]'
-        : 'max-w-[min(92vw,420px)]'
+        ? 'max-w-[400px] md:max-w-[420px]'
+        : 'max-w-[min(92vw,460px)]'
       : isPortraitPhoto
-        ? 'max-w-[320px] md:max-w-[340px]'
-        : 'max-w-[380px]';
+        ? 'max-w-[360px] md:max-w-[380px]'
+        : 'max-w-[420px]';
 
   const baroqueMatDisplayName = useMemo(() => {
     if (frameStyle !== 'baroque') return null;
@@ -790,8 +790,12 @@ const TitlePage: React.FC<TitlePageProps> = ({
       </div>
       )}
 
-      {/* 컨텐츠 영역 */}
-      <div className="relative z-20 flex flex-col items-center justify-center px-4 pt-4 pb-4 w-full min-h-[240px]">
+      {/* 컨텐츠 영역. 대시보드는 본문 패딩만 쓴다. px-4가 있으면 max-w를 올려도 위젯보다 좁은 칸에 막힌다. */}
+      <div
+        className={`relative z-20 flex w-full min-h-[240px] flex-col items-center justify-center pb-4 pt-4 ${
+          noBackground ? 'px-0' : 'px-4'
+        }`}
+      >
         {!noBackground && (
           /* 배경 하트 아이콘 (투명) */
           <motion.div

@@ -1,8 +1,8 @@
 /** TitlePage DailyPhotoFrame 과 동일 — 대시보드 타이틀 행 정렬·fit 폭 */
 export const DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX = {
-  portrait: 320,
-  portraitMd: 340,
-  landscape: 380,
+  portrait: 360,
+  portraitMd: 380,
+  landscape: 420,
 } as const;
 
 export function getDashboardPortraitFrameMaxWidthPx(viewportWidth: number): number {
