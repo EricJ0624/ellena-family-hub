@@ -10,10 +10,12 @@ import {
 } from '@/app/components/group-admin/WidgetPreviewComponents';
 import { CalendarShowroomDemo } from '@/app/components/dashboard/CalendarShowroomDemo';
 import { ChatShowroomDemo } from '@/app/components/dashboard/ChatShowroomDemo';
+import { BabyGrowthShowroomDemo } from '@/app/components/dashboard/BabyGrowthShowroomDemo';
 import { FamilyLogShowroomDemo } from '@/app/components/dashboard/FamilyLogShowroomDemo';
 import { PiggyShowroomDemo } from '@/app/components/dashboard/PiggyShowroomDemo';
 import { TasksShowroomDemo } from '@/app/components/dashboard/TasksShowroomDemo';
 import {
+  BABY_GROWTH_SHOWROOM_STEP_MS,
   CALENDAR_SHOWROOM_STEP_MS,
   CHAT_SHOWROOM_STEP_MS,
   FAMILY_LOG_SHOWROOM_STEP_MS,
@@ -47,7 +49,7 @@ type Props = {
 
 /**
  * 쇼룸 「미리보기」— 이용법 단계 + 위젯 카드 연출 (실기능 없음).
- * tasks 7 · calendar 8 · chat 6 · piggy 8 · family_log 9 단계 코드 연출, 그 외는 기존 3단계.
+ * tasks 7 · calendar 8 · chat 6 · piggy 8 · family_log 9 · baby_growth 5 단계 코드 연출, 그 외는 기존 3단계.
  */
 export function WidgetShowroomDemoOverlay({
   lang,
@@ -71,7 +73,8 @@ export function WidgetShowroomDemoOverlay({
     widgetKey === 'calendar' ||
     widgetKey === 'chat' ||
     widgetKey === 'piggy' ||
-    widgetKey === 'family_log';
+    widgetKey === 'family_log' ||
+    widgetKey === 'baby_growth';
   const showVideo = publishedUrl !== null;
 
   useEffect(() => {
@@ -90,7 +93,10 @@ export function WidgetShowroomDemoOverlay({
               ? PIGGY_SHOWROOM_STEP_MS
               : widgetKey === 'family_log' && steps.length === FAMILY_LOG_SHOWROOM_STEP_MS.length
                 ? FAMILY_LOG_SHOWROOM_STEP_MS
-                : steps.map(() => STEP_MS);
+                : widgetKey === 'baby_growth' &&
+                    steps.length === BABY_GROWTH_SHOWROOM_STEP_MS.length
+                  ? BABY_GROWTH_SHOWROOM_STEP_MS
+                  : steps.map(() => STEP_MS);
     const tick = () => {
       timer = window.setTimeout(() => {
         current = (current + 1) % steps.length;
@@ -218,6 +224,8 @@ export function WidgetShowroomDemoOverlay({
                   <PiggyShowroomDemo lang={scriptLang} step={step} />
                 ) : widgetKey === 'family_log' ? (
                   <FamilyLogShowroomDemo lang={scriptLang} step={step} />
+                ) : widgetKey === 'baby_growth' ? (
+                  <BabyGrowthShowroomDemo lang={scriptLang} step={step} />
                 ) : (
                   <motion.div
                     key={`${widgetKey}-${step}`}

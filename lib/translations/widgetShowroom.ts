@@ -126,6 +126,12 @@ export type WidgetShowroomTranslations = {
   howto_baby_growth_1: string;
   howto_baby_growth_2: string;
   howto_baby_growth_3: string;
+  howto_baby_growth_4: string;
+  howto_baby_growth_5: string;
+  howto_baby_growth_add_cta: string;
+  howto_baby_growth_add_hint: string;
+  howto_baby_growth_vaccine_title: string;
+  howto_baby_growth_vaccine_row: string;
 };
 
 const ko: WidgetShowroomTranslations = {
@@ -250,7 +256,13 @@ const ko: WidgetShowroomTranslations = {
   howto_games_3: '가족과 가벼운 게임으로 풀어 보세요.',
   howto_baby_growth_1: '아기 프로필과 태어난 날을 확인해요.',
   howto_baby_growth_2: '수유·수면·배변·체온을 바로 기록해요.',
-  howto_baby_growth_3: '예방접종 수첩에 맞은 날과 병원을 남겨요.',
+  howto_baby_growth_3: '좌우로 밀면 다른 아기나 등록 칸으로 넘어가요.',
+  howto_baby_growth_4: '등록 칸에서 새 아기를 추가할 수 있어요.',
+  howto_baby_growth_5: '예방접종 수첩에 맞은 날과 병원을 남겨요.',
+  howto_baby_growth_add_cta: '아기 등록',
+  howto_baby_growth_add_hint: '아직 등록된 아기가 없어요',
+  howto_baby_growth_vaccine_title: '예방접종',
+  howto_baby_growth_vaccine_row: 'BCG · 완료',
 };
 
 const en: WidgetShowroomTranslations = {
@@ -375,7 +387,13 @@ const en: WidgetShowroomTranslations = {
   howto_games_3: 'Light games for the whole family.',
   howto_baby_growth_1: 'Check the baby profile and birthday.',
   howto_baby_growth_2: 'Log feeding, sleep, diaper, and temperature.',
-  howto_baby_growth_3: 'Save the shot date and clinic in the vaccine record.',
+  howto_baby_growth_3: 'Swipe sideways to switch babies or open Add.',
+  howto_baby_growth_4: 'On the Add slide, register another baby.',
+  howto_baby_growth_5: 'Save the shot date and clinic in the vaccine record.',
+  howto_baby_growth_add_cta: 'Add baby',
+  howto_baby_growth_add_hint: 'No baby profile yet',
+  howto_baby_growth_vaccine_title: 'Vaccines',
+  howto_baby_growth_vaccine_row: 'BCG · done',
 };
 
 const widgetShowroom = Object.fromEntries(
@@ -474,8 +492,22 @@ export const FAMILY_LOG_SHOWROOM_STEP_MS = [
   2000, 3600, 2400, 3600, 2800, 2200, 2600, 2200, 3200,
 ] as const;
 
+const BABY_GROWTH_HOWTO_KEYS = [
+  'howto_baby_growth_1',
+  'howto_baby_growth_2',
+  'howto_baby_growth_3',
+  'howto_baby_growth_4',
+  'howto_baby_growth_5',
+] as const satisfies readonly (keyof WidgetShowroomTranslations)[];
+
+/** 성장기록 쇼룸: 프로필 → 기록 → 스와이프 → 등록 칸 → 접종 */
+export const BABY_GROWTH_SHOWROOM_STEP_MS = [2200, 2400, 1800, 2600, 2800] as const;
+
 const HOWTO_KEYS: Record<
-  Exclude<DashboardWidgetKey, 'tasks' | 'calendar' | 'chat' | 'piggy' | 'family_log'>,
+  Exclude<
+    DashboardWidgetKey,
+    'tasks' | 'calendar' | 'chat' | 'piggy' | 'family_log' | 'baby_growth'
+  >,
   [
     keyof WidgetShowroomTranslations,
     keyof WidgetShowroomTranslations,
@@ -492,7 +524,6 @@ const HOWTO_KEYS: Record<
   album: ['howto_album_1', 'howto_album_2', 'howto_album_3'],
   location: ['howto_location_1', 'howto_location_2', 'howto_location_3'],
   games: ['howto_games_1', 'howto_games_2', 'howto_games_3'],
-  baby_growth: ['howto_baby_growth_1', 'howto_baby_growth_2', 'howto_baby_growth_3'],
 };
 
 export function getWidgetShowroomTranslation(
@@ -521,6 +552,9 @@ export function getWidgetShowroomHowtoSteps(lang: LangCode, key: DashboardWidget
   }
   if (key === 'family_log') {
     return FAMILY_LOG_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
+  }
+  if (key === 'baby_growth') {
+    return BABY_GROWTH_HOWTO_KEYS.map((stepKey) => getWidgetShowroomTranslation(lang, stepKey));
   }
   const [a, b, c] = HOWTO_KEYS[key as keyof typeof HOWTO_KEYS];
   return [
