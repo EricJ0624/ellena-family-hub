@@ -288,7 +288,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: '저금통에서 예금',
     deposit_from_piggy_failed: '저금통 → 은행 예금 실패',
     deposit_source_from_wallet: '용돈에서 차감됩니다',
-    deposit_source_external: '용돈·저금통에서 차감되지 않습니다 (외부 입금)',
+    deposit_source_external: '용돈·저금통에서 차감되지 않습니다 (부모 또는 가족 입금)',
     open_execute_btn: '개봉 바로 실행',
     savings_withdraw_execute_btn: '용돈으로 바로 인출',
   },
@@ -433,7 +433,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
 
@@ -579,7 +579,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
 
@@ -725,7 +725,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
 
@@ -871,7 +871,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
 
@@ -1017,7 +1017,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
 
@@ -1163,7 +1163,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
 
@@ -1309,7 +1309,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
 
@@ -1455,7 +1455,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
 
@@ -1601,7 +1601,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     deposit_from_piggy_btn: "Deposit from piggy",
     deposit_from_piggy_failed: "Failed to deposit from piggy",
     deposit_source_from_wallet: "Deducted from allowance",
-    deposit_source_external: "Not deducted from allowance/piggy (external)",
+    deposit_source_external: "Not deducted from allowance/piggy (parent or family deposit)",
     open_execute_btn: "Open piggy now",
     savings_withdraw_execute_btn: "Withdraw to allowance now",
   },

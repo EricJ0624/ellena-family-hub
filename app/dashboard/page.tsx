@@ -922,6 +922,7 @@ export default function FamilyHub() {
   /** 저금통 패널: 페이지 이동 없이 대시보드 위에서 열기 */
   const [piggyPanelOpen, setPiggyPanelOpen] = useState(false);
   const [piggyPanelChildId, setPiggyPanelChildId] = useState('');
+  const [piggyPanelTab, setPiggyPanelTab] = useState<'wallet' | 'piggy' | 'savings'>('wallet');
   /** 앨범 패널: 페이지 이동 없이 대시보드 위에서 열기 */
   const [albumPanel, setAlbumPanel] = useState<{ photoId: string } | null>(null);
   /** 플래너 패널: 페이지 이동 없이 대시보드 위에서 열기 */
@@ -7425,14 +7426,17 @@ export default function FamilyHub() {
             formatAmount={formatDashboardPiggy}
             onGoClick={() => {
               setPiggyPanelChildId('');
+              setPiggyPanelTab('wallet');
               setPiggyPanelOpen(true);
             }}
             onManageClick={() => {
               setPiggyPanelChildId('');
+              setPiggyPanelTab('wallet');
               setPiggyPanelOpen(true);
             }}
             onAddPiggy={() => {
               setPiggyPanelChildId('');
+              setPiggyPanelTab('wallet');
               setPiggyPanelOpen(true);
             }}
             onDeletePiggy={handleDashboardDeletePiggy}
@@ -7441,6 +7445,12 @@ export default function FamilyHub() {
             onRequestAccount={handlePiggyRequestAccount}
             onMemberClick={(targetUserId) => {
               setPiggyPanelChildId(targetUserId);
+              setPiggyPanelTab('wallet');
+              setPiggyPanelOpen(true);
+            }}
+            onBalanceClick={(tab, userId) => {
+              setPiggyPanelChildId(userId || '');
+              setPiggyPanelTab(tab);
               setPiggyPanelOpen(true);
             }}
             translations={{
@@ -8355,10 +8365,13 @@ export default function FamilyHub() {
     {piggyPanelOpen ? (
       <DashboardScreenPanel>
         <PiggyBankPanelContent
+          key={`piggy-panel-${piggyPanelChildId}-${piggyPanelTab}`}
           initialChildId={piggyPanelChildId}
+          initialTab={piggyPanelTab}
           onClose={() => {
             setPiggyPanelOpen(false);
             setPiggyPanelChildId('');
+            setPiggyPanelTab('wallet');
           }}
         />
       </DashboardScreenPanel>

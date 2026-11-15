@@ -112,14 +112,22 @@ function piggyTxAttachmentKey(entityType: 'piggy_wallet_tx' | 'piggy_bank_tx', e
   return `${entityType}:${entityId}`;
 }
 
+export type PiggyPanelTab = 'wallet' | 'piggy' | 'savings';
+
 type Props = {
   /** 패널 닫기. 없으면 router.push('/dashboard?focus=piggy') */
   onClose?: () => void;
   /** 관리자 모드에서 처음 열 때 선택된 자녀 ID */
   initialChildId?: string;
+  /** 위젯에서 연 탭 (용돈 / 저금통 / 은행) */
+  initialTab?: PiggyPanelTab;
 };
 
-export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
+export function PiggyBankPanelContent({
+  onClose,
+  initialChildId = '',
+  initialTab = 'wallet',
+}: Props) {
   const router = useRouter();
   const { lang } = useLanguage();
   const pt = (key: keyof import('@/lib/translations/piggy').PiggyTranslations) => getPiggyTranslation(lang, key);
@@ -167,7 +175,7 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
     pendingAccountRequest?: boolean;
   } | null>(null);
   const [selectedSavingsAccountId, setSelectedSavingsAccountId] = useState('');
-  const [activePiggyTab, setActivePiggyTab] = useState<'wallet' | 'piggy' | 'savings'>('wallet');
+  const [activePiggyTab, setActivePiggyTab] = useState<PiggyPanelTab>(initialTab);
   const [proxyAsChild, setProxyAsChild] = useState(false);
   const [piggyToBankAmount, setPiggyToBankAmount] = useState('');
   const [piggyToBankMemo, setPiggyToBankMemo] = useState('');
@@ -929,6 +937,15 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
 
   return (
     <div className="piggy-page min-h-screen bg-[var(--surface-base)] p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="rounded-xl border-none bg-slate-200 px-4 py-2.5 font-semibold text-slate-700"
+        >
+          {pt('back_to_dashboard')}
+        </button>
+      </div>
       <div className="mb-5 flex items-center gap-4">
         <img
           src={piggyMarkSrc}
@@ -1900,65 +1917,6 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
 
           
 <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-            <h2 className="m-0 text-lg">{pt('savings_deposit_wallet_title')}</h2>
-            <p className="mt-1 text-xs text-slate-500">{pt('deposit_source_from_wallet')}</p>
-            <div className="mt-3 grid gap-2.5">
-              <input
-                type="number"
-                value={savingsWalletAmount}
-                onChange={(e) => setSavingsWalletAmount(e.target.value)}
-                placeholder={pt('amount_placeholder')}
-                className="rounded-[10px] border border-slate-200 p-2.5"
-              />
-              <input
-                value={savingsWalletMemo}
-                onChange={(e) => setSavingsWalletMemo(e.target.value)}
-                placeholder={pt('memo_placeholder')}
-                className="rounded-[10px] border border-slate-200 p-2.5"
-              />
-              <button
-                type="button"
-                disabled={savingsWalletSubmitting}
-                onClick={async () => {
-                  if (savingsWalletSubmitting) return;
-                  if (!selectedChildIdForAdmin) {
-                    setError(pt('select_child_first'));
-                    return;
-                  }
-                  if (!selectedSavingsAccountId) {
-                    setError(pt('savings_select_account'));
-                    return;
-                  }
-                  setSavingsWalletSubmitting(true);
-                  try {
-                    await handleAction('/api/piggy-bank/savings/deposit-from-wallet', {
-                      childId: selectedChildIdForAdmin,
-                      savingsAccountId: selectedSavingsAccountId,
-                      amount: savingsWalletAmount,
-                      memo: savingsWalletMemo,
-                      asProxy: true,
-                    });
-                    setSavingsWalletAmount('');
-                    setSavingsWalletMemo('');
-                  } catch (err: unknown) {
-                    if (!isSupabaseLockError(err)) {
-                      setError(err instanceof Error ? err.message : pt('savings_deposit_wallet_failed'));
-                    }
-                  } finally {
-                    setSavingsWalletSubmitting(false);
-                  }
-                }}
-                className={`rounded-xl border-none p-3 font-bold text-white ${
-                  savingsWalletSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-blue-500'
-                }`}
-              >
-                {savingsWalletSubmitting ? pt('submitting') : pt('savings_deposit_wallet_btn')}
-              </button>
-            </div>
-          </div>
-
-          
-<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
             <h2 className="m-0 text-lg">{pt('savings_apply_interest_title')}</h2>
             <p className="mt-2 text-xs text-slate-500">
               {pt('savings_next_interest_label')}: {savingsNextOn || '—'}
@@ -2271,10 +2229,12 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
           )}
           {showChildActions && (
             <>
-{!isAdmin && (
 <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
             <h2 className="m-0 text-lg">{pt('savings_deposit_wallet_title')}</h2>
             <p className="mt-1 text-xs text-slate-500">{pt('deposit_source_from_wallet')}</p>
+            {proxyAsChild && (
+              <p className="mt-1 text-xs text-amber-700">{pt('proxy_toggle_label')}</p>
+            )}
             <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
@@ -2294,6 +2254,10 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
                 disabled={savingsWalletSubmitting}
                 onClick={async () => {
                   if (savingsWalletSubmitting) return;
+                  if (proxyAsChild && !selectedChildIdForAdmin) {
+                    setError(pt('select_child_first'));
+                    return;
+                  }
                   if (!selectedSavingsAccountId) {
                     setError(pt('savings_select_account'));
                     return;
@@ -2304,6 +2268,7 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
                       savingsAccountId: selectedSavingsAccountId,
                       amount: savingsWalletAmount,
                       memo: savingsWalletMemo,
+                      ...proxyPayload,
                     });
                     setSavingsWalletAmount('');
                     setSavingsWalletMemo('');
@@ -2323,7 +2288,6 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
               </button>
             </div>
           </div>
-)}
 
           
 <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
@@ -2464,13 +2428,6 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
 
         </>
       )}
-
-      <button
-        onClick={handleClose}
-        className="rounded-xl border-none bg-slate-200 px-4 py-3 font-semibold text-slate-700"
-      >
-        {pt('back_to_dashboard')}
-      </button>
     </div>
   );
 }

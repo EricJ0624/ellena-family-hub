@@ -22,6 +22,8 @@ function piggyCardHeading(
   return withPiggyName(template, nickname);
 }
 
+export type PiggyWidgetTab = 'wallet' | 'piggy' | 'savings';
+
 interface PiggyBankSectionProps {
   currentGroupId: string | null;
   isAdmin: boolean;
@@ -40,6 +42,8 @@ interface PiggyBankSectionProps {
   onRejectRequest: (requestId: string) => void;
   onRequestAccount: () => void;
   onMemberClick: (userId: string) => void;
+  /** 잔액 칸 클릭: 해당 탭으로 패널 오픈 (userId는 관리자 카드일 때) */
+  onBalanceClick?: (tab: PiggyWidgetTab, userId?: string) => void;
   translations: {
     section_title_admin: string;
     section_title_user: string;
@@ -85,8 +89,17 @@ export function PiggyBankSection({
   onRejectRequest,
   onRequestAccount,
   onMemberClick,
+  onBalanceClick,
   translations: t,
 }: PiggyBankSectionProps) {
+  const openBalance = (tab: PiggyWidgetTab, userId?: string) => {
+    if (onBalanceClick) {
+      onBalanceClick(tab, userId);
+      return;
+    }
+    if (userId) onMemberClick(userId);
+    else onGoClick();
+  };
   const sectionTitle = isAdmin
     ? t.section_title_admin
     : withPiggyName(t.section_title_user, piggySummary?.ownerNickname);
@@ -245,30 +258,54 @@ export function PiggyBankSection({
                             </div>
                           </div>
                           <div className="grid grid-cols-3" style={{ gap: pu(2) }}>
-                            <div className="piggy-widget-metric--wallet rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2]" style={{ padding: pu(2.5) }}>
+                            <button
+                              type="button"
+                              className="piggy-widget-metric--wallet cursor-pointer rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2] text-left"
+                              style={{ padding: pu(2.5) }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (p.user_id) openBalance('wallet', p.user_id);
+                              }}
+                            >
                               <div className="text-[#b91c1c]" style={{ marginBottom: pu(1), fontSize: pu(3.5) }}>
                                 {t.wallet_balance_label}
                               </div>
                               <div className="font-bold text-[#b91c1c]" style={{ fontSize: pu(5) }}>
                                 {formatAmount(p.walletBalance ?? 0, p.currency)}
                               </div>
-                            </div>
-                            <div className="piggy-widget-metric--bank rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed]" style={{ padding: pu(2.5) }}>
+                            </button>
+                            <button
+                              type="button"
+                              className="piggy-widget-metric--bank cursor-pointer rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed] text-left"
+                              style={{ padding: pu(2.5) }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (p.user_id) openBalance('piggy', p.user_id);
+                              }}
+                            >
                               <div className="text-[#9a3412]" style={{ marginBottom: pu(1), fontSize: pu(3.5) }}>
                                 {t.bank_balance_label}
                               </div>
                               <div className="font-bold text-[#9a3412]" style={{ fontSize: pu(5) }}>
                                 {formatAmount(p.balance ?? 0, p.currency)}
                               </div>
-                            </div>
-                            <div className="piggy-widget-metric--savings rounded-lg border border-solid border-[#bfdbfe] bg-[#eff6ff]" style={{ padding: pu(2.5) }}>
+                            </button>
+                            <button
+                              type="button"
+                              className="piggy-widget-metric--savings cursor-pointer rounded-lg border border-solid border-[#bfdbfe] bg-[#eff6ff] text-left"
+                              style={{ padding: pu(2.5) }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (p.user_id) openBalance('savings', p.user_id);
+                              }}
+                            >
                               <div className="text-[#1d4ed8]" style={{ marginBottom: pu(1), fontSize: pu(3.5) }}>
                                 {t.savings_balance_label}
                               </div>
                               <div className="font-bold text-[#1d4ed8]" style={{ fontSize: pu(5) }}>
                                 {formatAmount(p.savingsBalance ?? 0, p.currency)}
                               </div>
-                            </div>
+                            </button>
                           </div>
                         </div>
                       )
@@ -278,30 +315,45 @@ export function PiggyBankSection({
             ) : piggySummary ? (
               /* 일반 사용자: 저금통 있음 — 잔고 표시 */
               <div className="grid" style={{ gap: pu(2.5) }}>
-                <div className="piggy-widget-card rounded-xl border border-slate-200 bg-white" style={{ padding: pu(3) }}>
+                <button
+                  type="button"
+                  className="piggy-widget-card cursor-pointer rounded-xl border border-slate-200 bg-white text-left"
+                  style={{ padding: pu(3) }}
+                  onClick={() => openBalance('wallet')}
+                >
                   <div className="text-[#b91c1c]" style={{ fontSize: pu(4.5) }}>
                     {t.wallet_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
                   <div className="font-bold text-[#b91c1c]" style={{ fontSize: pu(7) }}>
                     {formatAmount(piggySummary.walletBalance, piggySummary.currency)}
                   </div>
-                </div>
-                <div className="piggy-widget-card rounded-xl border border-slate-200 bg-white" style={{ padding: pu(3) }}>
+                </button>
+                <button
+                  type="button"
+                  className="piggy-widget-card cursor-pointer rounded-xl border border-slate-200 bg-white text-left"
+                  style={{ padding: pu(3) }}
+                  onClick={() => openBalance('piggy')}
+                >
                   <div className="text-[#9a3412]" style={{ fontSize: pu(4.5) }}>
                     {t.bank_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
                   <div className="font-bold text-[#9a3412]" style={{ fontSize: pu(7) }}>
                     {formatAmount(piggySummary.bankBalance, piggySummary.currency)}
                   </div>
-                </div>
-                <div className="piggy-widget-card rounded-xl border border-slate-200 bg-white" style={{ padding: pu(3) }}>
+                </button>
+                <button
+                  type="button"
+                  className="piggy-widget-card cursor-pointer rounded-xl border border-slate-200 bg-white text-left"
+                  style={{ padding: pu(3) }}
+                  onClick={() => openBalance('savings')}
+                >
                   <div className="text-[#1d4ed8]" style={{ fontSize: pu(4.5) }}>
                     {t.savings_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
                   <div className="font-bold text-[#1d4ed8]" style={{ fontSize: pu(7) }}>
                     {formatAmount(piggySummary.savingsBalance ?? 0, piggySummary.currency)}
                   </div>
-                </div>
+                </button>
               </div>
             ) : (
               /* 일반 사용자: 저금통 없음 */
