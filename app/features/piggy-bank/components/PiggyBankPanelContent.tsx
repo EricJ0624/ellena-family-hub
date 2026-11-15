@@ -21,6 +21,16 @@ import { formatMoneyAmount } from '@/lib/format-currency';
 import { intlLocaleForLang } from '@/lib/language-fonts';
 import { resolveUiTheme } from '@/lib/ui-theme';
 
+/** lib/piggy-bank MAX_PIGGY_SAVINGS_ACCOUNTS 와 동일 (클라이언트는 서버 모듈 비import). */
+const MAX_PIGGY_SAVINGS_ACCOUNTS = 3;
+
+function todayLocalISO(fromDate: Date = new Date()): string {
+  const y = fromDate.getFullYear();
+  const m = fromDate.getMonth() + 1;
+  const d = fromDate.getDate();
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 type PiggyAccount = {
   id: string;
   name: string;
@@ -33,6 +43,26 @@ type PiggyAccount = {
 type PiggyWallet = {
   id: string;
   balance: number;
+};
+
+type PiggySavings = {
+  id: string;
+  name: string;
+  bank_name?: string;
+  account_number?: string;
+  account_label?: string;
+  balance: number;
+  currency: string;
+  annual_interest_rate_bps: number;
+  interest_day: number;
+  next_interest_on: string;
+  tax_rate_bps: number;
+};
+
+type SavingsTransaction = Transaction & {
+  gross_amount?: number | null;
+  tax_amount?: number | null;
+  savings_account_id?: string | null;
 };
 
 type MemberInfo = {
@@ -52,6 +82,16 @@ type OpenRequest = {
   created_at: string;
 };
 
+type SavingsWithdrawRequest = {
+  id: string;
+  child_id: string;
+  amount: number;
+  reason: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  created_at: string;
+  savings_account_id?: string | null;
+};
+
 type Transaction = {
   id: string;
   amount: number;
@@ -61,6 +101,7 @@ type Transaction = {
   created_at: string;
   dateLabel: string;
   actor_nickname: string;
+  isProxy?: boolean;
 };
 
 type PiggyAttachment = UploadedAttachment;
@@ -111,24 +152,54 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
     name: string;
     balance: number;
     walletBalance: number;
+    savingsBalance?: number;
     currency?: string;
     noAccount: false;
   };
   const [summary, setSummary] = useState<{
     account?: PiggyAccount | null;
     wallet?: PiggyWallet | null;
+    savings?: PiggySavings | null;
+    savingsAccounts?: PiggySavings[];
+    savingsBalance?: number;
     accounts?: PiggyAccount[];
     memberPiggies?: MemberPiggy[];
     pendingAccountRequest?: boolean;
   } | null>(null);
+  const [selectedSavingsAccountId, setSelectedSavingsAccountId] = useState('');
+  const [activePiggyTab, setActivePiggyTab] = useState<'wallet' | 'piggy' | 'savings'>('wallet');
+  const [proxyAsChild, setProxyAsChild] = useState(false);
+  const [piggyToBankAmount, setPiggyToBankAmount] = useState('');
+  const [piggyToBankMemo, setPiggyToBankMemo] = useState('');
+  const [piggyToBankSubmitting, setPiggyToBankSubmitting] = useState(false);
+  const [settingsAccountName, setSettingsAccountName] = useState('');
+  const [settingsBankName, setSettingsBankName] = useState('');
+  const [settingsAccountNumber, setSettingsAccountNumber] = useState('');
+  const [settingsAccountLabel, setSettingsAccountLabel] = useState('Saving');
+  const [addAccountName, setAddAccountName] = useState('');
+  const [addBankName, setAddBankName] = useState('');
+  const [addAccountNumber, setAddAccountNumber] = useState('');
+  const [addAccountLabel, setAddAccountLabel] = useState('Saving');
+  const [savingsAddSubmitting, setSavingsAddSubmitting] = useState(false);
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [requests, setRequests] = useState<OpenRequest[]>([]);
+  const [savingsWithdrawRequests, setSavingsWithdrawRequests] = useState<SavingsWithdrawRequest[]>([]);
   const [walletTransactions, setWalletTransactions] = useState<Transaction[]>([]);
   const [bankTransactions, setBankTransactions] = useState<Transaction[]>([]);
+  const [savingsTransactions, setSavingsTransactions] = useState<SavingsTransaction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedChildIdForAdmin, setSelectedChildIdForAdmin] = useState(initialChildId);
 
   const isAdmin = useMemo(() => userRole === 'ADMIN' || isOwner, [userRole, isOwner]);
+  const showChildActions = !isAdmin || proxyAsChild;
+  const proxyPayload =
+    isAdmin && proxyAsChild && selectedChildIdForAdmin
+      ? { childId: selectedChildIdForAdmin, asProxy: true as const }
+      : {};
+
+  useEffect(() => {
+    setProxyAsChild(false);
+  }, [selectedChildIdForAdmin]);
   const piggyMarkSrc =
     resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly'
       ? '/piggy/kids-piggy-icon.webp?v=5'
@@ -152,6 +223,21 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
   const [saveSubmitting, setSaveSubmitting] = useState(false);
   const [spendSubmitting, setSpendSubmitting] = useState(false);
   const [openRequestSubmitting, setOpenRequestSubmitting] = useState(false);
+  const [savingsRatePercent, setSavingsRatePercent] = useState('0');
+  const [savingsInterestDay, setSavingsInterestDay] = useState('1');
+  const [savingsTaxPercent, setSavingsTaxPercent] = useState('0');
+  const [savingsNextOn, setSavingsNextOn] = useState('');
+  const [savingsWalletAmount, setSavingsWalletAmount] = useState('');
+  const [savingsWalletMemo, setSavingsWalletMemo] = useState('');
+  const [savingsParentAmount, setSavingsParentAmount] = useState('');
+  const [savingsParentMemo, setSavingsParentMemo] = useState('');
+  const [savingsWithdrawAmount, setSavingsWithdrawAmount] = useState('');
+  const [savingsWithdrawReason, setSavingsWithdrawReason] = useState('');
+  const [savingsSettingsSubmitting, setSavingsSettingsSubmitting] = useState(false);
+  const [savingsWalletSubmitting, setSavingsWalletSubmitting] = useState(false);
+  const [savingsParentSubmitting, setSavingsParentSubmitting] = useState(false);
+  const [savingsWithdrawSubmitting, setSavingsWithdrawSubmitting] = useState(false);
+  const [savingsInterestSubmitting, setSavingsInterestSubmitting] = useState(false);
   const [txAttachmentsByKey, setTxAttachmentsByKey] = useState<Record<string, PiggyAttachment[]>>({});
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [attachmentJobs, setAttachmentJobs] = useState<UploadJob[]>([]);
@@ -202,9 +288,14 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
     if (!response.ok) {
       throw new Error(result.error || pt('load_summary_failed'));
     }
+    const savingsAccounts = (result.data.savingsAccounts ||
+      (result.data.savings ? [result.data.savings] : [])) as PiggySavings[];
     setSummary({
       account: result.data.account,
       wallet: result.data.wallet,
+      savings: result.data.savings ?? savingsAccounts[0] ?? null,
+      savingsAccounts,
+      savingsBalance: result.data.savingsBalance ?? savingsAccounts.reduce((s, a) => s + (a.balance || 0), 0),
       accounts: result.data.accounts,
       memberPiggies: result.data.memberPiggies,
       pendingAccountRequest: !!result.data.pendingAccountRequest,
@@ -212,7 +303,31 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
     if (result.data.account) {
       setPiggyName(result.data.account.ownerNickname || result.data.account.name);
     }
+    setSelectedSavingsAccountId((prev) => {
+      if (prev && savingsAccounts.some((a) => a.id === prev)) return prev;
+      return savingsAccounts[0]?.id || '';
+    });
   };
+
+  const selectedSavings =
+    summary?.savingsAccounts?.find((a) => a.id === selectedSavingsAccountId) ||
+    summary?.savingsAccounts?.[0] ||
+    null;
+
+  useEffect(() => {
+    const sav =
+      summary?.savingsAccounts?.find((a) => a.id === selectedSavingsAccountId) ||
+      summary?.savingsAccounts?.[0];
+    if (!sav) return;
+    setSavingsRatePercent(String((sav.annual_interest_rate_bps ?? 0) / 100));
+    setSavingsInterestDay(String(sav.interest_day ?? 1));
+    setSavingsTaxPercent(String((sav.tax_rate_bps ?? 0) / 100));
+    setSavingsNextOn(String(sav.next_interest_on ?? '').slice(0, 10));
+    setSettingsAccountName(sav.name || '');
+    setSettingsBankName(sav.bank_name || '');
+    setSettingsAccountNumber(sav.account_number || '');
+    setSettingsAccountLabel(sav.account_label || 'Saving');
+  }, [selectedSavingsAccountId, summary?.savingsAccounts]);
 
   const fetchMembers = async () => {
     if (!currentGroupId || !isAdmin) return;
@@ -240,6 +355,20 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
     setRequests(result.data || []);
   };
 
+  const fetchSavingsWithdrawRequests = async () => {
+    if (!currentGroupId) return;
+    const headers = await getAuthHeader();
+    const response = await fetch(
+      `/api/piggy-bank/savings/withdraw-requests?group_id=${currentGroupId}`,
+      { headers },
+    );
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || pt('load_requests_failed'));
+    }
+    setSavingsWithdrawRequests(result.data || []);
+  };
+
   const fetchTransactions = async () => {
     if (!currentGroupId) return;
     const headers = await getAuthHeader();
@@ -254,6 +383,7 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
     }
     setWalletTransactions(result.data?.walletTransactions || []);
     setBankTransactions(result.data?.bankTransactions || []);
+    setSavingsTransactions(result.data?.savingsTransactions || []);
   };
 
   const handleSavePiggyCurrency = async () => {
@@ -309,7 +439,13 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
     }
     setLoading(true);
     setError(null);
-    Promise.all([fetchSummary(), fetchRequests(), fetchMembers(), fetchTransactions()])
+    Promise.all([
+      fetchSummary(),
+      fetchRequests(),
+      fetchSavingsWithdrawRequests(),
+      fetchMembers(),
+      fetchTransactions(),
+    ])
       .catch((err) => { if (!isSupabaseLockError(err)) setError(err.message || pt('load_error')); })
       .finally(() => setLoading(false));
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
@@ -360,6 +496,40 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
       .subscribe();
     channels.push(chBankTx);
 
+    const chSavings = supabase
+      .channel(`piggy_savings_accounts:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'piggy_savings_accounts', filter: `group_id=eq.${groupId}` }, () => {
+        fetchSummary();
+        fetchTransactions();
+      })
+      .subscribe();
+    channels.push(chSavings);
+
+    const chSavingsTx = supabase
+      .channel(`piggy_savings_transactions:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'piggy_savings_transactions', filter: `group_id=eq.${groupId}` }, () => fetchTransactions())
+      .subscribe();
+    channels.push(chSavingsTx);
+
+    const chSavingsWithdraw = supabase
+      .channel(`piggy_savings_withdraw_requests:${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'piggy_savings_withdraw_requests',
+          filter: `group_id=eq.${groupId}`,
+        },
+        () => {
+          fetchSavingsWithdrawRequests();
+          fetchSummary();
+          fetchTransactions();
+        },
+      )
+      .subscribe();
+    channels.push(chSavingsWithdraw);
+
     channelsRef.current = channels;
 
     return () => {
@@ -380,7 +550,12 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
     if (!response.ok) {
       throw new Error(result.error || pt('request_action_failed'));
     }
-    await Promise.all([fetchSummary(), fetchRequests(), fetchTransactions()]);
+    await Promise.all([
+      fetchSummary(),
+      fetchRequests(),
+      fetchSavingsWithdrawRequests(),
+      fetchTransactions(),
+    ]);
   };
 
   const handleRename = async () => {
@@ -597,7 +772,8 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
               <option key={acc.id} value={acc.user_id || ''}>
                 {acc.ownerNickname || pt('piggy_label')} · {pt('allowance_label')}{' '}
                 {formatPiggyAmount(acc.walletBalance ?? 0, acc.currency)} / {pt('piggy_label')}{' '}
-                {formatPiggyAmount(acc.balance, acc.currency)}
+                {formatPiggyAmount(acc.balance, acc.currency)} / {pt('savings_label')}{' '}
+                {formatPiggyAmount(acc.savingsBalance ?? 0, acc.currency)}
               </option>
             ))}
           </select>
@@ -794,6 +970,21 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
         </div>
       )}
 
+      {isAdmin && selectedChildIdForAdmin && (
+        <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <input
+            type="checkbox"
+            checked={proxyAsChild}
+            onChange={(e) => setProxyAsChild(e.target.checked)}
+            className="mt-1 h-4 w-4 accent-amber-600"
+          />
+          <span>
+            <span className="block text-sm font-semibold text-amber-900">{pt('proxy_toggle_label')}</span>
+            <span className="mt-1 block text-xs text-amber-800/80">{pt('proxy_toggle_hint')}</span>
+          </span>
+        </label>
+      )}
+
       <input
         ref={receiptFileInputRef}
         type="file"
@@ -803,21 +994,193 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
         className="hidden"
       />
 
-      <div className="mb-5 grid gap-3">
-        <div className="rounded-[14px] border border-blue-200 bg-blue-50 p-4">
+      <div className="mb-5 grid gap-3 sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => setActivePiggyTab('wallet')}
+          className={`rounded-[14px] border p-4 text-left transition ${
+            activePiggyTab === 'wallet'
+              ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-300'
+              : 'border-blue-200 bg-blue-50/80'
+          }`}
+        >
           <div className="text-[13px] text-blue-700">{pt('wallet_balance')}</div>
           <div className="text-2xl font-bold text-blue-700">
             {formatPiggyAmount(summary?.wallet?.balance ?? 0)}
           </div>
-        </div>
-        <div className="rounded-[14px] border border-amber-200 bg-amber-50 p-4">
+        </button>
+        <button
+          type="button"
+          onClick={() => setActivePiggyTab('piggy')}
+          className={`rounded-[14px] border p-4 text-left transition ${
+            activePiggyTab === 'piggy'
+              ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-300'
+              : 'border-amber-200 bg-amber-50/80'
+          }`}
+        >
           <div className="text-[13px] text-amber-800">{pt('piggy_balance')}</div>
           <div className="text-2xl font-bold text-amber-800">
             {formatPiggyAmount(summary?.account?.balance ?? 0)}
           </div>
-        </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActivePiggyTab('savings')}
+          className={`rounded-[14px] border p-4 text-left transition ${
+            activePiggyTab === 'savings'
+              ? 'border-indigo-400 bg-indigo-50 ring-2 ring-indigo-300'
+              : 'border-indigo-200 bg-indigo-50/80'
+          }`}
+        >
+          <div className="text-[13px] text-indigo-700">{pt('savings_balance')}</div>
+          <div className="text-2xl font-bold text-indigo-700">
+            {formatPiggyAmount(summary?.savingsBalance ?? 0)}
+          </div>
+          <div className="mt-0.5 text-[11px] text-indigo-400">
+            {pt('savings_total_hint')}
+            {(summary?.savingsAccounts?.length ?? 0) > 0
+              ? ` · ${summary?.savingsAccounts?.length}/${MAX_PIGGY_SAVINGS_ACCOUNTS}`
+              : ''}
+          </div>
+        </button>
       </div>
 
+      {isAdmin && (requests.filter((r) => r.status === 'pending').length > 0 ||
+        savingsWithdrawRequests.filter((r) => r.status === 'pending').length > 0) && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {requests.filter((r) => r.status === 'pending').length > 0 && (
+            <button
+              type="button"
+              onClick={() => setActivePiggyTab('piggy')}
+              className="cursor-pointer rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800"
+            >
+              {pt('pending_banner_open')} {requests.filter((r) => r.status === 'pending').length}
+            </button>
+          )}
+          {savingsWithdrawRequests.filter((r) => r.status === 'pending').length > 0 && (
+            <button
+              type="button"
+              onClick={() => setActivePiggyTab('savings')}
+              className="cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-800"
+            >
+              {pt('pending_banner_savings')}{' '}
+              {savingsWithdrawRequests.filter((r) => r.status === 'pending').length}
+            </button>
+          )}
+        </div>
+      )}
+
+      {activePiggyTab === 'wallet' && (
+        <>
+          {isAdmin && (
+            <>
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('allowance_grant_title')}</h2>
+            <div className="mt-3 grid gap-2.5">
+              <input
+                type="number"
+                value={allowanceAmount}
+                onChange={(e) => setAllowanceAmount(e.target.value)}
+                placeholder={pt('amount_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <input
+                value={allowanceMemo}
+                onChange={(e) => setAllowanceMemo(e.target.value)}
+                placeholder={pt('memo_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <button
+                type="button"
+                disabled={allowanceSubmitting}
+                onClick={async () => {
+                  if (allowanceSubmitting) return;
+                  if (!selectedChildIdForAdmin) {
+                    setError(pt('select_child_first'));
+                    return;
+                  }
+                  setAllowanceSubmitting(true);
+                  try {
+                    await handleAction('/api/piggy-bank/allowance', {
+                      childId: selectedChildIdForAdmin,
+                      amount: allowanceAmount,
+                      memo: allowanceMemo,
+                    });
+                    setAllowanceAmount('');
+                    setAllowanceMemo('');
+                  } catch (err: unknown) {
+                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('allowance_grant_failed'));
+                  } finally {
+                    setAllowanceSubmitting(false);
+                  }
+                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  allowanceSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-blue-600'
+                }`}
+              >
+                {allowanceSubmitting ? pt('submitting') : pt('allowance_grant_btn')}
+              </button>
+            </div>
+          </div>
+            </>
+          )}
+          {showChildActions && (
+            <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('spend_title')}</h2>
+            {proxyAsChild && (
+              <p className="mt-1 text-xs text-amber-700">{pt('proxy_toggle_label')}</p>
+            )}
+            <div className="mt-3 grid gap-2.5">
+              <input
+                type="number"
+                value={spendAmount}
+                onChange={(e) => setSpendAmount(e.target.value)}
+                placeholder={pt('amount_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <input
+                value={spendCategory}
+                onChange={(e) => setSpendCategory(e.target.value)}
+                placeholder={pt('category_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <input
+                value={spendMemo}
+                onChange={(e) => setSpendMemo(e.target.value)}
+                placeholder={pt('memo_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <button
+                type="button"
+                disabled={spendSubmitting}
+                onClick={async () => {
+                  if (spendSubmitting) return;
+                  setSpendSubmitting(true);
+                  try {
+                    await handleAction('/api/piggy-bank/spend', {
+                      amount: spendAmount,
+                      memo: spendMemo,
+                      category: spendCategory,
+                      ...proxyPayload,
+                    });
+                    setSpendAmount('');
+                    setSpendCategory('');
+                    setSpendMemo('');
+                  } catch (err: unknown) {
+                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('spend_failed'));
+                  } finally {
+                    setSpendSubmitting(false);
+                  }
+                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  spendSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-sky-500'
+                }`}
+              >
+                {spendSubmitting ? pt('submitting') : pt('spend_btn')}
+              </button>
+            </div>
+          </div>
+          )}
       {/* 용돈 거래 내역 */}
       <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
         <h2 className="mb-3 mt-0 text-lg">{pt('allowance_history')}</h2>
@@ -826,7 +1189,8 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
         ) : (
           <div className="grid max-h-[330px] gap-2 overflow-y-auto pr-1">
             {walletTransactions.map((tx) => {
-              const isNegative = tx.type === 'spend' || tx.type === 'child_save';
+              const isNegative =
+                tx.type === 'spend' || tx.type === 'child_save' || tx.type === 'deposit_to_savings';
               const receiptKey = piggyTxAttachmentKey('piggy_wallet_tx', tx.id);
               const receipts = txAttachmentsByKey[receiptKey] ?? [];
               const showReceiptSection =
@@ -842,9 +1206,10 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
                         <span className="text-xs text-slate-500">{tx.dateLabel}</span>
                         <span className="text-[13px] font-semibold text-slate-800">{tx.typeLabel}</span>
                       </div>
-                      {tx.actor_nickname && tx.type === 'allowance' && (
+                      {tx.actor_nickname && (tx.type === 'allowance' || tx.isProxy) && (
                         <div className="mb-1 text-xs text-slate-500">
-                          {tx.actor_nickname}{pt('paid_by_suffix')}
+                          {tx.actor_nickname}
+                          {tx.type === 'allowance' ? pt('paid_by_suffix') : ` · ${pt('proxy_actor_suffix')}`}
                         </div>
                       )}
                       {tx.memo && (
@@ -938,6 +1303,358 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
         )}
       </div>
 
+
+        </>
+      )}
+
+      {activePiggyTab === 'piggy' && (
+        <>
+      {isAdmin && (
+        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+          <h2 className="m-0 text-lg">{pt('piggy_name_title')}</h2>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              value={piggyName}
+              onChange={(e) => setPiggyName(e.target.value)}
+              className="w-full min-w-0 flex-1 rounded-[10px] border border-slate-200 p-2.5"
+            />
+            <button
+              onClick={handleRename}
+              className="inline-flex w-full shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border-none bg-red-500 px-4 py-2.5 font-semibold text-white sm:w-auto"
+            >
+              {pt('rename_btn')}
+            </button>
+          </div>
+        </div>
+      )}
+
+
+          {isAdmin && (
+            <>
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('parent_deposit_title')}</h2>
+            <p className="mt-1 text-xs text-slate-500">{pt('deposit_source_external')}</p>
+            <div className="mt-3 grid gap-2.5">
+              <input
+                type="number"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                placeholder={pt('amount_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <input
+                value={depositMemo}
+                onChange={(e) => setDepositMemo(e.target.value)}
+                placeholder={pt('memo_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <button
+                type="button"
+                disabled={depositSubmitting}
+                onClick={async () => {
+                  if (depositSubmitting) return;
+                  if (!selectedChildIdForAdmin) {
+                    setError(pt('select_child_first'));
+                    return;
+                  }
+                  setDepositSubmitting(true);
+                  try {
+                    await handleAction('/api/piggy-bank/parent-deposit', {
+                      childId: selectedChildIdForAdmin,
+                      amount: depositAmount,
+                      memo: depositMemo,
+                    });
+                    setDepositAmount('');
+                    setDepositMemo('');
+                  } catch (err: unknown) {
+                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('parent_deposit_failed'));
+                  } finally {
+                    setDepositSubmitting(false);
+                  }
+                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  depositSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-red-500'
+                }`}
+              >
+                {depositSubmitting ? pt('submitting') : pt('parent_deposit_btn')}
+              </button>
+            </div>
+          </div>
+
+          
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('open_approve_title')}</h2>
+            <div className="mt-3 grid max-h-[200px] gap-3 overflow-y-auto pr-1">
+              {requests.filter((r) => !selectedChildIdForAdmin || r.child_id === selectedChildIdForAdmin).length === 0 && (
+                <p className="text-slate-400">{pt('no_pending_requests')}</p>
+              )}
+              {requests
+                .filter((r) => !selectedChildIdForAdmin || r.child_id === selectedChildIdForAdmin)
+                .map((req) => {
+                const isInactive = req.status !== 'pending';
+                return (
+                  <div
+                    key={req.id}
+                    className={`rounded-xl border border-slate-200 p-3 ${
+                      isInactive ? 'opacity-60 line-through' : ''
+                    }`}
+                  >
+                    <div className="font-semibold">{resolveMemberName(req.child_id)}</div>
+                    <div className="mt-1 text-slate-600">{formatPiggyAmount(req.amount)}</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.reason || pt('reason_none')}
+                    </div>
+                    {isInactive && <div className="mt-1 text-xs text-slate-400">{req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}</div>}
+                    {!isInactive && (
+                      <div className="mt-2.5 flex gap-2">
+                        <button
+                          onClick={async () => {
+                            try {
+                              await handleAction('/api/piggy-bank/open-approve', { requestId: req.id });
+                            } catch (err: unknown) {
+                              if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('approve_failed'));
+                            }
+                          }}
+                          className="flex-1 rounded-[10px] border-none bg-green-600 p-2.5 font-bold text-white"
+                        >
+                          {pt('approve_btn')}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await handleAction('/api/piggy-bank/open-reject', { requestId: req.id });
+                            } catch (err: unknown) {
+                              if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('reject_failed'));
+                            }
+                          }}
+                          className="flex-1 rounded-[10px] border-none bg-gray-400 p-2.5 font-bold text-white"
+                        >
+                          {pt('reject_btn')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+            </>
+          )}
+          {showChildActions && (
+            <>
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('save_title')}</h2>
+            <p className="mt-1 text-xs text-slate-500">{pt('deposit_source_from_wallet')}</p>
+            {proxyAsChild && (
+              <p className="mt-1 text-xs text-amber-700">{pt('proxy_toggle_label')}</p>
+            )}
+            <div className="mt-3 grid gap-2.5">
+              <input
+                type="number"
+                value={saveAmount}
+                onChange={(e) => setSaveAmount(e.target.value)}
+                placeholder={pt('save_amount_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <input
+                value={saveMemo}
+                onChange={(e) => setSaveMemo(e.target.value)}
+                placeholder={pt('memo_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <button
+                type="button"
+                disabled={saveSubmitting}
+                onClick={async () => {
+                  if (saveSubmitting) return;
+                  setSaveSubmitting(true);
+                  try {
+                    await handleAction('/api/piggy-bank/save', {
+                      amount: saveAmount,
+                      memo: saveMemo,
+                      ...proxyPayload,
+                    });
+                    setSaveAmount('');
+                    setSaveMemo('');
+                  } catch (err: unknown) {
+                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('save_failed'));
+                  } finally {
+                    setSaveSubmitting(false);
+                  }
+                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  saveSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-orange-500'
+                }`}
+              >
+                {saveSubmitting ? pt('submitting') : pt('save_btn')}
+              </button>
+            </div>
+          </div>
+
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('deposit_from_piggy_title')}</h2>
+            <p className="mt-1 text-xs text-slate-500">{pt('savings_select_account')}</p>
+            <div className="mt-3 grid gap-2.5">
+              <select
+                value={selectedSavingsAccountId}
+                onChange={(e) => setSelectedSavingsAccountId(e.target.value)}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              >
+                {(summary?.savingsAccounts || []).map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {[acc.bank_name, acc.account_label || acc.name, acc.account_number]
+                      .filter(Boolean)
+                      .join(' · ') || acc.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                value={piggyToBankAmount}
+                onChange={(e) => setPiggyToBankAmount(e.target.value)}
+                placeholder={pt('amount_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <input
+                value={piggyToBankMemo}
+                onChange={(e) => setPiggyToBankMemo(e.target.value)}
+                placeholder={pt('memo_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <button
+                type="button"
+                disabled={piggyToBankSubmitting || !selectedSavingsAccountId}
+                onClick={async () => {
+                  if (piggyToBankSubmitting) return;
+                  if (!selectedSavingsAccountId) {
+                    setError(pt('savings_select_account'));
+                    return;
+                  }
+                  setPiggyToBankSubmitting(true);
+                  try {
+                    await handleAction('/api/piggy-bank/savings/deposit-from-piggy', {
+                      savingsAccountId: selectedSavingsAccountId,
+                      amount: piggyToBankAmount,
+                      memo: piggyToBankMemo,
+                      ...proxyPayload,
+                    });
+                    setPiggyToBankAmount('');
+                    setPiggyToBankMemo('');
+                  } catch (err: unknown) {
+                    if (!isSupabaseLockError(err)) {
+                      setError(err instanceof Error ? err.message : pt('deposit_from_piggy_failed'));
+                    }
+                  } finally {
+                    setPiggyToBankSubmitting(false);
+                  }
+                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  piggyToBankSubmitting || !selectedSavingsAccountId
+                    ? 'cursor-not-allowed bg-slate-400'
+                    : 'cursor-pointer bg-indigo-600'
+                }`}
+              >
+                {piggyToBankSubmitting ? pt('submitting') : pt('deposit_from_piggy_btn')}
+              </button>
+            </div>
+          </div>
+
+          
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('open_request_title')}</h2>
+            {proxyAsChild && (
+              <p className="mt-1 text-xs text-amber-700">{pt('proxy_toggle_label')} · {pt('open_execute_btn')}</p>
+            )}
+            <div className="mt-3 grid gap-2.5">
+              <input
+                type="number"
+                value={openAmount}
+                onChange={(e) => setOpenAmount(e.target.value)}
+                placeholder={pt('request_amount_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <select
+                value={openDestination}
+                onChange={(e) => setOpenDestination(e.target.value as 'wallet' | 'cash')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              >
+                <option value="wallet">{pt('to_wallet')}</option>
+                <option value="cash">{pt('to_cash')}</option>
+              </select>
+              <input
+                value={openReason}
+                onChange={(e) => setOpenReason(e.target.value)}
+                placeholder={pt('reason_placeholder')}
+                className="rounded-[10px] border border-slate-200 p-2.5"
+              />
+              <button
+                type="button"
+                disabled={openRequestSubmitting}
+                onClick={async () => {
+                  if (openRequestSubmitting) return;
+                  setOpenRequestSubmitting(true);
+                  try {
+                    if (proxyAsChild) {
+                      await handleAction('/api/piggy-bank/open-execute', {
+                        amount: openAmount,
+                        reason: openReason,
+                        destination: openDestination,
+                        ...proxyPayload,
+                      });
+                    } else {
+                      await handleAction('/api/piggy-bank/open-request', {
+                        amount: openAmount,
+                        reason: openReason,
+                        destination: openDestination,
+                      });
+                    }
+                    setOpenAmount('');
+                    setOpenReason('');
+                  } catch (err: unknown) {
+                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('open_request_failed'));
+                  } finally {
+                    setOpenRequestSubmitting(false);
+                  }
+                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  openRequestSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-violet-600'
+                }`}
+              >
+                {openRequestSubmitting
+                  ? pt('submitting')
+                  : proxyAsChild
+                    ? pt('open_execute_btn')
+                    : pt('open_request_btn')}
+              </button>
+            </div>
+
+            {!proxyAsChild && (
+            <div className="mt-4 grid gap-2.5">
+              {requests.length === 0 && <p className="text-slate-400">{pt('no_requests')}</p>}
+              {requests.map((req) => {
+                const isInactive = req.status !== 'pending';
+                return (
+                  <div
+                    key={req.id}
+                    className={`rounded-xl border border-slate-200 p-3 ${
+                      isInactive ? 'opacity-60 line-through' : ''
+                    }`}
+                  >
+                    <div className="font-semibold">{formatPiggyAmount(req.amount)}</div>
+                    <div className="text-xs text-slate-400">
+                      {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}
+                    </div>
+                    <div className="text-xs text-slate-400">{req.reason || pt('reason_none')}</div>
+                  </div>
+                );
+              })}
+            </div>
+            )}
+          </div>
+
+            </>
+          )}
       {/* 저금통 거래 내역 */}
       <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
         <h2 className="mb-3 mt-0 text-lg">{pt('piggy_history')}</h2>
@@ -962,9 +1679,10 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
                         <span className="text-xs text-slate-500">{tx.dateLabel}</span>
                         <span className="text-[13px] font-semibold text-slate-800">{tx.typeLabel}</span>
                       </div>
-                      {tx.actor_nickname && tx.type === 'parent_deposit' && (
+                      {tx.actor_nickname && (tx.type === 'parent_deposit' || tx.isProxy) && (
                         <div className="mb-1 text-xs text-slate-500">
-                          {tx.actor_nickname}{pt('deposited_by_suffix')}
+                          {tx.actor_nickname}
+                          {tx.type === 'parent_deposit' ? pt('deposited_by_suffix') : ` · ${pt('proxy_actor_suffix')}`}
                         </div>
                       )}
                       {tx.memo && (
@@ -1058,130 +1776,240 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
         )}
       </div>
 
-      {isAdmin && (
-        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-          <h2 className="m-0 text-lg">{pt('piggy_name_title')}</h2>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              value={piggyName}
-              onChange={(e) => setPiggyName(e.target.value)}
-              className="w-full min-w-0 flex-1 rounded-[10px] border border-slate-200 p-2.5"
-            />
-            <button
-              onClick={handleRename}
-              className="inline-flex w-full shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border-none bg-red-500 px-4 py-2.5 font-semibold text-white sm:w-auto"
-            >
-              {pt('rename_btn')}
-            </button>
-          </div>
-        </div>
+
+        </>
       )}
 
-      {isAdmin ? (
+      {activePiggyTab === 'savings' && (
         <>
-          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-            <h2 className="m-0 text-lg">{pt('allowance_grant_title')}</h2>
+      <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+        <h2 className="mb-3 mt-0 text-lg">{pt('savings_accounts_title')}</h2>
+        {(summary?.savingsAccounts?.length ?? 0) === 0 ? (
+          <p className="text-sm text-slate-400">{pt('no_savings_tx')}</p>
+        ) : (
+          <div className="grid gap-2">
+            <label className="text-xs font-semibold text-slate-600">{pt('savings_select_account')}</label>
+            <select
+              value={selectedSavingsAccountId}
+              onChange={(e) => setSelectedSavingsAccountId(e.target.value)}
+              className="rounded-[10px] border border-slate-200 p-2.5"
+            >
+              {(summary?.savingsAccounts || []).map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {[acc.bank_name, acc.account_label || acc.name, acc.account_number]
+                    .filter(Boolean)
+                    .join(' · ') || acc.name}
+                  {` (${formatPiggyAmount(acc.balance)})`}
+                </option>
+              ))}
+            </select>
+            {selectedSavings && (
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">
+                <div>
+                  <span className="text-slate-500">{pt('savings_bank_name_label')}: </span>
+                  {selectedSavings.bank_name || '—'}
+                </div>
+                <div>
+                  <span className="text-slate-500">{pt('savings_account_number_label')}: </span>
+                  {selectedSavings.account_number || '—'}
+                </div>
+                <div>
+                  <span className="text-slate-500">{pt('savings_account_label_label')}: </span>
+                  {selectedSavings.account_label || selectedSavings.name || '—'}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+
+          {selectedSavings && (
+            <div className="mb-5 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 text-sm text-indigo-900">
+              <div className="text-2xl font-bold text-indigo-700">
+                {formatPiggyAmount(selectedSavings.balance ?? 0)}
+              </div>
+              {selectedSavings.next_interest_on && (
+                <div className="mt-1 text-[11px] text-indigo-500">
+                  {pt('savings_next_interest_label')}: {String(selectedSavings.next_interest_on).slice(0, 10)}
+                  {String(selectedSavings.next_interest_on).slice(0, 10) <= todayLocalISO() && (
+                    <span className="ml-1 font-semibold text-amber-600">· {pt('savings_interest_due')}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          {isAdmin && (
+            <>
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('savings_parent_deposit_title')}</h2>
+            <p className="mt-1 text-xs text-slate-500">{pt('deposit_source_external')}</p>
             <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
-                value={allowanceAmount}
-                onChange={(e) => setAllowanceAmount(e.target.value)}
+                value={savingsParentAmount}
+                onChange={(e) => setSavingsParentAmount(e.target.value)}
                 placeholder={pt('amount_placeholder')}
                 className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
-                value={allowanceMemo}
-                onChange={(e) => setAllowanceMemo(e.target.value)}
+                value={savingsParentMemo}
+                onChange={(e) => setSavingsParentMemo(e.target.value)}
                 placeholder={pt('memo_placeholder')}
                 className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
-                disabled={allowanceSubmitting}
+                disabled={savingsParentSubmitting}
                 onClick={async () => {
-                  if (allowanceSubmitting) return;
+                  if (savingsParentSubmitting) return;
                   if (!selectedChildIdForAdmin) {
                     setError(pt('select_child_first'));
                     return;
                   }
-                  setAllowanceSubmitting(true);
+                  setSavingsParentSubmitting(true);
                   try {
-                    await handleAction('/api/piggy-bank/allowance', {
+                    if (!selectedSavingsAccountId) {
+                      setError(pt('savings_select_account'));
+                      return;
+                    }
+                    await handleAction('/api/piggy-bank/savings/parent-deposit', {
                       childId: selectedChildIdForAdmin,
-                      amount: allowanceAmount,
-                      memo: allowanceMemo,
+                      savingsAccountId: selectedSavingsAccountId,
+                      amount: savingsParentAmount,
+                      memo: savingsParentMemo,
                     });
-                    setAllowanceAmount('');
-                    setAllowanceMemo('');
+                    setSavingsParentAmount('');
+                    setSavingsParentMemo('');
                   } catch (err: unknown) {
-                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('allowance_grant_failed'));
+                    if (!isSupabaseLockError(err)) {
+                      setError(err instanceof Error ? err.message : pt('savings_parent_deposit_failed'));
+                    }
                   } finally {
-                    setAllowanceSubmitting(false);
+                    setSavingsParentSubmitting(false);
                   }
                 }}
                 className={`rounded-xl border-none p-3 font-bold text-white ${
-                  allowanceSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-blue-600'
+                  savingsParentSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-indigo-500'
                 }`}
               >
-                {allowanceSubmitting ? pt('submitting') : pt('allowance_grant_btn')}
+                {savingsParentSubmitting ? pt('submitting') : pt('savings_parent_deposit_btn')}
               </button>
             </div>
           </div>
 
-          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-            <h2 className="m-0 text-lg">{pt('parent_deposit_title')}</h2>
+          
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('savings_deposit_wallet_title')}</h2>
+            <p className="mt-1 text-xs text-slate-500">{pt('deposit_source_from_wallet')}</p>
             <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
+                value={savingsWalletAmount}
+                onChange={(e) => setSavingsWalletAmount(e.target.value)}
                 placeholder={pt('amount_placeholder')}
                 className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
-                value={depositMemo}
-                onChange={(e) => setDepositMemo(e.target.value)}
+                value={savingsWalletMemo}
+                onChange={(e) => setSavingsWalletMemo(e.target.value)}
                 placeholder={pt('memo_placeholder')}
                 className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
-                disabled={depositSubmitting}
+                disabled={savingsWalletSubmitting}
                 onClick={async () => {
-                  if (depositSubmitting) return;
+                  if (savingsWalletSubmitting) return;
                   if (!selectedChildIdForAdmin) {
                     setError(pt('select_child_first'));
                     return;
                   }
-                  setDepositSubmitting(true);
+                  if (!selectedSavingsAccountId) {
+                    setError(pt('savings_select_account'));
+                    return;
+                  }
+                  setSavingsWalletSubmitting(true);
                   try {
-                    await handleAction('/api/piggy-bank/parent-deposit', {
+                    await handleAction('/api/piggy-bank/savings/deposit-from-wallet', {
                       childId: selectedChildIdForAdmin,
-                      amount: depositAmount,
-                      memo: depositMemo,
+                      savingsAccountId: selectedSavingsAccountId,
+                      amount: savingsWalletAmount,
+                      memo: savingsWalletMemo,
+                      asProxy: true,
                     });
-                    setDepositAmount('');
-                    setDepositMemo('');
+                    setSavingsWalletAmount('');
+                    setSavingsWalletMemo('');
                   } catch (err: unknown) {
-                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('parent_deposit_failed'));
+                    if (!isSupabaseLockError(err)) {
+                      setError(err instanceof Error ? err.message : pt('savings_deposit_wallet_failed'));
+                    }
                   } finally {
-                    setDepositSubmitting(false);
+                    setSavingsWalletSubmitting(false);
                   }
                 }}
                 className={`rounded-xl border-none p-3 font-bold text-white ${
-                  depositSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-red-500'
+                  savingsWalletSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-blue-500'
                 }`}
               >
-                {depositSubmitting ? pt('submitting') : pt('parent_deposit_btn')}
+                {savingsWalletSubmitting ? pt('submitting') : pt('savings_deposit_wallet_btn')}
               </button>
             </div>
           </div>
 
-          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-            <h2 className="m-0 text-lg">{pt('open_approve_title')}</h2>
+          
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('savings_apply_interest_title')}</h2>
+            <p className="mt-2 text-xs text-slate-500">
+              {pt('savings_next_interest_label')}: {savingsNextOn || '—'}
+            </p>
+            <button
+              type="button"
+              disabled={savingsInterestSubmitting}
+              onClick={async () => {
+                if (savingsInterestSubmitting) return;
+                if (!selectedChildIdForAdmin) {
+                  setError(pt('select_child_first'));
+                  return;
+                }
+                setSavingsInterestSubmitting(true);
+                try {
+                  if (!selectedSavingsAccountId) {
+                    setError(pt('savings_select_account'));
+                    return;
+                  }
+                  await handleAction('/api/piggy-bank/savings/apply-interest', {
+                    childId: selectedChildIdForAdmin,
+                    savingsAccountId: selectedSavingsAccountId,
+                  });
+                } catch (err: unknown) {
+                  if (!isSupabaseLockError(err)) {
+                    setError(err instanceof Error ? err.message : pt('savings_apply_interest_failed'));
+                  }
+                } finally {
+                  setSavingsInterestSubmitting(false);
+                }
+              }}
+              className={`mt-3 w-full rounded-xl border-none p-3 font-bold text-white ${
+                savingsInterestSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-emerald-600'
+              }`}
+            >
+              {savingsInterestSubmitting ? pt('submitting') : pt('savings_apply_interest_btn')}
+            </button>
+          </div>
+
+          
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('savings_withdraw_approve_title')}</h2>
             <div className="mt-3 grid max-h-[200px] gap-3 overflow-y-auto pr-1">
-              {requests.length === 0 && <p className="text-slate-400">{pt('no_pending_requests')}</p>}
-              {requests.map((req) => {
+              {savingsWithdrawRequests
+                .filter((r) => !selectedChildIdForAdmin || r.child_id === selectedChildIdForAdmin)
+                .filter((r) => r.status === 'pending').length === 0 && (
+                <p className="text-slate-400">{pt('no_pending_requests')}</p>
+              )}
+              {savingsWithdrawRequests
+                .filter((r) => !selectedChildIdForAdmin || r.child_id === selectedChildIdForAdmin)
+                .map((req) => {
                 const isInactive = req.status !== 'pending';
                 return (
                   <div
@@ -1193,32 +2021,50 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
                     <div className="font-semibold">{resolveMemberName(req.child_id)}</div>
                     <div className="mt-1 text-slate-600">{formatPiggyAmount(req.amount)}</div>
                     <div className="mt-1 text-xs text-slate-400">
-                      {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.reason || pt('reason_none')}
+                      {pt('to_wallet')} · {req.reason || pt('reason_none')}
                     </div>
-                    {isInactive && <div className="mt-1 text-xs text-slate-400">{req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}</div>}
+                    {isInactive && (
+                      <div className="mt-1 text-xs text-slate-400">
+                        {req.status === 'approved'
+                          ? pt('status_approved')
+                          : req.status === 'rejected'
+                            ? pt('status_rejected')
+                            : req.status}
+                      </div>
+                    )}
                     {!isInactive && (
-                      <div className="mt-2.5 flex gap-2">
+                      <div className="mt-2 flex gap-2">
                         <button
+                          type="button"
                           onClick={async () => {
                             try {
-                              await handleAction('/api/piggy-bank/open-approve', { requestId: req.id });
+                              await handleAction('/api/piggy-bank/savings/withdraw-approve', {
+                                requestId: req.id,
+                              });
                             } catch (err: unknown) {
-                              if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('approve_failed'));
+                              if (!isSupabaseLockError(err)) {
+                                setError(err instanceof Error ? err.message : pt('approve_failed'));
+                              }
                             }
                           }}
-                          className="flex-1 rounded-[10px] border-none bg-green-600 p-2.5 font-bold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-green-600 px-3 py-1.5 text-sm font-semibold text-white"
                         >
                           {pt('approve_btn')}
                         </button>
                         <button
+                          type="button"
                           onClick={async () => {
                             try {
-                              await handleAction('/api/piggy-bank/open-reject', { requestId: req.id });
+                              await handleAction('/api/piggy-bank/savings/withdraw-reject', {
+                                requestId: req.id,
+                              });
                             } catch (err: unknown) {
-                              if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('reject_failed'));
+                              if (!isSupabaseLockError(err)) {
+                                setError(err instanceof Error ? err.message : pt('reject_failed'));
+                              }
                             }
                           }}
-                          className="flex-1 rounded-[10px] border-none bg-gray-400 p-2.5 font-bold text-white"
+                          className="cursor-pointer rounded-lg border border-slate-300 bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700"
                         >
                           {pt('reject_btn')}
                         </button>
@@ -1229,175 +2075,393 @@ export function PiggyBankPanelContent({ onClose, initialChildId = '' }: Props) {
               })}
             </div>
           </div>
-        </>
-      ) : (
-        <>
-          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-            <h2 className="m-0 text-lg">{pt('spend_title')}</h2>
+
+          
+
+          <details className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <summary className="cursor-pointer list-none text-lg font-semibold text-slate-800 [&::-webkit-details-marker]:hidden">
+              {pt('savings_manage_title')}
+            </summary>
+            <div className="mt-4 grid gap-4">
+<div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <h2 className="m-0 text-lg">{pt('savings_add_title')}</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  {(summary?.savingsAccounts?.length ?? 0) >= MAX_PIGGY_SAVINGS_ACCOUNTS
+                    ? pt('savings_max_reached')
+                    : `${summary?.savingsAccounts?.length ?? 0}/${MAX_PIGGY_SAVINGS_ACCOUNTS}`}
+                </p>
+                <div className="mt-3 grid gap-2.5">
+                  <input
+                    value={addBankName}
+                    onChange={(e) => setAddBankName(e.target.value)}
+                    placeholder={pt('savings_bank_name_label')}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <input
+                    value={addAccountNumber}
+                    onChange={(e) => setAddAccountNumber(e.target.value)}
+                    placeholder={pt('savings_account_number_label')}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <input
+                    value={addAccountLabel}
+                    onChange={(e) => setAddAccountLabel(e.target.value)}
+                    placeholder={pt('savings_account_label_label')}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <input
+                    value={addAccountName}
+                    onChange={(e) => setAddAccountName(e.target.value)}
+                    placeholder={pt('piggy_name_title')}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <button
+                    type="button"
+                    disabled={savingsAddSubmitting || (summary?.savingsAccounts?.length ?? 0) >= MAX_PIGGY_SAVINGS_ACCOUNTS}
+                    onClick={async () => {
+                      if (savingsAddSubmitting) return;
+                      if (!selectedChildIdForAdmin) {
+                        setError(pt('select_child_first'));
+                        return;
+                      }
+                      setSavingsAddSubmitting(true);
+                      try {
+                        await handleAction('/api/piggy-bank/savings/accounts', {
+                          childId: selectedChildIdForAdmin,
+                          bankName: addBankName,
+                          accountNumber: addAccountNumber,
+                          accountLabel: addAccountLabel,
+                          name: addAccountName,
+                        });
+                        setAddBankName('');
+                        setAddAccountNumber('');
+                        setAddAccountLabel('Saving');
+                        setAddAccountName('');
+                      } catch (err: unknown) {
+                        if (!isSupabaseLockError(err)) {
+                          setError(err instanceof Error ? err.message : pt('savings_add_failed'));
+                        }
+                      } finally {
+                        setSavingsAddSubmitting(false);
+                      }
+                    }}
+                    className={`rounded-xl border-none p-3 font-bold text-white ${
+                      savingsAddSubmitting || (summary?.savingsAccounts?.length ?? 0) >= MAX_PIGGY_SAVINGS_ACCOUNTS
+                        ? 'cursor-not-allowed bg-slate-400'
+                        : 'cursor-pointer bg-indigo-500'
+                    }`}
+                  >
+                    {savingsAddSubmitting ? pt('submitting') : pt('savings_add_btn')}
+                  </button>
+                </div>
+              </div>
+
+              
+<div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <h2 className="m-0 text-lg">{pt('savings_settings_title')}</h2>
+                <div className="mt-3 grid gap-2.5">
+                  <label className="text-xs font-semibold text-slate-600">{pt('savings_bank_name_label')}</label>
+                  <input
+                    value={settingsBankName}
+                    onChange={(e) => setSettingsBankName(e.target.value)}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <label className="text-xs font-semibold text-slate-600">{pt('savings_account_number_label')}</label>
+                  <input
+                    value={settingsAccountNumber}
+                    onChange={(e) => setSettingsAccountNumber(e.target.value)}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <label className="text-xs font-semibold text-slate-600">{pt('savings_account_label_label')}</label>
+                  <input
+                    value={settingsAccountLabel}
+                    onChange={(e) => setSettingsAccountLabel(e.target.value)}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <label className="text-xs font-semibold text-slate-600">{pt('piggy_name_title')}</label>
+                  <input
+                    value={settingsAccountName}
+                    onChange={(e) => setSettingsAccountName(e.target.value)}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <label className="text-xs font-semibold text-slate-600">{pt('savings_rate_label')}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={savingsRatePercent}
+                    onChange={(e) => setSavingsRatePercent(e.target.value)}
+                    placeholder={pt('savings_rate_placeholder')}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <label className="text-xs font-semibold text-slate-600">{pt('savings_interest_day_label')}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={savingsInterestDay}
+                    onChange={(e) => setSavingsInterestDay(e.target.value)}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <label className="text-xs font-semibold text-slate-600">{pt('savings_tax_rate_label')}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={savingsTaxPercent}
+                    onChange={(e) => setSavingsTaxPercent(e.target.value)}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <label className="text-xs font-semibold text-slate-600">{pt('savings_next_interest_label')}</label>
+                  <input
+                    type="date"
+                    value={savingsNextOn}
+                    onChange={(e) => setSavingsNextOn(e.target.value)}
+                    className="rounded-[10px] border border-slate-200 p-2.5"
+                  />
+                  <button
+                    type="button"
+                    disabled={savingsSettingsSubmitting}
+                    onClick={async () => {
+                      if (savingsSettingsSubmitting) return;
+                      if (!selectedChildIdForAdmin) {
+                        setError(pt('select_child_first'));
+                        return;
+                      }
+                      if (!selectedSavingsAccountId) {
+                        setError(pt('savings_select_account'));
+                        return;
+                      }
+                      setSavingsSettingsSubmitting(true);
+                      try {
+                        const rate = Math.round(Number(savingsRatePercent) * 100);
+                        const tax = Math.round(Number(savingsTaxPercent) * 100);
+                        await handleAction('/api/piggy-bank/savings/settings', {
+                          childId: selectedChildIdForAdmin,
+                          savingsAccountId: selectedSavingsAccountId,
+                          name: settingsAccountName,
+                          bankName: settingsBankName,
+                          accountNumber: settingsAccountNumber,
+                          accountLabel: settingsAccountLabel,
+                          annualInterestRateBps: rate,
+                          interestDay: Number(savingsInterestDay),
+                          taxRateBps: tax,
+                          nextInterestOn: savingsNextOn || undefined,
+                        });
+                      } catch (err: unknown) {
+                        if (!isSupabaseLockError(err)) {
+                          setError(err instanceof Error ? err.message : pt('savings_settings_failed'));
+                        }
+                      } finally {
+                        setSavingsSettingsSubmitting(false);
+                      }
+                    }}
+                    className={`rounded-xl border-none p-3 font-bold text-white ${
+                      savingsSettingsSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-indigo-600'
+                    }`}
+                  >
+                    {savingsSettingsSubmitting ? pt('submitting') : pt('savings_settings_save')}
+                  </button>
+                </div>
+              </div>
+
+              
+            </div>
+          </details>
+
+            </>
+          )}
+          {showChildActions && (
+            <>
+{!isAdmin && (
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('savings_deposit_wallet_title')}</h2>
+            <p className="mt-1 text-xs text-slate-500">{pt('deposit_source_from_wallet')}</p>
             <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
-                value={spendAmount}
-                onChange={(e) => setSpendAmount(e.target.value)}
+                value={savingsWalletAmount}
+                onChange={(e) => setSavingsWalletAmount(e.target.value)}
                 placeholder={pt('amount_placeholder')}
                 className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
-                value={spendCategory}
-                onChange={(e) => setSpendCategory(e.target.value)}
-                placeholder={pt('category_placeholder')}
-                className="rounded-[10px] border border-slate-200 p-2.5"
-              />
-              <input
-                value={spendMemo}
-                onChange={(e) => setSpendMemo(e.target.value)}
+                value={savingsWalletMemo}
+                onChange={(e) => setSavingsWalletMemo(e.target.value)}
                 placeholder={pt('memo_placeholder')}
                 className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
-                disabled={spendSubmitting}
+                disabled={savingsWalletSubmitting}
                 onClick={async () => {
-                  if (spendSubmitting) return;
-                  setSpendSubmitting(true);
+                  if (savingsWalletSubmitting) return;
+                  if (!selectedSavingsAccountId) {
+                    setError(pt('savings_select_account'));
+                    return;
+                  }
+                  setSavingsWalletSubmitting(true);
                   try {
-                    await handleAction('/api/piggy-bank/spend', {
-                      amount: spendAmount,
-                      memo: spendMemo,
-                      category: spendCategory,
+                    await handleAction('/api/piggy-bank/savings/deposit-from-wallet', {
+                      savingsAccountId: selectedSavingsAccountId,
+                      amount: savingsWalletAmount,
+                      memo: savingsWalletMemo,
                     });
-                    setSpendAmount('');
-                    setSpendCategory('');
-                    setSpendMemo('');
+                    setSavingsWalletAmount('');
+                    setSavingsWalletMemo('');
                   } catch (err: unknown) {
-                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('spend_failed'));
+                    if (!isSupabaseLockError(err)) {
+                      setError(err instanceof Error ? err.message : pt('savings_deposit_wallet_failed'));
+                    }
                   } finally {
-                    setSpendSubmitting(false);
+                    setSavingsWalletSubmitting(false);
                   }
                 }}
                 className={`rounded-xl border-none p-3 font-bold text-white ${
-                  spendSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-sky-500'
+                  savingsWalletSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-indigo-500'
                 }`}
               >
-                {spendSubmitting ? pt('submitting') : pt('spend_btn')}
+                {savingsWalletSubmitting ? pt('submitting') : pt('savings_deposit_wallet_btn')}
               </button>
             </div>
           </div>
+)}
 
-          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-            <h2 className="m-0 text-lg">{pt('save_title')}</h2>
+          
+<div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('savings_withdraw_title')}</h2>
+            {proxyAsChild && (
+              <p className="mt-1 text-xs text-amber-700">{pt('proxy_toggle_label')} · {pt('savings_withdraw_execute_btn')}</p>
+            )}
             <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
-                value={saveAmount}
-                onChange={(e) => setSaveAmount(e.target.value)}
-                placeholder={pt('save_amount_placeholder')}
+                value={savingsWithdrawAmount}
+                onChange={(e) => setSavingsWithdrawAmount(e.target.value)}
+                placeholder={pt('savings_withdraw_request_amount')}
                 className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
-                value={saveMemo}
-                onChange={(e) => setSaveMemo(e.target.value)}
-                placeholder={pt('memo_placeholder')}
-                className="rounded-[10px] border border-slate-200 p-2.5"
-              />
-              <button
-                type="button"
-                disabled={saveSubmitting}
-                onClick={async () => {
-                  if (saveSubmitting) return;
-                  setSaveSubmitting(true);
-                  try {
-                    await handleAction('/api/piggy-bank/save', { amount: saveAmount, memo: saveMemo });
-                    setSaveAmount('');
-                    setSaveMemo('');
-                  } catch (err: unknown) {
-                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('save_failed'));
-                  } finally {
-                    setSaveSubmitting(false);
-                  }
-                }}
-                className={`rounded-xl border-none p-3 font-bold text-white ${
-                  saveSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-orange-500'
-                }`}
-              >
-                {saveSubmitting ? pt('submitting') : pt('save_btn')}
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-            <h2 className="m-0 text-lg">{pt('open_request_title')}</h2>
-            <div className="mt-3 grid gap-2.5">
-              <input
-                type="number"
-                value={openAmount}
-                onChange={(e) => setOpenAmount(e.target.value)}
-                placeholder={pt('request_amount_placeholder')}
-                className="rounded-[10px] border border-slate-200 p-2.5"
-              />
-              <select
-                value={openDestination}
-                onChange={(e) => setOpenDestination(e.target.value as 'wallet' | 'cash')}
-                className="rounded-[10px] border border-slate-200 p-2.5"
-              >
-                <option value="wallet">{pt('to_wallet')}</option>
-                <option value="cash">{pt('to_cash')}</option>
-              </select>
-              <input
-                value={openReason}
-                onChange={(e) => setOpenReason(e.target.value)}
+                value={savingsWithdrawReason}
+                onChange={(e) => setSavingsWithdrawReason(e.target.value)}
                 placeholder={pt('reason_placeholder')}
                 className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
-                disabled={openRequestSubmitting}
+                disabled={savingsWithdrawSubmitting}
                 onClick={async () => {
-                  if (openRequestSubmitting) return;
-                  setOpenRequestSubmitting(true);
+                  if (savingsWithdrawSubmitting) return;
+                  if (!selectedSavingsAccountId) {
+                    setError(pt('savings_select_account'));
+                    return;
+                  }
+                  setSavingsWithdrawSubmitting(true);
                   try {
-                    await handleAction('/api/piggy-bank/open-request', {
-                      amount: openAmount,
-                      reason: openReason,
-                      destination: openDestination,
-                    });
-                    setOpenAmount('');
-                    setOpenReason('');
+                    if (proxyAsChild) {
+                      await handleAction('/api/piggy-bank/savings/withdraw-execute', {
+                        savingsAccountId: selectedSavingsAccountId,
+                        amount: savingsWithdrawAmount,
+                        reason: savingsWithdrawReason,
+                        ...proxyPayload,
+                      });
+                    } else {
+                      await handleAction('/api/piggy-bank/savings/withdraw-request', {
+                        savingsAccountId: selectedSavingsAccountId,
+                        amount: savingsWithdrawAmount,
+                        reason: savingsWithdrawReason,
+                      });
+                    }
+                    setSavingsWithdrawAmount('');
+                    setSavingsWithdrawReason('');
                   } catch (err: unknown) {
-                    if (!isSupabaseLockError(err)) setError(err instanceof Error ? err.message : pt('open_request_failed'));
+                    if (!isSupabaseLockError(err)) {
+                      setError(err instanceof Error ? err.message : pt('savings_withdraw_failed'));
+                    }
                   } finally {
-                    setOpenRequestSubmitting(false);
+                    setSavingsWithdrawSubmitting(false);
                   }
                 }}
                 className={`rounded-xl border-none p-3 font-bold text-white ${
-                  openRequestSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-violet-600'
+                  savingsWithdrawSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-slate-700'
                 }`}
               >
-                {openRequestSubmitting ? pt('submitting') : pt('open_request_btn')}
+                {savingsWithdrawSubmitting
+                  ? pt('submitting')
+                  : proxyAsChild
+                    ? pt('savings_withdraw_execute_btn')
+                    : pt('savings_withdraw_btn')}
               </button>
             </div>
+            {savingsWithdrawRequests.length > 0 && (
+              <div className="mt-4 grid max-h-[160px] gap-2 overflow-y-auto">
+                {savingsWithdrawRequests.slice(0, 10).map((req) => (
+                  <div key={req.id} className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
+                    {formatPiggyAmount(req.amount)} ·{' '}
+                    {req.status === 'approved'
+                      ? pt('status_approved')
+                      : req.status === 'rejected'
+                        ? pt('status_rejected')
+                        : req.status === 'pending'
+                          ? pt('approval_pending')
+                          : req.status}
+                    {req.reason ? ` · ${req.reason}` : ''}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-            <div className="mt-4 grid gap-2.5">
-              {requests.length === 0 && <p className="text-slate-400">{pt('no_requests')}</p>}
-              {requests.map((req) => {
-                const isInactive = req.status !== 'pending';
+          
+            </>
+          )}
+      {/* 은행 거래 내역 (선택 계좌) */}
+      <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+        <h2 className="mb-3 mt-0 text-lg">{pt('savings_history')}</h2>
+        {(() => {
+          const visibleSavingsTx = selectedSavingsAccountId
+            ? savingsTransactions.filter(
+                (tx) => !tx.savings_account_id || tx.savings_account_id === selectedSavingsAccountId,
+              )
+            : savingsTransactions;
+          if (visibleSavingsTx.length === 0) {
+            return <p className="text-sm text-slate-400">{pt('no_savings_tx')}</p>;
+          }
+          return (
+            <div className="grid max-h-[330px] gap-2 overflow-y-auto pr-1">
+              {visibleSavingsTx.map((tx) => {
+                const isNegative = tx.type === 'withdraw_to_wallet';
                 return (
-                  <div
-                    key={req.id}
-                    className={`rounded-xl border border-slate-200 p-3 ${
-                      isInactive ? 'opacity-60 line-through' : ''
-                    }`}
-                  >
-                    <div className="font-semibold">{formatPiggyAmount(req.amount)}</div>
-                    <div className="text-xs text-slate-400">
-                      {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}
+                  <div key={tx.id} className="flex items-start justify-between rounded-xl border border-slate-200 p-3">
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="text-xs text-slate-500">{tx.dateLabel}</span>
+                        <span className="text-[13px] font-semibold text-slate-800">{tx.typeLabel}</span>
+                      </div>
+                      {tx.isProxy && tx.actor_nickname && (
+                        <div className="mb-1 text-xs text-slate-500">
+                          {tx.actor_nickname} · {pt('proxy_actor_suffix')}
+                        </div>
+                      )}
+                      {tx.memo && <div className="text-xs text-slate-400">{tx.memo}</div>}
+                      {tx.type === 'interest' && (tx.gross_amount != null || tx.tax_amount != null) && (
+                        <div className="mt-1 text-[11px] text-slate-400">
+                          {tx.gross_amount != null ? `gross ${formatPiggyAmount(tx.gross_amount)}` : ''}
+                          {tx.tax_amount != null ? ` · tax ${formatPiggyAmount(tx.tax_amount)}` : ''}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs text-slate-400">{req.reason || pt('reason_none')}</div>
+                    <div className={`text-base font-bold ${isNegative ? 'text-red-700' : 'text-green-600'}`}>
+                      {isNegative ? '-' : '+'}
+                      {formatPiggyAmount(tx.amount)}
+                    </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          );
+        })()}
+      </div>
+
+
         </>
       )}
 

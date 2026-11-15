@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
-import { ensurePiggyAccountForUser, getGroupMembers } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser, ensurePiggySavingsAccount, ensurePiggyWallet, getGroupMembers } from '@/lib/piggy-bank';
 
 /** 관리자 전용: 아이별 저금통 삭제 (해당 user의 piggy_wallets, piggy_bank_accounts 삭제) */
 export async function DELETE(request: NextRequest) {
@@ -94,7 +94,7 @@ export async function DELETE(request: NextRequest) {
         }
       }
 
-      // 2. 실제 데이터 삭제: 거래 → 지갑 → 계정 순
+      // 2. 실제 데이터 삭제: 거래 → 지갑/은행 → 계정 순
       await supabase
         .from('piggy_wallet_transactions')
         .delete()
@@ -105,7 +105,13 @@ export async function DELETE(request: NextRequest) {
         .delete()
         .eq('group_id', groupId)
         .eq('related_user_id', childId);
+      await supabase
+        .from('piggy_savings_transactions')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', childId);
       await supabase.from('piggy_wallets').delete().eq('group_id', groupId).eq('user_id', childId);
+      await supabase.from('piggy_savings_accounts').delete().eq('group_id', groupId).eq('user_id', childId);
       const { error: delAcc } = await supabase.from('piggy_bank_accounts').delete().eq('id', account.id);
       if (delAcc) throw delAcc;
     }
@@ -148,6 +154,8 @@ export async function POST(request: NextRequest) {
     }
 
     const account = await ensurePiggyAccountForUser(groupId, childId);
+    await ensurePiggyWallet(groupId, childId);
+    await ensurePiggySavingsAccount(groupId, childId);
 
     return NextResponse.json({
       success: true,

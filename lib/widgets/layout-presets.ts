@@ -58,7 +58,7 @@ export interface LayoutCoords {
 
 /**
  * size → 12열 기준 w/h 반환.
- * travel M은 전역 M보다 낮고, location M은 세로 프레임에 맞춰 더 높다.
+ * travel M은 전역 M과 동일 세로, location M은 세로 프레임에 맞춰 더 높다.
  */
 export function getPresetLayout(
   key: DashboardWidgetKey,

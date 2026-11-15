@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
-import { ensurePiggyAccountForUser, ensurePiggyWallet, getPiggyAccountForUserIfExists, getPiggyWalletForUserIfExists, getGroupMembers } from '@/lib/piggy-bank';
+import {
+  ensurePiggyWallet,
+  getPiggyAccountForUserIfExists,
+  getGroupMembers,
+  listPiggySavingsAccounts,
+} from '@/lib/piggy-bank';
+
+function savingsSummaryPayload(accounts: Awaited<ReturnType<typeof listPiggySavingsAccounts>>) {
+  const total = accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+  return {
+    savingsAccounts: accounts,
+    savings: accounts[0] ?? null,
+    savingsBalance: total,
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +42,8 @@ export async function GET(request: NextRequest) {
       // 관리자가 특정 아이 조회 시: 있으면 반환(잔고 0 포함), 없으면 null (저금통 추가 버튼용)
       const account = await getPiggyAccountForUserIfExists(groupId, childId);
       const wallet = account ? await ensurePiggyWallet(groupId, childId) : null;
-      
+      const savingsAccounts = account ? await listPiggySavingsAccounts(groupId, childId) : [];
+
       let ownerNickname: string | null = null;
       if (account?.user_id) {
         const { data: profile } = await supabase
@@ -38,7 +53,7 @@ export async function GET(request: NextRequest) {
           .single();
         ownerNickname = profile?.nickname || null;
       }
-      
+
       const { data: pendingRequests } = await supabase
         .from('piggy_open_requests')
         .select('id, child_id, amount, reason, destination, status, created_at')
@@ -53,6 +68,7 @@ export async function GET(request: NextRequest) {
           isOwner,
           account: account ? { ...account, ownerNickname } : null,
           wallet,
+          ...savingsSummaryPayload(savingsAccounts),
           pendingRequests: pendingRequests || [],
         },
       });
@@ -70,6 +86,8 @@ export async function GET(request: NextRequest) {
             return { user_id: member.user_id, ownerNickname: member.nickname || null, noAccount: true as const };
           }
           const wallet = await ensurePiggyWallet(groupId, member.user_id);
+          const savingsAccounts = await listPiggySavingsAccounts(groupId, member.user_id);
+          const savingsBalance = savingsAccounts.reduce((sum, a) => sum + (a.balance || 0), 0);
           return {
             id: account.id,
             user_id: account.user_id,
@@ -78,6 +96,8 @@ export async function GET(request: NextRequest) {
             balance: account.balance,
             currency: account.currency,
             walletBalance: wallet.balance,
+            savingsBalance,
+            savingsAccountCount: savingsAccounts.length,
             noAccount: false as const,
           };
         })
@@ -134,7 +154,8 @@ export async function GET(request: NextRequest) {
     // 일반 멤버: 저금통은 관리자가 생성해야 함. 있으면 반환(용돈 지갑은 있으면 0으로 생성), 없으면 null
     const account = await getPiggyAccountForUserIfExists(groupId, user.id);
     const wallet = account ? await ensurePiggyWallet(groupId, user.id) : null;
-    
+    const savingsAccounts = account ? await listPiggySavingsAccounts(groupId, user.id) : [];
+
     let ownerNickname: string | null = null;
     if (account?.user_id) {
       const { data: profile } = await supabase
@@ -144,7 +165,7 @@ export async function GET(request: NextRequest) {
         .single();
       ownerNickname = profile?.nickname || null;
     }
-    
+
     const { data: pendingRequests } = await supabase
       .from('piggy_open_requests')
       .select('id, child_id, amount, reason, destination, status, created_at')
@@ -173,6 +194,7 @@ export async function GET(request: NextRequest) {
         isOwner,
         account: account ? { ...account, ownerNickname } : null,
         wallet: wallet ?? null,
+        ...savingsSummaryPayload(savingsAccounts),
         pendingRequests: pendingRequests || [],
         pendingAccountRequest,
       },

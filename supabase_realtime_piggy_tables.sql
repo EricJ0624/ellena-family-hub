@@ -10,7 +10,10 @@ DECLARE
     'piggy_wallets',
     'piggy_open_requests',
     'piggy_wallet_transactions',
-    'piggy_bank_transactions'
+    'piggy_bank_transactions',
+    'piggy_savings_accounts',
+    'piggy_savings_transactions',
+    'piggy_savings_withdraw_requests'
   ];
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN

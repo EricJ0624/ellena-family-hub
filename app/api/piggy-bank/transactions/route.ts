@@ -8,6 +8,8 @@ const WALLET_TYPE_LABELS: Record<string, string> = {
   spend: '지출',
   child_save: '저금통 저축',
   withdraw_to_wallet: '개봉 → 용돈 적립',
+  deposit_to_savings: '은행 예금',
+  withdraw_from_savings: '은행 → 용돈',
 };
 
 const BANK_TYPE_LABELS: Record<string, string> = {
@@ -15,6 +17,15 @@ const BANK_TYPE_LABELS: Record<string, string> = {
   child_save: '저금통 저축',
   withdraw_to_wallet: '개봉(용돈 적립)',
   withdraw_cash: '개봉(현금 인출)',
+  deposit_to_savings: '저금통 → 은행',
+};
+
+const SAVINGS_TYPE_LABELS: Record<string, string> = {
+  deposit_from_wallet: '용돈에서 예금',
+  deposit_from_piggy: '저금통에서 예금',
+  withdraw_to_wallet: '용돈으로 인출',
+  parent_deposit: '은행 입금',
+  interest: '이자',
 };
 
 // 날짜 포맷: "n월 n일"
@@ -85,10 +96,26 @@ export async function GET(request: NextRequest) {
       throw bankError;
     }
 
+    // 2b. 은행계좌 거래 내역 조회
+    const { data: savingsTransactions, error: savingsError } = await supabase
+      .from('piggy_savings_transactions')
+      .select(
+        'id, amount, type, memo, created_at, actor_id, gross_amount, tax_amount, rate_bps_snapshot, tax_rate_bps_snapshot, savings_account_id',
+      )
+      .eq('group_id', groupId)
+      .eq('user_id', targetUserId)
+      .order('created_at', { ascending: false })
+      .range(safeOffset, safeOffset + safeLimit - 1);
+
+    if (savingsError) {
+      throw savingsError;
+    }
+
     // 3. actor_id 목록 수집 (별명 조회용)
     const actorIds = new Set<string>();
     (walletTransactions || []).forEach((tx) => actorIds.add(tx.actor_id));
     (bankTransactions || []).forEach((tx) => actorIds.add(tx.actor_id));
+    (savingsTransactions || []).forEach((tx) => actorIds.add(tx.actor_id));
 
     // 4. 별명 조회
     let actorNicknames: Record<string, string> = {};
@@ -108,6 +135,7 @@ export async function GET(request: NextRequest) {
     // 5. 응답 데이터 포맷팅 (최근 N건을 가져온 뒤, 화면에는 기입 순 오래된 것 → 최신 순으로 표시)
     const walletRowsChronological = [...(walletTransactions || [])].reverse();
     const bankRowsChronological = [...(bankTransactions || [])].reverse();
+    const savingsRowsChronological = [...(savingsTransactions || [])].reverse();
 
     const formattedWalletTransactions = walletRowsChronological.map((tx) => ({
       id: tx.id,
@@ -118,6 +146,8 @@ export async function GET(request: NextRequest) {
       created_at: tx.created_at,
       dateLabel: formatDate(tx.created_at),
       actor_nickname: actorNicknames[tx.actor_id] || '멤버',
+      actor_id: tx.actor_id,
+      isProxy: Boolean(tx.actor_id && tx.actor_id !== targetUserId),
     }));
 
     const formattedBankTransactions = bankRowsChronological.map((tx) => ({
@@ -129,6 +159,26 @@ export async function GET(request: NextRequest) {
       created_at: tx.created_at,
       dateLabel: formatDate(tx.created_at),
       actor_nickname: actorNicknames[tx.actor_id] || '멤버',
+      actor_id: tx.actor_id,
+      isProxy: Boolean(tx.actor_id && tx.actor_id !== targetUserId),
+    }));
+
+    const formattedSavingsTransactions = savingsRowsChronological.map((tx) => ({
+      id: tx.id,
+      amount: tx.amount,
+      type: tx.type,
+      typeLabel: SAVINGS_TYPE_LABELS[tx.type] || tx.type,
+      memo: tx.memo,
+      created_at: tx.created_at,
+      dateLabel: formatDate(tx.created_at),
+      actor_nickname: actorNicknames[tx.actor_id] || '멤버',
+      actor_id: tx.actor_id,
+      isProxy: Boolean(tx.actor_id && tx.actor_id !== targetUserId),
+      gross_amount: tx.gross_amount ?? null,
+      tax_amount: tx.tax_amount ?? null,
+      rate_bps_snapshot: tx.rate_bps_snapshot ?? null,
+      tax_rate_bps_snapshot: tx.tax_rate_bps_snapshot ?? null,
+      savings_account_id: tx.savings_account_id ?? null,
     }));
 
     return NextResponse.json({
@@ -136,6 +186,7 @@ export async function GET(request: NextRequest) {
       data: {
         walletTransactions: formattedWalletTransactions,
         bankTransactions: formattedBankTransactions,
+        savingsTransactions: formattedSavingsTransactions,
       },
     });
   } catch (error) {

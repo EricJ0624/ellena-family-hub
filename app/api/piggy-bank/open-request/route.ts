@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
-import { ensurePiggyAccountForUser } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser, parsePiggyAmount } from '@/lib/piggy-bank';
 import { getGroupAdminUserIds, notifyFamily } from '@/lib/notifications/notify';
-
-function parseAmount(raw: any): number | null {
-  const value = typeof raw === 'string' ? Number(raw) : raw;
-  if (!Number.isFinite(value)) return null;
-  const amount = Math.floor(value);
-  return amount > 0 ? amount : null;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'groupId가 필요합니다.' }, { status: 400 });
     }
 
-    const parsedAmount = parseAmount(amount);
+    const parsedAmount = parsePiggyAmount(amount);
     if (!parsedAmount) {
       return NextResponse.json({ error: '유효한 금액을 입력해주세요.' }, { status: 400 });
     }

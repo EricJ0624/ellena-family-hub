@@ -31,8 +31,8 @@ export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }>
   XL: { w: 12, h: 12 }, // @deprecated — L 과 동일
 };
 
-/** Travel planner M 기본 높이. 전역 M(8)보다 낮고 너비(12)는 유지. */
-export const TRAVEL_M_LAYOUT_H = 7;
+/** Travel planner M 기본 높이. 전역 M(8)과 동일 세로, 너비(12)는 유지. */
+export const TRAVEL_M_LAYOUT_H = 8;
 
 /** 여행 다이어리 M 기본 높이. 스크랩북 비율 유지하되 초기 빈 여백을 줄임. */
 export const TRAVEL_DIARY_M_LAYOUT_H = 6;
@@ -40,8 +40,8 @@ export const TRAVEL_DIARY_M_LAYOUT_H = 6;
 /** 빠른 여행 기록 M 기본 높이. 타이틀+원형 버튼(+Neo 섀도우)용으로 travel보다 짧게. */
 export const TRAVEL_QUICK_RECORD_M_LAYOUT_H = 4;
 
-/** Family Log M 기본 높이. 리본 + 카드 2줄 + 하단 버튼이 들어가는 세로. */
-export const FAMILY_LOG_M_LAYOUT_H = 10;
+/** Family Log M 기본 높이. 리본 + 카드 영역 + 하단 버튼용 세로. */
+export const FAMILY_LOG_M_LAYOUT_H = 9;
 
 /** 우리아이 성장기록 M 기본 높이. 전역 M(8)보다 세로 1칸. */
 export const BABY_GROWTH_M_LAYOUT_H = 9;

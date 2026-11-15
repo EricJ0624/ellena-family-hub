@@ -681,7 +681,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                 onKeyDown={pageIndex === 1 ? onMonthKeyDown : undefined}
                 className="relative z-[1] m-0 whitespace-nowrap text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                 style={{
-                  fontSize: monthBg ? '5.3cqmin' : '5.5cqmin',
+                  fontSize: monthBg ? '6.2cqmin' : '6.4cqmin',
                   fontWeight: 800,
                   backgroundImage: skin.navTitle,
                   backgroundColor: 'transparent',

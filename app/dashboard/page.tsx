@@ -1967,6 +1967,8 @@ export default function FamilyHub() {
             name: result.data.account.name || 'Ellena Piggy Bank',
             walletBalance: result.data.wallet?.balance ?? 0,
             bankBalance: result.data.account.balance ?? 0,
+            savingsBalance:
+              result.data.savingsBalance ?? result.data.savings?.balance ?? 0,
             ownerNickname: result.data.account.ownerNickname || null,
             currency: result.data.account.currency,
           }
@@ -7457,8 +7459,10 @@ export default function FamilyHub() {
               approve_btn: dt('piggy_approve_btn'),
               wallet_balance_label: dt('piggy_wallet_balance_label'),
               bank_balance_label: dt('piggy_bank_balance_label'),
+              savings_balance_label: dt('piggy_savings_balance_label'),
               wallet_balance_for_name: dt('piggy_wallet_balance_for_name'),
               bank_balance_for_name: dt('piggy_bank_balance_for_name'),
+              savings_balance_for_name: dt('piggy_savings_balance_for_name'),
               empty_ask_admin: dt('piggy_empty_ask_admin'),
               request_account_btn: dt('piggy_request_account_btn'),
               member: ct('member'),

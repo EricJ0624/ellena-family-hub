@@ -6,6 +6,7 @@ import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import {
   DASHBOARD_WIDGET_KEYS,
   DEFAULT_WIDGET_CONFIGS,
+  FAMILY_LOG_M_LAYOUT_H,
   TRAVEL_M_LAYOUT_H,
   TRAVEL_QUICK_RECORD_M_LAYOUT_H,
   WIDGET_LAYOUT_PRESETS,
@@ -83,17 +84,29 @@ function sanitizeDraftLayoutForSave(d: WidgetConfigDraft): Pick<
   };
 }
 
-/** 예전 전역 M(8)·이전 travel 기본(6)만 새 기본 높이로 맞춘다. 커스텀 높이는 유지. */
+/** 전역 M(8)·이전 travel 기본(7·6)만 새 기본 높이로 맞춘다. 커스텀 높이는 유지. */
 function adoptTravelDefaultHeight(h: number | null): number | null {
-  if (h === WIDGET_LAYOUT_PRESETS.M.h || h === 6) return TRAVEL_M_LAYOUT_H;
+  if (h === WIDGET_LAYOUT_PRESETS.M.h || h === 7 || h === 6) return TRAVEL_M_LAYOUT_H;
   return h;
 }
 
-/** travel 기본(7·이전 6)/전역 M(8)/이전 짧은 기본(4) → 현재 기본 높이로 채택. 커스텀은 유지. */
+/** 전역 M(8)·travel 기본(8·이전 7·6)/이전 짧은 기본(4) → 현재 기본 높이로 채택. 커스텀은 유지. */
 function adoptTravelQuickRecordDefaultHeight(h: number | null): number | null {
-  if (h === WIDGET_LAYOUT_PRESETS.M.h || h === TRAVEL_M_LAYOUT_H || h === 6 || h === 4) {
+  if (
+    h === WIDGET_LAYOUT_PRESETS.M.h ||
+    h === TRAVEL_M_LAYOUT_H ||
+    h === 7 ||
+    h === 6 ||
+    h === 4
+  ) {
     return TRAVEL_QUICK_RECORD_M_LAYOUT_H;
   }
+  return h;
+}
+
+/** 이전 family_log 기본(10)만 새 기본 높이로 맞춘다. 커스텀 높이는 유지. */
+function adoptFamilyLogDefaultHeight(h: number | null): number | null {
+  if (h === 10) return FAMILY_LOG_M_LAYOUT_H;
   return h;
 }
 
@@ -106,10 +119,12 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
     if (!found) return { ...base };
     const isTravel = found.widget_key === 'travel';
     const isQuick = found.widget_key === 'travel_quick_record';
+    const isFamilyLog = found.widget_key === 'family_log';
     const adoptH = (raw: number | null | undefined) => {
       const clamped = clampNumeric(raw, 0.001, 9999);
       if (isTravel) return adoptTravelDefaultHeight(clamped);
       if (isQuick) return adoptTravelQuickRecordDefaultHeight(clamped);
+      if (isFamilyLog) return adoptFamilyLogDefaultHeight(clamped);
       return clamped;
     };
     return {
@@ -144,7 +159,7 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   return compactDraftsLayoutCoordinates(sorted);
 }
 
-const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v6_';
+const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v7_';
 
 function cacheKey(groupId: string): string {
   return `${WIDGET_CONFIG_CACHE_PREFIX}${groupId}`;

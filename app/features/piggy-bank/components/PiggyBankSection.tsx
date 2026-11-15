@@ -56,8 +56,10 @@ interface PiggyBankSectionProps {
     approve_btn: string;
     wallet_balance_label: string;
     bank_balance_label: string;
+    savings_balance_label: string;
     wallet_balance_for_name: string;
     bank_balance_for_name: string;
+    savings_balance_for_name: string;
     empty_ask_admin: string;
     request_account_btn: string;
     member: string;
@@ -242,21 +244,29 @@ export function PiggyBankSection({
                               <span className="text-[#64748b]" style={{ fontSize: pu(4) }}>→</span>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2" style={{ gap: pu(2.5) }}>
+                          <div className="grid grid-cols-3" style={{ gap: pu(2) }}>
                             <div className="piggy-widget-metric--wallet rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2]" style={{ padding: pu(2.5) }}>
-                              <div className="text-[#b91c1c]" style={{ marginBottom: pu(1), fontSize: pu(4) }}>
+                              <div className="text-[#b91c1c]" style={{ marginBottom: pu(1), fontSize: pu(3.5) }}>
                                 {t.wallet_balance_label}
                               </div>
-                              <div className="font-bold text-[#b91c1c]" style={{ fontSize: pu(6) }}>
+                              <div className="font-bold text-[#b91c1c]" style={{ fontSize: pu(5) }}>
                                 {formatAmount(p.walletBalance ?? 0, p.currency)}
                               </div>
                             </div>
                             <div className="piggy-widget-metric--bank rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed]" style={{ padding: pu(2.5) }}>
-                              <div className="text-[#9a3412]" style={{ marginBottom: pu(1), fontSize: pu(4) }}>
+                              <div className="text-[#9a3412]" style={{ marginBottom: pu(1), fontSize: pu(3.5) }}>
                                 {t.bank_balance_label}
                               </div>
-                              <div className="font-bold text-[#9a3412]" style={{ fontSize: pu(6) }}>
+                              <div className="font-bold text-[#9a3412]" style={{ fontSize: pu(5) }}>
                                 {formatAmount(p.balance ?? 0, p.currency)}
+                              </div>
+                            </div>
+                            <div className="piggy-widget-metric--savings rounded-lg border border-solid border-[#bfdbfe] bg-[#eff6ff]" style={{ padding: pu(2.5) }}>
+                              <div className="text-[#1d4ed8]" style={{ marginBottom: pu(1), fontSize: pu(3.5) }}>
+                                {t.savings_balance_label}
+                              </div>
+                              <div className="font-bold text-[#1d4ed8]" style={{ fontSize: pu(5) }}>
+                                {formatAmount(p.savingsBalance ?? 0, p.currency)}
                               </div>
                             </div>
                           </div>
@@ -282,6 +292,14 @@ export function PiggyBankSection({
                   </div>
                   <div className="font-bold text-[#9a3412]" style={{ fontSize: pu(7) }}>
                     {formatAmount(piggySummary.bankBalance, piggySummary.currency)}
+                  </div>
+                </div>
+                <div className="piggy-widget-card rounded-xl border border-slate-200 bg-white" style={{ padding: pu(3) }}>
+                  <div className="text-[#1d4ed8]" style={{ fontSize: pu(4.5) }}>
+                    {t.savings_balance_for_name.replace(/\{name\}/g, piggyLabel)}
+                  </div>
+                  <div className="font-bold text-[#1d4ed8]" style={{ fontSize: pu(7) }}>
+                    {formatAmount(piggySummary.savingsBalance ?? 0, piggySummary.currency)}
                   </div>
                 </div>
               </div>
