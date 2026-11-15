@@ -3,7 +3,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useHorizontalPageSwipe, type PageSwipeDir } from '@/lib/hooks/useHorizontalPageSwipe';
 import { createPortal } from 'react-dom';
-import { Pencil, Star, Trash2 } from 'lucide-react';
+import { Pencil, Share2, Star, Trash2 } from 'lucide-react';
+import { imageFilesFromUrls, shareResult } from '@/lib/share/share-result';
+import { formatShareCoord } from '@/lib/share/diary-share-text';
 import { DiaryPhotoCollage } from '@/app/features/travel-diary/components/DiaryPhotoCollage';
 import { FamilyLogPhotoGallery } from './FamilyLogPhotoGallery';
 import { resolveFamilyLogSlots } from '../collage';
@@ -59,6 +61,7 @@ export function FamilyLogCardView({
   const [galleryZoomId, setGalleryZoomId] = useState<string | null>(null);
   const [receipts, setReceipts] = useState<UploadedAttachment[]>(cachedOnOpen?.receipts ?? []);
   const [deleting, setDeleting] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -267,6 +270,52 @@ export function FamilyLogCardView({
 
           <div className="mt-3 flex items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={shareBusy}
+                onClick={() => {
+                  void (async () => {
+                    setShareBusy(true);
+                    try {
+                      const lines = [card.title.trim(), card.day_date];
+                      const address = card.address?.trim();
+                      if (address) lines.push(address);
+                      const placeCoord = formatShareCoord(place.latitude, place.longitude);
+                      if (placeCoord) lines.push(placeCoord);
+                      const routeSharePoints =
+                        routePoints.length <= 24
+                          ? routePoints
+                          : Array.from({ length: 24 }, (_, index) => {
+                              const at = Math.round((index * (routePoints.length - 1)) / 23);
+                              return routePoints[at]!;
+                            });
+                      for (const point of routeSharePoints) {
+                        const step = formatShareCoord(point.latitude, point.longitude);
+                        if (step && step !== placeCoord) lines.push(step);
+                      }
+                      if (note) lines.push(note);
+                      if (card.mood_tags.length > 0) lines.push(card.mood_tags.join(' '));
+                      if (hasAmount) {
+                        lines.push(`${card.amount}${card.currency ? ` ${card.currency}` : ''}`);
+                      }
+                      const files = await imageFilesFromUrls(visiblePhotos.map((photo) => photo.image_url));
+                      await shareResult({
+                        title: card.title,
+                        text: lines.filter(Boolean).join('\n'),
+                        files,
+                      });
+                    } catch (err) {
+                      console.error('[FamilyLogCardView] share:', err);
+                    } finally {
+                      setShareBusy(false);
+                    }
+                  })();
+                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                {shareBusy ? labels.loading : labels.share}
+              </button>
               <button
                 type="button"
                 onClick={onEdit}

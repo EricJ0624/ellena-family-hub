@@ -33,6 +33,7 @@ import type {
 } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import { exportPrintAlbumPdf } from '../utils/export-print-album-pdf';
+import { shareResult } from '@/lib/share/share-result';
 import {
   FRAME_SCALE_MIN,
   FRAME_SCALE_X_MAX,
@@ -1450,6 +1451,31 @@ export function BabyPrintAlbumEditor({
     }
   };
 
+  const handleSharePdf = async () => {
+    if (selectedItems.length === 0 || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      const albumTitle = title.trim() || defaultTitle;
+      const blob = await exportPrintAlbumPdf({
+        title: albumTitle,
+        items: selectedItems,
+        bg,
+        layout,
+        photoSize,
+        showCaptions,
+        monthLabel,
+        save: false,
+      });
+      const safe = albumTitle.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60) || 'baby-album';
+      const file = new File([blob], `${safe}.pdf`, { type: 'application/pdf' });
+      await shareResult({ title: albumTitle, text: albumTitle, files: [file] });
+    } catch (err) {
+      console.error('[BabyPrintAlbumEditor] share:', err);
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   if (!open) return null;
 
   return createPortal(
@@ -1508,6 +1534,16 @@ export function BabyPrintAlbumEditor({
               className="rounded-full bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
             >
               {pdfBusy ? '...' : t.album_print_download}
+            </button>
+            <button
+              type="button"
+              disabled={selectedItems.length === 0 || pdfBusy}
+              onClick={() => {
+                void handleSharePdf();
+              }}
+              className="rounded-full bg-pink-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              {t.report_share}
             </button>
             <button
               type="button"

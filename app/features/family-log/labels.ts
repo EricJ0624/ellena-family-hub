@@ -15,6 +15,7 @@ export type FamilyLogLabels = {
   save: string;
   cancel: string;
   edit: string;
+  share: string;
   close: string;
   editTitle: string;
   locationFailed: string;
@@ -79,6 +80,7 @@ const ko: FamilyLogLabels = {
   save: '저장',
   cancel: '취소',
   edit: '편집',
+  share: '공유',
   close: '닫기',
   editTitle: '제목',
   locationFailed: '위치를 가져오지 못했습니다.',
@@ -143,6 +145,7 @@ const en: FamilyLogLabels = {
   save: 'Save',
   cancel: 'Cancel',
   edit: 'Edit',
+  share: 'Share',
   close: 'Close',
   editTitle: 'Title',
   locationFailed: 'Could not read your location.',
@@ -246,6 +249,7 @@ const ja: FamilyLogLabels = {
   save: '保存',
   cancel: 'キャンセル',
   edit: '編集',
+  share: '共有',
   close: '閉じる',
   editTitle: 'タイトル',
   locationFailed: '位置を取得できませんでした。',
@@ -310,6 +314,7 @@ const zhCN: FamilyLogLabels = {
   save: '保存',
   cancel: '取消',
   edit: '编辑',
+  share: '分享',
   close: '关闭',
   editTitle: '标题',
   locationFailed: '无法获取位置。',
@@ -369,6 +374,7 @@ const zhTW: FamilyLogLabels = {
   recording: '正在記錄動線…',
   save: '儲存',
   edit: '編輯',
+  share: '分享',
   close: '關閉',
   editTitle: '標題',
   locationFailed: '無法取得位置。',
@@ -433,6 +439,7 @@ const es: FamilyLogLabels = {
   save: 'Guardar',
   cancel: 'Cancelar',
   edit: 'Editar',
+  share: 'Compartir',
   close: 'Cerrar',
   editTitle: 'Título',
   locationFailed: 'No se pudo leer la ubicación.',
@@ -497,6 +504,7 @@ const fr: FamilyLogLabels = {
   save: 'Enregistrer',
   cancel: 'Annuler',
   edit: 'Modifier',
+  share: 'Partager',
   close: 'Fermer',
   editTitle: 'Titre',
   locationFailed: 'Position indisponible.',
@@ -561,6 +569,7 @@ const de: FamilyLogLabels = {
   save: 'Speichern',
   cancel: 'Abbrechen',
   edit: 'Bearbeiten',
+  share: 'Teilen',
   close: 'Schließen',
   editTitle: 'Titel',
   locationFailed: 'Standort nicht verfügbar.',
@@ -625,6 +634,7 @@ const it: FamilyLogLabels = {
   save: 'Salva',
   cancel: 'Annulla',
   edit: 'Modifica',
+  share: 'Condividi',
   close: 'Chiudi',
   editTitle: 'Titolo',
   locationFailed: 'Posizione non disponibile.',
@@ -689,6 +699,7 @@ const pt: FamilyLogLabels = {
   save: 'Guardar',
   cancel: 'Cancelar',
   edit: 'Editar',
+  share: 'Partilhar',
   close: 'Fechar',
   editTitle: 'Título',
   locationFailed: 'Não foi possível ler a localização.',

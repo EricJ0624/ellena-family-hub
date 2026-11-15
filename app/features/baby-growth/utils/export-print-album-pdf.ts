@@ -293,8 +293,10 @@ export async function exportPrintAlbumPdf(opts: {
   showCaptions: boolean;
   monthLabel: (n: number) => string;
   fileName?: string;
+  /** false면 저장 대화상자 없이 Blob만 돌려준다. 공유 버튼용. */
+  save?: boolean;
   onProgress?: (ratio: number) => void;
-}): Promise<void> {
+}): Promise<Blob> {
   if (opts.items.length === 0) throw new Error('no photos');
 
   const paper = PRINT_PHOTO_SIZES[opts.photoSize];
@@ -414,5 +416,8 @@ export async function exportPrintAlbumPdf(opts: {
   opts.onProgress?.(1);
   const blob = pdf.output('blob');
   const safeTitle = opts.title.trim().replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60) || 'baby-album';
-  await saveBlobLocally(blob, opts.fileName ?? `${safeTitle}.pdf`);
+  if (opts.save !== false) {
+    await saveBlobLocally(blob, opts.fileName ?? `${safeTitle}.pdf`);
+  }
+  return blob;
 }

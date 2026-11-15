@@ -11,6 +11,7 @@ import {
   type PhotoCollection,
 } from '../utils/build-photo-collections';
 import { exportSlideshowVideo } from '../utils/export-slideshow-video';
+import { imageFilesFromUrls, shareResult } from '@/lib/share/share-result';
 
 const PLAY_INTERVAL_MS = 1000;
 
@@ -31,6 +32,7 @@ export function BabyPhotoCollections({ open, onClose, photos, t }: Props) {
   const [slideEffect, setSlideEffect] = useState<SlideEffect>('fade');
   const [slideIdx, setSlideIdx] = useState(0);
   const [videoBusy, setVideoBusy] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
   const [playError, setPlayError] = useState<string | null>(null);
 
   const active: PhotoCollection | null = useMemo(
@@ -48,6 +50,7 @@ export function BabyPhotoCollections({ open, onClose, photos, t }: Props) {
       setActiveId(null);
       setSlideIdx(0);
       setVideoBusy(false);
+      setShareBusy(false);
       setPlayError(null);
     }
   }, [open]);
@@ -70,12 +73,12 @@ export function BabyPhotoCollections({ open, onClose, photos, t }: Props) {
   }, [playList.length, slideIdx]);
 
   useEffect(() => {
-    if (!active || playList.length === 0 || videoBusy) return;
+    if (!active || playList.length === 0 || videoBusy || shareBusy) return;
     const timer = setInterval(() => {
       setSlideIdx((i) => (i + 1) % playList.length);
     }, PLAY_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [active, playList.length, videoBusy]);
+  }, [active, playList.length, videoBusy, shareBusy]);
 
   const titleOf = (c: PhotoCollection) =>
     collectionTitle(c, {
@@ -84,8 +87,24 @@ export function BabyPhotoCollections({ open, onClose, photos, t }: Props) {
       month: t.album_collection_month,
     });
 
+  const handleSharePhotos = async () => {
+    if (!active || shareBusy || videoBusy || playList.length === 0) return;
+    setShareBusy(true);
+    setPlayError(null);
+    try {
+      const title = titleOf(active);
+      const files = await imageFilesFromUrls(playList.map((p) => p.imageUrl));
+      await shareResult({ title, text: title, files });
+    } catch (err) {
+      console.error('[BabyPhotoCollections] share:', err);
+      setPlayError(err instanceof Error ? err.message : t.error_save);
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
   const handleSaveVideo = async () => {
-    if (!active || videoBusy || playList.length === 0) return;
+    if (!active || videoBusy || shareBusy || playList.length === 0) return;
     setVideoBusy(true);
     setPlayError(null);
     try {
@@ -190,7 +209,17 @@ export function BabyPhotoCollections({ open, onClose, photos, t }: Props) {
             </label>
             <button
               type="button"
-              disabled={videoBusy || playList.length === 0}
+              disabled={shareBusy || videoBusy || playList.length === 0}
+              onClick={() => {
+                void handleSharePhotos();
+              }}
+              className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 disabled:opacity-50"
+            >
+              {shareBusy ? '...' : t.report_share}
+            </button>
+            <button
+              type="button"
+              disabled={videoBusy || shareBusy || playList.length === 0}
               onClick={() => {
                 void handleSaveVideo();
               }}

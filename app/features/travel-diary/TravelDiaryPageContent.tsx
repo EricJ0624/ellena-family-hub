@@ -28,6 +28,8 @@ import { DiaryHiddenSlotList } from '@/app/features/travel-diary/components/Diar
 import { DiaryHorizontalPager } from '@/app/features/travel-diary/components/DiaryHorizontalPager';
 import { TravelFieldRecordHost } from '@/app/features/travel-planner/components/TravelFieldRecordHost';
 import { getTravelTranslation } from '@/lib/translations/travel';
+import { diaryShareText } from '@/lib/share/diary-share-text';
+import { imageFilesFromUrls, shareButtonLabel, shareResult } from '@/lib/share/share-result';
 
 const API = '/api/v1/travel';
 const VIEW_MODE_KEY = 'ellena-travel-diary-view';
@@ -101,6 +103,7 @@ export function TravelDiaryPageContent({
   const [planner, setPlanner] = useState<PlannerBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [hidingAll, setHidingAll] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
@@ -261,6 +264,60 @@ export function TravelDiaryPageContent({
     if (!planner) return [];
     return buildHiddenDiarySlots(unifiedItems, hiddenEntries);
   }, [planner, unifiedItems, hiddenEntries]);
+
+  const shareDiary = useCallback(async () => {
+    if (!trip || shareBusy) return;
+    setShareBusy(true);
+    try {
+      const text = diaryShareText(
+        trip,
+        timelineSlots.map((slot) => {
+          const sourceKey =
+            slot.source_kind && slot.source_id ? `${slot.source_kind}:${slot.source_id}` : '';
+          const fb = sourceKey
+            ? feedback.find((row) => `${row.source_kind}:${row.source_id}` === sourceKey) ?? null
+            : null;
+          const linkedById = fb?.travel_expense_id
+            ? expenses.find((row) => row.id === fb.travel_expense_id) ?? null
+            : null;
+          let linked = linkedById;
+          if (!linked && sourceKey) {
+            for (const row of expenses) {
+              if (!row.source_kind || !row.source_id) continue;
+              if (`${row.source_kind}:${row.source_id}` !== sourceKey) continue;
+              if (!linked || row.diary_origin) linked = row;
+            }
+          }
+          const spend = linked && linked.entry_type !== 'addition' ? linked : null;
+          return {
+            day_date: slot.day_date,
+            title: slot.title,
+            note: slot.entry?.note,
+            moods: slot.entry?.mood_tags,
+            latitude: slot.latitude,
+            longitude: slot.longitude,
+            expense: spend ? `${spend.amount} ${spend.currency}` : null,
+          };
+        }),
+      );
+      const urls: string[] = [];
+      for (const slot of timelineSlots) {
+        const entryId = slot.entry?.id;
+        if (!entryId || !entryPhotos) continue;
+        for (const photo of entryPhotos.get(entryId) ?? []) {
+          if (photo.mime_type.startsWith('image/') && photo.image_url && photo.image_url !== 'expired') {
+            urls.push(photo.image_url);
+          }
+        }
+      }
+      const files = await imageFilesFromUrls(urls);
+      await shareResult({ title: trip.title, text, files });
+    } catch (err) {
+      console.error('[travel-diary] share:', err);
+    } finally {
+      setShareBusy(false);
+    }
+  }, [trip, shareBusy, timelineSlots, entryPhotos, feedback, expenses]);
 
   useEffect(() => {
     try {
@@ -905,6 +962,23 @@ export function TravelDiaryPageContent({
           >
             {t('diary_page_title')}
           </h1>
+          {trip ? (
+            <button
+              type="button"
+              onClick={() => {
+                void shareDiary();
+              }}
+              disabled={shareBusy}
+              className={[
+                'inline-flex cursor-pointer items-center rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                isDarkPage
+                  ? 'border-pink-300/40 bg-white/95 text-pink-600 hover:bg-white'
+                  : 'border-slate-200 bg-white text-pink-600 hover:border-pink-200 hover:bg-pink-50',
+              ].join(' ')}
+            >
+              {shareBusy ? t('loading') : shareButtonLabel(lang)}
+            </button>
+          ) : null}
           {canWrite ? (
             <button
               type="button"

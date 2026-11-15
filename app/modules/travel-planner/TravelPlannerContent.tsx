@@ -64,7 +64,9 @@ import {
   ChevronRight,
   FileDown,
   FileText,
+  Share2,
 } from 'lucide-react';
+import { shareButtonLabel, shareResult } from '@/lib/share/share-result';
 import { PlaceAutocompleteInput } from '@/app/modules/travel-planner/PlaceAutocompleteInput';
 import type { PlaceSelectResult } from '@/app/modules/travel-planner/PlaceAutocompleteInput';
 import {
@@ -2629,6 +2631,43 @@ export function TravelPlannerContent({
     })();
   }, [selectedTrip, currentGroupId, pdfBusy, getAuthHeaders, printItineraryDocument, tt]);
 
+  const shareItineraryPdf = useCallback(() => {
+    if (!selectedTrip || !currentGroupId || pdfBusy) return;
+    void (async () => {
+      setPdfBusy(true);
+      try {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/itinerary-pdf?groupId=${currentGroupId}`, {
+          method: 'POST',
+          headers,
+        });
+        if (!res.ok) {
+          let detail = `pdf ${res.status}`;
+          try {
+            const body = (await res.json()) as { error?: string };
+            if (body?.error) detail = body.error;
+          } catch {
+            /* ignore */
+          }
+          alert(`${tt('itinerary_pdf_server_failed')}\n\n${detail.slice(0, 240)}`);
+          return;
+        }
+        const blob = await res.blob();
+        const safe = selectedTrip.title.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60) || 'itinerary';
+        const file = new File([blob], `${safe}.pdf`, { type: blob.type || 'application/pdf' });
+        const destination = selectedTrip.destination?.trim() ?? '';
+        const text = [selectedTrip.title, `${selectedTrip.start_date} ~ ${selectedTrip.end_date}`, destination]
+          .filter(Boolean)
+          .join('\n');
+        await shareResult({ title: selectedTrip.title, text, files: [file] });
+      } catch (err) {
+        console.error('[itinerary-pdf] share:', err);
+      } finally {
+        setPdfBusy(false);
+      }
+    })();
+  }, [selectedTrip, currentGroupId, pdfBusy, getAuthHeaders, tt]);
+
   if (!currentGroupId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base)] p-5">
@@ -3013,6 +3052,15 @@ export function TravelPlannerContent({
                   >
                     {pdfBusy ? <Loader2 className="h-[14px] w-[14px] animate-spin" /> : <FileDown className="h-[14px] w-[14px]" />}
                     {tt('view_itinerary_pdf')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={shareItineraryPdf}
+                    disabled={pdfBusy || !selectedTrip}
+                    className="flex cursor-pointer items-center gap-1 rounded-md border-0 bg-pink-500 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                  >
+                    <Share2 className="h-[14px] w-[14px]" />
+                    {shareButtonLabel(lang)}
                   </button>
                   <button
                     type="button"
