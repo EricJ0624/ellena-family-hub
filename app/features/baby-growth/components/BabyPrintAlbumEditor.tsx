@@ -237,13 +237,8 @@ function editFrameScaleY(edit: PhotoEdit): number {
   return clampNum(edit.frameScaleY ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
 }
 
-function frameBoxPercent(
-  scaleX: number,
-  scaleY: number,
-  pageGrow = 1,
-): { width: string; height: string } {
-  const grow = Math.max(pageGrow, 1);
-  return { width: `${scaleX * 100}%`, height: `${(scaleY / grow) * 100}%` };
+function frameBoxPercent(scaleX: number, scaleY: number): { width: string; height: string } {
+  return { width: `${scaleX * 100}%`, height: `${scaleY * 100}%` };
 }
 
 /** 프레임 마스크 — 사진은 움직이고 창(하트 등)은 고정 */
@@ -602,42 +597,37 @@ function FramedPhoto({
   edit,
   selected,
   fill,
-  pageGrow = 1,
 }: {
   photo: BabyPhoto;
   edit: PhotoEdit;
   selected?: boolean;
   /** 미리보기 그리드 셀을 채움 (aspect-square 대신) */
   fill?: boolean;
-  /** 페이지를 이 배율만큼 키운 뒤의 칸 높이 기준 */
-  pageGrow?: number;
 }) {
   const frameRot = editFrameRotation(edit);
-  const box = frameBoxPercent(editFrameScaleX(edit), editFrameScaleY(edit), pageGrow);
-  const heightRatio =
-    editFrameScaleY(edit) / Math.max(pageGrow, 1);
-  const frameInset = `${((1 - heightRatio) / 2) * 100}%`;
+  const scaleX = editFrameScaleX(edit);
+  const scaleY = editFrameScaleY(edit);
+  // 세로는 칸 높이가 아니라 프레임 가로의 배수. 바깥 페이지는 그대로다.
+  const heightFromWidth = `${(scaleY / Math.max(scaleX, 0.01)) * 100}%`;
   return (
     <div
-      className={`relative overflow-hidden ${
-        fill ? 'h-full min-h-0 w-full' : 'aspect-square'
+      className={`overflow-hidden ${
+        fill ? 'absolute inset-0' : 'relative aspect-square'
       } ${selected ? 'ring-2 ring-amber-500 ring-offset-1' : ''}`}
     >
       <div
-        className={`absolute left-1/2 overflow-hidden bg-white/70 shadow-sm ${
+        className={`absolute left-1/2 top-1/2 overflow-hidden bg-white/70 shadow-sm ${
           edit.frame === 'rect' ? 'rounded-xl' : ''
         } ${selected ? '' : 'border border-white/80'}`}
         style={{
-          width: box.width,
-          top: frameInset,
-          bottom: frameInset,
-          height: 'auto',
-          transform: `translateX(-50%) rotate(${frameRot}deg)`,
+          width: `${scaleX * 100}%`,
+          transform: `translate(-50%, -50%) rotate(${frameRot}deg)`,
           ...frameMaskStyle(edit.frame),
         }}
       >
+        <div style={{ paddingTop: heightFromWidth }} />
         <div
-          className="relative h-full w-full overflow-hidden"
+          className="absolute inset-0 overflow-hidden"
           style={{ transform: `rotate(${edit.rotation}deg)` }}
         >
           {/* zoom 1 미만 여백: 같은 사진으로 프레임을 채운 블러 배경 */}
@@ -714,7 +704,6 @@ function SortableAlbumThumb({
   caption,
   hero,
   frameEditMode,
-  pageGrow = 1,
   onSelect,
   onFitChange,
 }: {
@@ -726,7 +715,6 @@ function SortableAlbumThumb({
   hero?: boolean;
   /** true: 팬/줌만 / false: DnD 정렬 */
   frameEditMode: boolean;
-  pageGrow?: number;
   onSelect: () => void;
   onFitChange: (patch: Partial<PhotoEdit>) => void;
 }) {
@@ -886,7 +874,7 @@ function SortableAlbumThumb({
           onPointerMove={frameEditMode ? onPointerMove : undefined}
           onPointerUp={frameEditMode ? onPointerUp : undefined}
           onPointerCancel={frameEditMode ? onPointerUp : undefined}
-          className={`h-full min-h-0 touch-none select-none ${
+          className={`absolute inset-0 touch-none select-none ${
             frameEditMode
               ? selected
                 ? 'cursor-grab active:cursor-grabbing'
@@ -896,7 +884,7 @@ function SortableAlbumThumb({
           style={{ WebkitUserDrag: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
           {...(frameEditMode ? {} : { ...attributes, ...listeners })}
         >
-          <FramedPhoto photo={photo} edit={edit} selected={selected} fill pageGrow={pageGrow} />
+          <FramedPhoto photo={photo} edit={edit} selected={selected} fill />
         </div>
       </div>
       {showCaption && caption ? (
@@ -1103,13 +1091,15 @@ export function BabyPrintAlbumEditor({
     };
   }, []);
 
-  // 앨범 칸 실측. 스마트폰은 높이 %가 풀리지 않아 프레임 세로가 페이지를 못 따라간다.
+  // 바깥 페이지 높이는 앨범 칸에 고정. 세로 배율은 안쪽 프레임만 키운다.
   useEffect(() => {
     if (!open) return;
     const el = albumBoxRef.current;
     if (!el) return;
     const update = () => {
-      const next = Math.round(el.clientHeight);
+      const style = getComputedStyle(el);
+      const pad = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const next = Math.max(0, Math.round(el.clientHeight - pad));
       setAlbumBoxH((prev) => (Math.abs(prev - next) < 2 ? prev : next));
     };
     update();
@@ -1201,10 +1191,6 @@ export function BabyPrintAlbumEditor({
   }, [orderedPhotos, edits]);
 
   const printPages = chunkPhotos(selectedItems, pageSizeFor(layout));
-  const albumGrow = printPages.reduce((sum, page) => {
-    const pageGrow = Math.max(1, ...page.map((photo) => editFrameScaleY(photo.edit)));
-    return sum + pageGrow;
-  }, 0);
   const gridClass =
     layout === 'grid1' ? 'grid-cols-1' : layout === 'grid3' ? 'grid-cols-3' : 'grid-cols-2';
 
@@ -1829,29 +1815,15 @@ export function BabyPrintAlbumEditor({
                 {selectedItems.length === 0 ? (
                   <p className="py-10 text-center text-sm text-slate-400">{t.album_print_empty}</p>
                 ) : (
-                  <div
-                    className="mx-auto flex w-full max-w-2xl flex-col gap-2"
-                    style={
-                      albumBoxH > 0
-                        ? {
-                            height: Math.round(albumBoxH * Math.max(albumGrow, 1)),
-                            minHeight: albumBoxH,
-                          }
-                        : { minHeight: '100%' }
-                    }
-                  >
+                  <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
                     {printPages.map((page, pageIdx) => {
-                      const pageGrow = Math.max(
-                        1,
-                        ...page.map((photo) => editFrameScaleY(photo.edit)),
-                      );
                       return (
                       <section
                         key={`print-page-${pageIdx}`}
-                        className={`flex min-h-0 flex-col overflow-hidden rounded-2xl p-2 shadow-sm sm:p-3 ${
+                        className={`flex shrink-0 flex-col overflow-hidden rounded-2xl p-2 shadow-sm sm:p-3 ${
                           PRINT_BG[bg].preview
                         }`}
-                        style={{ flex: `${pageGrow} 1 0px` }}
+                        style={albumBoxH > 0 ? { height: albumBoxH } : undefined}
                       >
                         <div className="mb-2 flex shrink-0 items-baseline justify-between gap-2">
                           <h4 className="m-0 text-sm font-bold text-[#5c4630]">
@@ -1877,7 +1849,6 @@ export function BabyPrintAlbumEditor({
                               }
                               hero={layout === 'hero' && idx === 0}
                               frameEditMode={frameEditMode}
-                              pageGrow={pageGrow}
                               onSelect={() => setActiveId(photo.id)}
                               onFitChange={(patch) => patchEdit(photo.id, patch)}
                             />
