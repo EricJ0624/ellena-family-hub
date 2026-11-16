@@ -217,6 +217,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
   };
 
   const feverItems: TimelineItem[] = [];
+  const medicationItems: TimelineItem[] = [];
   for (const l of logs) {
     if (l.log_type === 'temperature' && l.temperature_celsius != null) {
       feverItems.push({
@@ -227,7 +228,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
       });
     }
     if (l.log_type === 'medication' && l.medication_name) {
-      feverItems.push({
+      medicationItems.push({
         id: `m-${l.id}`,
         at: new Date(l.logged_at).getTime(),
         label: formatTime(l.logged_at),
@@ -236,6 +237,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
     }
   }
   feverItems.sort((a, b) => a.at - b.at);
+  medicationItems.sort((a, b) => a.at - b.at);
 
   const diarrheaItems: TimelineItem[] = logs
     .filter((l) => l.log_type === 'diaper')
@@ -264,6 +266,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
     items: TimelineItem[];
   }[] = [
     { key: 'fever', title: '열', emoji: BABY_SYMPTOM_EMOJI['열'], items: feverItems },
+    { key: 'medication', title: t.log_medication, emoji: '💊', items: medicationItems },
     { key: 'diarrhea', title: '설사', emoji: BABY_SYMPTOM_EMOJI['설사'], items: diarrheaItems },
   ];
 
