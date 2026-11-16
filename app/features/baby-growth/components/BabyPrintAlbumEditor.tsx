@@ -250,6 +250,20 @@ function frameMaskStyle(frame: PrintFrame): React.CSSProperties {
 }
 
 /**
+ * zoom >= 1은 기존 min 크기 그대로.
+ * zoom < 1은 그 배치를 유지한 채 scale만 줄인다.
+ * min-width/min-height는 원본 픽셀보다 작게 만들지 못한다.
+ */
+function photoFitScale(zoom: number): { size: string; transform: string } {
+  const layoutZoom = zoom < 1 ? 1 : zoom;
+  return {
+    size: `${layoutZoom * 100}%`,
+    transform:
+      zoom < 1 ? `translate(-50%, -50%) scale(${zoom})` : 'translate(-50%, -50%)',
+  };
+}
+
+/**
  * 팬/줌 — zoom 1은 프레임 cover.
  * zoom이 1보다 작으면 cover보다 줄어 잘렸던 원본이 보이고, 빈 칸만 블러.
  */
@@ -257,7 +271,7 @@ function photoFitStyle(edit: PhotoEdit): React.CSSProperties {
   const zoom = editZoom(edit);
   const fx = editFocusX(edit);
   const fy = editFocusY(edit);
-  const size = `${zoom * 100}%`;
+  const fit = photoFitScale(zoom);
   return {
     position: 'absolute',
     zIndex: 1,
@@ -265,11 +279,11 @@ function photoFitStyle(edit: PhotoEdit): React.CSSProperties {
     top: `${fy}%`,
     width: 'auto',
     height: 'auto',
-    minWidth: size,
-    minHeight: size,
+    minWidth: fit.size,
+    minHeight: fit.size,
     maxWidth: 'none',
     maxHeight: 'none',
-    transform: 'translate(-50%, -50%)',
+    transform: fit.transform,
     willChange: 'left, top, min-width, min-height',
   };
 }
@@ -442,14 +456,15 @@ function runPrintAlbum(opts: {
           const zoom = editZoom(photo.edit);
           const fx = editFocusX(photo.edit);
           const fy = editFocusY(photo.edit);
+          const fit = photoFitScale(zoom);
           const fRot = editFrameRotation(photo.edit);
           const box = frameBoxPercent(editFrameScaleX(photo.edit), editFrameScaleY(photo.edit));
           const maskStyle = clip === 'none' ? '' : `clip-path:${clip};`;
           const src = escapeHtml(photo.imageUrl);
           const fitStyle =
             `position:absolute;z-index:1;left:${fx}%;top:${fy}%;` +
-            `width:auto;height:auto;min-width:${zoom * 100}%;min-height:${zoom * 100}%;` +
-            `max-width:none;max-height:none;transform:translate(-50%,-50%);`;
+            `width:auto;height:auto;min-width:${fit.size};min-height:${fit.size};` +
+            `max-width:none;max-height:none;transform:${fit.transform};`;
           const blurStyle =
             `position:absolute;inset:0;z-index:0;width:100%;height:100%;` +
             `object-fit:cover;transform:scale(1.2);filter:blur(2.5mm);`;
