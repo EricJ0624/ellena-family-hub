@@ -1497,9 +1497,9 @@ export function BabyPrintAlbumEditor({
     <div className="fixed inset-0 z-[10000] flex flex-col bg-black/50">
       <SoftHeartClipDefs />
       <div className="mx-auto flex h-full w-full max-w-[100rem] flex-col bg-white shadow-2xl sm:my-2 sm:h-[calc(100dvh-1rem)] sm:w-[min(98vw,100rem)] sm:rounded-2xl">
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
-          <h3 className="m-0 text-sm font-bold text-slate-800">{t.album_print}</h3>
-          <div className="flex flex-wrap items-center justify-end gap-1.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+          <h3 className="m-0 shrink-0 whitespace-nowrap text-sm font-bold text-slate-800">{t.album_print}</h3>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
             {currentGroupId ? (
               <button
                 type="button"
