@@ -111,6 +111,7 @@ export type BabyGrowthTranslations = {
   album_print_edit_mode: string;
   album_print_edit_mode_hint: string;
   album_print_empty: string;
+  album_print_image_failed: string;
   album_print_no_saved: string;
   album_print_photo_size: string;
   album_print_size_mini: string;
@@ -371,6 +372,7 @@ const ko: BabyGrowthTranslations = {
   album_print_edit_mode: '편집 모드',
   album_print_edit_mode_hint: '끄기: 넣고 빼기·순서 / 켜기: 확대·이동',
   album_print_empty: '인쇄할 사진을 선택하세요.',
+  album_print_image_failed: '사진을 불러오지 못해 출력본을 만들지 못했습니다.',
   album_print_no_saved: '저장된 가족 앨범이 없습니다.',
   album_print_photo_size: '사진 크기',
   album_print_size_mini: '미니 2×3',
@@ -611,6 +613,7 @@ const en: BabyGrowthTranslations = {
   album_print_edit_mode: 'Edit mode',
   album_print_edit_mode_hint: 'Off: arrange / On: pan & zoom',
   album_print_empty: 'Select photos to print.',
+  album_print_image_failed: 'A photo could not be loaded, so the print file was not created.',
   album_print_no_saved: 'No saved family albums yet.',
   album_print_photo_size: 'Photo size',
   album_print_size_mini: 'Mini 2×3',
@@ -851,6 +854,7 @@ const ja: BabyGrowthTranslations = {
   album_print_edit_mode: '編集モード',
   album_print_edit_mode_hint: 'オフ: 並べ替え / オン: 拡大・移動',
   album_print_empty: '印刷する写真を選んでください。',
+  album_print_image_failed: '写真を読み込めなかったため、出力を作れませんでした。',
   album_print_no_saved: '保存された家族アルバムはありません。',
   album_print_photo_size: '写真サイズ',
   album_print_size_mini: 'ミニ 2×3',
@@ -1094,6 +1098,7 @@ const zhCN: BabyGrowthTranslations = {
   album_print_edit_mode: '编辑模式',
   album_print_edit_mode_hint: '关: 整理 / 开: 缩放移动',
   album_print_empty: '请选择要打印的照片。',
+  album_print_image_failed: '有照片未能加载，因此没有生成输出。',
   album_print_no_saved: '还没有已保存的家庭相册。',
   album_print_photo_size: '照片尺寸',
   album_print_size_mini: '迷你 2×3',
@@ -1332,6 +1337,7 @@ const zhTW: BabyGrowthTranslations = {
   album_print_edit_mode: '編輯模式',
   album_print_edit_mode_hint: '關: 整理 / 開: 縮放移動',
   album_print_empty: '請選擇要列印的照片。',
+  album_print_image_failed: '有照片未能載入，因此沒有產生輸出。',
   album_print_no_saved: '尚無已儲存的家庭相簿。',
   album_print_photo_size: '照片尺寸',
   album_print_size_mini: '迷你 2×3',
@@ -1570,6 +1576,7 @@ const es: BabyGrowthTranslations = {
   album_print_edit_mode: 'Modo edición',
   album_print_edit_mode_hint: 'Off: ordenar / On: mover y zoom',
   album_print_empty: 'Elige fotos para imprimir.',
+  album_print_image_failed: 'No se pudo cargar una foto, así que no se creó la impresión.',
   album_print_no_saved: 'Aún no hay álbumes familiares.',
   album_print_photo_size: 'Tamaño',
   album_print_size_mini: 'Mini 2×3',
@@ -1808,6 +1815,7 @@ const fr: BabyGrowthTranslations = {
   album_print_edit_mode: 'Mode édition',
   album_print_edit_mode_hint: 'Off: ranger / On: cadrer',
   album_print_empty: 'Sélectionnez des photos.',
+  album_print_image_failed: "Une photo n'a pas pu être chargée, l'impression n'a pas été créée.",
   album_print_no_saved: 'Aucun album famille enregistré.',
   album_print_photo_size: 'Taille',
   album_print_size_mini: 'Mini 2×3',
@@ -2046,6 +2054,7 @@ const de: BabyGrowthTranslations = {
   album_print_edit_mode: 'Bearbeiten',
   album_print_edit_mode_hint: 'Aus: anordnen / An: zoomen',
   album_print_empty: 'Fotos zum Drucken wählen.',
+  album_print_image_failed: 'Ein Foto konnte nicht geladen werden, daher wurde kein Druck erstellt.',
   album_print_no_saved: 'Noch keine Familienalben.',
   album_print_photo_size: 'Fotogröße',
   album_print_size_mini: 'Mini 2×3',
@@ -2284,6 +2293,7 @@ const it: BabyGrowthTranslations = {
   album_print_edit_mode: 'Modalità modifica',
   album_print_edit_mode_hint: 'Off: ordina / On: sposta e zoom',
   album_print_empty: 'Seleziona le foto da stampare.',
+  album_print_image_failed: 'Non è stato possibile caricare una foto, quindi la stampa non è stata creata.',
   album_print_no_saved: 'Nessun album famiglia salvato.',
   album_print_photo_size: 'Formato',
   album_print_size_mini: 'Mini 2×3',
@@ -2522,6 +2532,7 @@ const pt: BabyGrowthTranslations = {
   album_print_edit_mode: 'Modo edição',
   album_print_edit_mode_hint: 'Off: organizar / On: mover e zoom',
   album_print_empty: 'Selecione fotos para imprimir.',
+  album_print_image_failed: 'Não foi possível carregar uma foto, por isso a impressão não foi criada.',
   album_print_no_saved: 'Ainda não há álbuns da família.',
   album_print_photo_size: 'Tamanho',
   album_print_size_mini: 'Mini 2×3',

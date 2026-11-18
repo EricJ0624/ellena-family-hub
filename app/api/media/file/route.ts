@@ -43,8 +43,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: '열 수 없는 파일입니다.' }, { status: 403 });
   }
 
+  // raw=1: 인쇄·PDF 캔버스용 같은 출처 바이트. 화면 <img>는 기존 CloudFront 302를 유지한다.
+  const wantBytes = request.nextUrl.searchParams.get('raw') === '1';
   const cloudfrontDomain = process.env.AWS_CLOUDFRONT_DOMAIN || process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
-  if (cloudfrontDomain) {
+  if (!wantBytes && cloudfrontDomain) {
     const unsignedUrl = generatePublicAssetUrl(s3Key);
     const signer = resolveCloudFrontSigner();
     if (signer === 'incomplete') {

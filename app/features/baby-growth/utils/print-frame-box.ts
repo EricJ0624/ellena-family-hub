@@ -1,6 +1,17 @@
-import type { BabyPrintAlbum } from '../types';
+import type { BabyPrintAlbum, BabyPrintPhotoSize } from '../types';
 
 type PrintLayout = BabyPrintAlbum['layout'];
+
+/** 출력 규격 (가로×세로 mm, 세로 인화). 미리보기 비율과 PDF·인쇄가 이 표만 쓴다. */
+export const PRINT_PHOTO_SIZES: Record<BabyPrintPhotoSize, { wMm: number; hMm: number }> = {
+  mini_2x3: { wMm: 50.8, hMm: 76.2 },
+  small_3_5x5: { wMm: 88.9, hMm: 127 },
+  std_4x6: { wMm: 101.6, hMm: 152.4 },
+  large_5x7: { wMm: 127, hMm: 177.8 },
+  xl_8x10: { wMm: 203.2, hMm: 254 },
+};
+
+export const PRINT_PHOTO_SIZE_KEYS = Object.keys(PRINT_PHOTO_SIZES) as BabyPrintPhotoSize[];
 
 /** 페이지당 장수. 배치만 따르고 용지 크기와는 분리한다. */
 export function pageSizeFor(layout: PrintLayout): number {

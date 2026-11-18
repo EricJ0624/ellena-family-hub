@@ -32,12 +32,14 @@ import type {
   BabyPrintPhotoSize,
 } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
-import { exportPrintAlbumPdf } from '../utils/export-print-album-pdf';
+import { exportPrintAlbumPdf, printPrintAlbum } from '../utils/export-print-album-pdf';
 import { shareResult } from '@/lib/share/share-result';
 import {
   FRAME_SCALE_MIN,
   FRAME_SCALE_X_MAX,
   FRAME_SCALE_Y_MAX,
+  PRINT_PHOTO_SIZES,
+  PRINT_PHOTO_SIZE_KEYS,
   chunkPhotos,
   pageSizeFor,
 } from '../utils/print-frame-box';
@@ -68,49 +70,25 @@ type PrintFrame = BabyPrintPhotoEdit['frame'];
 type PhotoEdit = BabyPrintPhotoEdit;
 type FlashTarget = 'family' | null;
 
-/** 출력 규격 (가로×세로 mm, 세로 인화) */
-const PRINT_PHOTO_SIZES: Record<
-  BabyPrintPhotoSize,
-  { wMm: number; hMm: number; marginMm: number }
-> = {
-  mini_2x3: { wMm: 50.8, hMm: 76.2, marginMm: 3 },
-  small_3_5x5: { wMm: 88.9, hMm: 127, marginMm: 4 },
-  std_4x6: { wMm: 101.6, hMm: 152.4, marginMm: 5 },
-  large_5x7: { wMm: 127, hMm: 177.8, marginMm: 6 },
-  xl_8x10: { wMm: 203.2, hMm: 254, marginMm: 8 },
-};
-
-const PHOTO_SIZE_KEYS: BabyPrintPhotoSize[] = [
-  'mini_2x3',
-  'small_3_5x5',
-  'std_4x6',
-  'large_5x7',
-  'xl_8x10',
-];
-
 function isPhotoSize(v: unknown): v is BabyPrintPhotoSize {
-  return typeof v === 'string' && PHOTO_SIZE_KEYS.includes(v as BabyPrintPhotoSize);
+  return typeof v === 'string' && PRINT_PHOTO_SIZE_KEYS.includes(v as BabyPrintPhotoSize);
 }
 
-const PRINT_BG: Record<PrintBgKey, { preview: string; print: string; swatch: string }> = {
+const PRINT_BG: Record<PrintBgKey, { preview: string; swatch: string }> = {
   cream: {
     preview: 'bg-[linear-gradient(160deg,#fbf6ec_0%,#f3e8d4_55%,#efe2cc_100%)]',
-    print: 'linear-gradient(160deg,#fbf6ec 0%,#f3e8d4 55%,#efe2cc 100%)',
     swatch: 'bg-[#f3e8d4]',
   },
   blush: {
     preview: 'bg-[linear-gradient(160deg,#fff7f5_0%,#fde8e4_55%,#f9dcd6_100%)]',
-    print: 'linear-gradient(160deg,#fff7f5 0%,#fde8e4 55%,#f9dcd6 100%)',
     swatch: 'bg-[#fde8e4]',
   },
   sage: {
     preview: 'bg-[linear-gradient(160deg,#f4f7f2_0%,#e4eee0_55%,#d7e6d1_100%)]',
-    print: 'linear-gradient(160deg,#f4f7f2 0%,#e4eee0 55%,#d7e6d1 100%)',
     swatch: 'bg-[#e4eee0]',
   },
   sky: {
     preview: 'bg-[linear-gradient(160deg,#f3f8fb_0%,#e2eef6_55%,#d4e6f2_100%)]',
-    print: 'linear-gradient(160deg,#f3f8fb 0%,#e2eef6 55%,#d4e6f2 100%)',
     swatch: 'bg-[#e2eef6]',
   },
 };
@@ -238,10 +216,6 @@ function editFrameScaleY(edit: PhotoEdit): number {
   return clampNum(edit.frameScaleY ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
 }
 
-function frameBoxPercent(scaleX: number, scaleY: number): { width: string; height: string } {
-  return { width: `${scaleX * 100}%`, height: `${scaleY * 100}%` };
-}
-
 /** 프레임 마스크 — 사진은 움직이고 창(하트 등)은 고정 */
 function frameMaskStyle(frame: PrintFrame): React.CSSProperties {
   const clip =
@@ -338,20 +312,6 @@ function placeIncludedBefore(
   return [...without.slice(0, idx), photoId, ...without.slice(idx)];
 }
 
-function colsFor(layout: PrintLayout): number {
-  if (layout === 'grid1') return 1;
-  if (layout === 'grid3') return 3;
-  return 2;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function parsePhotoEdit(raw: unknown): PhotoEdit {
   if (!raw || typeof raw !== 'object') return defaultEdit();
   const e = raw as Record<string, unknown>;
@@ -414,188 +374,6 @@ function mergePhotoState(
 
 type PrintItem = BabyPhoto & { edit: PhotoEdit };
 
-function runPrintAlbum(opts: {
-  title: string;
-  items: PrintItem[];
-  bg: PrintBgKey;
-  layout: PrintLayout;
-  photoSize: BabyPrintPhotoSize;
-  showCaptions: boolean;
-  monthLabel: (n: number) => string;
-}) {
-  const iframe = document.createElement('iframe');
-  iframe.setAttribute('aria-hidden', 'true');
-  iframe.style.cssText =
-    'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none';
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentDocument;
-  const win = iframe.contentWindow;
-  if (!doc || !win) {
-    iframe.remove();
-    return;
-  }
-
-  const paper = PRINT_PHOTO_SIZES[opts.photoSize];
-  const size = pageSizeFor(opts.layout);
-  const pages = chunkPhotos(opts.items, size);
-  const cols = colsFor(opts.layout);
-
-  const pageHtml = pages
-    .map((page, pageIdx) => {
-      const cells = page
-        .map((photo, idx) => {
-          const caption =
-            opts.showCaptions && photo.monthAge !== null
-              ? escapeHtml(opts.monthLabel(photo.monthAge))
-              : '';
-          const clip =
-            photo.edit.frame === 'heart_soft'
-              ? 'url(#print-heart-soft-clip)'
-              : FRAME_CLIP[photo.edit.frame];
-          const zoom = editZoom(photo.edit);
-          const fx = editFocusX(photo.edit);
-          const fy = editFocusY(photo.edit);
-          const fit = photoFitScale(zoom);
-          const fRot = editFrameRotation(photo.edit);
-          const box = frameBoxPercent(editFrameScaleX(photo.edit), editFrameScaleY(photo.edit));
-          const maskStyle = clip === 'none' ? '' : `clip-path:${clip};`;
-          const src = escapeHtml(photo.imageUrl);
-          const fitStyle =
-            `position:absolute;z-index:1;left:${fx}%;top:${fy}%;` +
-            `width:auto;height:auto;min-width:${fit.size};min-height:${fit.size};` +
-            `max-width:none;max-height:none;transform:${fit.transform};`;
-          const blurStyle =
-            `position:absolute;inset:0;z-index:0;width:100%;height:100%;` +
-            `object-fit:cover;transform:scale(1.2);filter:blur(2.5mm);`;
-          const radius =
-            photo.edit.frame === 'rect' ? 'border-radius:4mm;' : 'border-radius:0;';
-          const heroClass = opts.layout === 'hero' && idx === 0 ? ' cell--hero' : '';
-          const frameBox =
-            `width:${box.width};height:${box.height};` +
-            `transform:translate(-50%,-50%) rotate(${fRot}deg);${radius}${maskStyle}`;
-          return `<figure class="cell${heroClass}">
-  <div class="frame-slot">
-    <div class="frame" style="${frameBox}">
-      <div class="spin" style="transform:rotate(${photo.edit.rotation}deg)">
-        <img src="${src}" alt="" aria-hidden="true" style="${blurStyle}" />
-        <img src="${src}" alt="" style="${fitStyle}" />
-      </div>
-    </div>
-  </div>
-  ${caption ? `<figcaption>${caption}</figcaption>` : ''}
-</figure>`;
-        })
-        .join('');
-      const gridClass =
-        opts.layout === 'hero' ? 'grid grid--hero' : `grid grid--${cols}`;
-      return `<section class="page${pageIdx === pages.length - 1 ? ' page--last' : ''}">
-  <header><h1>${escapeHtml(opts.title)}</h1><span>${pageIdx + 1}/${pages.length}</span></header>
-  <div class="${gridClass}">${cells}</div>
-</section>`;
-    })
-    .join('');
-
-  doc.open();
-  doc.write(`<!doctype html><html><head><meta charset="utf-8" /><title>${escapeHtml(opts.title)}</title>
-<style>
-  @page { size: ${paper.wMm}mm ${paper.hMm}mm; margin: ${paper.marginMm}mm; }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    font-family: "Segoe UI", "Apple SD Gothic Neo", sans-serif;
-    color: #4a3f35;
-    background: ${PRINT_BG[opts.bg].print};
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .page {
-    min-height: calc(100vh - 2px);
-    padding: 10mm;
-    display: flex;
-    flex-direction: column;
-    gap: 7mm;
-    page-break-after: always;
-    break-after: page;
-  }
-  .page--last { page-break-after: auto; break-after: auto; }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  h1 { margin: 0; font-size: 18pt; font-weight: 700; letter-spacing: -0.02em; }
-  header span { font-size: 10pt; opacity: 0.55; }
-  .grid { flex: 1; display: grid; gap: 5mm; align-content: stretch; min-height: 0; }
-  .grid--1 { grid-template-columns: 1fr; grid-auto-rows: 1fr; }
-  .grid--2 { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
-  .grid--3 { grid-template-columns: 1fr 1fr 1fr; grid-auto-rows: 1fr; }
-  .grid--hero {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1.35fr 1fr 1fr;
-  }
-  .cell--hero { grid-column: 1 / -1; }
-  .cell { margin: 0; display: flex; flex-direction: column; gap: 2mm; min-height: 0; }
-  .frame-slot {
-    flex: 1;
-    min-height: 0;
-    position: relative;
-    overflow: hidden;
-  }
-  .frame {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    overflow: hidden;
-    background: rgba(255,255,255,0.72);
-    box-shadow: 0 1.2mm 3.5mm rgba(74, 63, 53, 0.12);
-    border: 0.35mm solid rgba(255,255,255,0.9);
-  }
-  .spin {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-  .spin img {
-    display: block;
-    max-width: none;
-    max-height: none;
-  }
-  figcaption { font-size: 8.5pt; font-weight: 600; opacity: 0.7; text-align: center; }
-  @media print {
-    .page { min-height: auto; height: ${paper.hMm - paper.marginMm * 2}mm; padding: ${paper.marginMm}mm; }
-    h1 { font-size: ${opts.layout === 'grid3' ? '12pt' : '14pt'}; }
-  }
-</style></head><body>
-<svg width="0" height="0" aria-hidden="true" style="position:absolute">
-  <defs>
-    <clipPath id="print-heart-soft-clip" clipPathUnits="objectBoundingBox">
-      <path d="${HEART_SOFT_PATH}" />
-    </clipPath>
-  </defs>
-</svg>
-${pageHtml}</body></html>`);
-  doc.close();
-
-  const imgs = Array.from(doc.images);
-  const wait =
-    imgs.length === 0
-      ? Promise.resolve()
-      : Promise.all(
-          imgs.map(
-            (img) =>
-              new Promise<void>((resolve) => {
-                if (img.complete) return resolve();
-                img.onload = () => resolve();
-                img.onerror = () => resolve();
-              }),
-          ),
-        );
-
-  void wait.then(() => {
-    win.focus();
-    win.print();
-    window.setTimeout(() => iframe.remove(), 1000);
-  });
-}
-
 function SoftHeartClipDefs() {
   return (
     <svg width={0} height={0} className="absolute" aria-hidden>
@@ -627,12 +405,12 @@ function FramedPhoto({
     <div
       className={`flex items-center justify-center overflow-hidden ${
         fill ? 'absolute inset-0' : 'relative aspect-square'
-      } ${selected ? 'ring-2 ring-amber-500 ring-offset-1' : ''}`}
+      }`}
     >
       <div
         className={`relative shrink-0 overflow-hidden bg-white/70 shadow-sm ${
           edit.frame === 'rect' ? 'rounded-xl' : ''
-        } ${selected ? '' : 'border border-white/80'}`}
+        } ${selected ? 'ring-2 ring-inset ring-amber-500' : 'border border-white/80'}`}
         style={{
           width: `${scaleX * 100}%`,
           transform: `rotate(${frameRot}deg)`,
@@ -1077,6 +855,8 @@ export function BabyPrintAlbumEditor({
   const [listOpen, setListOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [printBusy, setPrintBusy] = useState(false);
+  const [outputError, setOutputError] = useState<string | null>(null);
   const [activeAlbumId, setActiveAlbumId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -1203,6 +983,7 @@ export function BabyPrintAlbumEditor({
       setActiveId(initial.order[0] ?? null);
       setActiveAlbumId(null);
       setListOpen(false);
+      setOutputError(null);
       setFlashTarget(null);
       void loadFamilyAlbums();
       return;
@@ -1446,9 +1227,34 @@ export function BabyPrintAlbumEditor({
   const frameYMax = Math.max(FRAME_SCALE_MIN, frameSlotRatio);
   const frameY = activeEdit ? Math.min(editFrameScaleY(activeEdit), frameYMax) : frameYMax;
 
+  const outputBusy = pdfBusy || printBusy;
+
+  const handlePrint = async () => {
+    if (selectedItems.length === 0 || outputBusy) return;
+    setPrintBusy(true);
+    setOutputError(null);
+    try {
+      await printPrintAlbum({
+        title: title.trim() || defaultTitle,
+        items: selectedItems,
+        bg,
+        layout,
+        photoSize,
+        showCaptions,
+        monthLabel,
+      });
+    } catch (err) {
+      console.error('[BabyPrintAlbumEditor] print:', err);
+      setOutputError(t.album_print_image_failed);
+    } finally {
+      setPrintBusy(false);
+    }
+  };
+
   const handleSavePdf = async () => {
-    if (selectedItems.length === 0 || pdfBusy) return;
+    if (selectedItems.length === 0 || outputBusy) return;
     setPdfBusy(true);
+    setOutputError(null);
     try {
       await exportPrintAlbumPdf({
         title: title.trim() || defaultTitle,
@@ -1461,17 +1267,20 @@ export function BabyPrintAlbumEditor({
       });
     } catch (err) {
       console.error('[BabyPrintAlbumEditor] pdf:', err);
+      setOutputError(t.album_print_image_failed);
     } finally {
       setPdfBusy(false);
     }
   };
 
   const handleSharePdf = async () => {
-    if (selectedItems.length === 0 || pdfBusy) return;
+    if (selectedItems.length === 0 || outputBusy) return;
     setPdfBusy(true);
+    setOutputError(null);
+    const albumTitle = title.trim() || defaultTitle;
+    let blob: Blob;
     try {
-      const albumTitle = title.trim() || defaultTitle;
-      const blob = await exportPrintAlbumPdf({
+      blob = await exportPrintAlbumPdf({
         title: albumTitle,
         items: selectedItems,
         bg,
@@ -1481,6 +1290,13 @@ export function BabyPrintAlbumEditor({
         monthLabel,
         save: false,
       });
+    } catch (err) {
+      console.error('[BabyPrintAlbumEditor] share:', err);
+      setOutputError(t.album_print_image_failed);
+      setPdfBusy(false);
+      return;
+    }
+    try {
       const safe = albumTitle.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60) || 'baby-album';
       const file = new File([blob], `${safe}.pdf`, { type: 'application/pdf' });
       await shareResult({ title: albumTitle, text: albumTitle, files: [file] });
@@ -1524,25 +1340,17 @@ export function BabyPrintAlbumEditor({
             ) : null}
             <button
               type="button"
-              disabled={selectedItems.length === 0}
-              onClick={() =>
-                runPrintAlbum({
-                  title: title.trim() || defaultTitle,
-                  items: selectedItems,
-                  bg,
-                  layout,
-                  photoSize,
-                  showCaptions,
-                  monthLabel,
-                })
-              }
+              disabled={selectedItems.length === 0 || outputBusy}
+              onClick={() => {
+                void handlePrint();
+              }}
               className="rounded-full bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
             >
-              {t.album_print_action}
+              {printBusy ? '...' : t.album_print_action}
             </button>
             <button
               type="button"
-              disabled={selectedItems.length === 0 || pdfBusy}
+              disabled={selectedItems.length === 0 || outputBusy}
               onClick={() => {
                 void handleSavePdf();
               }}
@@ -1552,7 +1360,7 @@ export function BabyPrintAlbumEditor({
             </button>
             <button
               type="button"
-              disabled={selectedItems.length === 0 || pdfBusy}
+              disabled={selectedItems.length === 0 || outputBusy}
               onClick={() => {
                 void handleSharePdf();
               }}
@@ -1569,6 +1377,10 @@ export function BabyPrintAlbumEditor({
             </button>
           </div>
         </div>
+
+        {outputError ? (
+          <p className="m-0 shrink-0 bg-rose-50 px-4 py-2 text-xs font-medium text-rose-700">{outputError}</p>
+        ) : null}
 
         {listOpen ? (
           <div className="shrink-0 border-b border-slate-100 bg-slate-50 px-4 py-3">
@@ -1691,7 +1503,7 @@ export function BabyPrintAlbumEditor({
 
             <span className="text-[11px] font-semibold text-slate-500">{t.album_print_photo_size}</span>
             <div className="flex flex-wrap gap-1">
-              {PHOTO_SIZE_KEYS.map((key) => (
+              {PRINT_PHOTO_SIZE_KEYS.map((key) => (
                 <button
                   key={key}
                   type="button"

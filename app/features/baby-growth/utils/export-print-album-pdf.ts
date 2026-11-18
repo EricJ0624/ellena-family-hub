@@ -6,6 +6,7 @@ import {
   FRAME_SCALE_MIN,
   FRAME_SCALE_X_MAX,
   FRAME_SCALE_Y_MAX,
+  PRINT_PHOTO_SIZES,
   chunkPhotos,
   pageSizeFor,
 } from './print-frame-box';
@@ -14,56 +15,41 @@ type PrintBgKey = BabyPrintAlbum['bg'];
 type PrintLayout = BabyPrintAlbum['layout'];
 type PrintItem = BabyPhoto & { edit: BabyPrintPhotoEdit };
 
-const PRINT_PHOTO_SIZES: Record<
-  BabyPrintPhotoSize,
-  { wMm: number; hMm: number; marginMm: number }
-> = {
-  mini_2x3: { wMm: 50.8, hMm: 76.2, marginMm: 3 },
-  small_3_5x5: { wMm: 88.9, hMm: 127, marginMm: 4 },
-  std_4x6: { wMm: 101.6, hMm: 152.4, marginMm: 5 },
-  large_5x7: { wMm: 127, hMm: 177.8, marginMm: 6 },
-  xl_8x10: { wMm: 203.2, hMm: 254, marginMm: 8 },
+/** 보통 4×6 세로를 기준으로 글자·간격을 용지 높이에 비례시킨다. */
+const STD_PAGE_H_MM = PRINT_PHOTO_SIZES.std_4x6.hMm;
+/** 화면 카드 안쪽 여백과 같은 비율. 용지마다 mm를 고정하면 미니 사진이 더 작아진다. */
+const PAGE_INSET_RATIO = 0.024;
+
+const PRINT_BG: Record<PrintBgKey, [string, string, string]> = {
+  cream: ['#fbf6ec', '#f3e8d4', '#efe2cc'],
+  blush: ['#fff7f5', '#fde8e4', '#f9dcd6'],
+  sage: ['#f4f7f2', '#e4eee0', '#d7e6d1'],
+  sky: ['#f3f8fb', '#e2eef6', '#d4e6f2'],
 };
 
-const PRINT_BG: Record<PrintBgKey, string> = {
-  cream: '#f3e8d4',
-  blush: '#fde8e4',
-  sage: '#e4eee0',
-  sky: '#e2eef6',
-};
+/** 화면 <img>용 302는 유지하고, 캔버스에 그릴 때만 같은 출처 바이트를 받는다. */
+function canvasImageUrl(src: string): string {
+  if (!src.startsWith('/api/media/file')) return src;
+  if (/[?&]raw=1(?:&|$)/.test(src)) return src;
+  return `${src}${src.includes('?') ? '&' : '?'}raw=1`;
+}
 
-async function loadImageDataUrl(src: string): Promise<string> {
+async function loadImageElement(src: string): Promise<{ img: HTMLImageElement; done: () => void }> {
+  const res = await fetch(canvasImageUrl(src), { credentials: 'include' });
+  if (!res.ok) throw new Error('image fetch failed');
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
   try {
-    const res = await fetch(src, { credentials: 'include' });
-    if (!res.ok) throw new Error('fetch failed');
-    const blob = await res.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error('read failed'));
-      reader.readAsDataURL(blob);
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('image decode failed'));
+      el.src = objectUrl;
     });
-  } catch {
-    // fallback: try direct (may taint / fail)
-    return await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        const c = document.createElement('canvas');
-        c.width = img.naturalWidth;
-        c.height = img.naturalHeight;
-        const ctx = c.getContext('2d');
-        if (!ctx) return reject(new Error('canvas'));
-        ctx.drawImage(img, 0, 0);
-        try {
-          resolve(c.toDataURL('image/jpeg', 0.92));
-        } catch (e) {
-          reject(e);
-        }
-      };
-      img.onerror = () => reject(new Error('image load failed'));
-      img.src = src;
-    });
+    return { img, done: () => URL.revokeObjectURL(objectUrl) };
+  } catch (err) {
+    URL.revokeObjectURL(objectUrl);
+    throw err;
   }
 }
 
@@ -129,13 +115,55 @@ function drawCover(
   ctx.restore();
 }
 
-async function dataUrlToImage(dataUrl: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('image decode failed'));
-    img.src = dataUrl;
-  });
+function layoutMetrics(paper: { wMm: number; hMm: number }, showCaptions: boolean) {
+  const scale = paper.hMm / STD_PAGE_H_MM;
+  return {
+    margin: paper.wMm * PAGE_INSET_RATIO,
+    gap: 2.5 * scale,
+    headerH: 8 * scale,
+    captionH: showCaptions ? 4 * scale : 0,
+    titleMm: 4.2 * scale,
+    pageNumMm: 2.8 * scale,
+    captionMm: 2.6 * scale,
+    captionGapMm: 1.2 * scale,
+  };
+}
+
+function fillPaperBackground(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  stops: [string, string, string],
+) {
+  const rad = (160 * Math.PI) / 180;
+  const dx = Math.sin(rad);
+  const dy = -Math.cos(rad);
+  const len = Math.abs(width * dx) + Math.abs(height * dy);
+  const cx = width / 2;
+  const cy = height / 2;
+  const grad = ctx.createLinearGradient(cx - (dx * len) / 2, cy - (dy * len) / 2, cx + (dx * len) / 2, cy + (dy * len) / 2);
+  grad.addColorStop(0, stops[0]);
+  grad.addColorStop(0.55, stops[1]);
+  grad.addColorStop(1, stops[2]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, height);
+}
+
+function fitCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (maxWidth <= 0) return '';
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  const ellipsis = '…';
+  let end = text.length;
+  while (end > 0 && ctx.measureText(`${text.slice(0, end)}${ellipsis}`).width > maxWidth) end -= 1;
+  return end > 0 ? `${text.slice(0, end)}${ellipsis}` : '';
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 type SaveFilePickerWindow = Window & {
@@ -148,7 +176,7 @@ type SaveFilePickerWindow = Window & {
 };
 
 /** PC는 가능하면 저장 위치 선택, 그 외·스마트폰은 다운로드 */
-export async function saveBlobLocally(blob: Blob, fileName: string): Promise<void> {
+async function saveBlobLocally(blob: Blob, fileName: string): Promise<void> {
   const w = window as SaveFilePickerWindow;
   if (typeof w.showSaveFilePicker === 'function') {
     try {
@@ -236,6 +264,11 @@ function traceFrame(ctx: CanvasRenderingContext2D, frame: PrintFrame, w: number,
     ctx.closePath();
     return;
   }
+  const radius = Math.min(w, h) * 0.06;
+  if (frame === 'rect' && typeof ctx.roundRect === 'function') {
+    ctx.roundRect(-w / 2, -h / 2, w, h, radius);
+    return;
+  }
   ctx.rect(-w / 2, -h / 2, w, h);
 }
 
@@ -284,7 +317,7 @@ function cellRects(
   return rects;
 }
 
-export async function exportPrintAlbumPdf(opts: {
+type AlbumPageOpts = {
   title: string;
   items: PrintItem[];
   bg: PrintBgKey;
@@ -292,80 +325,114 @@ export async function exportPrintAlbumPdf(opts: {
   photoSize: BabyPrintPhotoSize;
   showCaptions: boolean;
   monthLabel: (n: number) => string;
-  fileName?: string;
-  /** false면 저장 대화상자 없이 Blob만 돌려준다. 공유 버튼용. */
-  save?: boolean;
   onProgress?: (ratio: number) => void;
-}): Promise<Blob> {
+};
+
+function waitForPrintImages(imgs: HTMLImageElement[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (imgs.length === 0) {
+      reject(new Error('print image failed'));
+      return;
+    }
+    let settled = false;
+    let pending = imgs.length;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      if (!ok) {
+        settled = true;
+        window.clearTimeout(timer);
+        reject(new Error('print image failed'));
+        return;
+      }
+      pending -= 1;
+      if (pending > 0) return;
+      settled = true;
+      window.clearTimeout(timer);
+      resolve();
+    };
+    const timer = window.setTimeout(() => finish(false), 15000);
+    for (const img of imgs) {
+      if (img.complete) {
+        finish(img.naturalWidth > 0);
+        continue;
+      }
+      img.onload = () => finish(true);
+      img.onerror = () => finish(false);
+    }
+  });
+}
+
+function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) reject(new Error('canvas'));
+      else resolve(blob);
+    }, 'image/jpeg', 0.92);
+  });
+}
+
+/** 인쇄와 PDF가 같이 쓰는 용지 페이지. 여백은 페이지 안에 한 번만 들어간다. */
+async function renderPrintAlbumCanvases(opts: AlbumPageOpts): Promise<HTMLCanvasElement[]> {
   if (opts.items.length === 0) throw new Error('no photos');
 
   const paper = PRINT_PHOTO_SIZES[opts.photoSize];
+  const metrics = layoutMetrics(paper, opts.showCaptions);
   const pages = chunkPhotos(opts.items, pageSizeFor(opts.layout));
-  const pdf = new jsPDF({
-    unit: 'mm',
-    format: [paper.wMm, paper.hMm],
-    orientation: paper.wMm >= paper.hMm ? 'landscape' : 'portrait',
-  });
-
-  const margin = paper.marginMm;
-  const gap = 2.5;
-  const headerH = 8;
-  const captionH = opts.showCaptions ? 4 : 0;
-  const dpi = 2; // canvas sharpness
-  const bg = PRINT_BG[opts.bg];
+  const dpi = 2;
+  const canvases: HTMLCanvasElement[] = [];
 
   for (let pageIdx = 0; pageIdx < pages.length; pageIdx += 1) {
     opts.onProgress?.(pageIdx / pages.length);
-    if (pageIdx > 0) pdf.addPage([paper.wMm, paper.hMm], paper.wMm >= paper.hMm ? 'landscape' : 'portrait');
-
     const page = pages[pageIdx]!;
-    const contentW = paper.wMm - margin * 2;
-    const contentH = paper.hMm - margin * 2;
-    const gridY = margin + headerH;
-    const gridH = contentH - headerH - 1;
+    const contentW = paper.wMm - metrics.margin * 2;
+    const contentH = paper.hMm - metrics.margin * 2;
+    const gridY = metrics.margin + metrics.headerH;
+    const gridH = contentH - metrics.headerH - metrics.captionGapMm;
 
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(paper.wMm * 96 * dpi / 25.4);
-    canvas.height = Math.round(paper.hMm * 96 * dpi / 25.4);
+    canvas.width = Math.round((paper.wMm * 96 * dpi) / 25.4);
+    canvas.height = Math.round((paper.hMm * 96 * dpi) / 25.4);
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('canvas unsupported');
 
     const sx = canvas.width / paper.wMm;
     const sy = canvas.height / paper.hMm;
 
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    fillPaperBackground(ctx, canvas.width, canvas.height, PRINT_BG[opts.bg]);
 
     ctx.fillStyle = '#4a3f35';
-    ctx.font = `bold ${Math.round(4.2 * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
     ctx.textBaseline = 'top';
-    ctx.fillText(opts.title, margin * sx, margin * sy);
-    ctx.font = `${Math.round(2.8 * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
-    ctx.globalAlpha = 0.55;
+    ctx.font = `${Math.round(metrics.pageNumMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
     const pageLabel = `${pageIdx + 1}/${pages.length}`;
     const labelW = ctx.measureText(pageLabel).width;
-    ctx.fillText(pageLabel, canvas.width - margin * sx - labelW, margin * sy);
+    ctx.font = `bold ${Math.round(metrics.titleMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
+    const titleMax = canvas.width - metrics.margin * sx * 2 - labelW - 2 * sx;
+    ctx.fillText(fitCanvasText(ctx, opts.title, titleMax), metrics.margin * sx, metrics.margin * sy);
+    ctx.font = `${Math.round(metrics.pageNumMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
+    ctx.globalAlpha = 0.55;
+    ctx.fillText(pageLabel, canvas.width - metrics.margin * sx - labelW, metrics.margin * sy);
     ctx.globalAlpha = 1;
 
-    const rects = cellRects(opts.layout, page.length, margin, gridY, contentW, gridH, gap);
+    const rects = cellRects(opts.layout, page.length, metrics.margin, gridY, contentW, gridH, metrics.gap);
 
     for (let i = 0; i < page.length; i += 1) {
       const photo = page[i]!;
       const rect = rects[i];
       if (!rect) continue;
-      const photoH = Math.max(4, rect.h - captionH);
+      const photoH = Math.max(0, rect.h - metrics.captionH);
       const px = rect.x * sx;
       const py = rect.y * sy;
       const pw = rect.w * sx;
       const ph = photoH * sy;
+      // 화면과 같게: 프레임 크기는 칸 너비 기준이고, 칸 안에서 가운데 정렬된다.
+      const scaleX = clampNum(photo.edit.frameScaleX ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_X_MAX);
+      const scaleY = clampNum(photo.edit.frameScaleY ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
+      const fw = pw * scaleX;
+      const fh = fw * (scaleY / Math.max(scaleX, 0.01));
 
+      const loaded = await loadImageElement(photo.imageUrl);
       try {
-        const dataUrl = await loadImageDataUrl(photo.imageUrl);
-        const img = await dataUrlToImage(dataUrl);
-        const fw =
-          pw * clampNum(photo.edit.frameScaleX ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_X_MAX);
-        const fh =
-          ph * clampNum(photo.edit.frameScaleY ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
+        const img = loaded.img;
         const frameRot = ((photo.edit.frameRotation ?? 0) * Math.PI) / 180;
         const photoRot = (photo.edit.rotation * Math.PI) / 180;
         ctx.save();
@@ -377,6 +444,8 @@ export async function exportPrintAlbumPdf(opts: {
         traceFrame(ctx, photo.edit.frame, fw, fh);
         ctx.fillStyle = 'rgba(255,255,255,0.72)';
         ctx.fill();
+        ctx.save();
+        traceFrame(ctx, photo.edit.frame, fw, fh);
         ctx.clip();
         ctx.rotate(photoRot);
         drawCover(
@@ -391,29 +460,111 @@ export async function exportPrintAlbumPdf(opts: {
           photo.edit.zoom ?? 1,
         );
         ctx.restore();
-      } catch {
-        ctx.fillStyle = '#ccc';
-        ctx.fillRect(px, py, pw, ph);
+        traceFrame(ctx, photo.edit.frame, fw, fh);
+        ctx.lineWidth = Math.max(1, 0.35 * sx);
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.stroke();
+        ctx.restore();
+      } finally {
+        loaded.done();
       }
 
       if (opts.showCaptions && photo.monthAge != null) {
         ctx.fillStyle = 'rgba(74,63,53,0.7)';
-        ctx.font = `600 ${Math.round(2.6 * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
+        ctx.font = `600 ${Math.round(metrics.captionMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(
-          opts.monthLabel(photo.monthAge),
-          px + pw / 2,
-          py + ph + 1.2 * sy,
-        );
+        ctx.fillText(opts.monthLabel(photo.monthAge), px + pw / 2, py + ph + metrics.captionGapMm * sy);
         ctx.textAlign = 'left';
       }
     }
 
-    const jpeg = canvas.toDataURL('image/jpeg', 0.92);
-    pdf.addImage(jpeg, 'JPEG', 0, 0, paper.wMm, paper.hMm);
+    canvases.push(canvas);
   }
 
   opts.onProgress?.(1);
+  return canvases;
+}
+
+/** 같은 페이지 그림을 선택한 용지 크기로 인쇄한다. 미리보기가 닫히면 프레임을 치운다. */
+export async function printPrintAlbum(opts: AlbumPageOpts): Promise<void> {
+  const paper = PRINT_PHOTO_SIZES[opts.photoSize];
+  const canvases = await renderPrintAlbumCanvases(opts);
+  const blobs = await Promise.all(canvases.map((canvas) => canvasToJpegBlob(canvas)));
+  const urls = blobs.map((blob) => URL.createObjectURL(blob));
+
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = `position:fixed;left:-12000px;top:0;width:${paper.wMm}mm;height:${paper.hMm}mm;border:0;pointer-events:none;`;
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  const win = iframe.contentWindow;
+  let removed = false;
+  const cleanup = () => {
+    if (removed) return;
+    removed = true;
+    urls.forEach((url) => URL.revokeObjectURL(url));
+    iframe.remove();
+  };
+  if (!doc || !win) {
+    cleanup();
+    throw new Error('print frame failed');
+  }
+
+  const images = urls.map((url) => `<img src="${url}" alt="" />`).join('');
+  doc.open();
+  doc.write(`<!doctype html><html><head><meta charset="utf-8" /><title>${escapeHtml(opts.title)}</title>
+<style>
+  @page { size: ${paper.wMm}mm ${paper.hMm}mm; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  img { display: block; width: ${paper.wMm}mm; height: ${paper.hMm}mm; page-break-after: always; break-after: page; }
+  img:last-child { page-break-after: auto; break-after: auto; }
+</style></head><body>${images}</body></html>`);
+  doc.close();
+
+  const imgs = Array.from(doc.images);
+  try {
+    await waitForPrintImages(imgs);
+  } catch (err) {
+    cleanup();
+    throw err;
+  }
+
+  const finish = () => {
+    win.removeEventListener('afterprint', finish);
+    cleanup();
+  };
+  win.addEventListener('afterprint', finish);
+  try {
+    win.focus();
+    win.print();
+  } catch (err) {
+    finish();
+    throw err;
+  }
+}
+
+export async function exportPrintAlbumPdf(opts: AlbumPageOpts & {
+  fileName?: string;
+  /** false면 저장 대화상자 없이 Blob만 돌려준다. 공유 버튼용. */
+  save?: boolean;
+}): Promise<Blob> {
+  const paper = PRINT_PHOTO_SIZES[opts.photoSize];
+  const canvases = await renderPrintAlbumCanvases(opts);
+  const pdf = new jsPDF({
+    unit: 'mm',
+    format: [paper.wMm, paper.hMm],
+    orientation: paper.wMm >= paper.hMm ? 'landscape' : 'portrait',
+  });
+
+  canvases.forEach((canvas, pageIdx) => {
+    if (pageIdx > 0) {
+      pdf.addPage([paper.wMm, paper.hMm], paper.wMm >= paper.hMm ? 'landscape' : 'portrait');
+    }
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, paper.wMm, paper.hMm);
+  });
+
   const blob = pdf.output('blob');
   const safeTitle = opts.title.trim().replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60) || 'baby-album';
   if (opts.save !== false) {
