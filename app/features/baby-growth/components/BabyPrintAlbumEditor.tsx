@@ -43,6 +43,16 @@ import {
   chunkPhotos,
   pageSizeFor,
 } from '../utils/print-frame-box';
+import {
+  PRINT_BG_CUTE_KEYS,
+  PRINT_BG_PREMIUM_KEYS,
+  PRINT_BG_RECIPES,
+  isPrintBgKey,
+  printBgPreviewStyle,
+  printBgThumbStyle,
+  type PrintBgGroup,
+  type PrintBgKey,
+} from '../utils/print-album-bg';
 
 type DragZone = 'album' | 'pool';
 type PrintDragData = { photoId: string; zone: DragZone };
@@ -64,7 +74,6 @@ const printCollisionDetection: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
-type PrintBgKey = BabyPrintAlbum['bg'];
 type PrintLayout = BabyPrintAlbum['layout'];
 type PrintFrame = BabyPrintPhotoEdit['frame'];
 type PhotoEdit = BabyPrintPhotoEdit;
@@ -73,25 +82,6 @@ type FlashTarget = 'family' | null;
 function isPhotoSize(v: unknown): v is BabyPrintPhotoSize {
   return typeof v === 'string' && PRINT_PHOTO_SIZE_KEYS.includes(v as BabyPrintPhotoSize);
 }
-
-const PRINT_BG: Record<PrintBgKey, { preview: string; swatch: string }> = {
-  cream: {
-    preview: 'bg-[linear-gradient(160deg,#fbf6ec_0%,#f3e8d4_55%,#efe2cc_100%)]',
-    swatch: 'bg-[#f3e8d4]',
-  },
-  blush: {
-    preview: 'bg-[linear-gradient(160deg,#fff7f5_0%,#fde8e4_55%,#f9dcd6_100%)]',
-    swatch: 'bg-[#fde8e4]',
-  },
-  sage: {
-    preview: 'bg-[linear-gradient(160deg,#f4f7f2_0%,#e4eee0_55%,#d7e6d1_100%)]',
-    swatch: 'bg-[#e4eee0]',
-  },
-  sky: {
-    preview: 'bg-[linear-gradient(160deg,#f3f8fb_0%,#e2eef6_55%,#d4e6f2_100%)]',
-    swatch: 'bg-[#e2eef6]',
-  },
-};
 
 /** 각진 하트 — 적은 점의 polygon */
 const HEART_ANGULAR_CLIP =
@@ -179,7 +169,6 @@ const ZOOM_COVER = 1;
 /** 확대 상한 */
 const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.08;
-const BG_KEYS = Object.keys(PRINT_BG) as PrintBgKey[];
 
 function normDeg(deg: number): number {
   return ((Math.round(deg) % 360) + 360) % 360;
@@ -401,6 +390,8 @@ function FramedPhoto({
   const frameRot = editFrameRotation(edit);
   const scaleX = editFrameScaleX(edit);
   const scaleY = editFrameScaleY(edit);
+  const zoom = editZoom(edit);
+  const shrunk = zoom < 1;
   return (
     <div
       className={`flex items-center justify-center overflow-hidden ${
@@ -422,37 +413,54 @@ function FramedPhoto({
           className="absolute inset-0 overflow-hidden"
           style={{ transform: `rotate(${edit.rotation}deg)` }}
         >
-          {/* zoom 1 미만 여백: 같은 사진으로 프레임을 채운 블러 배경 */}
+          {/* zoom 1 미만일 때만 여백 블러. PDF drawCover와 같게, 기본은 프레임을 채운다. */}
+          {shrunk ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo.thumbnailUrl ?? photo.imageUrl}
+              alt=""
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-0 h-full w-full max-w-none object-cover select-none"
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
+              style={
+                {
+                  filter: 'blur(18px)',
+                  transform: 'scale(1.2)',
+                  WebkitUserDrag: 'none',
+                  userSelect: 'none',
+                } as React.CSSProperties
+              }
+            />
+          ) : null}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={photo.thumbnailUrl ?? photo.imageUrl}
             alt=""
-            aria-hidden
-            className="pointer-events-none absolute inset-0 z-0 h-full w-full max-w-none object-cover select-none"
+            className="pointer-events-none select-none"
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
             style={
-              {
-                filter: 'blur(18px)',
-                transform: 'scale(1.2)',
-                WebkitUserDrag: 'none',
-                userSelect: 'none',
-              } as React.CSSProperties
-            }
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={photo.thumbnailUrl ?? photo.imageUrl}
-            alt=""
-            className="pointer-events-none max-w-none select-none"
-            draggable={false}
-            onDragStart={(e) => e.preventDefault()}
-            style={
-              {
-                ...photoFitStyle(edit),
-                WebkitUserDrag: 'none',
-                userSelect: 'none',
-              } as React.CSSProperties
+              (shrunk
+                ? {
+                    ...photoFitStyle(edit),
+                    WebkitUserDrag: 'none',
+                    userSelect: 'none',
+                  }
+                : {
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 1,
+                    width: '100%',
+                    height: '100%',
+                    maxWidth: 'none',
+                    objectFit: 'cover',
+                    objectPosition: `${editFocusX(edit)}% ${editFocusY(edit)}%`,
+                    transform: zoom === 1 ? undefined : `scale(${zoom})`,
+                    transformOrigin: `${editFocusX(edit)}% ${editFocusY(edit)}%`,
+                    WebkitUserDrag: 'none',
+                    userSelect: 'none',
+                  }) as React.CSSProperties
             }
           />
         </div>
@@ -798,7 +806,7 @@ function applyDraftToState(
   setters.setTitle(
     typeof draft.title === 'string' && draft.title.trim() ? draft.title : defaultTitle,
   );
-  if (draft.bg === 'cream' || draft.bg === 'blush' || draft.bg === 'sage' || draft.bg === 'sky') {
+  if (isPrintBgKey(draft.bg)) {
     setters.setBg(draft.bg);
   }
   if (
@@ -842,6 +850,10 @@ export function BabyPrintAlbumEditor({
 }) {
   const [title, setTitle] = useState(defaultTitle);
   const [bg, setBg] = useState<PrintBgKey>('cream');
+  const [bgTab, setBgTab] = useState<PrintBgGroup>('premium');
+  useEffect(() => {
+    setBgTab(PRINT_BG_RECIPES[bg].group);
+  }, [bg]);
   const [layout, setLayout] = useState<PrintLayout>('grid2');
   /** true: 프레임 안 맞춤 / false: 넣고 빼기·순서 */
   const [frameEditMode, setFrameEditMode] = useState(false);
@@ -1459,25 +1471,77 @@ export function BabyPrintAlbumEditor({
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[11px] font-semibold text-slate-500">{t.album_print_bg}</span>
-            <div className="flex gap-2">
-              {BG_KEYS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  aria-label={key}
-                  aria-pressed={bg === key}
-                  onClick={() => setBg(key)}
-                  className={`h-7 w-7 rounded-full border-2 ${PRINT_BG[key].swatch} ${
-                    bg === key
-                      ? 'scale-110 border-slate-800'
-                      : 'border-white shadow ring-1 ring-slate-200'
-                  }`}
-                />
-              ))}
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold text-slate-500">{t.album_print_bg}</span>
+              <div className="flex gap-1 rounded-full bg-slate-100 p-0.5">
+                {(
+                  [
+                    ['premium', t.album_print_bg_premium],
+                    ['cute', t.album_print_bg_cute],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={bgTab === key}
+                    onClick={() => setBgTab(key)}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      bgTab === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
+            <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {(bgTab === 'premium' ? PRINT_BG_PREMIUM_KEYS : PRINT_BG_CUTE_KEYS).map((key) => {
+                const label = {
+                  cream: t.album_print_bg_cream,
+                  blush: t.album_print_bg_blush,
+                  sage: t.album_print_bg_sage,
+                  sky: t.album_print_bg_sky,
+                  wash: t.album_print_bg_wash,
+                  line: t.album_print_bg_line,
+                  floral: t.album_print_bg_floral,
+                  vellum: t.album_print_bg_vellum,
+                  stars_clouds: t.album_print_bg_stars_clouds,
+                  hearts_soft: t.album_print_bg_hearts_soft,
+                  moon: t.album_print_bg_moon,
+                  animals: t.album_print_bg_animals,
+                  rainbow: t.album_print_bg_rainbow,
+                  balloons: t.album_print_bg_balloons,
+                  footprints: t.album_print_bg_footprints,
+                  blocks: t.album_print_bg_blocks,
+                }[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-label={label}
+                    aria-pressed={bg === key}
+                    onClick={() => setBg(key)}
+                    className={`flex w-[4.5rem] shrink-0 flex-col items-center gap-1 rounded-xl p-1 text-left transition ${
+                      bg === key ? 'ring-2 ring-slate-800' : 'ring-1 ring-slate-200'
+                    }`}
+                  >
+                    <span
+                      className="relative block aspect-[2/3] w-full overflow-hidden rounded-lg"
+                      style={printBgThumbStyle(key)}
+                    >
+                      <span className="absolute inset-x-[28%] top-[34%] bottom-[34%] rounded-sm bg-white/55" />
+                    </span>
+                    <span className="w-full truncate text-center text-[10px] font-semibold text-slate-600">
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-[11px] font-semibold text-slate-500">{t.album_print_layout}</span>
             <div className="flex gap-1">
               {(
@@ -1729,14 +1793,13 @@ export function BabyPrintAlbumEditor({
                       return (
                       <section
                         key={`print-page-${pageIdx}`}
-                        className={`flex shrink-0 flex-col overflow-hidden rounded-2xl p-2 shadow-sm sm:p-3 ${
-                          PRINT_BG[bg].preview
-                        }`}
-                        style={
-                          pageW > 0
+                        className="flex shrink-0 flex-col overflow-hidden rounded-2xl p-2 sm:p-3"
+                        style={{
+                          ...printBgPreviewStyle(bg),
+                          ...(pageW > 0
                             ? { width: Math.round(pageW), height: Math.round(pageH) }
-                            : undefined
-                        }
+                            : {}),
+                        }}
                       >
                         <div className="mb-2 flex shrink-0 items-baseline justify-between gap-2">
                           <h4 className="m-0 text-sm font-bold text-[#5c4630]">

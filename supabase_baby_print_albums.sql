@@ -17,7 +17,10 @@ create table if not exists public.baby_print_albums (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
   constraint baby_print_albums_bg_check
-    check (bg in ('cream', 'blush', 'sage', 'sky')),
+    check (bg in (
+      'cream', 'blush', 'sage', 'sky', 'wash', 'line', 'floral', 'vellum',
+      'stars_clouds', 'hearts_soft', 'moon', 'animals', 'rainbow', 'balloons', 'footprints', 'blocks'
+    )),
   constraint baby_print_albums_layout_check
     check (layout in ('grid1', 'grid2', 'grid3', 'hero'))
 );

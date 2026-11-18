@@ -10,8 +10,12 @@ import {
   chunkPhotos,
   pageSizeFor,
 } from './print-frame-box';
+import {
+  fillPrintPaperBackground,
+  printBgPatternUrl,
+  type PrintBgKey,
+} from './print-album-bg';
 
-type PrintBgKey = BabyPrintAlbum['bg'];
 type PrintLayout = BabyPrintAlbum['layout'];
 type PrintItem = BabyPhoto & { edit: BabyPrintPhotoEdit };
 
@@ -19,13 +23,6 @@ type PrintItem = BabyPhoto & { edit: BabyPrintPhotoEdit };
 const STD_PAGE_H_MM = PRINT_PHOTO_SIZES.std_4x6.hMm;
 /** 화면 카드 안쪽 여백과 같은 비율. 용지마다 mm를 고정하면 미니 사진이 더 작아진다. */
 const PAGE_INSET_RATIO = 0.024;
-
-const PRINT_BG: Record<PrintBgKey, [string, string, string]> = {
-  cream: ['#fbf6ec', '#f3e8d4', '#efe2cc'],
-  blush: ['#fff7f5', '#fde8e4', '#f9dcd6'],
-  sage: ['#f4f7f2', '#e4eee0', '#d7e6d1'],
-  sky: ['#f3f8fb', '#e2eef6', '#d4e6f2'],
-};
 
 /** 화면 <img>용 302는 유지하고, 캔버스에 그릴 때만 같은 출처 바이트를 받는다. */
 function canvasImageUrl(src: string): string {
@@ -127,26 +124,6 @@ function layoutMetrics(paper: { wMm: number; hMm: number }, showCaptions: boolea
     captionMm: 2.6 * scale,
     captionGapMm: 1.2 * scale,
   };
-}
-
-function fillPaperBackground(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  stops: [string, string, string],
-) {
-  const rad = (160 * Math.PI) / 180;
-  const dx = Math.sin(rad);
-  const dy = -Math.cos(rad);
-  const len = Math.abs(width * dx) + Math.abs(height * dy);
-  const cx = width / 2;
-  const cy = height / 2;
-  const grad = ctx.createLinearGradient(cx - (dx * len) / 2, cy - (dy * len) / 2, cx + (dx * len) / 2, cy + (dy * len) / 2);
-  grad.addColorStop(0, stops[0]);
-  grad.addColorStop(0.55, stops[1]);
-  grad.addColorStop(1, stops[2]);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, width, height);
 }
 
 function fitCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
@@ -381,108 +358,122 @@ async function renderPrintAlbumCanvases(opts: AlbumPageOpts): Promise<HTMLCanvas
   const dpi = 2;
   const canvases: HTMLCanvasElement[] = [];
 
-  for (let pageIdx = 0; pageIdx < pages.length; pageIdx += 1) {
-    opts.onProgress?.(pageIdx / pages.length);
-    const page = pages[pageIdx]!;
-    const contentW = paper.wMm - metrics.margin * 2;
-    const contentH = paper.hMm - metrics.margin * 2;
-    const gridY = metrics.margin + metrics.headerH;
-    const gridH = contentH - metrics.headerH - metrics.captionGapMm;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round((paper.wMm * 96 * dpi) / 25.4);
-    canvas.height = Math.round((paper.hMm * 96 * dpi) / 25.4);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('canvas unsupported');
-
-    const sx = canvas.width / paper.wMm;
-    const sy = canvas.height / paper.hMm;
-
-    fillPaperBackground(ctx, canvas.width, canvas.height, PRINT_BG[opts.bg]);
-
-    ctx.fillStyle = '#4a3f35';
-    ctx.textBaseline = 'top';
-    ctx.font = `${Math.round(metrics.pageNumMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
-    const pageLabel = `${pageIdx + 1}/${pages.length}`;
-    const labelW = ctx.measureText(pageLabel).width;
-    ctx.font = `bold ${Math.round(metrics.titleMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
-    const titleMax = canvas.width - metrics.margin * sx * 2 - labelW - 2 * sx;
-    ctx.fillText(fitCanvasText(ctx, opts.title, titleMax), metrics.margin * sx, metrics.margin * sy);
-    ctx.font = `${Math.round(metrics.pageNumMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
-    ctx.globalAlpha = 0.55;
-    ctx.fillText(pageLabel, canvas.width - metrics.margin * sx - labelW, metrics.margin * sy);
-    ctx.globalAlpha = 1;
-
-    const rects = cellRects(opts.layout, page.length, metrics.margin, gridY, contentW, gridH, metrics.gap);
-
-    for (let i = 0; i < page.length; i += 1) {
-      const photo = page[i]!;
-      const rect = rects[i];
-      if (!rect) continue;
-      const photoH = Math.max(0, rect.h - metrics.captionH);
-      const px = rect.x * sx;
-      const py = rect.y * sy;
-      const pw = rect.w * sx;
-      const ph = photoH * sy;
-      // 화면과 같게: 프레임 크기는 칸 너비 기준이고, 칸 안에서 가운데 정렬된다.
-      const scaleX = clampNum(photo.edit.frameScaleX ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_X_MAX);
-      const scaleY = clampNum(photo.edit.frameScaleY ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
-      const fw = pw * scaleX;
-      const fh = fw * (scaleY / Math.max(scaleX, 0.01));
-
-      const loaded = await loadImageElement(photo.imageUrl);
-      try {
-        const img = loaded.img;
-        const frameRot = ((photo.edit.frameRotation ?? 0) * Math.PI) / 180;
-        const photoRot = (photo.edit.rotation * Math.PI) / 180;
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(px, py, pw, ph);
-        ctx.clip();
-        ctx.translate(px + pw / 2, py + ph / 2);
-        ctx.rotate(frameRot);
-        traceFrame(ctx, photo.edit.frame, fw, fh);
-        ctx.fillStyle = 'rgba(255,255,255,0.72)';
-        ctx.fill();
-        ctx.save();
-        traceFrame(ctx, photo.edit.frame, fw, fh);
-        ctx.clip();
-        ctx.rotate(photoRot);
-        drawCover(
-          ctx,
-          img,
-          -fw / 2,
-          -fh / 2,
-          fw,
-          fh,
-          photo.edit.focusX ?? 50,
-          photo.edit.focusY ?? 50,
-          photo.edit.zoom ?? 1,
-        );
-        ctx.restore();
-        traceFrame(ctx, photo.edit.frame, fw, fh);
-        ctx.lineWidth = Math.max(1, 0.35 * sx);
-        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-        ctx.stroke();
-        ctx.restore();
-      } finally {
-        loaded.done();
-      }
-
-      if (opts.showCaptions && photo.monthAge != null) {
-        ctx.fillStyle = 'rgba(74,63,53,0.7)';
-        ctx.font = `600 ${Math.round(metrics.captionMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText(opts.monthLabel(photo.monthAge), px + pw / 2, py + ph + metrics.captionGapMm * sy);
-        ctx.textAlign = 'left';
-      }
-    }
-
-    canvases.push(canvas);
+  let patternImg: HTMLImageElement | null = null;
+  let releasePattern: (() => void) | null = null;
+  try {
+    const loaded = await loadImageElement(printBgPatternUrl(opts.bg));
+    patternImg = loaded.img;
+    releasePattern = loaded.done;
+  } catch {
+    patternImg = null;
   }
 
-  opts.onProgress?.(1);
-  return canvases;
+  try {
+    for (let pageIdx = 0; pageIdx < pages.length; pageIdx += 1) {
+      opts.onProgress?.(pageIdx / pages.length);
+      const page = pages[pageIdx]!;
+      const contentW = paper.wMm - metrics.margin * 2;
+      const contentH = paper.hMm - metrics.margin * 2;
+      const gridY = metrics.margin + metrics.headerH;
+      const gridH = contentH - metrics.headerH - metrics.captionGapMm;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round((paper.wMm * 96 * dpi) / 25.4);
+      canvas.height = Math.round((paper.hMm * 96 * dpi) / 25.4);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('canvas unsupported');
+
+      const sx = canvas.width / paper.wMm;
+      const sy = canvas.height / paper.hMm;
+
+      fillPrintPaperBackground(ctx, canvas.width, canvas.height, opts.bg, patternImg);
+
+      ctx.fillStyle = '#4a3f35';
+      ctx.textBaseline = 'top';
+      ctx.font = `${Math.round(metrics.pageNumMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
+      const pageLabel = `${pageIdx + 1}/${pages.length}`;
+      const labelW = ctx.measureText(pageLabel).width;
+      ctx.font = `bold ${Math.round(metrics.titleMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
+      const titleMax = canvas.width - metrics.margin * sx * 2 - labelW - 2 * sx;
+      ctx.fillText(fitCanvasText(ctx, opts.title, titleMax), metrics.margin * sx, metrics.margin * sy);
+      ctx.font = `${Math.round(metrics.pageNumMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
+      ctx.globalAlpha = 0.55;
+      ctx.fillText(pageLabel, canvas.width - metrics.margin * sx - labelW, metrics.margin * sy);
+      ctx.globalAlpha = 1;
+
+      const rects = cellRects(opts.layout, page.length, metrics.margin, gridY, contentW, gridH, metrics.gap);
+
+      for (let i = 0; i < page.length; i += 1) {
+        const photo = page[i]!;
+        const rect = rects[i];
+        if (!rect) continue;
+        const photoH = Math.max(0, rect.h - metrics.captionH);
+        const px = rect.x * sx;
+        const py = rect.y * sy;
+        const pw = rect.w * sx;
+        const ph = photoH * sy;
+        // 화면과 같게: 프레임 크기는 칸 너비 기준이고, 칸 안에서 가운데 정렬된다.
+        const scaleX = clampNum(photo.edit.frameScaleX ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_X_MAX);
+        const scaleY = clampNum(photo.edit.frameScaleY ?? 1, FRAME_SCALE_MIN, FRAME_SCALE_Y_MAX);
+        const fw = pw * scaleX;
+        const fh = fw * (scaleY / Math.max(scaleX, 0.01));
+
+        const loaded = await loadImageElement(photo.imageUrl);
+        try {
+          const img = loaded.img;
+          const frameRot = ((photo.edit.frameRotation ?? 0) * Math.PI) / 180;
+          const photoRot = (photo.edit.rotation * Math.PI) / 180;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(px, py, pw, ph);
+          ctx.clip();
+          ctx.translate(px + pw / 2, py + ph / 2);
+          ctx.rotate(frameRot);
+          traceFrame(ctx, photo.edit.frame, fw, fh);
+          ctx.fillStyle = 'rgba(255,255,255,0.72)';
+          ctx.fill();
+          ctx.save();
+          traceFrame(ctx, photo.edit.frame, fw, fh);
+          ctx.clip();
+          ctx.rotate(photoRot);
+          drawCover(
+            ctx,
+            img,
+            -fw / 2,
+            -fh / 2,
+            fw,
+            fh,
+            photo.edit.focusX ?? 50,
+            photo.edit.focusY ?? 50,
+            photo.edit.zoom ?? 1,
+          );
+          ctx.restore();
+          traceFrame(ctx, photo.edit.frame, fw, fh);
+          ctx.lineWidth = Math.max(1, 0.35 * sx);
+          ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+          ctx.stroke();
+          ctx.restore();
+        } finally {
+          loaded.done();
+        }
+
+        if (opts.showCaptions && photo.monthAge != null) {
+          ctx.fillStyle = 'rgba(74,63,53,0.7)';
+          ctx.font = `600 ${Math.round(metrics.captionMm * sx)}px "Segoe UI", "Apple SD Gothic Neo", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText(opts.monthLabel(photo.monthAge), px + pw / 2, py + ph + metrics.captionGapMm * sy);
+          ctx.textAlign = 'left';
+        }
+      }
+
+      canvases.push(canvas);
+    }
+
+    opts.onProgress?.(1);
+    return canvases;
+  } finally {
+    releasePattern?.();
+  }
 }
 
 /** 같은 페이지 그림을 선택한 용지 크기로 인쇄한다. 미리보기가 닫히면 프레임을 치운다. */

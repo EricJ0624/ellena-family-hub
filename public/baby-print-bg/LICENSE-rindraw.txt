@@ -1,0 +1,13 @@
+Rindraw free textures
+https://rindraw.com/free-textures/
+
+Paper grains and brush tips made by Sawir Studio for Rindraw, from seeded noise.
+
+To the extent possible under law, Sawir Studio LLC has waived all copyright and related or
+neighboring rights to these textures, under CC0 1.0 Universal:
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Use them in any app, for any work, commercial or not, and share or sell brushes made with
+them. No credit is needed, though a link back to rindraw.com is always appreciated.
+
+Each is an 8-bit grayscale PNG, white where paint goes. Papers tile seamlessly.

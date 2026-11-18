@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <g fill="#d8c4a8" opacity="0.35">
+    <ellipse cx="30" cy="28" rx="46" ry="28"/>
+    <ellipse cx="210" cy="40" rx="40" ry="24"/>
+    <ellipse cx="24" cy="200" rx="42" ry="26"/>
+    <ellipse cx="206" cy="214" rx="48" ry="30"/>
+  </g>
+  <g fill="#e7d3bc" opacity="0.28">
+    <ellipse cx="120" cy="18" rx="36" ry="16"/>
+    <ellipse cx="118" cy="228" rx="40" ry="18"/>
+  </g>
+</svg>

@@ -309,7 +309,23 @@ export interface BabyPrintAlbum {
   baby_id: string;
   created_by: string | null;
   title: string;
-  bg: 'cream' | 'blush' | 'sage' | 'sky';
+  bg:
+    | 'cream'
+    | 'blush'
+    | 'sage'
+    | 'sky'
+    | 'wash'
+    | 'line'
+    | 'floral'
+    | 'vellum'
+    | 'stars_clouds'
+    | 'hearts_soft'
+    | 'moon'
+    | 'animals'
+    | 'rainbow'
+    | 'balloons'
+    | 'footprints'
+    | 'blocks';
   layout: 'grid1' | 'grid2' | 'grid3' | 'hero';
   /** 출력 사진 규격. 없으면 std_4x6 */
   photo_size?: BabyPrintPhotoSize;
