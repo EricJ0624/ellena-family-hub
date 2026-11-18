@@ -803,9 +803,7 @@ function applyDraftToState(
     setActiveId: (v: string | null) => void;
   },
 ) {
-  setters.setTitle(
-    typeof draft.title === 'string' && draft.title.trim() ? draft.title : defaultTitle,
-  );
+  setters.setTitle(typeof draft.title === 'string' ? draft.title : defaultTitle);
   if (isPrintBgKey(draft.bg)) {
     setters.setBg(draft.bg);
   }
@@ -1157,7 +1155,7 @@ export function BabyPrintAlbumEditor({
       const base = {
         group_id: currentGroupId,
         baby_id: babyId,
-        title: title.trim() || defaultTitle,
+        title: title.trim(),
         bg,
         layout,
         photo_size: photoSize,
@@ -1247,7 +1245,7 @@ export function BabyPrintAlbumEditor({
     setOutputError(null);
     try {
       await printPrintAlbum({
-        title: title.trim() || defaultTitle,
+        title: title.trim(),
         items: selectedItems,
         bg,
         layout,
@@ -1269,7 +1267,7 @@ export function BabyPrintAlbumEditor({
     setOutputError(null);
     try {
       await exportPrintAlbumPdf({
-        title: title.trim() || defaultTitle,
+        title: title.trim(),
         items: selectedItems,
         bg,
         layout,
@@ -1289,7 +1287,7 @@ export function BabyPrintAlbumEditor({
     if (selectedItems.length === 0 || outputBusy) return;
     setPdfBusy(true);
     setOutputError(null);
-    const albumTitle = title.trim() || defaultTitle;
+    const albumTitle = title.trim();
     let blob: Blob;
     try {
       blob = await exportPrintAlbumPdf({
@@ -1803,7 +1801,7 @@ export function BabyPrintAlbumEditor({
                       >
                         <div className="mb-2 flex shrink-0 items-baseline justify-between gap-2">
                           <h4 className="m-0 text-sm font-bold text-[#5c4630]">
-                            {title.trim() || defaultTitle}
+                            {title.trim()}
                           </h4>
                           <span className="text-[10px] font-medium text-[#8a7355]/80">
                             {pageIdx + 1}/{printPages.length}
