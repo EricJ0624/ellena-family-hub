@@ -1094,6 +1094,9 @@ export interface Database {
           assigned_to: string | null
           is_completed: boolean
           created_at: string
+          due_at: string | null
+          remind_offsets_minutes: number[]
+          app_id: string
         }
         Insert: {
           id?: string
@@ -1103,6 +1106,9 @@ export interface Database {
           assigned_to?: string | null
           is_completed?: boolean
           created_at?: string
+          due_at?: string | null
+          remind_offsets_minutes?: number[]
+          app_id?: string
         }
         Update: {
           id?: string
@@ -1112,6 +1118,9 @@ export interface Database {
           assigned_to?: string | null
           is_completed?: boolean
           created_at?: string
+          due_at?: string | null
+          remind_offsets_minutes?: number[]
+          app_id?: string
         }
         Relationships: [
           {
@@ -1122,6 +1131,166 @@ export interface Database {
           },
           {
             foreignKeyName: "family_tasks_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      family_task_subtasks: {
+        Row: {
+          id: string
+          task_id: string
+          group_id: string
+          app_id: string
+          title: string
+          is_done: boolean
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          group_id: string
+          app_id?: string
+          title: string
+          is_done?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          group_id?: string
+          app_id?: string
+          title?: string
+          is_done?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_task_subtasks_task_id_fkey"
+            columns: ["task_id"]
+            referencedRelation: "family_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_task_subtasks_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      family_task_list_templates: {
+        Row: {
+          id: string
+          group_id: string
+          app_id: string
+          name: string
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          app_id?: string
+          name: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          app_id?: string
+          name?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_task_list_templates_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      family_task_list_template_items: {
+        Row: {
+          id: string
+          template_id: string
+          group_id: string
+          app_id: string
+          title: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          template_id: string
+          group_id: string
+          app_id?: string
+          title: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          template_id?: string
+          group_id?: string
+          app_id?: string
+          title?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_task_list_template_items_template_id_fkey"
+            columns: ["template_id"]
+            referencedRelation: "family_task_list_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_task_list_template_items_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      task_reminder_dispatches: {
+        Row: {
+          id: string
+          task_id: string
+          group_id: string
+          app_id: string
+          offset_minutes: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          group_id: string
+          app_id?: string
+          offset_minutes: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          group_id?: string
+          app_id?: string
+          offset_minutes?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_reminder_dispatches_task_id_fkey"
+            columns: ["task_id"]
+            referencedRelation: "family_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_reminder_dispatches_group_id_fkey"
             columns: ["group_id"]
             referencedRelation: "groups"
             referencedColumns: ["id"]

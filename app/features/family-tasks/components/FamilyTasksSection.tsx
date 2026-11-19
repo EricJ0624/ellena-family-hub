@@ -10,8 +10,26 @@ import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState 
 import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import { useOnlineUsers } from '@/app/dashboard/online-presence';
 import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
-import type { FamilyTask, FamilyTaskMemberOption } from '../types';
+import type { FamilyTask, FamilyTaskMemberOption, TaskRemindOffsetMinutes } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
+import { useFamilyTaskSubtaskProgress } from '../hooks/useFamilyTaskSubtasks';
+import { TaskSubtaskDesk } from './TaskSubtaskDesk';
+import { TaskSwipeRow } from './TaskSwipeRow';
+import {
+  DEFAULT_TASK_REMIND_OFFSETS,
+  formatTaskDueShort,
+  localInputValueToDueAtIso,
+  normalizeTaskRemindOffsets,
+  taskReminderFireAt,
+} from '../remind-offsets';
+import { dispatchDueTaskReminderClient } from '@/lib/notifications/client';
+import { supabase } from '@/lib/supabase';
+import { useFamilyTaskListTemplates } from '../hooks/useFamilyTaskListTemplates';
+import {
+  clearOpenTaskDesk,
+  readOpenTaskDesk,
+  writeOpenTaskDesk,
+} from '../desk-persistence';
 import {
   fitFontSizeToWidth,
   shrinkFontSizeToElement,
@@ -66,7 +84,19 @@ interface FamilyTasksSectionProps {
     invalid_input: string;
     anyone: string;
     cancel: string;
+    close: string;
     delete_confirm: string;
+    todo_due_label: string;
+    todo_remind_1h: string;
+    todo_list_btn: string;
+    subtask_desk_title: string;
+    subtask_add_placeholder: string;
+    subtask_add_btn: string;
+    subtask_empty: string;
+    subtask_save_list: string;
+    subtask_load_list: string;
+    subtask_template_name_placeholder: string;
+    subtask_template_empty: string;
   };
   chatDragOver: boolean;
   chatDropRef: React.RefObject<HTMLDivElement | null>;
@@ -154,12 +184,52 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   const [todoError, setTodoError] = useState<string | null>(null);
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
+  const todoDueRef = useRef<HTMLInputElement>(null);
+  const todoRemind1hRef = useRef<HTMLInputElement>(null);
   const emptyStateRef = useRef<HTMLParagraphElement>(null);
   const chalkTodoListRef = useRef<HTMLDivElement>(null);
   const [emptyStateFontPx, setEmptyStateFontPx] = useState<number | null>(null);
   const [chalkTodoListMaxPx, setChalkTodoListMaxPx] = useState<number | null>(null);
+  const [deskTaskId, setDeskTaskId] = useState<string | null>(null);
+  const [sendReadyTick, setSendReadyTick] = useState(0);
+  const [createTemplateId, setCreateTemplateId] = useState('');
 
   const onlineUsers = useOnlineUsers();
+
+  const {
+    templates: listTemplates,
+    loadTemplateItemTexts,
+    saveTemplate,
+    reloadTemplates,
+  } = useFamilyTaskListTemplates({
+    currentGroupId,
+    userId,
+    getCurrentKey,
+    CryptoService,
+  });
+
+  const openDesk = useCallback(
+    (taskId: string) => {
+      setDeskTaskId(taskId);
+      writeOpenTaskDesk(userId, currentGroupId, taskId);
+    },
+    [userId, currentGroupId],
+  );
+
+  const closeDesk = useCallback(() => {
+    setDeskTaskId(null);
+    clearOpenTaskDesk(userId, currentGroupId);
+  }, [userId, currentGroupId]);
+
+  // 로그아웃·복귀 시 열려 있던 서브태스크 창 복원 (로그아웃 후 userId 없으면 스킵)
+  useEffect(() => {
+    if (!userId || !currentGroupId) {
+      setDeskTaskId(null);
+      return;
+    }
+    const saved = readOpenTaskDesk(userId, currentGroupId);
+    setDeskTaskId((prev) => prev ?? saved);
+  }, [userId, currentGroupId]);
 
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
@@ -217,22 +287,31 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     if (changed) onTasksChange(next);
   }, [tasks, taskMembers, onlineUsers, familyRoleByUserId, lang, onTasksChange]);
 
-  const { addTask, toggleTask, deleteTask, claimTask, applyTasksChange } = useFamilyTasks({
-    currentGroupId,
-    userId,
-    getCurrentKey,
-    CryptoService,
-    onTasksChange,
-    currentTasks: tasks,
-    assigneeDisplayFromUserIdRef,
-  });
+  const { addTask, toggleTask, deleteTask, claimTask, applyTasksChange } =
+    useFamilyTasks({
+      currentGroupId,
+      userId,
+      getCurrentKey,
+      CryptoService,
+      onTasksChange,
+      currentTasks: tasks,
+      assigneeDisplayFromUserIdRef,
+    });
+
+  const { progressByTaskId, reloadProgress } = useFamilyTaskSubtaskProgress(currentGroupId);
 
   const commitTasks = (next: FamilyTask[]) => {
     tasksRef.current = next;
     applyTasksChange(next);
   };
 
-  const insertTask = async (sanitizedText: string, assignedToUserId: string | null) => {
+  const insertTask = async (
+    sanitizedText: string,
+    assignedToUserId: string | null,
+    dueAt: string | null,
+    remindOffsetsMinutes: TaskRemindOffsetMinutes[],
+    templateIdToApply?: string,
+  ) => {
     const assigneeStr = assignedToUserId ? formatAssigneeDisplay(assignedToUserId) : '누구나';
     const tempId = nextTempTaskId();
     const optimisticTask: FamilyTask = {
@@ -242,6 +321,8 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       done: false,
       assigned_to_user_id: assignedToUserId ?? undefined,
       created_by: userId,
+      due_at: dueAt,
+      remind_offsets_minutes: remindOffsetsMinutes,
     };
     commitTasks([optimisticTask, ...tasksRef.current]);
     try {
@@ -250,24 +331,85 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
         assignee: assigneeStr,
         done: false,
         assignedToUserId,
+        dueAt,
+        remindOffsetsMinutes,
       });
       const latest = tasksRef.current.filter(
         (row) => row.id !== tempId && String(row.id) !== String(inserted.id),
       );
-      commitTasks([
-        {
-          ...optimisticTask,
-          id: inserted.id,
-          created_by: inserted.created_by ?? userId,
-          done: inserted.is_completed ?? false,
-        },
-        ...latest,
-      ]);
+      const nextTask: FamilyTask = {
+        ...optimisticTask,
+        id: inserted.id,
+        created_by: inserted.created_by ?? userId,
+        done: inserted.is_completed ?? false,
+        due_at: inserted.due_at ?? dueAt,
+        remind_offsets_minutes: normalizeTaskRemindOffsets(
+          inserted.remind_offsets_minutes ?? remindOffsetsMinutes,
+        ),
+      };
+      commitTasks([nextTask, ...latest]);
+      void dispatchDueTaskReminderClient({
+        taskId: String(inserted.id),
+        title: sanitizedText,
+        dueAt: nextTask.due_at,
+        remindOffsetsMinutes: nextTask.remind_offsets_minutes ?? [],
+      });
+
+      if (templateIdToApply) {
+        try {
+          const titles = await loadTemplateItemTexts(templateIdToApply);
+          if (titles.length > 0 && currentGroupId) {
+            const key = getCurrentKey();
+            const rows = titles.map((text, index) => ({
+              task_id: String(inserted.id),
+              group_id: currentGroupId,
+              title: CryptoService.encrypt(text, key),
+              is_done: false,
+              sort_order: index,
+            }));
+            const { error: subError } = await supabase.from('family_task_subtasks').insert(rows);
+            if (subError) console.warn('템플릿 불러오기 실패:', subError);
+            else void reloadProgress();
+          }
+        } catch (templateError) {
+          console.warn('템플릿 불러오기 실패:', templateError);
+        }
+      }
     } catch (error) {
       commitTasks(tasksRef.current.filter((row) => row.id !== tempId));
       throw error;
     }
   };
+
+  // 앱이 열려 있을 때 마감 알림 시각이 되면 발송 API 호출
+  useEffect(() => {
+    const now = Date.now();
+    let wait = Number.POSITIVE_INFINITY;
+    for (const task of tasks) {
+      if (task.done || !task.due_at || isTempTaskId(task.id)) continue;
+      for (const offset of normalizeTaskRemindOffsets(task.remind_offsets_minutes)) {
+        const fire = taskReminderFireAt(task.due_at, offset);
+        if (!fire) continue;
+        const delta = fire.getTime() - now;
+        if (delta <= 0) {
+          void dispatchDueTaskReminderClient({
+            taskId: String(task.id),
+            title: task.text,
+            dueAt: task.due_at,
+            remindOffsetsMinutes: task.remind_offsets_minutes ?? [],
+          });
+        } else if (delta < wait) {
+          wait = delta;
+        }
+      }
+    }
+    if (!Number.isFinite(wait)) return;
+    const id = window.setTimeout(
+      () => setSendReadyTick((tick) => tick + 1),
+      Math.min(wait, 2_147_000_000),
+    );
+    return () => window.clearTimeout(id);
+  }, [tasks, sendReadyTick]);
 
   const handleToggleTask = (taskId: number | string) => {
     const latest = tasksRef.current;
@@ -307,6 +449,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
 
     const removed = tasksRef.current.find((x) => x.id === taskId);
     commitTasks(tasksRef.current.filter((x) => x.id !== taskId));
+    if (deskTaskId && String(taskId) === deskTaskId) closeDesk();
 
     void (async () => {
       try {
@@ -324,12 +467,16 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   const openTodoModal = (titlePrefill?: string) => {
     setTodoError(null);
     setIsTodoModalOpen(true);
+    void reloadTemplates();
     requestAnimationFrame(() => {
       if (todoTextRef.current) {
         const raw = titlePrefill?.trim() ?? '';
         todoTextRef.current.value = raw ? sanitizeInput(raw, 100) : '';
       }
       if (todoWhoRef.current) todoWhoRef.current.value = '';
+      if (todoDueRef.current) todoDueRef.current.value = '';
+      if (todoRemind1hRef.current) todoRemind1hRef.current.checked = true;
+      setCreateTemplateId('');
     });
   };
 
@@ -354,14 +501,22 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
 
     const selectedUserId = (todoWhoRef.current?.value ?? '').trim();
     const assignedToUserId = selectedUserId.length > 0 ? selectedUserId : null;
+    const dueAt = localInputValueToDueAtIso(todoDueRef.current?.value ?? '');
+    const remindOffsets: TaskRemindOffsetMinutes[] =
+      dueAt && todoRemind1hRef.current?.checked !== false
+        ? [...DEFAULT_TASK_REMIND_OFFSETS]
+        : [];
 
+    const templateId = createTemplateId.trim();
     if (todoTextRef.current) todoTextRef.current.value = '';
     if (todoWhoRef.current) todoWhoRef.current.value = '';
+    if (todoDueRef.current) todoDueRef.current.value = '';
+    setCreateTemplateId('');
     setTodoError(null);
     setIsTodoModalOpen(false);
 
     try {
-      await insertTask(sanitizedText, assignedToUserId);
+      await insertTask(sanitizedText, assignedToUserId, dueAt, remindOffsets, templateId || undefined);
     } catch (error) {
       console.error('임무 추가 실패:', error);
       alert('임무 저장에 실패했습니다. 다시 시도해 주세요.');
@@ -369,9 +524,23 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   };
 
   const visibleTasks = dedupeFamilyTasks(tasks || []);
+  const deskTask = deskTaskId
+    ? visibleTasks.find((row) => String(row.id) === deskTaskId) ?? null
+    : null;
+
+  // 저장된 창의 임무가 목록에 더 이상 없으면 닫기 (삭제·그룹 전환)
+  useEffect(() => {
+    if (!deskTaskId || visibleTasks.length === 0) return;
+    if (!visibleTasks.some((row) => String(row.id) === deskTaskId)) {
+      closeDesk();
+    }
+  }, [deskTaskId, visibleTasks, closeDesk]);
   const chalkTasksScrollable = visibleTasks.length > CHALK_TASK_SCROLL_AFTER;
   const chalkTasksLayoutKey = visibleTasks
-    .map((task) => `${task.id}:${task.text}:${task.assignee ?? ''}:${task.done ? 1 : 0}`)
+    .map(
+      (task) =>
+        `${task.id}:${task.text}:${task.assignee ?? ''}:${task.done ? 1 : 0}:${task.due_at ?? ''}`,
+    )
     .join('|');
 
   const fitChalkTodoTextsAndCap = useCallback(() => {
@@ -484,51 +653,100 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       }}
     >
       {isKidsTheme ? (
-            <div className="chalkboard-modal-frame" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="chalkboard-modal-frame chalkboard-modal-frame--stack"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="chalkboard-modal-container">
-                <h2 className="chalkboard-modal-heading">{t.todo_modal_title}</h2>
-                <div className="chalkboard-modal-form">
-                  <div className="chalkboard-modal-field chalkboard-modal-field--what">
-                    <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-what">
-                      {t.todo_what_label}
-                    </label>
-                    <input
-                      ref={todoTextRef}
-                      id="chalkboard-todo-what"
-                      type="text"
-                      className="chalkboard-form-input"
-                      placeholder={t.todo_what_placeholder}
-                    />
-                  </div>
-                  <div className="chalkboard-modal-field chalkboard-modal-field--who">
-                    <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-who">
-                      {t.todo_who_label}
-                    </label>
-                    <select
-                      ref={todoWhoRef}
-                      id="chalkboard-todo-who"
-                      className="chalkboard-form-input"
-                      defaultValue=""
-                    >
-                      <option value="">{t.todo_who_placeholder || t.anyone}</option>
-                      {taskMembers.map((m) => (
-                        <option key={m.userId} value={m.userId}>
-                          {formatAssigneeDisplay(m.userId)}
+                <div className="chalkboard-modal-stack">
+                  <h2 className="chalkboard-modal-heading chalkboard-modal-heading--in-stack">
+                    {t.todo_modal_title}
+                  </h2>
+                  <div className="chalkboard-modal-stack-body">
+                    <div className="chalkboard-modal-field">
+                      <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-what">
+                        {t.todo_what_label}
+                      </label>
+                      <input
+                        ref={todoTextRef}
+                        id="chalkboard-todo-what"
+                        type="text"
+                        className="chalkboard-form-input"
+                        placeholder={t.todo_what_placeholder}
+                      />
+                    </div>
+                    <div className="chalkboard-modal-field">
+                      <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-who">
+                        {t.todo_who_label}
+                      </label>
+                      <select
+                        ref={todoWhoRef}
+                        id="chalkboard-todo-who"
+                        className="chalkboard-form-input"
+                        defaultValue=""
+                      >
+                        <option value="">{t.todo_who_placeholder || t.anyone}</option>
+                        {taskMembers.map((m) => (
+                          <option key={m.userId} value={m.userId}>
+                            {formatAssigneeDisplay(m.userId)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="chalkboard-modal-field chalkboard-modal-field--due">
+                      <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-due">
+                        {t.todo_due_label}
+                      </label>
+                      <input
+                        ref={todoDueRef}
+                        id="chalkboard-todo-due"
+                        type="datetime-local"
+                        className="chalkboard-form-input"
+                      />
+                      <label className="chalkboard-modal-remind">
+                        <input ref={todoRemind1hRef} type="checkbox" defaultChecked />
+                        <span>{t.todo_remind_1h}</span>
+                      </label>
+                    </div>
+                    <div className="chalkboard-modal-field chalkboard-modal-field--template">
+                      <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-template">
+                        {t.subtask_load_list}
+                      </label>
+                      <select
+                        id="chalkboard-todo-template"
+                        className="chalkboard-form-input"
+                        value={createTemplateId}
+                        onChange={(e) => setCreateTemplateId(e.target.value)}
+                      >
+                        <option value="">
+                          {listTemplates.length === 0 ? t.subtask_template_empty : '—'}
                         </option>
-                      ))}
-                    </select>
+                        {listTemplates.map((tpl) => (
+                          <option key={tpl.id} value={tpl.id}>
+                            {tpl.name} ({tpl.item_count})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {todoError ? (
+                      <p className="chalkboard-modal-error">{todoError}</p>
+                    ) : null}
                   </div>
-                </div>
-                {todoError ? (
-                  <p className="mt-2 text-center text-sm font-medium text-red-200">{todoError}</p>
-                ) : null}
-                <div className="chalkboard-modal-actions">
-                  <button type="button" onClick={() => { setTodoError(null); setIsTodoModalOpen(false); }} className="chalkboard-btn-secondary">
-                    {t.cancel}
-                  </button>
-                  <button type="button" onClick={submitNewTodo} className="chalkboard-btn-primary">
-                    {t.todo_register_btn}
-                  </button>
+                  <div className="chalkboard-modal-actions chalkboard-modal-actions--in-stack">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTodoError(null);
+                        setIsTodoModalOpen(false);
+                      }}
+                      className="chalkboard-btn-secondary"
+                    >
+                      {t.cancel}
+                    </button>
+                    <button type="button" onClick={submitNewTodo} className="chalkboard-btn-primary">
+                      {t.todo_register_btn}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -564,6 +782,41 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-600" htmlFor="plain-todo-due">
+                    {t.todo_due_label}
+                  </label>
+                  <input
+                    ref={todoDueRef}
+                    id="plain-todo-due"
+                    type="datetime-local"
+                    className="form-input w-full"
+                  />
+                  <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-600">
+                    <label className="inline-flex items-center gap-1.5">
+                      <input ref={todoRemind1hRef} type="checkbox" defaultChecked />
+                      {t.todo_remind_1h}
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-600" htmlFor="plain-todo-template">
+                    {t.subtask_load_list}
+                  </label>
+                  <select
+                    id="plain-todo-template"
+                    className="form-input w-full"
+                    value={createTemplateId}
+                    onChange={(e) => setCreateTemplateId(e.target.value)}
+                  >
+                    <option value="">{t.subtask_template_empty}</option>
+                    {listTemplates.map((tpl) => (
+                      <option key={tpl.id} value={tpl.id}>
+                        {tpl.name} ({tpl.item_count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               {todoError ? (
                 <p className="mt-3 text-sm font-medium text-red-600">{todoError}</p>
@@ -592,10 +845,40 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     </TopLayerDialog>
   );
 
+  const deskModal = (
+    <TaskSubtaskDesk
+      open={!!deskTaskId}
+      onClose={closeDesk}
+      task={deskTask}
+      currentGroupId={currentGroupId}
+      getCurrentKey={getCurrentKey}
+      CryptoService={CryptoService}
+      sanitizeInput={sanitizeInput}
+      isKidsTheme={isKidsTheme}
+      translations={t}
+      saveTemplate={saveTemplate}
+    />
+  );
+
+  const renderMeta = (task: FamilyTask) => {
+    const dueLabel = formatTaskDueShort(task.due_at);
+    const progress = progressByTaskId[String(task.id)];
+    const progressLabel =
+      progress && progress.total > 0 ? `${progress.done}/${progress.total}` : null;
+    if (!dueLabel && !progressLabel) return null;
+    return (
+      <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0 text-[0.7rem] leading-tight opacity-80">
+        {dueLabel ? <span>{dueLabel}</span> : null}
+        {progressLabel ? <span>{progressLabel}</span> : null}
+      </span>
+    );
+  };
+
   if (!isKidsTheme) {
     return (
       <>
         {todoModal}
+        {deskModal}
         <section className="content-section">
           <div className="section-header">
             <h3 className="section-title">{t.todo_section_title}</h3>
@@ -619,62 +902,73 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {visibleTasks.map((task) => {
                   const assigneeLabel = assigneeText(task);
+                  const nick =
+                    assigneeLabel === '누구나' ? t.anyone : assigneeLabel || t.anyone;
                   return (
-                  <li
-                    key={task.id}
-                    className="flex items-center gap-2 rounded-xl border border-glass-medium bg-glass-soft px-3 py-2 shadow-glass-soft backdrop-blur-glass-soft"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleToggleTask(task.id)}
-                      className="flex min-w-0 flex-1 items-start gap-2 border-0 bg-transparent p-0 text-left"
-                    >
-                      <span
-                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                          task.done
-                            ? 'border-indigo-500 bg-indigo-500 text-white'
-                            : 'border-slate-300 bg-white text-transparent'
-                        }`}
+                    <li key={task.id} className="list-none">
+                      <TaskSwipeRow
+                        className="rounded-xl border border-glass-medium bg-glass-soft shadow-glass-soft backdrop-blur-glass-soft"
+                        onDeleteRequest={() => handleDeleteTask(task.id)}
                       >
-                        {task.done ? (
-                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : null}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span
-                          className={`block text-sm font-medium text-slate-800 ${task.done ? 'line-through opacity-60' : ''}`}
-                        >
-                          {task.text}
-                        </span>
-                        {assigneeLabel ? (
-                          <span className="mt-0.5 block text-xs text-slate-500">
-                            {assigneeLabel === '누구나' ? t.anyone : assigneeLabel}
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                    {!task.done && !task.assigned_to_user_id && !isTempTaskId(task.id) ? (
-                      <button
-                        type="button"
-                        onClick={() => handleClaimTask(task.id)}
-                        className="shrink-0 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
-                      >
-                        내가 할게요
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTask(task.id)}
-                      className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                      aria-label="delete"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </li>
+                        <div className="flex min-w-0 items-center gap-2 px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleTask(task.id);
+                            }}
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                              task.done
+                                ? 'border-indigo-500 bg-indigo-500 text-white'
+                                : 'border-slate-300 bg-white text-transparent'
+                            }`}
+                            aria-checked={task.done}
+                            role="checkbox"
+                          >
+                            {task.done ? (
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : null}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <span
+                              className={`block text-sm font-medium leading-tight text-slate-800 line-clamp-2 ${
+                                task.done ? 'line-through opacity-60' : ''
+                              }`}
+                            >
+                              {task.text}
+                            </span>
+                            {renderMeta(task)}
+                          </div>
+                          {!isTempTaskId(task.id) ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDesk(String(task.id));
+                              }}
+                              className="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                            >
+                              {t.todo_list_btn}
+                            </button>
+                          ) : null}
+                          <span className="max-w-[30%] shrink truncate text-xs text-slate-500">{nick}</span>
+                          {!task.done && !task.assigned_to_user_id && !isTempTaskId(task.id) ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleClaimTask(task.id);
+                              }}
+                              className="shrink-0 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                            >
+                              내가 할게요
+                            </button>
+                          ) : null}
+                        </div>
+                      </TaskSwipeRow>
+                    </li>
                   );
                 })}
               </ul>
@@ -731,6 +1025,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
         </defs>
       </svg>
       {todoModal}
+      {deskModal}
 
       <div className="chalkboard-frame flex w-full min-w-0 flex-col">
         <section className="chalkboard-container flex flex-col">
@@ -762,40 +1057,66 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
               >
                 {visibleTasks.map((task) => {
                   const assigneeLabel = assigneeText(task);
+                  const nick =
+                    assigneeLabel === '누구나' ? t.anyone : assigneeLabel || t.anyone;
                   return (
-                  <div key={task.id} className="todo-item">
-                    <div onClick={() => handleToggleTask(task.id)} className="todo-content">
-                      <div className={`todo-checkbox ${task.done ? 'todo-checkbox-checked' : ''}`}>
-                        {task.done && (
-                          <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M5 13l4 4L19 7"></path>
-                          </svg>
-                        )}
-                      </div>
-                      <div className="todo-text-wrapper">
-                        <span className={`todo-text ${task.done ? 'todo-text-done' : ''}`}>{task.text}</span>
-                        {assigneeLabel ? (
-                          <span className="todo-assignee">
-                            {assigneeLabel === '누구나' ? t.anyone : assigneeLabel}
-                          </span>
+                    <TaskSwipeRow
+                      key={task.id}
+                      className="todo-item"
+                      onDeleteRequest={() => handleDeleteTask(task.id)}
+                    >
+                      <div className="todo-content">
+                        <button
+                          type="button"
+                          className={`todo-checkbox ${task.done ? 'todo-checkbox-checked' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleTask(task.id);
+                          }}
+                          aria-checked={task.done}
+                          role="checkbox"
+                        >
+                          {task.done ? (
+                            <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path d="M5 13l4 4L19 7"></path>
+                            </svg>
+                          ) : null}
+                        </button>
+                        <div className="todo-text-wrapper">
+                          <div className="min-w-0 flex-1">
+                            <span className={`todo-text ${task.done ? 'todo-text-done' : ''}`}>
+                              {task.text}
+                            </span>
+                            {renderMeta(task)}
+                          </div>
+                          {!isTempTaskId(task.id) ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDesk(String(task.id));
+                              }}
+                              className="chalkboard-btn-claim shrink-0"
+                            >
+                              {t.todo_list_btn}
+                            </button>
+                          ) : null}
+                          <span className="todo-assignee">{nick}</span>
+                        </div>
+                        {!task.done && !task.assigned_to_user_id && !isTempTaskId(task.id) ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleClaimTask(task.id);
+                            }}
+                            className="chalkboard-btn-claim"
+                          >
+                            내가 할게요
+                          </button>
                         ) : null}
                       </div>
-                    </div>
-                    {!task.done && !task.assigned_to_user_id && !isTempTaskId(task.id) ? (
-                      <button
-                        type="button"
-                        onClick={() => handleClaimTask(task.id)}
-                        className="chalkboard-btn-claim"
-                      >
-                        내가 할게요
-                      </button>
-                    ) : null}
-                    <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
-                      <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
-                      </svg>
-                    </button>
-                  </div>
+                    </TaskSwipeRow>
                   );
                 })}
               </div>

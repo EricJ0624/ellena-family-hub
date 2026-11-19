@@ -20,7 +20,8 @@ import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import { emitNotificationClient } from '@/lib/notifications/client';
 import { isOpaqueIdLabel } from '@/app/features/family-games/components/MemberSelect';
-import type { FamilyTask } from '../types';
+import { normalizeTaskRemindOffsets } from '../remind-offsets';
+import type { FamilyTask, TaskRemindOffsetMinutes } from '../types';
 
 const ASSIGNED_TO_USER_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -45,6 +46,31 @@ interface UseFamilyTasksProps {
   currentTasks: FamilyTask[];
   /** assigned_to 가 사용자 UUID일 때 표시 문자열(닉네임·가족표시·이모지) */
   assigneeDisplayFromUserIdRef: MutableRefObject<(userId: string) => string>;
+}
+
+function decryptTaskTitle(
+  raw: string,
+  key: string,
+  crypto: UseFamilyTasksProps['CryptoService'] | null,
+): string {
+  if (!raw || !key || !crypto) return raw;
+  if (!raw.startsWith('U2FsdGVkX1')) return raw;
+  try {
+    const decrypted = crypto.decrypt(raw, key);
+    return typeof decrypted === 'string' && decrypted.length > 0 ? decrypted : raw;
+  } catch {
+    return raw;
+  }
+}
+
+function dueFieldsFromRow(row: {
+  due_at?: string | null;
+  remind_offsets_minutes?: unknown;
+}): Pick<FamilyTask, 'due_at' | 'remind_offsets_minutes'> {
+  return {
+    due_at: row.due_at ?? null,
+    remind_offsets_minutes: normalizeTaskRemindOffsets(row.remind_offsets_minutes),
+  };
 }
 
 const tasksRt = {
@@ -79,6 +105,8 @@ export function useFamilyTasks({
     assignee: string;
     done: boolean;
     assignedToUserId?: string | null;
+    dueAt?: string | null;
+    remindOffsetsMinutes?: TaskRemindOffsetMinutes[];
   }) => {
     if (!payload?.text) {
       throw new Error('ADD_TODO: invalid payload');
@@ -89,6 +117,10 @@ export function useFamilyTasks({
     }
 
     const encryptedText = CryptoService.encrypt(payload.text, getCurrentKey());
+    const dueAt = payload.dueAt ?? null;
+    const remindOffsets = dueAt
+      ? normalizeTaskRemindOffsets(payload.remindOffsetsMinutes)
+      : [];
 
     const taskData: Record<string, unknown> = {
       group_id: currentGroupId,
@@ -99,6 +131,8 @@ export function useFamilyTasks({
           ? payload.assignedToUserId
           : null,
       is_completed: payload.done || false,
+      due_at: dueAt,
+      remind_offsets_minutes: remindOffsets,
     };
 
     const { error, data } = await supabase.from('family_tasks').insert(taskData).select();
@@ -140,7 +174,13 @@ export function useFamilyTasks({
       });
     }
 
-    return inserted as { id: string; created_by?: string; is_completed?: boolean };
+    return inserted as {
+      id: string;
+      created_by?: string;
+      is_completed?: boolean;
+      due_at?: string | null;
+      remind_offsets_minutes?: number[];
+    };
   };
 
   // TOGGLE TODO
@@ -299,7 +339,9 @@ export function useFamilyTasks({
 
       const { data: tasksData, error: tasksError } = await supabase
         .from('family_tasks')
-        .select('id, title, is_completed, assigned_to, created_by, created_at, group_id') // app_id 미사용 — 불필요 컬럼 제거
+        .select(
+          'id, title, is_completed, assigned_to, created_by, created_at, group_id, due_at, remind_offsets_minutes',
+        )
         .eq('group_id', groupId)
         .order('created_at', { ascending: false });
 
@@ -309,28 +351,8 @@ export function useFamilyTasks({
 
       const formattedTasks: FamilyTask[] = tasksData.map((task: any) => {
         const taskText = task.title || task.task_text || '';
-        let decryptedText = taskText;
         const currentKey = tasksRt.getCurrentKey.current();
-
-        if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
-          const isEncrypted = taskText.startsWith('U2FsdGVkX1');
-          if (isEncrypted) {
-            try {
-              const decrypted = tasksRt.crypto.current!.decrypt(taskText, currentKey);
-              if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                decryptedText = decrypted;
-              } else {
-                decryptedText = taskText;
-              }
-            } catch (e: any) {
-              decryptedText = taskText;
-            }
-          } else {
-            decryptedText = taskText;
-          }
-        } else {
-          decryptedText = taskText;
-        }
+        const decryptedText = decryptTaskTitle(taskText, currentKey, tasksRt.crypto.current);
 
         const assignedToUserId = isAssignedToUserUuid(task.assigned_to) ? task.assigned_to : undefined;
         const prev = tasksRt.tasks.current.find((row) => String(row.id) === String(task.id));
@@ -366,6 +388,7 @@ export function useFamilyTasks({
           done: task.is_completed || false,
           created_by: task.created_by || undefined,
           assigned_to_user_id: assignedToUserId,
+          ...dueFieldsFromRow(task),
         };
       });
 
@@ -376,7 +399,7 @@ export function useFamilyTasks({
       const merged = [...pendingLocal, ...formattedTasks];
 
       const taskSig = (row: FamilyTask) =>
-        `${row.id}:${row.done ? 1 : 0}:${row.text}:${row.assignee}:${row.assigned_to_user_id ?? ''}:${row.created_by ?? ''}`;
+        `${row.id}:${row.done ? 1 : 0}:${row.text}:${row.assignee}:${row.assigned_to_user_id ?? ''}:${row.created_by ?? ''}:${row.due_at ?? ''}:${(row.remind_offsets_minutes ?? []).join(',')}`;
       const nextSig = merged.map(taskSig).join('|');
       const prevSig = tasksRt.tasks.current.map(taskSig).join('|');
       // [수정 5] tasksRt.onTasksChange.current() ref 경유 → deps에서 onTasksChange 제거 가능
@@ -458,21 +481,9 @@ export function useFamilyTasks({
         if (ev === 'UPDATE') {
           const updatedTask = payload.new;
           const taskText = updatedTask.title || updatedTask.task_text || '';
-          let decryptedText = taskText;
           const updateTaskKey = tasksRt.getCurrentKey.current();
-
-          if (
-            updateTaskKey &&
-            updateTaskKey.length > 0 &&
-            taskText &&
-            taskText.length > 0 &&
-            taskText.startsWith('U2FsdGVkX1')
-          ) {
-            try {
-              const decrypted = tasksRt.crypto.current!.decrypt(taskText, updateTaskKey);
-              if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedText = decrypted;
-            } catch (_) {}
-          }
+          const decryptedText = decryptTaskTitle(taskText, updateTaskKey, tasksRt.crypto.current);
+          const due = dueFieldsFromRow(updatedTask);
 
           const updatedAssignedToUserId = isAssignedToUserUuid(updatedTask.assigned_to)
             ? updatedTask.assigned_to
@@ -508,6 +519,7 @@ export function useFamilyTasks({
                         done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done,
                         assigned_to_user_id: updatedAssignedToUserId ?? t.assigned_to_user_id,
                         created_by: updatedTask.created_by || t.created_by,
+                        ...due,
                       }
                     : t
                 )
@@ -519,6 +531,7 @@ export function useFamilyTasks({
                     done: updatedTask.is_completed || false,
                     created_by: updatedTask.created_by,
                     assigned_to_user_id: updatedAssignedToUserId,
+                    ...due,
                   },
                   ...latestTasks,
                 ],
@@ -546,28 +559,9 @@ export function useFamilyTasks({
         }
 
         const taskText = newTask.title || newTask.task_text || '';
-        let decryptedText = taskText;
         const taskKey = tasksRt.getCurrentKey.current();
-
-        if (taskKey && taskKey.length > 0 && taskText && taskText.length > 0) {
-          const isEncrypted = taskText.startsWith('U2FsdGVkX1');
-          if (isEncrypted) {
-            try {
-              const decrypted = tasksRt.crypto.current!.decrypt(taskText, taskKey);
-              if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                decryptedText = decrypted;
-              } else {
-                decryptedText = taskText;
-              }
-            } catch (e: any) {
-              decryptedText = taskText;
-            }
-          } else {
-            decryptedText = taskText;
-          }
-        } else {
-          decryptedText = taskText;
-        }
+        const decryptedText = decryptTaskTitle(taskText, taskKey, tasksRt.crypto.current);
+        const due = dueFieldsFromRow(newTask);
 
         const newAssignedToUserId = isAssignedToUserUuid(newTask.assigned_to) ? newTask.assigned_to : undefined;
 
@@ -627,6 +621,7 @@ export function useFamilyTasks({
                       assignee: decryptedAssignee,
                       done: newTask.is_completed || false,
                       assigned_to_user_id: newAssignedToUserId ?? t.assigned_to_user_id,
+                      ...due,
                     }
                   : t
               )
@@ -643,6 +638,7 @@ export function useFamilyTasks({
             done: newTask.is_completed || false,
             created_by: newTask.created_by,
             assigned_to_user_id: newAssignedToUserId,
+            ...due,
           },
           ...latestTasks,
         ]);

@@ -1729,8 +1729,8 @@ body {
  * OS/문서가 dark color-scheme 이면 UA 가 폼 컨트롤을 어둡게 그려 "검은 박스"로 보임.
  * (next-themes enableColorScheme 끔 + 아래로 이중 방어)
  */
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([type="color"]):not(.chalkboard-form-input):not(.form-input):not(.chat-input),
-textarea:not(.chalkboard-form-input),
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([type="color"]):not(.chalkboard-form-input):not(.form-input):not(.chat-input):not(.desk-text):not(.chalkboard-desk-input),
+textarea:not(.chalkboard-form-input):not(.desk-text):not(.chalkboard-desk-input),
 select:not(.chalkboard-form-input) {
   background-color: #ffffff;
   color: #1e293b;
@@ -3239,7 +3239,7 @@ html[data-ui-theme='default'] body {
   flex: 1 1 0%;
   font-size: 5.5cqw;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.05;
   color: #ffffff;
   letter-spacing: 0.03em;
   min-width: 0;
@@ -3375,6 +3375,20 @@ html[data-ui-theme='default'] body {
   }
 }
 
+/**
+ * 추가 모달: 원본 PNG 비율 유지(늘리면 나무 바깥에 녹색 테두리가 보임).
+ * 필드가 많아도 aspect는 원본, 안쪽 스택만 압축·버튼은 분필 위로.
+ */
+.chalkboard-modal-frame--stack {
+  /* 기본 .chalkboard-modal-frame 비율(467/558) 그대로 */
+  background-color: transparent;
+}
+
+.chalkboard-modal-frame--stack .chalkboard-modal-container {
+  position: absolute;
+  inset: 0;
+}
+
 .chalkboard-modal-container {
   position: absolute;
   inset: 0;
@@ -3402,14 +3416,14 @@ html[data-ui-theme='default'] body {
   z-index: 1;
   left: var(--chalkboard-newtask-form-left);
   right: var(--chalkboard-newtask-form-right);
-  top: 17%;
+  top: 12%;
   margin: 0;
   padding: 0.2em 0 0.05em;
   text-align: center;
   font-family: var(--chalk-font-title);
-  font-size: 7.8cqi;
+  font-size: 7cqi;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   letter-spacing: 0.04em;
   color: rgba(255, 248, 235, 0.86);
   -webkit-text-stroke: 0.45px rgba(255, 248, 235, 0.42);
@@ -3447,11 +3461,41 @@ html[data-ui-theme='default'] body {
 }
 
 .chalkboard-modal-field--what {
-  top: 30%;
+  top: 22%;
 }
 
 .chalkboard-modal-field--who {
-  top: 52%;
+  top: 38%;
+}
+
+/* 마감·템플릿: PNG absolute 폼에 top 없으면 제목과 겹침 */
+.chalkboard-modal-field--due {
+  top: 54%;
+  gap: 0.8cqi;
+}
+
+.chalkboard-modal-field--template {
+  top: 70%;
+  gap: 0.8cqi;
+}
+
+.chalkboard-modal-remind {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2cqi;
+  margin: 0;
+  font-family: var(--chalk-font-body);
+  font-size: 3.6cqi;
+  font-weight: 600;
+  color: rgba(255, 248, 235, 0.88);
+  filter: url('#chalkboard-chalk-texture');
+}
+
+.chalkboard-modal-remind input[type='checkbox'] {
+  width: 3.6cqi;
+  height: 3.6cqi;
+  accent-color: rgba(255, 248, 235, 0.85);
+  flex-shrink: 0;
 }
 
 .chalkboard-modal-container .chalkboard-form-input {
@@ -3507,12 +3551,95 @@ html[data-ui-theme='default'] body {
   position: absolute;
   left: var(--chalkboard-newtask-form-left);
   right: var(--chalkboard-newtask-form-right);
-  bottom: 18%;
+  bottom: 8%;
   display: flex;
   flex-shrink: 0;
   gap: var(--spacing-md);
   margin-top: 0;
   padding-top: 0;
+}
+
+/**
+ * PNG 프레임 안쪽 flex 스택 — absolute 필드 top% 충돌 없이 정렬.
+ */
+.chalkboard-modal-stack {
+  position: absolute;
+  left: var(--chalkboard-newtask-form-left);
+  right: var(--chalkboard-newtask-form-right);
+  /* 제목 ↔ 위쪽 나무 프레임 여백 */
+  top: 11%;
+  /* 지우개와 아주 살짝만 떨어짐 (크게 올리면 목록↔버튼이 다시 겹침) */
+  bottom: 13%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* absolute heading(specificity 0,2,0)보다 이겨서 스택 흐름에 넣음 */
+.chalkboard-modal-container .chalkboard-modal-heading.chalkboard-modal-heading--in-stack {
+  position: static;
+  left: auto;
+  right: auto;
+  top: auto;
+  z-index: auto;
+  flex-shrink: 0;
+  width: 100%;
+  margin: 0.15rem 0 0.35rem;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  text-align: center;
+}
+
+.chalkboard-modal-stack-body {
+  display: flex;
+  /* 공간 부족 시 바디만 줄고, 목록↔버튼 간격은 절대 안 찌그러짐 */
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 0.25rem;
+}
+
+.chalkboard-modal-stack .chalkboard-modal-field {
+  position: static;
+  left: auto;
+  right: auto;
+  top: auto;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.chalkboard-modal-stack .chalkboard-modal-field--template {
+  margin-bottom: 0;
+}
+
+.chalkboard-modal-actions--in-stack {
+  position: relative;
+  z-index: 2;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  /* 목록 박스와 버튼이 닿지 않을 최소 간격 (filter 번짐 포함) */
+  margin-top: 0.65rem;
+  padding-top: 0;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.chalkboard-modal-error {
+  margin: 0;
+  text-align: center;
+  font-family: var(--chalk-font-body);
+  font-size: 3.4cqi;
+  font-weight: 600;
+  color: #fecaca;
 }
 
 .chalkboard-modal-container .chalkboard-btn-secondary,
@@ -3526,6 +3653,44 @@ html[data-ui-theme='default'] body {
     min-height: 9.5cqi;
     padding: 2.4cqi 3.2cqi;
     font-size: 4cqi;
+  }
+
+  .chalkboard-modal-field--due .chalkboard-form-input,
+  .chalkboard-modal-field--template .chalkboard-form-input {
+    min-height: 7.2cqi;
+    padding: 1.5cqi 2.4cqi;
+    font-size: 3.4cqi;
+  }
+
+  .chalkboard-modal-field--due .chalkboard-modal-field-label,
+  .chalkboard-modal-field--template .chalkboard-modal-field-label {
+    font-size: 4cqi;
+  }
+
+  /* 스택 폼: 필드·버튼 겹침 없이 PNG 안에 들어가도록 압축 */
+  .chalkboard-modal-stack .chalkboard-form-input {
+    min-height: 7.2cqi;
+    padding: 1.4cqi 2.4cqi;
+    font-size: 3.3cqi;
+  }
+
+  .chalkboard-modal-stack .chalkboard-modal-field-label {
+    font-size: 3.8cqi;
+  }
+
+  .chalkboard-modal-stack .chalkboard-modal-heading {
+    font-size: 5.8cqi;
+    padding: 0;
+  }
+
+  .chalkboard-modal-stack .chalkboard-modal-remind {
+    font-size: 3cqi;
+    gap: 0.9cqi;
+  }
+
+  .chalkboard-modal-stack .chalkboard-modal-remind input[type='checkbox'] {
+    width: 3cqi;
+    height: 3cqi;
   }
 
   .chalkboard-modal-container select.chalkboard-form-input {
@@ -3543,6 +3708,38 @@ html[data-ui-theme='default'] body {
     padding: 2.6cqi 0;
     font-size: 3.8cqi;
   }
+
+  .chalkboard-modal-stack .chalkboard-btn-secondary,
+  .chalkboard-modal-stack .chalkboard-btn-primary {
+    padding: 2cqi 0;
+    font-size: 3.3cqi;
+  }
+
+  .chalkboard-desk-item .desk-text {
+    font-size: 5.8cqi !important;
+  }
+
+  .chalkboard-desk-item .desk-check {
+    width: 6.2cqi;
+    height: 6.2cqi;
+    font-size: 3.8cqi;
+  }
+
+  .chalkboard-desk-item .desk-delete {
+    font-size: 6.5cqi;
+  }
+
+  .chalkboard-desk-input {
+    min-height: 9cqi;
+    padding: 2cqi 2.8cqi;
+    font-size: 3.8cqi !important;
+  }
+
+  .chalkboard-desk-btn {
+    min-height: 9cqi;
+    padding: 2cqi 3cqi;
+    font-size: 3.6cqi !important;
+  }
 }
 
 .chalkboard-modal-title {
@@ -3555,6 +3752,242 @@ html[data-ui-theme='default'] body {
   gap: var(--spacing-sm);
   position: relative;
   z-index: 1;
+}
+
+/**
+ * 세부 목록: 임무 추가와 같은 newtask PNG 프레임 + 체크리스트가 주.
+ */
+.chalkboard-modal-stack--desk {
+  top: 10%;
+  /* 분필·지우개와 하단 버튼이 붙지 않게 */
+  bottom: 14.5%;
+  gap: 0.55rem;
+}
+
+.chalkboard-modal-heading--desk {
+  font-size: 5.2cqi !important;
+  margin-bottom: 0.25rem;
+}
+
+.chalkboard-desk-body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chalkboard-desk-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 0;
+  background: transparent;
+}
+
+.chalkboard-desk-item,
+.chalkboard-desk-item::before,
+.chalkboard-desk-item::after {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+.chalkboard-desk-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.15rem;
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
+  list-style: none;
+}
+
+.chalkboard-desk-item .desk-check {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 248, 235, 0.8);
+  background: transparent;
+  color: rgba(255, 248, 235, 0.95);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  filter: none;
+}
+
+.chalkboard-desk-item .desk-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0.15rem 0;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 0;
+  outline: none !important;
+  box-shadow: none !important;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: var(--chalk-font-body);
+  font-size: 1.35rem !important;
+  font-weight: 700;
+  line-height: 1.35;
+  color: rgba(255, 248, 235, 0.95) !important;
+  color-scheme: dark;
+  caret-color: rgba(255, 248, 235, 0.95);
+  background: transparent !important;
+  background-color: transparent !important;
+  /* chalk filter가 입력칸 아래 흰 가로줄을 만듦 → 목록 텍스트에는 미사용 */
+  filter: none !important;
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.28),
+    0 0 1.5px rgba(255, 255, 255, 0.22);
+}
+
+.chalkboard-desk-item .desk-text:focus,
+.chalkboard-desk-item .desk-text:focus-visible {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.chalkboard-desk-item .desk-text.is-done {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.chalkboard-desk-item .desk-text:-webkit-autofill,
+.chalkboard-desk-item .desk-text:-webkit-autofill:hover,
+.chalkboard-desk-item .desk-text:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgba(255, 248, 235, 0.95);
+  transition: background-color 99999s ease-in-out 0s;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+}
+
+.chalkboard-desk-item .desk-delete {
+  flex-shrink: 0;
+  border: 0 !important;
+  background: transparent;
+  color: rgba(255, 248, 235, 0.65);
+  font-size: 1.65rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  filter: none;
+}
+
+.chalkboard-desk-item .desk-delete:hover {
+  color: #fca5a5;
+}
+
+.chalkboard-desk-empty {
+  flex: 1 1 auto;
+  min-height: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  text-align: center;
+  font-family: var(--chalk-font-body);
+  font-size: 0.9rem;
+  color: rgba(255, 248, 235, 0.75);
+}
+
+.chalkboard-desk-secondary {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.chalkboard-desk-input {
+  min-width: 0;
+  flex: 1 1 auto;
+  width: auto;
+  box-sizing: border-box;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.7rem;
+  font-family: var(--chalk-font-body);
+  font-size: 0.95rem !important;
+  font-weight: 700;
+  color: rgba(255, 248, 235, 0.9) !important;
+  color-scheme: dark;
+  caret-color: rgba(255, 248, 235, 0.95);
+  border: 2px solid rgba(255, 248, 235, 0.7);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.15) !important;
+  background-color: rgba(0, 0, 0, 0.15) !important;
+  box-shadow: none !important;
+  appearance: none;
+  -webkit-appearance: none;
+  filter: none;
+}
+
+.chalkboard-desk-input::placeholder {
+  color: rgba(255, 248, 235, 0.42);
+  font-size: 0.9rem;
+}
+
+.chalkboard-desk-input:-webkit-autofill,
+.chalkboard-desk-input:-webkit-autofill:hover,
+.chalkboard-desk-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgba(255, 248, 235, 0.9);
+  transition: background-color 99999s ease-in-out 0s;
+  box-shadow: 0 0 0 1000px rgba(30, 58, 36, 0.95) inset;
+}
+
+.chalkboard-desk-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.85rem;
+  font-family: var(--chalk-font-title);
+  font-size: 0.9rem !important;
+  font-weight: 700;
+  color: rgba(255, 248, 235, 0.9);
+  background: rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(255, 248, 235, 0.7);
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  filter: none;
+}
+
+.chalkboard-desk-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chalkboard-desk-btn--ghost {
+  background: transparent;
+}
+
+.chalkboard-desk-actions {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  margin-top: 0.55rem;
+  padding-top: 0.35rem;
+  gap: 0.5rem;
 }
 
 .chalkboard-modal-icon {

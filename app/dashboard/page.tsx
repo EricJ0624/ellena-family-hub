@@ -411,7 +411,7 @@ function tasksSignature(tasks: ReadonlyArray<FamilyTask>): string {
   return tasks
     .map(
       (t) =>
-        `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.supabaseId ?? ''}:${t.created_by ?? ''}`,
+        `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.supabaseId ?? ''}:${t.created_by ?? ''}:${t.due_at ?? ''}:${(t.remind_offsets_minutes ?? []).join(',')}`,
     )
     .join('|');
 }
@@ -677,7 +677,19 @@ export default function FamilyHub() {
     invalid_input: getDashboardTranslation(lang, 'invalid_input'),
     anyone: getCommonTranslation(lang, 'anyone'),
     cancel: getCommonTranslation(lang, 'cancel'),
+    close: getCommonTranslation(lang, 'close'),
     delete_confirm: getCommonTranslation(lang, 'delete_confirm'),
+    todo_due_label: getDashboardTranslation(lang, 'todo_due_label'),
+    todo_remind_1h: getDashboardTranslation(lang, 'todo_remind_1h'),
+    todo_list_btn: getDashboardTranslation(lang, 'todo_list_btn'),
+    subtask_desk_title: getDashboardTranslation(lang, 'subtask_desk_title'),
+    subtask_add_placeholder: getDashboardTranslation(lang, 'subtask_add_placeholder'),
+    subtask_add_btn: getDashboardTranslation(lang, 'subtask_add_btn'),
+    subtask_empty: getDashboardTranslation(lang, 'subtask_empty'),
+    subtask_save_list: getDashboardTranslation(lang, 'subtask_save_list'),
+    subtask_load_list: getDashboardTranslation(lang, 'subtask_load_list'),
+    subtask_template_name_placeholder: getDashboardTranslation(lang, 'subtask_template_name_placeholder'),
+    subtask_template_empty: getDashboardTranslation(lang, 'subtask_template_empty'),
   }), [lang]);
 
   const chatTranslations = useMemo(() => ({

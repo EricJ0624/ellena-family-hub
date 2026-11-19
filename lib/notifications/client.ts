@@ -1,4 +1,5 @@
 import { normalizeRemindOffsets } from '@/app/features/family-calendar/remind-offsets';
+import { normalizeTaskRemindOffsets } from '@/app/features/family-tasks/remind-offsets';
 import { supabase } from '@/lib/supabase';
 import type { NotifiableWidgetKey, NotificationEventType } from './types';
 
@@ -70,5 +71,41 @@ export async function dispatchDueCalendarReminderClient(input: {
     }
   } catch (error) {
     console.warn('[dispatchDueCalendarReminderClient] 오류:', error);
+  }
+}
+
+/** 저장 직후·대시보드 열림 시, 이미 발송 시각이 된 할 일 마감 알림만 서버에 맡긴다. */
+export async function dispatchDueTaskReminderClient(input: {
+  taskId: string;
+  title: string;
+  dueAt: string | null | undefined;
+  remindOffsetsMinutes: number[];
+}): Promise<void> {
+  try {
+    if (!input.taskId || /^\d+$/.test(input.taskId)) return;
+    if (!input.dueAt) return;
+    if (normalizeTaskRemindOffsets(input.remindOffsetsMinutes).length === 0) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    const res = await fetch('/api/tasks/reminders/dispatch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        taskId: input.taskId,
+        title: input.title,
+      }),
+    });
+    if (!res.ok) {
+      console.warn('[dispatchDueTaskReminderClient] 요청 실패:', res.status);
+    }
+  } catch (error) {
+    console.warn('[dispatchDueTaskReminderClient] 오류:', error);
   }
 }
