@@ -36,6 +36,12 @@ import {
   readPhotoFrameGestureHintSeen,
   writePhotoFrameGestureHintSeen,
 } from '@/lib/preferences/photo-frame-gesture-hint';
+import {
+  clearStoredFrameSelectedPhoto,
+  getLocalDateKey,
+  readStoredFrameSelectedPhoto,
+  writeStoredFrameSelectedPhoto,
+} from '@/lib/preferences/photo-frame-selected-photo';
 
 const SWIPE_THRESHOLD_PX = 48;
 const SLIDE_OFFSET_PX = 28;
@@ -43,14 +49,7 @@ const SLIDE_DURATION_SEC = 0.32;
 /** 첫 안내 중에만 사진·액자 전환을 느리게 */
 const HINT_SLIDE_DURATION_SEC = 0.95;
 
-
-// 날짜 기반 해시 시드 생성 함수
-const getDateHashSeed = (date: Date): string => {
-  const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-  return dateStr;
-};
-
-// 해시 기반 시드 랜덤 함수 (일관된 랜덤 생성)
+// 해시 기반 시드 랜덤 (같은 시드 → 같은 0~1)
 const seededRandom = (seed: string): number => {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -58,7 +57,6 @@ const seededRandom = (seed: string): number => {
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Convert to 32bit integer
   }
-  // 0~1 사이의 값으로 정규화
   return Math.abs(hash % 10000) / 10000;
 };
 
@@ -67,11 +65,10 @@ const seededRandom = (seed: string): number => {
 const isStablePhotoUrl = (url: string): boolean =>
   !!url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/api/photo/proxy') || url.startsWith('/api/media/file'));
 
-// 오늘의 무작위 사진 선택 함수 (날짜 시드 — 같은 날·같은 앨범이면 동일 인덱스)
+// 오늘의 무작위 사진 (로컬 날짜 시드 — 스와이프 당일 만료와 동일 기준)
 const getTodayRandomPhoto = (photos: Array<{ id: number | string; data: string }>): number | null => {
   if (!photos || photos.length === 0) return null;
-  const dateSeed = getDateHashSeed(new Date());
-  const random = seededRandom(dateSeed);
+  const random = seededRandom(getLocalDateKey());
   return Math.floor(random * photos.length);
 };
 
@@ -97,8 +94,8 @@ interface DailyPhotoFrameProps {
   onPhotoOrientationChange?: (isPortrait: boolean) => void;
   /** false면 액자 제스처 안내를 시작하지 않음 (위젯 쇼룸 등 선행 온보딩) */
   gestureHintEnabled?: boolean;
-  /** @deprecated 안내는 브라우저당 한 번이라 그룹 ID를 쓰지 않습니다. */
-  gestureHintScope?: string | null;
+  /** 스와이프 선택 저장 scope (그룹 ID). 없으면 세션만 유지 */
+  photoSelectionStorageScope?: string | null;
 }
 
 const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
@@ -109,10 +106,11 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   groupCaptionName,
   onPhotoOrientationChange,
   gestureHintEnabled = true,
+  photoSelectionStorageScope = null,
 }) => {
   const { lang } = useLanguage();
   const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
-  // Hydration 불일치 방지: 날짜/시드 기반 선택은 클라이언트 마운트 후에만 수행 (React #418)
+  // Hydration 불일치 방지: 날짜/시드·localStorage 복원은 클라이언트 마운트 후에만 (React #418)
   const [mounted, setMounted] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | number | null>(null);
   const [slideAxis, setSlideAxis] = useState<'x' | 'y'>('x');
@@ -122,14 +120,41 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const didSwipeRef = useRef(false);
   const pointerStartRef = useRef<{ id: number; x: number; y: number } | null>(null);
 
+  // 마운트 + 당일 스와이프 선택 복원을 한 번에 (랜덤 깜빡임 방지)
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (!photoSelectionStorageScope) {
+      setSelectedPhotoId(null);
+      return;
+    }
+    setSelectedPhotoId(readStoredFrameSelectedPhoto(photoSelectionStorageScope));
+  }, [photoSelectionStorageScope]);
 
   // blob/data URL 제외 → 업로드 직후 뒤로가기 시 Hydration/렌더 에러 근본 방지
   const stablePhotos = useMemo(
     () => (photos || []).filter((p) => p?.data && isStablePhotoUrl(p.data)),
     [photos]
+  );
+
+  // 앨범에 없는 저장된 ID → 정리 후 랜덤 폴백
+  useEffect(() => {
+    if (!mounted || selectedPhotoId == null || stablePhotos.length === 0) return;
+    const exists = stablePhotos.some((p) => String(p.id) === String(selectedPhotoId));
+    if (exists) return;
+    if (photoSelectionStorageScope) {
+      clearStoredFrameSelectedPhoto(photoSelectionStorageScope);
+    }
+    setSelectedPhotoId(null);
+  }, [mounted, selectedPhotoId, stablePhotos, photoSelectionStorageScope]);
+
+  const persistSelectedPhotoId = useCallback(
+    (photoId: string | number) => {
+      setSelectedPhotoId(photoId);
+      if (photoSelectionStorageScope) {
+        writeStoredFrameSelectedPhoto(photoSelectionStorageScope, photoId);
+      }
+    },
+    [photoSelectionStorageScope],
   );
 
   const selectedPhoto = useMemo(() => {
@@ -175,20 +200,14 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     }
     const cacheKey = String(selectedPhoto.id);
     const cachedRatio = imageAspectRatioCacheRef.current[cacheKey];
-    const ratio = typeof cachedRatio === 'number' ? cachedRatio : null;
     setImageLoadError(false);
-    setImageAspectRatio(ratio);
-    // 캐시 hit 시에만 즉시 보고. null(=미확정)일 때 landscape(false)로 강제하지 않음
-    if (ratio !== null) {
-      reportPhotoOrientation(ratio < 1);
-    }
+    // null(=미확정)일 때 landscape로 강제하지 않음 — 아래 effect가 확정 비율만 보고
+    setImageAspectRatio(typeof cachedRatio === 'number' ? cachedRatio : null);
   }, [selectedPhoto, reportPhotoOrientation]);
 
   const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
   useEffect(() => {
-    if (!selectedPhoto) return;
-    // 비율 미확정 시 false로 덮어쓰지 않음 — 대시보드가 가로 타이틀 레이아웃에 고착되는 원인
-    if (imageAspectRatio === null) return;
+    if (!selectedPhoto || imageAspectRatio === null) return;
     reportPhotoOrientation(imageAspectRatio < 1);
   }, [selectedPhoto, imageAspectRatio, reportPhotoOrientation]);
 
@@ -228,16 +247,16 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         const prev = stablePhotos.find((p) => String(p.id) === String(undo.fromId));
         photoUndoRef.current = null;
         if (prev && String(prev.id) !== String(currentId)) {
-          setSelectedPhotoId(prev.id);
+          persistSelectedPhotoId(prev.id);
           return;
         }
       }
 
       const next = others[Math.floor(Math.random() * others.length)];
       photoUndoRef.current = currentId != null ? { fromId: currentId, dir } : null;
-      setSelectedPhotoId(next.id);
+      persistSelectedPhotoId(next.id);
     },
-    [stablePhotos, selectedPhoto],
+    [stablePhotos, selectedPhoto, persistSelectedPhotoId],
   );
 
   const cycleFrame = useCallback(
@@ -566,10 +585,9 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 interface TitleTextProps {
   title: string;
   titleStyle: TitleStyle;
-  onTitleClick?: (e: React.MouseEvent) => void;
 }
 
-const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }) => {
+const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle }) => {
   const raw = titleStyle.content || title;
   const parenMatch = typeof raw === 'string' && raw.match(/^(.*?)(\s*\([^)]+\))(.*)$/);
   const titleContent = parenMatch ? (
@@ -584,8 +602,7 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
-      onClick={onTitleClick}
-      className={cn('relative z-30 mb-6 select-none text-center', onTitleClick ? 'cursor-pointer' : 'cursor-default')}
+      className="relative z-30 mb-6 cursor-default select-none text-center"
       style={{
         color: titleStyle.color,
         fontSize: `${titleStyle.fontSize}px`,
@@ -600,12 +617,6 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
     </motion.h1>
   );
 };
-
-// 디자인 에디터 컴포넌트는 제거됨 (현재 editable={false} 고정으로 미사용)
-
-// TitlePage 메인 컴포넌트
-  
-
 
 // 떠다니는 꽃잎 컴포넌트
 const FloatingPetals: React.FC = () => {
@@ -655,12 +666,8 @@ const FloatingPetals: React.FC = () => {
 // TitlePage 메인 컴포넌트
 interface TitlePageProps {
   title?: string;
-  onTitleClick?: () => void;
   photos?: Array<{ id: number | string; data: string }>;
   titleStyle?: Partial<TitleStyle>;
-  onTitleStyleChange?: (style: TitleStyle) => void;
-  /** false면 타이틀 클릭 시 디자인 에디터 미표시 (읽기 전용) */
-  editable?: boolean;
   /** 액자 매트 캡션 (대시보드 타이틀과 별도 — pending 시 Hearth) */
   frameCaptionName?: string;
   /** false면 타이틀 텍스트 미표시 (대시보드에서 한 줄 타이틀을 별도 사용할 때) */
@@ -669,7 +676,7 @@ interface TitlePageProps {
   noBackground?: boolean;
   /** 액자 클릭 시 호출 (예: 가족 추억 페이지로 이동) */
   onFrameClick?: () => void;
-  /** 설정 시 localStorage에 프레임 선택 저장·복원 (예: 그룹 ID) */
+  /** 설정 시 localStorage에 프레임·스와이프 사진 선택 저장·복원 (예: 그룹 ID) */
   frameStyleStorageScope?: string | null;
   /** 액자 사진 세로 여부 — 대시보드 타이틀 정렬 */
   onPhotoOrientationChange?: (isPortrait: boolean) => void;
@@ -679,11 +686,8 @@ interface TitlePageProps {
 
 const TitlePage: React.FC<TitlePageProps> = ({
   title,
-  onTitleClick,
   photos = [],
   titleStyle: externalTitleStyle,
-  onTitleStyleChange,
-  editable = true,
   showTitle = true,
   noBackground = false,
   onFrameClick,
@@ -702,7 +706,6 @@ const TitlePage: React.FC<TitlePageProps> = ({
     if (stored) setFrameStyle(stored);
   }, [frameStyleStorageScope]);
 
-
   const handleFrameChange = useCallback(
     (style: FrameStyle) => {
       setFrameStyle(style);
@@ -712,7 +715,8 @@ const TitlePage: React.FC<TitlePageProps> = ({
     },
     [frameStyleStorageScope],
   );
-  const [internalTitleStyle, setInternalTitleStyle] = useState<TitleStyle>({
+
+  const [internalTitleStyle] = useState<TitleStyle>({
     content: title || ct('app_title'),
     color: '#9333ea',
     fontSize: 48,
@@ -720,20 +724,11 @@ const TitlePage: React.FC<TitlePageProps> = ({
     letterSpacing: 0,
     fontFamily: 'Inter',
   });
-  
-  // 외부에서 전달된 titleStyle이 있으면 사용, 없으면 내부 상태 사용
-  const titleStyle = externalTitleStyle 
+
+  const titleStyle = externalTitleStyle
     ? { ...internalTitleStyle, ...externalTitleStyle }
     : internalTitleStyle;
-  
-  // 타이틀 스타일 변경 핸들러
-  const handleStyleChange = useCallback((newStyle: TitleStyle) => {
-    setInternalTitleStyle(newStyle);
-    if (onTitleStyleChange) {
-      onTitleStyleChange(newStyle);
-    }
-  }, [onTitleStyleChange]);
-  
+
   return (
     <div
       className={`relative mb-4 flex min-h-[240px] w-full flex-col items-center justify-center overflow-visible rounded-2xl pt-2 md:min-h-[280px] ${
@@ -819,7 +814,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
           groupCaptionName={frameCaptionName ?? title ?? 'Hearth'}
           onPhotoOrientationChange={onPhotoOrientationChange}
           gestureHintEnabled={gestureHintEnabled}
-          gestureHintScope={frameStyleStorageScope}
+          photoSelectionStorageScope={frameStyleStorageScope}
         />
 
         {/* 타이틀 텍스트 (showTitle이 true일 때만) */}

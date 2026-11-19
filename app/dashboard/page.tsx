@@ -7977,11 +7977,6 @@ export default function FamilyHub() {
             photos={stableAlbum}
             titleStyle={effectiveTitleStyle}
             onPhotoOrientationChange={setFrameIsPortrait}
-            onTitleStyleChange={(style) => {
-              setTitleStyle(style);
-              updateState('UPDATE_TITLE_STYLE', style);
-            }}
-            editable={false}
             showTitle={false}
             noBackground
             frameStyleStorageScope={currentGroupId}
