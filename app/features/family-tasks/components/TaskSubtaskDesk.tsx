@@ -1,6 +1,6 @@
 /**
- * 임무 서브태스크 창 — 체크리스트 보기/편집, 목록 템플릿 저장.
- * 마감·알림은 할 일 추가 모달에서만 설정 (이 창에는 없음).
+ * 임무 서브태스크 창 — 체크리스트 보기 전용 (체크·취소선·닫기).
+ * 항목 추가/자주쓰는 저장은 TaskListComposer(임무 추가 모달)에서 처리.
  * 폼 state는 FamilyTasksSection 안에서만 유지 (대시보드 page로 올리지 않음).
  */
 
@@ -13,18 +13,16 @@ import type { FamilyTask } from '../types';
 
 export type TaskSubtaskDeskTranslations = {
   subtask_desk_title: string;
-  subtask_add_placeholder: string;
-  subtask_add_btn: string;
   subtask_empty: string;
-  subtask_save_list: string;
-  subtask_template_name_placeholder: string;
+  subtask_all_done: string;
   close: string;
-  delete_confirm: string;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** 목록이 전부 완료인 채 닫을 때 — 부모 임무를 완료 처리 */
+  onCloseWithAllDone?: () => void;
   task: FamilyTask | null;
   currentGroupId: string | null;
   getCurrentKey: () => string;
@@ -32,118 +30,128 @@ type Props = {
     encrypt: (data: any, key: string) => string;
     decrypt: (cipher: string, key: string) => any;
   };
-  sanitizeInput: (input: string | null | undefined, maxLength?: number) => string;
   isKidsTheme: boolean;
   translations: TaskSubtaskDeskTranslations;
-  /** 부모(FamilyTasksSection)와 동일 훅 — 저장 후 추가 모달 목록이 바로 갱신됨 */
-  saveTemplate: (name: string, itemTexts: string[]) => Promise<string>;
 };
+
+function fireAllDoneConfetti() {
+  void import('canvas-confetti').then(({ default: confetti }) => {
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('aria-hidden', 'true');
+    canvas.style.cssText =
+      'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10070';
+    document.body.appendChild(canvas);
+    const fire = confetti.create(canvas, { resize: true, useWorker: false });
+    const colors = ['#fff8eb', '#fde68a', '#86efac', '#7dd3fc', '#f9a8d4'];
+    fire({
+      particleCount: 70,
+      spread: 68,
+      origin: { x: 0.5, y: 0.55 },
+      colors,
+      ticks: 160,
+      startVelocity: 28,
+      gravity: 0.9,
+    });
+    setTimeout(() => {
+      fire.reset();
+      canvas.remove();
+    }, 1800);
+  });
+}
 
 export function TaskSubtaskDesk({
   open,
   onClose,
+  onCloseWithAllDone,
   task,
   currentGroupId,
   getCurrentKey,
   CryptoService,
-  sanitizeInput,
   isKidsTheme,
   translations: t,
-  saveTemplate,
 }: Props) {
   const taskId = task && !/^\d+$/.test(String(task.id)) ? String(task.id) : null;
-  const {
-    items,
-    loading,
-    addSubtask,
-    updateSubtaskText,
-    toggleSubtask,
-    deleteSubtask,
-  } = useFamilyTaskSubtasks({
+  const { items, loading, toggleSubtask } = useFamilyTaskSubtasks({
     taskId: open ? taskId : null,
     currentGroupId,
     getCurrentKey,
     CryptoService,
   });
 
-  const [newText, setNewText] = useState('');
-  const [templateName, setTemplateName] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const draftTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const draftValues = useRef<Map<string, string>>(new Map());
+  const [showAllDone, setShowAllDone] = useState(false);
+  const celebratedRef = useRef(false);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   useEffect(() => {
-    if (!open || !task) return;
-    setNewText('');
-    setTemplateName('');
-    setError(null);
+    if (!open) {
+      celebratedRef.current = false;
+      setShowAllDone(false);
+      if (bannerTimerRef.current) {
+        clearTimeout(bannerTimerRef.current);
+        bannerTimerRef.current = null;
+      }
+    }
   }, [open, task?.id]);
 
   useEffect(() => {
     return () => {
-      draftTimers.current.forEach((timer) => clearTimeout(timer));
-      draftTimers.current.clear();
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
     };
   }, []);
 
-  const handleAdd = async () => {
-    const text = sanitizeInput(newText, 100);
-    if (!text) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await addSubtask(text);
-      setNewText('');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '추가 실패');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const scheduleTextSave = (subtaskId: string, value: string) => {
-    draftValues.current.set(subtaskId, value);
-    const prev = draftTimers.current.get(subtaskId);
-    if (prev) clearTimeout(prev);
-    const timer = setTimeout(() => {
-      draftTimers.current.delete(subtaskId);
-      const latest = draftValues.current.get(subtaskId);
-      if (latest == null) return;
-      const cleaned = sanitizeInput(latest, 100);
-      if (!cleaned) return;
-      void updateSubtaskText(subtaskId, cleaned).catch((e) => {
-        setError(e instanceof Error ? e.message : '저장 실패');
-      });
-    }, 450);
-    draftTimers.current.set(subtaskId, timer);
-  };
-
-  const handleSaveTemplate = async () => {
-    const name = sanitizeInput(templateName, 60);
-    if (!name) {
-      setError(t.subtask_template_name_placeholder);
+  const celebrateIfAllDone = (allDone: boolean) => {
+    if (!allDone) {
+      celebratedRef.current = false;
       return;
     }
-    setBusy(true);
-    setError(null);
-    try {
-      await saveTemplate(
-        name,
-        items.map((i) => i.text),
-      );
-      setTemplateName('');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '저장 실패');
-    } finally {
-      setBusy(false);
-    }
+    if (celebratedRef.current) return;
+    celebratedRef.current = true;
+    setShowAllDone(true);
+    fireAllDoneConfetti();
+    if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    bannerTimerRef.current = setTimeout(() => {
+      setShowAllDone(false);
+      bannerTimerRef.current = null;
+    }, 1500);
   };
+
+  const handleToggle = (itemId: string, nextDone: boolean) => {
+    const allDone =
+      items.length > 0 && items.every((row) => (row.id === itemId ? nextDone : row.done));
+    void toggleSubtask(itemId, nextDone)
+      .then(() => {
+        celebrateIfAllDone(allDone);
+      })
+      .catch(() => {
+        /* 훅에서 롤백 — 실패 시 축하 없음 */
+      });
+  };
+
+  const handleClose = () => {
+    const latest = itemsRef.current;
+    const allDone = latest.length > 0 && latest.every((row) => row.done);
+    if (allDone) onCloseWithAllDone?.();
+    onClose();
+  };
+
+  const allDoneBanner = showAllDone ? (
+    <p
+      className={
+        isKidsTheme
+          ? 'chalkboard-desk-all-done'
+          : 'm-0 text-center text-base font-semibold text-emerald-600'
+      }
+      aria-live="polite"
+    >
+      {t.subtask_all_done}
+    </p>
+  ) : null;
 
   if (isKidsTheme) {
     return (
-      <TopLayerDialog open={open} onClose={onClose}>
+      <TopLayerDialog open={open} onClose={handleClose}>
         <div
           className="chalkboard-modal-frame chalkboard-modal-frame--stack chalkboard-modal-frame--desk"
           onClick={(e) => e.stopPropagation()}
@@ -167,106 +175,26 @@ export function TaskSubtaskDesk({
                         <button
                           type="button"
                           className="desk-check"
-                          onClick={() => void toggleSubtask(item.id, !item.done)}
+                          onClick={() => handleToggle(item.id, !item.done)}
                           aria-checked={item.done}
                           role="checkbox"
                         >
                           {item.done ? '✓' : ''}
                         </button>
-                        <input
-                          type="text"
-                          className={`desk-text${item.done ? ' is-done' : ''}`}
-                          defaultValue={item.text}
-                          key={`${item.id}:${item.text}`}
-                          onChange={(e) => scheduleTextSave(item.id, e.target.value)}
-                          maxLength={100}
-                          style={{
-                            background: 'transparent',
-                            backgroundColor: 'transparent',
-                            color: 'rgba(255, 248, 235, 0.95)',
-                            border: 'none',
-                            borderBottom: 'none',
-                            boxShadow: 'none',
-                            outline: 'none',
-                            filter: 'none',
-                            fontSize: '1.35rem',
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="desk-delete"
-                          aria-label="delete"
-                          onClick={() => {
-                            if (!confirm(t.delete_confirm)) return;
-                            void deleteSubtask(item.id).catch((e) =>
-                              setError(e instanceof Error ? e.message : '삭제 실패'),
-                            );
-                          }}
-                        >
-                          ×
-                        </button>
+                        <span className={`desk-text${item.done ? ' is-done' : ''}`}>{item.text}</span>
                       </li>
                     ))}
                   </ul>
                 )}
-
-                <div className="chalkboard-desk-secondary">
-                  <input
-                    type="text"
-                    className="chalkboard-desk-input"
-                    placeholder={t.subtask_add_placeholder}
-                    value={newText}
-                    onChange={(e) => setNewText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        void handleAdd();
-                      }
-                    }}
-                    maxLength={100}
-                    style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.15)',
-                      color: 'rgba(255, 248, 235, 0.9)',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void handleAdd()}
-                    className="chalkboard-desk-btn"
-                  >
-                    {t.subtask_add_btn}
-                  </button>
-                </div>
-
-                <div className="chalkboard-desk-secondary">
-                  <input
-                    type="text"
-                    className="chalkboard-desk-input"
-                    placeholder={t.subtask_template_name_placeholder}
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    maxLength={60}
-                    style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.15)',
-                      color: 'rgba(255, 248, 235, 0.9)',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    disabled={busy || items.length === 0}
-                    onClick={() => void handleSaveTemplate()}
-                    className="chalkboard-desk-btn chalkboard-desk-btn--ghost"
-                  >
-                    {t.subtask_save_list}
-                  </button>
-                </div>
-
-                {error ? <p className="chalkboard-modal-error">{error}</p> : null}
+                {allDoneBanner}
               </div>
 
               <div className="chalkboard-desk-actions">
-                <button type="button" onClick={onClose} className="chalkboard-desk-btn chalkboard-desk-btn--ghost">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="chalkboard-desk-btn chalkboard-desk-btn--ghost"
+                >
                   {t.close}
                 </button>
               </div>
@@ -278,7 +206,7 @@ export function TaskSubtaskDesk({
   }
 
   return (
-    <TopLayerDialog open={open} onClose={onClose}>
+    <TopLayerDialog open={open} onClose={handleClose}>
       <div
         className="flex max-h-[88dvh] w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -305,91 +233,30 @@ export function TaskSubtaskDesk({
                   <button
                     type="button"
                     className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-300 bg-white text-sm"
-                    onClick={() => void toggleSubtask(item.id, !item.done)}
+                    onClick={() => handleToggle(item.id, !item.done)}
                     aria-checked={item.done}
                     role="checkbox"
                   >
                     {item.done ? '✓' : ''}
                   </button>
-                  <input
-                    type="text"
-                    className={`min-w-0 flex-1 border-0 bg-transparent text-base text-slate-800 outline-none ${
+                  <span
+                    className={`min-w-0 flex-1 text-base text-slate-800 ${
                       item.done ? 'line-through opacity-60' : ''
                     }`}
-                    defaultValue={item.text}
-                    key={`${item.id}:${item.text}`}
-                    onChange={(e) => scheduleTextSave(item.id, e.target.value)}
-                    maxLength={100}
-                  />
-                  <button
-                    type="button"
-                    className="shrink-0 text-slate-400 hover:text-red-500"
-                    aria-label="delete"
-                    onClick={() => {
-                      if (!confirm(t.delete_confirm)) return;
-                      void deleteSubtask(item.id).catch((e) =>
-                        setError(e instanceof Error ? e.message : '삭제 실패'),
-                      );
-                    }}
                   >
-                    ×
-                  </button>
+                    {item.text}
+                  </span>
                 </li>
               ))}
             </ul>
           )}
-
-          <div className="flex shrink-0 gap-2">
-            <input
-              type="text"
-              className="form-input min-h-8 flex-1 py-1.5 text-sm"
-              placeholder={t.subtask_add_placeholder}
-              value={newText}
-              onChange={(e) => setNewText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  void handleAdd();
-                }
-              }}
-              maxLength={100}
-            />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleAdd()}
-              className="shrink-0 rounded-lg bg-indigo-500 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-600 disabled:opacity-50"
-            >
-              {t.subtask_add_btn}
-            </button>
-          </div>
-
-          <div className="flex shrink-0 flex-wrap gap-2">
-            <input
-              type="text"
-              className="form-input min-h-8 min-w-[8rem] flex-1 py-1.5 text-sm"
-              placeholder={t.subtask_template_name_placeholder}
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              maxLength={60}
-            />
-            <button
-              type="button"
-              disabled={busy || items.length === 0}
-              onClick={() => void handleSaveTemplate()}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            >
-              {t.subtask_save_list}
-            </button>
-          </div>
-
-          {error ? <p className="m-0 text-sm text-red-600">{error}</p> : null}
+          {allDoneBanner}
         </div>
 
         <div className="mt-3 flex shrink-0 justify-end">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
           >
             {t.close}

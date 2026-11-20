@@ -42,6 +42,7 @@ export function localInputValueToDueAtIso(value: string): string | null {
   return d.toISOString();
 }
 
+/** 목록용 마감 표시: 월 짧은 이름 + 일 + 24시간 (예: Nov 22 12:09). 알림 로직과 무관. */
 export function formatTaskDueShort(dueAtIso: string | null | undefined, locale?: string): string {
   if (!dueAtIso) return '';
   const d = new Date(dueAtIso);
@@ -52,8 +53,12 @@ export function formatTaskDueShort(dueAtIso: string | null | undefined, locale?:
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
+      hourCycle: 'h23',
     }).format(d);
   } catch {
-    return d.toLocaleString();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
   }
 }

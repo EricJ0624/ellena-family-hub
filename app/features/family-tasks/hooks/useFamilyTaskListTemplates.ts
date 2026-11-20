@@ -31,55 +31,49 @@ export function useFamilyTaskListTemplates(input: {
 }) {
   const { currentGroupId, userId, getCurrentKey, CryptoService } = input;
   const [templates, setTemplates] = useState<FamilyTaskListTemplate[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const loadTemplates = useCallback(async () => {
     if (!currentGroupId) {
       setTemplates([]);
       return;
     }
-    setLoading(true);
-    try {
-      const session = await waitForSupabaseSession(supabase);
-      if (!session?.access_token) return;
+    const session = await waitForSupabaseSession(supabase);
+    if (!session?.access_token) return;
 
-      const { data: tplRows, error } = await supabase
-        .from('family_task_list_templates')
-        .select('id, name, created_at')
-        .eq('group_id', currentGroupId)
-        .order('created_at', { ascending: false });
+    const { data: tplRows, error } = await supabase
+      .from('family_task_list_templates')
+      .select('id, name, created_at')
+      .eq('group_id', currentGroupId)
+      .order('created_at', { ascending: false });
 
-      if (error || !tplRows) {
-        setTemplates([]);
-        return;
-      }
-
-      const ids = tplRows.map((r) => String(r.id));
-      const countById = new Map<string, number>();
-      if (ids.length > 0) {
-        const { data: itemRows } = await supabase
-          .from('family_task_list_template_items')
-          .select('template_id')
-          .eq('group_id', currentGroupId)
-          .in('template_id', ids);
-        for (const row of itemRows || []) {
-          const id = String(row.template_id);
-          countById.set(id, (countById.get(id) ?? 0) + 1);
-        }
-      }
-
-      const key = getCurrentKey();
-      setTemplates(
-        tplRows.map((row) => ({
-          id: String(row.id),
-          name: decryptText(row.name || '', key, CryptoService),
-          created_at: String(row.created_at || ''),
-          item_count: countById.get(String(row.id)) ?? 0,
-        })),
-      );
-    } finally {
-      setLoading(false);
+    if (error || !tplRows) {
+      setTemplates([]);
+      return;
     }
+
+    const ids = tplRows.map((r) => String(r.id));
+    const countById = new Map<string, number>();
+    if (ids.length > 0) {
+      const { data: itemRows } = await supabase
+        .from('family_task_list_template_items')
+        .select('template_id')
+        .eq('group_id', currentGroupId)
+        .in('template_id', ids);
+      for (const row of itemRows || []) {
+        const id = String(row.template_id);
+        countById.set(id, (countById.get(id) ?? 0) + 1);
+      }
+    }
+
+    const key = getCurrentKey();
+    setTemplates(
+      tplRows.map((row) => ({
+        id: String(row.id),
+        name: decryptText(row.name || '', key, CryptoService),
+        created_at: String(row.created_at || ''),
+        item_count: countById.get(String(row.id)) ?? 0,
+      })),
+    );
   }, [currentGroupId, getCurrentKey, CryptoService]);
 
   useEffect(() => {
@@ -141,11 +135,28 @@ export function useFamilyTaskListTemplates(input: {
     [currentGroupId, getCurrentKey, CryptoService],
   );
 
+  const deleteTemplate = useCallback(
+    async (templateId: string) => {
+      const id = templateId.trim();
+      if (!currentGroupId || !id) throw new Error('목록을 선택해 주세요.');
+
+      const { error } = await supabase
+        .from('family_task_list_templates')
+        .delete()
+        .eq('id', id)
+        .eq('group_id', currentGroupId);
+
+      if (error) throw error;
+      await loadTemplates();
+    },
+    [currentGroupId, loadTemplates],
+  );
+
   return {
     templates,
-    loading,
     saveTemplate,
     loadTemplateItemTexts,
+    deleteTemplate,
     reloadTemplates: loadTemplates,
   };
 }

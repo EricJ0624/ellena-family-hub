@@ -692,6 +692,11 @@ export default function FamilyHub() {
     subtask_load_list: getDashboardTranslation(lang, 'subtask_load_list'),
     subtask_template_name_placeholder: getDashboardTranslation(lang, 'subtask_template_name_placeholder'),
     subtask_template_empty: getDashboardTranslation(lang, 'subtask_template_empty'),
+    subtask_template_delete: getDashboardTranslation(lang, 'subtask_template_delete'),
+    subtask_template_delete_confirm: getDashboardTranslation(lang, 'subtask_template_delete_confirm'),
+    subtask_add_list_btn: getDashboardTranslation(lang, 'subtask_add_list_btn'),
+    subtask_composer_title: getDashboardTranslation(lang, 'subtask_composer_title'),
+    subtask_all_done: getDashboardTranslation(lang, 'subtask_all_done'),
   }), [lang]);
 
   const chatTranslations = useMemo(() => ({

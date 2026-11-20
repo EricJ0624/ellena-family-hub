@@ -14,6 +14,7 @@ import type { FamilyTask, FamilyTaskMemberOption, TaskRemindOffsetMinutes } from
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 import { useFamilyTaskSubtaskProgress } from '../hooks/useFamilyTaskSubtasks';
 import { TaskSubtaskDesk } from './TaskSubtaskDesk';
+import { TaskListComposer } from './TaskListComposer';
 import { TaskSwipeRow } from './TaskSwipeRow';
 import {
   DEFAULT_TASK_REMIND_OFFSETS,
@@ -97,6 +98,11 @@ interface FamilyTasksSectionProps {
     subtask_load_list: string;
     subtask_template_name_placeholder: string;
     subtask_template_empty: string;
+    subtask_template_delete: string;
+    subtask_template_delete_confirm: string;
+    subtask_add_list_btn: string;
+    subtask_composer_title: string;
+    subtask_all_done: string;
   };
   chatDragOver: boolean;
   chatDropRef: React.RefObject<HTMLDivElement | null>;
@@ -193,6 +199,8 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   const [deskTaskId, setDeskTaskId] = useState<string | null>(null);
   const [sendReadyTick, setSendReadyTick] = useState(0);
   const [createTemplateId, setCreateTemplateId] = useState('');
+  const [createListDraft, setCreateListDraft] = useState<string[]>([]);
+  const [isListComposerOpen, setIsListComposerOpen] = useState(false);
 
   const onlineUsers = useOnlineUsers();
 
@@ -200,6 +208,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     templates: listTemplates,
     loadTemplateItemTexts,
     saveTemplate,
+    deleteTemplate,
     reloadTemplates,
   } = useFamilyTaskListTemplates({
     currentGroupId,
@@ -207,6 +216,18 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     getCurrentKey,
     CryptoService,
   });
+
+  const handleDeleteSelectedTemplate = useCallback(async () => {
+    const id = createTemplateId.trim();
+    if (!id) return;
+    if (!confirm(t.subtask_template_delete_confirm)) return;
+    try {
+      await deleteTemplate(id);
+      setCreateTemplateId('');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+    }
+  }, [createTemplateId, deleteTemplate, t.subtask_template_delete_confirm]);
 
   const openDesk = useCallback(
     (taskId: string) => {
@@ -311,6 +332,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     dueAt: string | null,
     remindOffsetsMinutes: TaskRemindOffsetMinutes[],
     templateIdToApply?: string,
+    draftItems?: string[],
   ) => {
     const assigneeStr = assignedToUserId ? formatAssigneeDisplay(assignedToUserId) : '누구나';
     const tempId = nextTempTaskId();
@@ -355,25 +377,27 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
         remindOffsetsMinutes: nextTask.remind_offsets_minutes ?? [],
       });
 
-      if (templateIdToApply) {
-        try {
-          const titles = await loadTemplateItemTexts(templateIdToApply);
-          if (titles.length > 0 && currentGroupId) {
-            const key = getCurrentKey();
-            const rows = titles.map((text, index) => ({
-              task_id: String(inserted.id),
-              group_id: currentGroupId,
-              title: CryptoService.encrypt(text, key),
-              is_done: false,
-              sort_order: index,
-            }));
-            const { error: subError } = await supabase.from('family_task_subtasks').insert(rows);
-            if (subError) console.warn('템플릿 불러오기 실패:', subError);
-            else void reloadProgress();
-          }
-        } catch (templateError) {
-          console.warn('템플릿 불러오기 실패:', templateError);
+      const draftTitles = (draftItems ?? []).map((text) => text.trim()).filter(Boolean);
+      try {
+        let titles = draftTitles;
+        if (titles.length === 0 && templateIdToApply) {
+          titles = await loadTemplateItemTexts(templateIdToApply);
         }
+        if (titles.length > 0 && currentGroupId) {
+          const key = getCurrentKey();
+          const rows = titles.map((text, index) => ({
+            task_id: String(inserted.id),
+            group_id: currentGroupId,
+            title: CryptoService.encrypt(text, key),
+            is_done: false,
+            sort_order: index,
+          }));
+          const { error: subError } = await supabase.from('family_task_subtasks').insert(rows);
+          if (subError) console.warn('목록 항목 저장 실패:', subError);
+          else void reloadProgress();
+        }
+      } catch (listError) {
+        console.warn('목록 항목 저장 실패:', listError);
       }
     } catch (error) {
       commitTasks(tasksRef.current.filter((row) => row.id !== tempId));
@@ -420,6 +444,18 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
 
     toggleTask(taskId, !task.done);
   };
+
+  /** 목록 전부 완료 후 닫기 — 미완료 임무만 완료로 (이미 완료면 유지) */
+  const markTaskDoneIfNeeded = useCallback(
+    (taskId: number | string) => {
+      const latest = tasksRef.current;
+      const task = latest.find((x) => x.id === taskId);
+      if (!task || task.done || isTempTaskId(task.id)) return;
+      commitTasks(latest.map((x) => (x.id === taskId ? { ...x, done: true } : x)));
+      toggleTask(taskId, true);
+    },
+    [toggleTask],
+  );
 
   const handleClaimTask = (taskId: number | string) => {
     const latest = tasksRef.current;
@@ -477,6 +513,8 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       if (todoDueRef.current) todoDueRef.current.value = '';
       if (todoRemind1hRef.current) todoRemind1hRef.current.checked = true;
       setCreateTemplateId('');
+      setCreateListDraft([]);
+      setIsListComposerOpen(false);
     });
   };
 
@@ -508,15 +546,25 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
         : [];
 
     const templateId = createTemplateId.trim();
+    const draftItems = [...createListDraft];
     if (todoTextRef.current) todoTextRef.current.value = '';
     if (todoWhoRef.current) todoWhoRef.current.value = '';
     if (todoDueRef.current) todoDueRef.current.value = '';
     setCreateTemplateId('');
+    setCreateListDraft([]);
+    setIsListComposerOpen(false);
     setTodoError(null);
     setIsTodoModalOpen(false);
 
     try {
-      await insertTask(sanitizedText, assignedToUserId, dueAt, remindOffsets, templateId || undefined);
+      await insertTask(
+        sanitizedText,
+        assignedToUserId,
+        dueAt,
+        remindOffsets,
+        templateId || undefined,
+        draftItems,
+      );
     } catch (error) {
       console.error('임무 추가 실패:', error);
       alert('임무 저장에 실패했습니다. 다시 시도해 주세요.');
@@ -644,11 +692,18 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     };
   }, [isKidsTheme, visibleTasks.length, fitEmptyStateFont, isTodoModalOpen]);
 
+  const templateEmptyLabel = listTemplates.length === 0 ? t.subtask_template_empty : '—';
+  const addListBtnLabel =
+    createListDraft.length > 0
+      ? `${t.subtask_add_list_btn} (${createListDraft.length})`
+      : t.subtask_add_list_btn;
+
   const todoModal = (
     <TopLayerDialog
       open={isTodoModalOpen}
       onClose={() => {
         setTodoError(null);
+        setIsListComposerOpen(false);
         setIsTodoModalOpen(false);
       }}
     >
@@ -673,6 +728,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                         type="text"
                         className="chalkboard-form-input"
                         placeholder={t.todo_what_placeholder}
+                        autoComplete="off"
                       />
                     </div>
                     <div className="chalkboard-modal-field">
@@ -708,35 +764,52 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                         <span>{t.todo_remind_1h}</span>
                       </label>
                     </div>
-                    <div className="chalkboard-modal-field chalkboard-modal-field--template">
-                      <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-template">
-                        {t.subtask_load_list}
-                      </label>
-                      <select
-                        id="chalkboard-todo-template"
-                        className="chalkboard-form-input"
-                        value={createTemplateId}
-                        onChange={(e) => setCreateTemplateId(e.target.value)}
-                      >
-                        <option value="">
-                          {listTemplates.length === 0 ? t.subtask_template_empty : '—'}
-                        </option>
-                        {listTemplates.map((tpl) => (
-                          <option key={tpl.id} value={tpl.id}>
-                            {tpl.name} ({tpl.item_count})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
                     {todoError ? (
                       <p className="chalkboard-modal-error">{todoError}</p>
                     ) : null}
+                  </div>
+                  {/* overflow 스크롤 영역 밖 — chalk 테두리 잘림 방지 */}
+                  <div className="chalkboard-modal-field chalkboard-modal-field--template chalkboard-modal-field--template-footer">
+                    <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-template">
+                      {t.subtask_load_list}
+                    </label>
+                      <div className="chalkboard-template-row">
+                        <select
+                          id="chalkboard-todo-template"
+                          className="chalkboard-form-input"
+                          value={createTemplateId}
+                          onChange={(e) => setCreateTemplateId(e.target.value)}
+                        >
+                          <option value="">{templateEmptyLabel}</option>
+                          {listTemplates.map((tpl) => (
+                            <option key={tpl.id} value={tpl.id}>
+                              {tpl.name} ({tpl.item_count})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="chalkboard-btn-secondary chalkboard-template-add-btn"
+                          disabled={!createTemplateId.trim()}
+                          onClick={() => void handleDeleteSelectedTemplate()}
+                        >
+                          {t.subtask_template_delete}
+                        </button>
+                        <button
+                          type="button"
+                          className="chalkboard-btn-secondary chalkboard-template-add-btn"
+                          onClick={() => setIsListComposerOpen(true)}
+                        >
+                          {addListBtnLabel}
+                        </button>
+                      </div>
                   </div>
                   <div className="chalkboard-modal-actions chalkboard-modal-actions--in-stack">
                     <button
                       type="button"
                       onClick={() => {
                         setTodoError(null);
+                        setIsListComposerOpen(false);
                         setIsTodoModalOpen(false);
                       }}
                       className="chalkboard-btn-secondary"
@@ -767,6 +840,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                     type="text"
                     className="form-input w-full"
                     placeholder={t.todo_what_placeholder}
+                    autoComplete="off"
                   />
                 </div>
                 <div>
@@ -803,19 +877,36 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                   <label className="mb-1 block text-sm font-medium text-slate-600" htmlFor="plain-todo-template">
                     {t.subtask_load_list}
                   </label>
-                  <select
-                    id="plain-todo-template"
-                    className="form-input w-full"
-                    value={createTemplateId}
-                    onChange={(e) => setCreateTemplateId(e.target.value)}
-                  >
-                    <option value="">{t.subtask_template_empty}</option>
-                    {listTemplates.map((tpl) => (
-                      <option key={tpl.id} value={tpl.id}>
-                        {tpl.name} ({tpl.item_count})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      id="plain-todo-template"
+                      className="form-input min-w-0 flex-1"
+                      value={createTemplateId}
+                      onChange={(e) => setCreateTemplateId(e.target.value)}
+                    >
+                      <option value="">{templateEmptyLabel}</option>
+                      {listTemplates.map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>
+                          {tpl.name} ({tpl.item_count})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={!createTemplateId.trim()}
+                      onClick={() => void handleDeleteSelectedTemplate()}
+                      className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {t.subtask_template_delete}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsListComposerOpen(true)}
+                      className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      {addListBtnLabel}
+                    </button>
+                  </div>
                 </div>
               </div>
               {todoError ? (
@@ -826,6 +917,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                   type="button"
                   onClick={() => {
                     setTodoError(null);
+                    setIsListComposerOpen(false);
                     setIsTodoModalOpen(false);
                   }}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -849,27 +941,45 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     <TaskSubtaskDesk
       open={!!deskTaskId}
       onClose={closeDesk}
+      onCloseWithAllDone={() => {
+        if (deskTaskId) markTaskDoneIfNeeded(deskTaskId);
+      }}
       task={deskTask}
       currentGroupId={currentGroupId}
       getCurrentKey={getCurrentKey}
       CryptoService={CryptoService}
+      isKidsTheme={isKidsTheme}
+      translations={t}
+    />
+  );
+
+  const listComposerModal = (
+    <TaskListComposer
+      open={isListComposerOpen}
+      onClose={() => setIsListComposerOpen(false)}
+      items={createListDraft}
+      onChangeItems={setCreateListDraft}
       sanitizeInput={sanitizeInput}
       isKidsTheme={isKidsTheme}
       translations={t}
       saveTemplate={saveTemplate}
+      onTemplateSaved={(id) => setCreateTemplateId(id)}
     />
   );
 
   const renderMeta = (task: FamilyTask) => {
-    const dueLabel = formatTaskDueShort(task.due_at);
+    const dueLabel = formatTaskDueShort(task.due_at, typeof lang === 'string' ? lang : undefined);
     const progress = progressByTaskId[String(task.id)];
     const progressLabel =
       progress && progress.total > 0 ? `${progress.done}/${progress.total}` : null;
     if (!dueLabel && !progressLabel) return null;
+    const metaText =
+      dueLabel && progressLabel
+        ? `${dueLabel} · ${progressLabel}`
+        : dueLabel || progressLabel || '';
     return (
-      <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0 text-[0.7rem] leading-tight opacity-80">
-        {dueLabel ? <span>{dueLabel}</span> : null}
-        {progressLabel ? <span>{progressLabel}</span> : null}
+      <span className="todo-meta mt-0.5 block text-[0.7rem] leading-tight opacity-80 whitespace-nowrap">
+        {metaText}
       </span>
     );
   };
@@ -878,6 +988,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     return (
       <>
         {todoModal}
+        {listComposerModal}
         {deskModal}
         <section className="content-section">
           <div className="section-header">
@@ -1025,6 +1136,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
         </defs>
       </svg>
       {todoModal}
+      {listComposerModal}
       {deskModal}
 
       <div className="chalkboard-frame flex w-full min-w-0 flex-col">

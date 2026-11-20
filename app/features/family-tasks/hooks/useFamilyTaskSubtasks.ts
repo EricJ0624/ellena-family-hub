@@ -1,5 +1,6 @@
 /**
- * 가족 임무 서브태스크 — 목록 CRUD, 진행률, Realtime.
+ * 가족 임무 서브태스크 — 목록 조회·체크 토글·진행률, Realtime.
+ * 항목 추가/수정/삭제는 임무 추가 시 초안·템플릿으로만 생성 (보기 창은 체크 전용).
  * 대시보드 page state에 올리지 않고 FamilyTasksSection 안에서만 사용.
  */
 
@@ -191,43 +192,6 @@ export function useFamilyTaskSubtasks(input: {
     return release;
   }, [taskId, currentGroupId, load]);
 
-  const addSubtask = useCallback(
-    async (text: string) => {
-      if (!taskId || !currentGroupId || !text.trim()) return;
-      const maxOrder = itemsRef.current.reduce((m, s) => Math.max(m, s.sort_order), -1);
-      const encrypted = CryptoService.encrypt(text.trim(), getCurrentKey());
-      const { error } = await supabase.from('family_task_subtasks').insert({
-        task_id: taskId,
-        group_id: currentGroupId,
-        title: encrypted,
-        is_done: false,
-        sort_order: maxOrder + 1,
-      });
-      if (error) throw error;
-      await load();
-    },
-    [taskId, currentGroupId, CryptoService, getCurrentKey, load],
-  );
-
-  const updateSubtaskText = useCallback(
-    async (subtaskId: string, text: string) => {
-      if (!currentGroupId || !text.trim()) return;
-      const encrypted = CryptoService.encrypt(text.trim(), getCurrentKey());
-      const { error } = await supabase
-        .from('family_task_subtasks')
-        .update({ title: encrypted })
-        .eq('id', subtaskId)
-        .eq('group_id', currentGroupId);
-      if (error) throw error;
-      setItems((prev) =>
-        sortSubtasksForDisplay(
-          prev.map((s) => (s.id === subtaskId ? { ...s, text: text.trim() } : s)),
-        ),
-      );
-    },
-    [currentGroupId, CryptoService, getCurrentKey],
-  );
-
   const toggleSubtask = useCallback(
     async (subtaskId: string, done: boolean) => {
       if (!currentGroupId) return;
@@ -251,54 +215,10 @@ export function useFamilyTaskSubtasks(input: {
     [currentGroupId],
   );
 
-  const deleteSubtask = useCallback(
-    async (subtaskId: string) => {
-      if (!currentGroupId) return;
-      const prev = itemsRef.current;
-      setItems(prev.filter((s) => s.id !== subtaskId));
-      const { error } = await supabase
-        .from('family_task_subtasks')
-        .delete()
-        .eq('id', subtaskId)
-        .eq('group_id', currentGroupId);
-      if (error) {
-        setItems(prev);
-        throw error;
-      }
-    },
-    [currentGroupId],
-  );
-
-  const appendSubtasksFromTitles = useCallback(
-    async (titles: string[]) => {
-      if (!taskId || !currentGroupId || titles.length === 0) return;
-      const maxOrder = itemsRef.current.reduce((m, s) => Math.max(m, s.sort_order), -1);
-      const rows = titles
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .map((text, index) => ({
-          task_id: taskId,
-          group_id: currentGroupId,
-          title: CryptoService.encrypt(text, getCurrentKey()),
-          is_done: false,
-          sort_order: maxOrder + 1 + index,
-        }));
-      if (rows.length === 0) return;
-      const { error } = await supabase.from('family_task_subtasks').insert(rows);
-      if (error) throw error;
-      await load();
-    },
-    [taskId, currentGroupId, CryptoService, getCurrentKey, load],
-  );
-
   return {
     items,
     loading,
-    addSubtask,
-    updateSubtaskText,
     toggleSubtask,
-    deleteSubtask,
-    appendSubtasksFromTitles,
     reload: load,
   };
 }
