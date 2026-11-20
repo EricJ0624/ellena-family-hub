@@ -58,11 +58,21 @@ self.addEventListener('push', (event) => {
   );
 });
 
+/**
+ * 알림 클릭 이동 URL — 동일 origin의 path-absolute 상대경로만 허용.
+ * 절대 URL·//evil·javascript: 등 open redirect를 차단한다.
+ */
 function notificationTargetUrl(raw) {
+  const fallback = new URL('/dashboard', self.location.origin).href;
   try {
-    return new URL(raw || '/dashboard', self.location.origin).href;
+    const s = typeof raw === 'string' ? raw.trim() : '';
+    if (!s || !s.startsWith('/') || s.startsWith('//')) return fallback;
+    const u = new URL(s, self.location.origin);
+    if (u.origin !== self.location.origin) return fallback;
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return fallback;
+    return u.href;
   } catch (e) {
-    return new URL('/dashboard', self.location.origin).href;
+    return fallback;
   }
 }
 
@@ -91,12 +101,19 @@ self.addEventListener('notificationclick', (event) => {
       if (existing.url !== targetUrl && typeof existing.navigate === 'function') {
         try {
           await existing.navigate(targetUrl);
-          return existing.focus();
         } catch (e) {
           console.warn('[sw.js] 알림 주소로 이동 실패, 페이지에 전달:', e);
         }
       }
-      existing.postMessage({ type: 'NOTIFICATION_OPEN', url: targetUrl });
+      // 페이지 핸들러는 path-absolute 상대경로만 받음 (absolute href면 거부됨)
+      let openPath = '/dashboard';
+      try {
+        const u = new URL(targetUrl);
+        openPath = `${u.pathname}${u.search}${u.hash}` || '/dashboard';
+      } catch (e) {
+        /* fallback */
+      }
+      existing.postMessage({ type: 'NOTIFICATION_OPEN', url: openPath });
       return existing.focus();
     }
 

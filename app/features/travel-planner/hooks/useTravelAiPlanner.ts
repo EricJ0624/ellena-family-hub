@@ -8,13 +8,16 @@
  */
 
 import { useState, useCallback } from 'react';
+import { fetchAiProxy } from '@/lib/ai-proxy-client';
+import { getStoredAiKey, type AiUserProvider } from '@/lib/ai-user-key';
 import type { ParsedImportItem } from '@/lib/modules/travel-planner/itinerary-import-types';
 
 // ---------------------------------------------------------------------------
 // 타입
 // ---------------------------------------------------------------------------
 
-export type AiProvider = 'openai' | 'anthropic';
+export type AiProvider = AiUserProvider;
+export { getStoredAiKey };
 
 export interface TravelAiDraft {
   title: string;
@@ -65,22 +68,6 @@ export interface AiTravelPlan {
   accommodations: AiAccommodationItem[];
   dining: AiDiningItem[];
   transports: AiTransportItem[];
-}
-
-// ---------------------------------------------------------------------------
-// localStorage
-// ---------------------------------------------------------------------------
-
-const LS_KEY = (userId: string, provider: AiProvider) =>
-  `sfh_ai_key_${userId}_${provider}`;
-
-export function getStoredAiKey(userId: string): { key: string; provider: AiProvider } | null {
-  if (typeof window === 'undefined' || !userId) return null;
-  const openaiKey = localStorage.getItem(LS_KEY(userId, 'openai'));
-  if (openaiKey) return { key: openaiKey, provider: 'openai' };
-  const anthropicKey = localStorage.getItem(LS_KEY(userId, 'anthropic'));
-  if (anthropicKey) return { key: anthropicKey, provider: 'anthropic' };
-  return null;
 }
 
 /** AI JSON → 가져오기 위저드 ParsedImportItem[] */
@@ -264,19 +251,15 @@ export function useTravelAiPlanner({ userId, hasApiKeyRevision }: UseTravelAiPla
       try {
         const { systemPrompt, userPrompt } = buildTravelPrompt(draft, options);
 
-        const res = await fetch('/api/ai/proxy', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${currentKeyInfo.key}`,
-          },
-          body: JSON.stringify({
+        const res = await fetchAiProxy({
+          apiKey: currentKeyInfo.key,
+          body: {
             provider: currentKeyInfo.provider,
             systemPrompt,
             userPrompt,
             stream: false,
             maxTokens: 2500,
-          }),
+          },
         });
 
         if (!res.ok) {

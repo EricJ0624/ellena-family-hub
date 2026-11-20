@@ -8,6 +8,8 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { fetchAiProxy } from '@/lib/ai-proxy-client';
+import { aiUserKeyStorageKey, type AiUserProvider } from '@/lib/ai-user-key';
 import type { BabyProfile, BabyDailyLog, BabyGrowthRecord } from '../types';
 import { calcAgeInDays, calcAgeInMonths } from '../utils/age-calculator';
 
@@ -15,12 +17,10 @@ import { calcAgeInDays, calcAgeInMonths } from '../utils/age-calculator';
 // 상수
 // ---------------------------------------------------------------------------
 
-export type AiProvider = 'openai' | 'anthropic';
+export type AiProvider = AiUserProvider;
 export type AiMode = 'guide' | 'diary' | 'schedule' | 'qa';
 
-// 앱 전체 공통 AI 키 (위젯 독립적)
-const LS_KEY = (userId: string, provider: AiProvider) =>
-  `sfh_ai_key_${userId}_${provider}`;
+const LS_KEY = aiUserKeyStorageKey;
 
 // 구버전 호환: sfh_baby_ai_key_{userId}_{provider} 및 단일 키 형식
 const LS_LEGACY_KEY_PROVIDER = (userId: string, provider: AiProvider) =>
@@ -260,16 +260,12 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
       setPinging(true);
       setPingResult(null);
       try {
-        const res = await fetch('/api/ai/proxy', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${testKey}`,
-          },
-          body: JSON.stringify({
+        const res = await fetchAiProxy({
+          apiKey: testKey,
+          body: {
             provider,
             ping: true,
-          }),
+          },
         });
         const ok = res.ok;
         setPingResult(ok ? 'ok' : 'fail');
@@ -314,18 +310,14 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
 
         const useStream = options?.stream ?? true;
 
-        const res = await fetch('/api/ai/proxy', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
+        const res = await fetchAiProxy({
+          apiKey,
+          body: {
             provider,
             systemPrompt,
             userPrompt,
             stream: useStream,
-          }),
+          },
         });
 
         if (!res.ok) {

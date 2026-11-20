@@ -32,6 +32,8 @@ import {
 import { applyOpenGroupIfValid } from '@/lib/route-guard-group-required';
 import { formatUnknownError, isAbortLikeError, isSupabaseLockError } from '@/lib/supabase-error';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
+import { fetchAiProxy } from '@/lib/ai-proxy-client';
+import { aiUserKeyStorageKey } from '@/lib/ai-user-key';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -713,6 +715,10 @@ export default function FamilyHub() {
     chat_unread_badge: getDashboardTranslation(lang, 'chat_unread_badge'),
     chat_unread_summary_title: getDashboardTranslation(lang, 'chat_unread_summary_title'),
     chat_unread_mark_all: getDashboardTranslation(lang, 'chat_unread_mark_all'),
+    chat_translate: getDashboardTranslation(lang, 'chat_translate'),
+    chat_translate_undo: getDashboardTranslation(lang, 'chat_translate_undo'),
+    chat_translating: getDashboardTranslation(lang, 'chat_translating'),
+    chat_translate_failed: getDashboardTranslation(lang, 'chat_translate_failed'),
     me: getCommonTranslation(lang, 'me'),
     user: getCommonTranslation(lang, 'user'),
   }), [lang]);
@@ -7154,15 +7160,20 @@ export default function FamilyHub() {
   }, [piggyPanelOpen]);
 
   useEffect(() => {
+    if (orderedWidgets.length === 0) return undefined;
+
     const focus = focusWidgetFromLocation(window.location.search);
-    if (!focus || orderedWidgets.length === 0) return undefined;
+    if (!focus) return undefined;
+
     if (focus === 'chat') {
       if (!orderedWidgets.some((w) => w.widget_key === 'chat')) return undefined;
+      // 이미 URL로 연 경우 스킵 — 재알림은 NOTIFICATION_OPEN이 연다
       if (chatRoomFromUrlRef.current) return undefined;
       chatRoomFromUrlRef.current = true;
       openChatRoom({ focusInput: true });
       return undefined;
     }
+
     let cancelled = false;
     const tryScroll = () => {
       if (!cancelled) scrollDashboardWidgetIntoView(focus);
@@ -7180,15 +7191,29 @@ export default function FamilyHub() {
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
+      // SW→client postMessage 또는 동일 창만 허용 (타 origin window 메시지 무시)
+      const src = event.source;
+      const fromSw = typeof ServiceWorker !== 'undefined' && src instanceof ServiceWorker;
+      const fromOwnWindow = src === window || src === null;
+      if (!fromSw && !fromOwnWindow) return;
+
       const data = event.data as { type?: string; url?: string } | null;
       if (!data || data.type !== 'NOTIFICATION_OPEN' || typeof data.url !== 'string') return;
+
       let next: URL;
       try {
-        next = new URL(data.url, window.location.origin);
+        const raw = data.url.trim();
+        if (!raw || raw.startsWith('//')) return;
+        // path-absolute 상대경로 또는 동일 origin 절대 URL
+        next = raw.startsWith('/')
+          ? new URL(raw, window.location.origin)
+          : new URL(raw);
       } catch {
         return;
       }
       if (next.origin !== window.location.origin) return;
+      if (next.protocol !== 'http:' && next.protocol !== 'https:') return;
+
       const samePlace =
         next.pathname === window.location.pathname && next.search === window.location.search;
       if (!samePlace) {
@@ -7197,6 +7222,7 @@ export default function FamilyHub() {
       }
       const focus = focusWidgetFromLocation(next.search);
       if (focus === 'chat') {
+        chatRoomFromUrlRef.current = true;
         openChatRoom({ focusInput: true });
         return;
       }
@@ -8394,9 +8420,6 @@ export default function FamilyHub() {
 // ---------------------------------------------------------------------------
 type _AiApiProvider = 'openai' | 'anthropic';
 
-const AI_LS_KEY = (userId: string, provider: _AiApiProvider) =>
-  `sfh_ai_key_${userId}_${provider}`;
-
 function AiApiKeySettings({ userId }: { userId: string }) {
   const [activeProvider, setActiveProvider] = React.useState<_AiApiProvider>('openai');
   const [keyInput, setKeyInput] = React.useState('');
@@ -8406,7 +8429,10 @@ function AiApiKeySettings({ userId }: { userId: string }) {
 
   // 현재 provider의 저장된 키 로드
   const storedKey = React.useMemo(
-    () => (typeof window !== 'undefined' ? (localStorage.getItem(AI_LS_KEY(userId, activeProvider)) ?? '') : ''),
+    () =>
+      typeof window !== 'undefined'
+        ? (localStorage.getItem(aiUserKeyStorageKey(userId, activeProvider)) ?? '')
+        : '',
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [userId, activeProvider, saved]
   );
@@ -8420,7 +8446,7 @@ function AiApiKeySettings({ userId }: { userId: string }) {
 
   const handleSave = () => {
     if (!keyInput.trim()) return;
-    localStorage.setItem(AI_LS_KEY(userId, activeProvider), keyInput.trim());
+    localStorage.setItem(aiUserKeyStorageKey(userId, activeProvider), keyInput.trim());
     window.dispatchEvent(new CustomEvent('sfh:ai-key-updated'));
     setSaved(true);
     setKeyInput('');
@@ -8428,7 +8454,7 @@ function AiApiKeySettings({ userId }: { userId: string }) {
   };
 
   const handleDelete = () => {
-    localStorage.removeItem(AI_LS_KEY(userId, activeProvider));
+    localStorage.removeItem(aiUserKeyStorageKey(userId, activeProvider));
     window.dispatchEvent(new CustomEvent('sfh:ai-key-updated'));
     setKeyInput('');
     setPingResult(null);
@@ -8441,13 +8467,9 @@ function AiApiKeySettings({ userId }: { userId: string }) {
     setPinging(true);
     setPingResult(null);
     try {
-      const res = await fetch('/api/ai/proxy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${testKey}`,
-        },
-        body: JSON.stringify({ provider: activeProvider, ping: true }),
+      const res = await fetchAiProxy({
+        apiKey: testKey,
+        body: { provider: activeProvider, ping: true },
       });
       setPingResult(res.ok ? 'ok' : 'fail');
     } catch {

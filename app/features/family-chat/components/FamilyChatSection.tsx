@@ -21,6 +21,7 @@ import {
 const EMPTY_UNREAD_SUMMARY: UnreadChatSenderSummary[] = [];
 import { getCommonTranslation } from '@/lib/translations/common';
 import { isValidLang } from '@/lib/language-fonts';
+import { hasStoredChatAiKey, translateChatText } from '@/lib/chat-ai-translate';
 
 interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
@@ -75,6 +76,10 @@ interface FamilyChatSectionProps {
     chat_unread_badge: string;
     chat_unread_summary_title: string;
     chat_unread_mark_all: string;
+    chat_translate: string;
+    chat_translate_undo: string;
+    chat_translating: string;
+    chat_translate_failed: string;
     me: string;
     user: string;
   };
@@ -152,6 +157,36 @@ export const FamilyChatSection = memo(function FamilyChatSection({
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const isKidsTheme = uiTheme === 'kids_friendly';
+
+  /** AI 키 등록 여부 — 키 있을 때만 번역 버튼 표시 */
+  const [hasAiKey, setHasAiKey] = useState(false);
+  const [composeTranslated, setComposeTranslated] = useState(false);
+  const [composeBusy, setComposeBusy] = useState(false);
+  const composeOriginalRef = useRef<string | null>(null);
+  const composeTranslatedValueRef = useRef<string | null>(null);
+  /** messageId → 번역문 (원문은 messages[].text 유지, 되돌리기 시 삭제) */
+  const [translatedById, setTranslatedById] = useState<Record<string, string>>({});
+  const [msgTranslateBusyId, setMsgTranslateBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const sync = () => setHasAiKey(hasStoredChatAiKey(userId));
+    sync();
+    window.addEventListener('sfh:ai-key-updated', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('sfh:ai-key-updated', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, [userId]);
+
+  // 그룹 바뀌면 수신 번역 오버레이·되돌리기 상태 초기화
+  useEffect(() => {
+    setTranslatedById({});
+    setMsgTranslateBusyId(null);
+    composeOriginalRef.current = null;
+    composeTranslatedValueRef.current = null;
+    setComposeTranslated(false);
+  }, [currentGroupId]);
 
   // ── 안 읽은 메시지 추적 ──────────────────────────────────────────
   const storageKey = userId && currentGroupId
@@ -275,6 +310,12 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     chatCameraInputRef.current?.click();
   };
 
+  const clearComposeTranslateState = () => {
+    composeOriginalRef.current = null;
+    composeTranslatedValueRef.current = null;
+    setComposeTranslated(false);
+  };
+
   const handleSendClick = () => {
     if (isSendingText) return;
     const input = chatInputRef.current;
@@ -286,6 +327,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     familyChatDebug('send click', { length: text.length });
     onSendMessage(text);
     input.value = '';
+    clearComposeTranslateState();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -294,6 +336,71 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     if (e.nativeEvent.isComposing) return;
     e.preventDefault();
     handleSendClick();
+  };
+
+  const handleComposeTranslateToggle = async () => {
+    if (!hasAiKey || composeBusy || isSendingText) return;
+    const input = chatInputRef.current;
+    if (!input) return;
+
+    if (composeTranslated && composeOriginalRef.current != null) {
+      input.value = composeOriginalRef.current;
+      clearComposeTranslateState();
+      return;
+    }
+
+    const raw = input.value.trim();
+    if (!raw) return;
+
+    setComposeBusy(true);
+    try {
+      // 보내기 전: 영어로 번역 (다국어 가족 공유용)
+      const translated = await translateChatText({
+        userId,
+        text: raw,
+        targetLang: 'en',
+      });
+      composeOriginalRef.current = raw;
+      composeTranslatedValueRef.current = translated;
+      input.value = translated;
+      setComposeTranslated(true);
+    } catch {
+      alert(t.chat_translate_failed);
+    } finally {
+      setComposeBusy(false);
+    }
+  };
+
+  const handleMessageTranslateToggle = async (messageId: string, originalText: string) => {
+    if (!hasAiKey || msgTranslateBusyId) return;
+
+    if (translatedById[messageId]) {
+      setTranslatedById((prev) => {
+        if (!(messageId in prev)) return prev;
+        const next = { ...prev };
+        delete next[messageId];
+        return next;
+      });
+      return;
+    }
+
+    const plain = originalText.trim();
+    if (!plain || isChatCipherText(plain)) return;
+
+    setMsgTranslateBusyId(messageId);
+    try {
+      const targetLang = isValidLang(lang) ? lang : 'en';
+      const translated = await translateChatText({
+        userId,
+        text: plain,
+        targetLang,
+      });
+      setTranslatedById((prev) => ({ ...prev, [messageId]: translated }));
+    } catch {
+      alert(t.chat_translate_failed);
+    } finally {
+      setMsgTranslateBusyId(null);
+    }
   };
 
   const attachControls = (
@@ -338,7 +445,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     <input
       ref={chatInputRef}
       type="text"
-      aria-busy={isSendingText}
+      aria-busy={isSendingText || composeBusy}
       onPointerDown={() => {
         if (roomMode) return;
         onInputFocus?.();
@@ -378,12 +485,32 @@ export const FamilyChatSection = memo(function FamilyChatSection({
         window.addEventListener('click', onClickOutside, true);
         window.addEventListener('pointercancel', cleanup);
       }}
+      onInput={() => {
+        if (!composeTranslated) return;
+        const input = chatInputRef.current;
+        if (!input) return;
+        if (input.value !== composeTranslatedValueRef.current) {
+          clearComposeTranslateState();
+        }
+      }}
       onFocus={onInputFocus}
       onKeyDown={handleKeyDown}
       className={`chat-input min-w-0 flex-1 ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
       placeholder={t.chat_placeholder}
     />
   );
+
+  const composeTranslateBtn = hasAiKey ? (
+    <button
+      type="button"
+      onClick={() => void handleComposeTranslateToggle()}
+      disabled={composeBusy || isSendingText}
+      className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-70"
+      title={composeTranslated ? t.chat_translate_undo : t.chat_translate}
+    >
+      {composeBusy ? t.chat_translating : composeTranslated ? t.chat_translate_undo : t.chat_translate}
+    </button>
+  ) : null;
 
   return (
     <section
@@ -456,13 +583,20 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                 !isChatCipherText(m.text) &&
                 (onOpenTaskWithText || onOpenCalendarWithText),
             );
+            const canTranslateMsg = Boolean(
+              hasAiKey && m.text && !isChatCipherText(m.text),
+            );
+            const showMsgActions = canQuickAdd || canTranslateMsg;
             const actionsOpen = activeMessageId === messageId;
+            const translatedText = translatedById[messageId];
+            const displaySource = translatedText ?? m.text;
+            const msgBusy = msgTranslateBusyId === messageId;
             return (
             <div
               key={messageId}
               className="message-item group/msg relative"
               onClick={() => {
-                if (!canQuickAdd) return;
+                if (!showMsgActions) return;
                 setActiveMessageId((prev) => (prev === messageId ? null : messageId));
               }}
             >
@@ -490,13 +624,31 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                 </span>
                 <span className="message-time">{m.time}</span>
                 {/* PC: hover, 모바일: 메시지 탭으로 토글 */}
-                {canQuickAdd && (
+                {showMsgActions && (
                   <span
-                    className={`ml-auto flex items-center gap-1 transition-opacity ${
+                    className={`ml-auto flex flex-wrap items-center justify-end gap-1 transition-opacity ${
                       actionsOpen ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'
                     }`}
                   >
-                    {onOpenTaskWithText && (
+                    {canTranslateMsg && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleMessageTranslateToggle(messageId, String(m.text));
+                        }}
+                        disabled={msgBusy}
+                        className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-70"
+                        title={translatedText ? t.chat_translate_undo : t.chat_translate}
+                      >
+                        {msgBusy
+                          ? t.chat_translating
+                          : translatedText
+                            ? t.chat_translate_undo
+                            : t.chat_translate}
+                      </button>
+                    )}
+                    {onOpenTaskWithText && canQuickAdd && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -510,7 +662,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                         ✅ {t.chat_quick_add_task}
                       </button>
                     )}
-                    {onOpenCalendarWithText && (
+                    {onOpenCalendarWithText && canQuickAdd && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -599,10 +751,10 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                     </div>
                   );
                 })()}
-                {m.text && (
+                {displaySource && (
                   <p className="message-text">
                     {getChatMessageDisplayText(
-                      String(m.text),
+                      String(displaySource),
                       lang === 'en' ? 'Unable to load message' : '메시지를 불러올 수 없습니다',
                     )}
                   </p>
@@ -619,11 +771,13 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                 <Mic className="chat-kids-mic-icon" />
               </span>
               {inputField}
+              {composeTranslateBtn}
               {attachControls}
             </div>
           ) : (
             <>
               {inputField}
+              {composeTranslateBtn}
               {attachControls}
             </>
           )}

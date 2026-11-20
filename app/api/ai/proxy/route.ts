@@ -2,10 +2,9 @@
  * /api/ai/proxy — 공용 LLM Pass-through Proxy
  *
  * 보안 원칙:
- * - 사용자의 API 키는 Authorization 헤더로 전달받아 메모리에서만 사용
- * - 서버 DB에 저장하지 않음
+ * - Authorization: Supabase access_token (세션 인증)
+ * - X-AI-Api-Key: 사용자 LLM 키 (메모리에서만 사용, 서버 DB 미저장)
  * - 로그에 키를 출력하지 않음
- * - 요청자 인증(Supabase 세션)은 필수
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -26,11 +25,14 @@ export async function POST(request: NextRequest) {
   const authResult = await requireAuthUser(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  const authHeader = request.headers.get('Authorization') ?? '';
-  const userApiKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  // LLM 키는 세션 토큰과 분리된 헤더만 허용 (Authorization에 키를 넣던 혼용 제거)
+  const userApiKey = request.headers.get('x-ai-api-key')?.trim() ?? '';
 
   if (!userApiKey) {
-    return NextResponse.json({ error: 'API 키가 없습니다. Authorization 헤더에 Bearer 키를 포함해 주세요.' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'API 키가 없습니다. X-AI-Api-Key 헤더가 필요합니다.' },
+      { status: 401 },
+    );
   }
 
   let body: Record<string, unknown>;
