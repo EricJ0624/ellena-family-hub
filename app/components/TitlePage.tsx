@@ -66,11 +66,20 @@ const isStablePhotoUrl = (url: string): boolean =>
   !!url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/api/photo/proxy') || url.startsWith('/api/media/file'));
 
 // 오늘의 무작위 사진 (로컬 날짜 시드 — 스와이프 당일 만료와 동일 기준)
-const getTodayRandomPhoto = (photos: Array<{ id: number | string; data: string }>): number | null => {
-  if (!photos || photos.length === 0) return null;
-  const random = seededRandom(getLocalDateKey());
+const getTodayRandomPhoto = (
+  photos: Array<{ id: number | string; data: string }>,
+  dayKey: string,
+): number | null => {
+  if (!photos || photos.length === 0 || !dayKey) return null;
+  const random = seededRandom(dayKey);
   return Math.floor(random * photos.length);
 };
+
+/** 다음 로컬 자정(+여유)까지 ms — 열린 화면에서도 날짜 롤오버 */
+function msUntilNextLocalMidnight(now: Date = new Date()): number {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 50);
+  return Math.max(1000, next.getTime() - now.getTime());
+}
 
 // 타이틀 스타일 타입 정의
 interface TitleStyle {
@@ -112,6 +121,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
   // Hydration 불일치 방지: 날짜/시드·localStorage 복원은 클라이언트 마운트 후에만 (React #418)
   const [mounted, setMounted] = useState(false);
+  /** 로컬 달력 키 — 자정·포커스 시 갱신되면 랜덤 재계산 */
+  const [dayKey, setDayKey] = useState<string | null>(null);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | number | null>(null);
   const [slideAxis, setSlideAxis] = useState<'x' | 'y'>('x');
   const [slideDir, setSlideDir] = useState(0);
@@ -119,15 +130,61 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const [hintPhase, setHintPhase] = useState<FrameGestureHintPhase | null>(null);
   const didSwipeRef = useRef(false);
   const pointerStartRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  /** applyCalendarDay에서 날짜 변경 여부를 동기적으로 판별 */
+  const dayKeyRef = useRef<string | null>(null);
 
-  // 마운트 + 당일 스와이프 선택 복원을 한 번에 (랜덤 깜빡임 방지)
+  // 날짜·스와이프 선택 동기화 (마운트 / 자정 / 포커스·가시성·bfcache)
   useEffect(() => {
     setMounted(true);
-    if (!photoSelectionStorageScope) {
-      setSelectedPhotoId(null);
-      return;
-    }
-    setSelectedPhotoId(readStoredFrameSelectedPhoto(photoSelectionStorageScope));
+
+    const applyCalendarDay = () => {
+      const today = getLocalDateKey();
+      const prevDay = dayKeyRef.current;
+      const dayChanged = prevDay != null && prevDay !== today;
+      dayKeyRef.current = today;
+      setDayKey((prev) => (prev === today ? prev : today));
+
+      if (photoSelectionStorageScope) {
+        // storage 날짜 만료 시 null → 오늘 시드 랜덤
+        const nextId = readStoredFrameSelectedPhoto(photoSelectionStorageScope);
+        setSelectedPhotoId((prev) => {
+          if (prev == null && nextId == null) return prev;
+          if (prev != null && nextId != null && String(prev) === String(nextId)) return prev;
+          return nextId;
+        });
+        return;
+      }
+
+      // scope 없음: 세션 스와이프는 유지하되, 날짜가 바뀐 때만 랜덤으로
+      if (dayChanged) setSelectedPhotoId(null);
+    };
+
+    applyCalendarDay();
+
+    let midnightTimer: ReturnType<typeof setTimeout> | undefined;
+    const armMidnight = () => {
+      if (midnightTimer != null) clearTimeout(midnightTimer);
+      midnightTimer = setTimeout(() => {
+        applyCalendarDay();
+        armMidnight();
+      }, msUntilNextLocalMidnight());
+    };
+    armMidnight();
+
+    const onResume = () => applyCalendarDay();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') applyCalendarDay();
+    };
+    window.addEventListener('focus', onResume);
+    window.addEventListener('pageshow', onResume);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      if (midnightTimer != null) clearTimeout(midnightTimer);
+      window.removeEventListener('focus', onResume);
+      window.removeEventListener('pageshow', onResume);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [photoSelectionStorageScope]);
 
   // blob/data URL 제외 → 업로드 직후 뒤로가기 시 Hydration/렌더 에러 근본 방지
@@ -158,14 +215,15 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   );
 
   const selectedPhoto = useMemo(() => {
-    if (!mounted || stablePhotos.length === 0) return null;
+    // dayKey는 클라이언트 effect 이후에만 설정 (Hydration 안전)
+    if (!dayKey || stablePhotos.length === 0) return null;
     if (selectedPhotoId != null) {
       const found = stablePhotos.find((p) => String(p.id) === String(selectedPhotoId));
       if (found) return found;
     }
-    const idx = getTodayRandomPhoto(stablePhotos);
+    const idx = getTodayRandomPhoto(stablePhotos, dayKey);
     return idx == null ? null : stablePhotos[idx];
-  }, [mounted, stablePhotos, selectedPhotoId]);
+  }, [dayKey, stablePhotos, selectedPhotoId]);
 
   // 세로/가로 자동 맞춤 복구: 사진 비율 캐시로 재진입 시 리플로우 최소화
   const imageAspectRatioCacheRef = useRef<Record<string, number>>({});

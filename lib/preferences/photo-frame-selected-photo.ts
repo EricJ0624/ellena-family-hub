@@ -1,7 +1,7 @@
 /**
  * 액자 스와이프로 고른 사진 — 당일만 유지.
  * 날짜가 바뀌면 무효 → 날짜 시드 랜덤으로 돌아감.
- * (날짜 키는 getLocalDateKey — 랜덤 시드와 동일 기준)
+ * (날짜 키는 getLocalDateKey — 랜덤 시드·자정/포커스 동기화와 동일 기준)
  */
 
 const STORAGE_KEY_PREFIX = 'ellena.photoFrameSelectedPhoto';
