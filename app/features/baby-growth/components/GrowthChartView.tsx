@@ -7,11 +7,9 @@ import type {
   BabyGrowthRecord,
   BabyGrowthRecordDraft,
   BabyMilestone,
-  PrenatalLog,
 } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import { useBabyGrowthRecords } from '../hooks/useBabyGrowthRecords';
-import { usePrenatalLogs } from '../hooks/usePrenatalLogs';
 import {
   WHO_WEIGHT_BOYS, WHO_WEIGHT_GIRLS,
   WHO_HEIGHT_BOYS, WHO_HEIGHT_GIRLS,
@@ -39,25 +37,11 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
 
   const { fetchGrowthRecords, addGrowthRecord, fetchMilestones, upsertMilestone } =
     useBabyGrowthRecords({ babyId: profile.id, currentGroupId, userId });
-  const { fetchLogs: fetchPrenatalLogs } = usePrenatalLogs({
-    babyId: profile.id,
-    currentGroupId,
-    userId,
-  });
-  const [prenatalLogs, setPrenatalLogs] = useState<PrenatalLog[]>([]);
 
   useEffect(() => {
     void fetchGrowthRecords().then(setRecords);
     void fetchMilestones().then(setMilestones);
   }, [fetchGrowthRecords, fetchMilestones]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchPrenatalLogs(120).then((rows) => {
-      if (!cancelled) setPrenatalLogs(rows);
-    });
-    return () => { cancelled = true; };
-  }, [fetchPrenatalLogs]);
 
   const handleAddRecord = useCallback(
     async (draft: BabyGrowthRecordDraft) => {
@@ -113,26 +97,8 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
       birthMetrics.length > 0,
   );
 
-  const lastCheckup = prenatalLogs.find((l) => l.log_type === 'checkup_note') ?? null;
-  const lastWeight = prenatalLogs.find((l) => l.log_type === 'maternal_weight') ?? null;
-  const lastEfw =
-    prenatalLogs.find((l) => l.fetal_weight_est_g != null) ?? null;
-  const bridgeBits = [
-    profile.due_date ? `${t.due_date} ${profile.due_date}` : null,
-    lastEfw?.fetal_weight_est_g != null
-      ? `${t.prenatal_fetal_weight_est} ${lastEfw.fetal_weight_est_g}g`
-      : null,
-    lastCheckup?.fundal_height_cm != null
-      ? `${t.prenatal_fundal_height} ${lastCheckup.fundal_height_cm}`
-      : null,
-    lastWeight?.weight_kg != null
-      ? `${t.prenatal_weight_kg} ${lastWeight.weight_kg}`
-      : null,
-    lastCheckup?.hospital_name ?? null,
-  ].filter(Boolean) as string[];
-
   return (
-    <div className="flex flex-col gap-5 p-4 overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-col gap-5 overflow-y-auto overscroll-y-contain p-4">
       {/* 출생정보 — 「성장 발달」 위. 아이(profile) 단위, prenatal write-through 대비 */}
       <section className="space-y-1.5">
         <h2 className="text-base font-bold">{t.birth_info}</h2>
@@ -160,18 +126,6 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
           </div>
         ) : (
           <p className="text-xs text-gray-400">{t.birth_info_empty}</p>
-        )}
-      </section>
-
-      <section className="space-y-1.5">
-        <h2 className="text-base font-bold">{t.prenatal_bridge_title}</h2>
-        <p className="text-[11px] leading-relaxed text-gray-500">{t.prenatal_bridge_hint}</p>
-        {bridgeBits.length > 0 ? (
-          <div className="rounded-2xl border border-pink-100 bg-pink-50/60 px-3 py-2.5 dark:border-pink-900/40 dark:bg-pink-950/20">
-            <p className="text-xs text-gray-700 dark:text-gray-200">{bridgeBits.join(' · ')}</p>
-          </div>
-        ) : (
-          <p className="text-xs text-gray-400">{t.prenatal_bridge_empty}</p>
         )}
       </section>
 

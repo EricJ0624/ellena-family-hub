@@ -217,12 +217,14 @@ export function BabyGrowthNavigator({
         )}
 
         {activeTab === 'growth' && !prenatal && (
-          <GrowthChartView
-            profile={profile}
-            currentGroupId={currentGroupId}
-            userId={userId}
-            t={t}
-          />
+          <div className="h-full min-h-0">
+            <GrowthChartView
+              profile={profile}
+              currentGroupId={currentGroupId}
+              userId={userId}
+              t={t}
+            />
+          </div>
         )}
 
         {activeTab === 'health' && !prenatal && (

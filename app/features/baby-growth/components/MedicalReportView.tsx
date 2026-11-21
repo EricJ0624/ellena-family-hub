@@ -32,10 +32,12 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
   const summaryText = useMemo(() => {
     const lines = [t.report_title];
     for (const col of columns) {
-      if (col.items.length === 0) continue;
-      lines.push(
-        `${col.title}: ${col.items.map((i) => `${i.label} ${i.text}`).join(', ')}`,
+      if (col.dayGroups.length === 0) continue;
+      const dayBits = col.dayGroups.map(
+        (g) =>
+          `${g.dateLabel}(${g.items.map((i) => `${i.label} ${i.text}`).join(', ')})`,
       );
+      lines.push(`${col.title}: ${dayBits.join(' · ')}`);
     }
     return lines.join('\n');
   }, [columns, t.report_title]);
@@ -141,7 +143,7 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
         </button>
       </section>
 
-      {/* 증상별 가로 칸 + 세로 시간순 */}
+      {/* 증상별 가로 칸 + 날짜별 그룹(당일 시간순) */}
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">
           {t.report_timeline_title}
@@ -158,17 +160,26 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
                 <p className="m-0 mb-1.5 text-center text-xs font-bold text-rose-600 dark:text-rose-300">
                   {col.emoji} {col.title}
                 </p>
-                <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-                  {col.items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="rounded-lg bg-white/90 px-1.5 py-1 text-[10px] leading-snug text-gray-700 shadow-sm dark:bg-gray-900/70 dark:text-gray-200"
-                    >
-                      <span className="font-semibold text-pink-500">{item.label}</span>
-                      <span className="mt-0.5 block">{item.text}</span>
-                    </li>
+                <div className="flex flex-col gap-2">
+                  {col.dayGroups.map((g) => (
+                    <div key={g.dateKey}>
+                      <p className="m-0 mb-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                        {g.dateLabel}
+                      </p>
+                      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                        {g.items.map((item) => (
+                          <li
+                            key={item.id}
+                            className="rounded-lg bg-white/90 px-1.5 py-1 text-[10px] leading-snug text-gray-700 shadow-sm dark:bg-gray-900/70 dark:text-gray-200"
+                          >
+                            <span className="font-semibold text-pink-500">{item.label}</span>
+                            <span className="mt-0.5 block">{item.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             ))}
           </div>
@@ -208,7 +219,31 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
   );
 }
 
-function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
+type DayGroup = {
+  dateKey: string;
+  dateLabel: string;
+  items: TimelineItem[];
+};
+
+type SymptomColumn = {
+  key: string;
+  title: string;
+  emoji: string;
+  dayGroups: DayGroup[];
+};
+
+function parseSymptomTags(raw: string | null | undefined): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function isDiarrheaConsistency(value: string | null | undefined): boolean {
+  return value === 'loose' || value === 'watery';
+}
+
+function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations): SymptomColumn[] {
   const typeMap: Record<string, string> = {
     wet: t.diaper_wet,
     dirty: t.diaper_dirty,
@@ -218,6 +253,8 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
 
   const feverItems: TimelineItem[] = [];
   const medicationItems: TimelineItem[] = [];
+  const diarrheaItems: TimelineItem[] = [];
+
   for (const l of logs) {
     if (l.log_type === 'temperature' && l.temperature_celsius != null) {
       feverItems.push({
@@ -235,36 +272,32 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
         text: `${l.medication_name}${l.medication_dose_mg != null ? ` ${l.medication_dose_mg}mg` : ''}`,
       });
     }
-  }
-  feverItems.sort((a, b) => a.at - b.at);
-  medicationItems.sort((a, b) => a.at - b.at);
-
-  const diarrheaItems: TimelineItem[] = logs
-    .filter((l) => l.log_type === 'diaper')
-    .map((l) => {
+    // 설사 칸: 성상이 설사/묽음인 기저귀만 (전체 기저귀 X)
+    if (l.log_type === 'diaper' && isDiarrheaConsistency(l.diaper_consistency)) {
       const typeName = l.diaper_type ? (typeMap[l.diaper_type] ?? '') : '';
-      const cKey = l.diaper_consistency
-        ? (`diaper_consistency_${l.diaper_consistency}` as keyof BabyGrowthTranslations)
-        : null;
-      const cLabel =
-        cKey && typeof t[cKey] === 'string' ? (t[cKey] as string) : l.diaper_consistency ?? '';
-      return {
+      const cKey = `diaper_consistency_${l.diaper_consistency}` as keyof BabyGrowthTranslations;
+      const cLabel = typeof t[cKey] === 'string' ? (t[cKey] as string) : l.diaper_consistency ?? '';
+      diarrheaItems.push({
         id: `d-${l.id}`,
         at: new Date(l.logged_at).getTime(),
         label: formatTime(l.logged_at),
         text: [typeName, cLabel].filter(Boolean).join(' · ') || t.log_diaper,
-      };
-    })
-    .sort((a, b) => a.at - b.at);
+      });
+    }
+    // 증상 칩「설사」도 같은 칸에 표시 (otherChips에서 빠져 누락되던 버그)
+    if (l.log_type === 'symptom' && parseSymptomTags(l.symptom_tags).includes('설사')) {
+      diarrheaItems.push({
+        id: `s-설사-${l.id}`,
+        at: new Date(l.logged_at).getTime(),
+        label: formatTime(l.logged_at),
+        text: l.notes?.trim() || '설사',
+      });
+    }
+  }
 
   const otherChips = BABY_SYMPTOM_CHIPS.filter((c) => c !== '열' && c !== '설사');
 
-  const columns: {
-    key: string;
-    title: string;
-    emoji: string;
-    items: TimelineItem[];
-  }[] = [
+  const rawColumns: { key: string; title: string; emoji: string; items: TimelineItem[] }[] = [
     { key: 'fever', title: '열', emoji: BABY_SYMPTOM_EMOJI['열'], items: feverItems },
     { key: 'medication', title: t.log_medication, emoji: '💊', items: medicationItems },
     { key: 'diarrhea', title: '설사', emoji: BABY_SYMPTOM_EMOJI['설사'], items: diarrheaItems },
@@ -272,26 +305,25 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations) {
 
   for (const chip of otherChips) {
     const items = logs
-      .filter(
-        (l) =>
-          l.log_type === 'symptom' &&
-          (l.symptom_tags ?? '')
-            .split(',')
-            .map((s) => s.trim())
-            .includes(chip),
-      )
+      .filter((l) => l.log_type === 'symptom' && parseSymptomTags(l.symptom_tags).includes(chip))
       .map((l) => ({
         id: `s-${chip}-${l.id}`,
         at: new Date(l.logged_at).getTime(),
         label: formatTime(l.logged_at),
         text: l.notes?.trim() || chip,
-      }))
-      .sort((a, b) => a.at - b.at);
+      }));
     if (items.length === 0) continue;
-    columns.push({ key: chip, title: chip, emoji: BABY_SYMPTOM_EMOJI[chip], items });
+    rawColumns.push({ key: chip, title: chip, emoji: BABY_SYMPTOM_EMOJI[chip], items });
   }
 
-  return columns.filter((col) => col.items.length > 0);
+  return rawColumns
+    .filter((col) => col.items.length > 0)
+    .map((col) => ({
+      key: col.key,
+      title: col.title,
+      emoji: col.emoji,
+      dayGroups: groupItemsByDate(col.items),
+    }));
 }
 
 function formatTime(iso: string): string {
@@ -299,4 +331,38 @@ function formatTime(iso: string): string {
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
+}
+
+function dateKeyFromMs(ms: number): string {
+  const d = new Date(ms);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateLabel(dateKey: string): string {
+  const [y, m, day] = dateKey.split('-').map(Number);
+  return new Date(y, m - 1, day).toLocaleDateString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/** 날짜별 묶음(최신 날짜 위) · 당일 항목은 시간 오름차순 */
+function groupItemsByDate(items: TimelineItem[]) {
+  const map = new Map<string, TimelineItem[]>();
+  for (const item of items) {
+    const key = dateKeyFromMs(item.at);
+    const list = map.get(key);
+    if (list) list.push(item);
+    else map.set(key, [item]);
+  }
+  return [...map.keys()]
+    .sort((a, b) => b.localeCompare(a))
+    .map((dateKey) => ({
+      dateKey,
+      dateLabel: formatDateLabel(dateKey),
+      items: (map.get(dateKey) ?? []).sort((a, b) => a.at - b.at),
+    }));
 }
