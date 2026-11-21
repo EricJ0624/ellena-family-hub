@@ -24,6 +24,8 @@ import { QuickLogModal } from './QuickLogModal';
 import { TodayPhotoSlider } from './TodayPhotoSlider';
 import { BabyAlbumView } from './BabyAlbumView';
 import { BabyWidgetBackdrop, BabyWidgetStickers } from './BabyWidgetBackdrop';
+import { AiGuideBriefingBanner } from './AiGuideBriefingBanner';
+import { getGuideBrief } from '../utils/parse-guide-brief';
 import { findCurrentOpenSleep, scheduledBedBefore } from '../utils/sleep-schedule';
 
 const ACTIVE_BABY_LS_KEY = 'sfh_baby_active_id';
@@ -370,6 +372,8 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
       ? ({ height: snapPageHeight, minHeight: snapPageHeight } as const)
       : undefined;
 
+  const guideBrief = aiText ? getGuideBrief(aiText) : '';
+
   // 대시보드 위젯 뷰 — 가로: 아이 / 등록 슬롯, 세로 스냅: 카드→사진
   return (
     <div
@@ -418,6 +422,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
                 onEditClick={() => setEditProfileOpen(true)}
                 onReportClick={() => setDetailOpen(true)}
               />
+              {guideBrief ? <AiGuideBriefingBanner text={guideBrief} /> : null}
             </div>
             <div className="relative z-[1] mt-1.5 min-h-0 flex-1">
               <QuickStatusCards
@@ -436,11 +441,6 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
             className="relative z-[1] flex h-full min-h-0 snap-start snap-always flex-col gap-1.5 overflow-hidden px-2 pt-2 pb-3"
             style={snapPageStyle}
           >
-            {aiText && (
-              <div className="relative z-20 shrink-0 line-clamp-2 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-                🤖 {aiText}
-              </div>
-            )}
             <div className="min-h-0 flex-1">
               <TodayPhotoSlider
                 babyId={profile.id}

@@ -476,35 +476,53 @@ async function renderPrintAlbumCanvases(opts: AlbumPageOpts): Promise<HTMLCanvas
   }
 }
 
-/** 같은 페이지 그림을 선택한 용지 크기로 인쇄한다. 미리보기가 닫히면 프레임을 치운다. */
+/**
+ * 같은 페이지 그림을 선택한 용지 크기로 인쇄한다.
+ * Android Chrome은 hidden iframe print 시 상위(앱) 문서를 미리보는 경우가 있어
+ * 앨범 HTML만 담은 새 창에서 print() 한다. (사용자 제스처 유지를 위해 창은 먼저 연다)
+ */
 export async function printPrintAlbum(opts: AlbumPageOpts): Promise<void> {
   const paper = PRINT_PHOTO_SIZES[opts.photoSize];
-  const canvases = await renderPrintAlbumCanvases(opts);
-  const blobs = await Promise.all(canvases.map((canvas) => canvasToJpegBlob(canvas)));
-  const urls = blobs.map((blob) => URL.createObjectURL(blob));
 
-  const iframe = document.createElement('iframe');
-  iframe.setAttribute('aria-hidden', 'true');
-  iframe.style.cssText = `position:fixed;left:-12000px;top:0;width:${paper.wMm}mm;height:${paper.hMm}mm;border:0;pointer-events:none;`;
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentDocument;
-  const win = iframe.contentWindow;
-  let removed = false;
-  const cleanup = () => {
-    if (removed) return;
-    removed = true;
-    urls.forEach((url) => URL.revokeObjectURL(url));
-    iframe.remove();
-  };
-  if (!doc || !win) {
-    cleanup();
-    throw new Error('print frame failed');
+  // popup blocker: await 전에 빈 창을 연다
+  const win = window.open('', '_blank');
+  if (!win) {
+    throw new Error('print window blocked');
   }
 
-  const images = urls.map((url) => `<img src="${url}" alt="" />`).join('');
-  doc.open();
-  doc.write(`<!doctype html><html><head><meta charset="utf-8" /><title>${escapeHtml(opts.title)}</title>
+  const urls: string[] = [];
+  let cleaned = false;
+  let safetyTimer = 0;
+  let afterPrintTimer = 0;
+
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    if (safetyTimer) window.clearTimeout(safetyTimer);
+    if (afterPrintTimer) window.clearTimeout(afterPrintTimer);
+    urls.forEach((url) => URL.revokeObjectURL(url));
+    try {
+      win.close();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  try {
+    win.document.open();
+    win.document.write(
+      `<!doctype html><html><head><meta charset="utf-8" /><title>${escapeHtml(opts.title)}</title></head>` +
+        `<body style="margin:0;font-family:sans-serif;padding:24px;color:#64748b;">Preparing print…</body></html>`,
+    );
+    win.document.close();
+
+    const canvases = await renderPrintAlbumCanvases(opts);
+    const blobs = await Promise.all(canvases.map((canvas) => canvasToJpegBlob(canvas)));
+    urls.push(...blobs.map((blob) => URL.createObjectURL(blob)));
+
+    const images = urls.map((url) => `<img src="${url}" alt="" />`).join('');
+    win.document.open();
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8" /><title>${escapeHtml(opts.title)}</title>
 <style>
   @page { size: ${paper.wMm}mm ${paper.hMm}mm; margin: 0; }
   * { box-sizing: border-box; }
@@ -512,26 +530,26 @@ export async function printPrintAlbum(opts: AlbumPageOpts): Promise<void> {
   img { display: block; width: ${paper.wMm}mm; height: ${paper.hMm}mm; page-break-after: always; break-after: page; }
   img:last-child { page-break-after: auto; break-after: auto; }
 </style></head><body>${images}</body></html>`);
-  doc.close();
+    win.document.close();
 
-  const imgs = Array.from(doc.images);
-  try {
+    const imgs = Array.from(win.document.images);
     await waitForPrintImages(imgs);
-  } catch (err) {
-    cleanup();
-    throw err;
-  }
 
-  const finish = () => {
-    win.removeEventListener('afterprint', finish);
-    cleanup();
-  };
-  win.addEventListener('afterprint', finish);
-  try {
+    // Android는 afterprint가 print() 직후 오기도 함 → 너무 이른 revoke/close 방지
+    const printStartedAt = Date.now();
+    const onAfterPrint = () => {
+      win.removeEventListener('afterprint', onAfterPrint);
+      const elapsed = Date.now() - printStartedAt;
+      const delayMs = elapsed < 800 ? 60_000 : 1_500;
+      afterPrintTimer = window.setTimeout(cleanup, delayMs);
+    };
+    win.addEventListener('afterprint', onAfterPrint);
+    safetyTimer = window.setTimeout(cleanup, 180_000);
+
     win.focus();
     win.print();
   } catch (err) {
-    finish();
+    cleanup();
     throw err;
   }
 }

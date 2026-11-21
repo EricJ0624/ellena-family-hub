@@ -7,7 +7,7 @@
  * - localStorage key: sfh_ai_key_{userId}_{provider}  (앱 전체 공통 키)
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { fetchAiProxy } from '@/lib/ai-proxy-client';
 import {
   aiUserKeyStorageKey,
@@ -134,8 +134,12 @@ function buildPromptPayload(
         systemPrompt:
           '당신은 소아과 전문의와 협력하는 전문 육아 가이드입니다. ' +
           '아래 아기 정보를 바탕으로 오늘 하루 주의할 사항과 발달에 맞는 활동을 간결하게 안내해 주세요. ' +
-          '의학적 판단이 필요한 경우 반드시 의사 상담을 권고하세요.',
-        userPrompt: `${baseContext}\n\n위 정보를 바탕으로 오늘의 육아 가이드를 한국어로 3~4문장으로 작성해 주세요.`,
+          '의학적 판단이 필요한 경우 반드시 의사 상담을 권고하세요. ' +
+          '응답 마지막 줄에는 반드시 홈 배너용 한 줄 요약을 `요약: …` 형식으로 붙이세요. ' +
+          '요약은 키워드·짧은 문장으로 20자 이내, 본문과 중복되지 않게 쓰세요.',
+        userPrompt:
+          `${baseContext}\n\n위 정보를 바탕으로 오늘의 육아 가이드를 한국어로 3~4문장 본문으로 작성한 뒤, ` +
+          `마지막 줄에만 \`요약: (20자 이내 한 줄)\` 을 추가해 주세요.`,
       };
     case 'diary':
       return {
@@ -186,12 +190,34 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const sync = () => setHasApiKey(Boolean(getStoredAiKey(userId)));
     window.addEventListener('sfh:ai-key-updated', sync);
     return () => window.removeEventListener('sfh:ai-key-updated', sync);
   }, [userId]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, []);
+
+  const clearResult = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setResult('');
+    setError(null);
+    setGenerating(false);
+  }, []);
+
+  /** 탭 재진입 시 홈 브리핑(guide)을 패널에 다시 보여 줄 때 사용 */
+  const seedResult = useCallback((text: string) => {
+    setResult(text);
+    setError(null);
+  }, []);
 
   const generate = useCallback(
     async (
@@ -206,6 +232,11 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
         setError('API 키가 필요합니다. 설정에서 키를 등록해 주세요.');
         return;
       }
+
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
+
       setGenerating(true);
       setError(null);
       setResult('');
@@ -228,7 +259,10 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
             userPrompt,
             stream: useStream,
           }),
+          signal: ac.signal,
         });
+
+        if (ac.signal.aborted) return;
 
         if (!res.ok) {
           const errJson = await res.json().catch(() => ({}));
@@ -240,10 +274,18 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
           const decoder = new TextDecoder();
           let accumulated = '';
           while (true) {
+            if (ac.signal.aborted) {
+              try {
+                await reader.cancel();
+              } catch {
+                /* ignore */
+              }
+              return;
+            }
             const { done, value } = await reader.read();
             if (done) break;
             const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\\n');
+            const lines = chunk.split('\n');
             for (const line of lines) {
               if (!line.startsWith('data: ')) continue;
               const payload = line.slice(6).trim();
@@ -253,7 +295,7 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
                 const delta = parsed.choices?.[0]?.delta?.content ?? '';
                 const anthropicDelta = parsed.delta?.text ?? '';
                 accumulated += delta || anthropicDelta;
-                setResult(accumulated);
+                if (!ac.signal.aborted) setResult(accumulated);
               } catch {
                 // JSON 파싱 실패 시 무시
               }
@@ -261,6 +303,7 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
           }
         } else {
           const json = await res.json();
+          if (ac.signal.aborted) return;
           const text =
             json.choices?.[0]?.message?.content?.trim() ??
             json.content?.[0]?.text?.trim() ??
@@ -268,11 +311,15 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
           setResult(text);
         }
       } catch (err: unknown) {
+        if (ac.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
+          return;
+        }
         const msg = err instanceof Error ? err.message : 'AI 응답을 받지 못했습니다.';
         console.error('[useBabyAiGuide] AI 오류:', err);
         setError(msg);
       } finally {
-        setGenerating(false);
+        if (abortRef.current === ac) abortRef.current = null;
+        if (!ac.signal.aborted) setGenerating(false);
       }
     },
     [userId]
@@ -284,9 +331,7 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
     generating,
     result,
     error,
-    clearResult: () => {
-      setResult('');
-      setError(null);
-    },
+    clearResult,
+    seedResult,
   };
 }

@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 export async function fetchAiProxy(params: {
   apiKey: string;
   body: Record<string, unknown>;
+  /** 삭제/취소 시 스트림·요청 중단용 (선택) */
+  signal?: AbortSignal;
 }): Promise<Response> {
   const key = params.apiKey.trim();
   if (!key) {
@@ -30,5 +32,6 @@ export async function fetchAiProxy(params: {
       'X-AI-Api-Key': key,
     },
     body: JSON.stringify(params.body),
+    signal: params.signal,
   });
 }

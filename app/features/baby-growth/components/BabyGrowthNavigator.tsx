@@ -170,15 +170,17 @@ export function BabyGrowthNavigator({
         )}
 
         {activeTab === 'ai' && (
-          <AiGuidePanel
-            profile={profile}
-            userId={userId}
-            recentLogs={logs}
-            latestGrowth={latestGrowth}
-            t={t}
-            externalText={aiText}
-            onTextChange={onAiTextChange}
-          />
+          <div className="h-full min-h-0">
+            <AiGuidePanel
+              profile={profile}
+              userId={userId}
+              recentLogs={logs}
+              latestGrowth={latestGrowth}
+              t={t}
+              externalText={aiText}
+              onTextChange={onAiTextChange}
+            />
+          </div>
         )}
       </div>
     </div>
