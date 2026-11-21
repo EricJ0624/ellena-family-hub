@@ -1193,7 +1193,11 @@ function AddBabyModal({
         <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex gap-2">
           {onDelete && (
             <button
-              onClick={onDelete}
+              type="button"
+              onClick={() => {
+                if (!window.confirm(t.delete_baby_confirm)) return;
+                void onDelete();
+              }}
               className="flex-none px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-sm font-medium hover:bg-red-100 transition-colors"
             >
               {t.delete}

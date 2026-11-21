@@ -12,6 +12,7 @@ export type BabyGrowthTranslations = {
   save: string;
   cancel: string;
   delete: string;
+  delete_baby_confirm: string;
   close: string;
   error_load: string;
   error_save: string;
@@ -350,6 +351,7 @@ const ko: BabyGrowthTranslations = {
   save: '저장',
   cancel: '취소',
   delete: '삭제',
+  delete_baby_confirm: '이 아이와 관련된 성장·기록·사진이 모두 삭제되며 되돌릴 수 없습니다. 정말 삭제할까요?',
   close: '닫기',
   error_load: '데이터를 불러오지 못했습니다.',
   error_save: '저장에 실패했습니다.',
@@ -664,6 +666,7 @@ const en: BabyGrowthTranslations = {
   save: 'Save',
   cancel: 'Cancel',
   delete: 'Delete',
+  delete_baby_confirm: 'This will permanently delete this child and all related growth logs, records, and photos. Delete anyway?',
   close: 'Close',
   error_load: 'Failed to load data.',
   error_save: 'Failed to save.',
@@ -978,6 +981,7 @@ const ja: BabyGrowthTranslations = {
   save: '保存',
   cancel: 'キャンセル',
   delete: '削除',
+  delete_baby_confirm: 'この子に関する成長・記録・写真がすべて削除され、元に戻せません。本当に削除しますか？',
   close: '閉じる',
   error_load: 'データの読み込みに失敗しました。',
   error_save: '保存に失敗しました。',
@@ -1295,6 +1299,7 @@ const zhCN: BabyGrowthTranslations = {
   save: '保存',
   cancel: '取消',
   delete: '删除',
+  delete_baby_confirm: '将永久删除该宝宝及相关成长记录、日志和照片，无法恢复。确定删除吗？',
   close: '关闭',
   error_load: '无法加载数据。',
   error_save: '保存失败。',
@@ -1607,6 +1612,7 @@ const zhTW: BabyGrowthTranslations = {
   save: '儲存',
   cancel: '取消',
   delete: '刪除',
+  delete_baby_confirm: '將永久刪除這個寶寶及相關成長紀錄、日誌與照片，無法復原。確定刪除嗎？',
   close: '關閉',
   error_load: '無法載入資料。',
   error_save: '儲存失敗。',
@@ -1919,6 +1925,7 @@ const es: BabyGrowthTranslations = {
   save: 'Guardar',
   cancel: 'Cancelar',
   delete: 'Eliminar',
+  delete_baby_confirm: 'Se eliminará de forma permanente este bebé y todos sus registros, fotos y datos de crecimiento. ¿Eliminar de todos modos?',
   close: 'Cerrar',
   error_load: 'No se pudieron cargar los datos.',
   error_save: 'Error al guardar.',
@@ -2231,6 +2238,7 @@ const fr: BabyGrowthTranslations = {
   save: 'Enregistrer',
   cancel: 'Annuler',
   delete: 'Supprimer',
+  delete_baby_confirm: 'Cela supprimera définitivement cet enfant ainsi que tous ses journaux, photos et données de croissance. Supprimer quand même ?',
   close: 'Fermer',
   error_load: 'Impossible de charger les données.',
   error_save: 'Échec de l\'enregistrement.',
@@ -2543,6 +2551,7 @@ const de: BabyGrowthTranslations = {
   save: 'Speichern',
   cancel: 'Abbrechen',
   delete: 'Löschen',
+  delete_baby_confirm: 'Dieses Kind und alle zugehörigen Wachstumsdaten, Einträge und Fotos werden dauerhaft gelöscht. Wirklich löschen?',
   close: 'Schließen',
   error_load: 'Daten konnten nicht geladen werden.',
   error_save: 'Speichern fehlgeschlagen.',
@@ -2855,6 +2864,7 @@ const it: BabyGrowthTranslations = {
   save: 'Salva',
   cancel: 'Annulla',
   delete: 'Elimina',
+  delete_baby_confirm: 'Questo eliminerà definitivamente il bambino e tutti i relativi registri, foto e dati di crescita. Eliminare comunque?',
   close: 'Chiudi',
   error_load: 'Impossibile caricare i dati.',
   error_save: 'Salvataggio fallito.',
@@ -3167,6 +3177,7 @@ const pt: BabyGrowthTranslations = {
   save: 'Salvar',
   cancel: 'Cancelar',
   delete: 'Excluir',
+  delete_baby_confirm: 'Isso excluirá permanentemente este bebê e todos os registros, fotos e dados de crescimento. Excluir mesmo assim?',
   close: 'Fechar',
   error_load: 'Não foi possível carregar os dados.',
   error_save: 'Falha ao salvar.',
