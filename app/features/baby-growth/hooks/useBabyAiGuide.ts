@@ -18,6 +18,11 @@ import {
 } from '@/lib/ai-user-key';
 import type { BabyProfile, BabyDailyLog, BabyGrowthRecord } from '../types';
 import { calcAgeInDays, calcAgeInMonths } from '../utils/age-calculator';
+import {
+  displayBabyName,
+  gestationalProgress,
+  isPrenatal,
+} from '../utils/prenatal';
 
 // ---------------------------------------------------------------------------
 // 상수
@@ -111,15 +116,65 @@ function buildPromptPayload(
   latestGrowth: BabyGrowthRecord | null,
   mode: AiMode,
   qaQuestion?: string,
+  lifePhase: 'prenatal' | 'postnatal' = 'postnatal',
 ): { systemPrompt: string; userPrompt: string } {
-  const ageMonths = calcAgeInMonths(baby.birth_date);
-  const ageDays = calcAgeInDays(baby.birth_date);
+  const prenatal = lifePhase === 'prenatal' || isPrenatal(baby);
+  const shownName = displayBabyName(baby);
+
+  if (prenatal) {
+    const progress = baby.due_date ? gestationalProgress(baby.due_date) : null;
+    const contextLines: string[] = [
+      `태명/이름: ${shownName}`,
+      baby.fetal_name ? `태명: ${baby.fetal_name}` : '',
+      baby.due_date ? `출산예정일: ${baby.due_date}` : '',
+      progress
+        ? `추정 임신 주수: ${progress.weeksPregnant}주 (출산까지 ${progress.ddayLabel}, 예정일 기준 추정)`
+        : '',
+      `성별: ${baby.gender ?? '미입력'}`,
+    ].filter(Boolean);
+    const baseContext = contextLines.join('\n');
+    switch (mode) {
+      case 'guide':
+        return {
+          systemPrompt:
+            '당신은 산부인과·산전 케어를 돕는 전문 가이드입니다. ' +
+            '임신 주수(예정일 기준 추정)에 맞는 주의사항과 산모·태아 케어를 간결히 안내하세요. ' +
+            '의학적 진단은 하지 말고 필요 시 병원 상담을 권고하세요. ' +
+            '응답 마지막 줄에는 반드시 `요약: …` 형식의 20자 이내 한 줄 요약을 붙이세요.',
+          userPrompt:
+            `${baseContext}\n\n오늘의 산전 가이드를 한국어로 3~4문장 본문으로 작성한 뒤, 마지막 줄에만 \`요약: (20자 이내)\` 을 추가해 주세요.`,
+        };
+      case 'diary':
+        return {
+          systemPrompt: '당신은 따뜻한 임신 일기 작가입니다. 산모의 시각으로 오늘을 기록해 주세요.',
+          userPrompt: `${baseContext}\n\n오늘의 임신 일기 초안을 한국어로 150~200자로 작성해 주세요.`,
+        };
+      case 'schedule':
+        return {
+          systemPrompt: '당신은 산전 일정 도우미입니다. 주수에 맞는 검진·휴식·영양 일과를 제안하세요.',
+          userPrompt: `${baseContext}\n\n내일 산전 일과 제안을 한국어로 작성해 주세요.`,
+        };
+      case 'qa':
+        return {
+          systemPrompt:
+            '당신은 친절한 산전 케어 AI입니다. 의학적 진단은 하지 않고 필요 시 산부인과 상담을 권고하세요.',
+          userPrompt: `${baseContext}\n\n질문: ${qaQuestion ?? '임신 중 궁금한 점이 있습니다.'}`,
+        };
+    }
+  }
+
+  const birthDate = baby.birth_date!;
+  const ageMonths = calcAgeInMonths(birthDate);
+  const ageDays = calcAgeInDays(birthDate);
 
   const contextLines: string[] = [
-    `아기 이름: ${baby.name}`,
+    `아기 이름: ${shownName}`,
+    baby.fetal_name ? `태명: ${baby.fetal_name}` : '',
     `월령: ${ageMonths}개월 (D+${ageDays})`,
+    baby.gestational_weeks != null ? `출생 시 재태주수: ${baby.gestational_weeks}주` : '',
+    baby.birth_weight_kg != null ? `출생 체중: ${baby.birth_weight_kg}kg` : '',
     `성별: ${baby.gender ?? '미입력'}`,
-  ];
+  ].filter(Boolean);
 
   if (latestGrowth) {
     if (latestGrowth.weight_kg) contextLines.push(`최근 체중: ${latestGrowth.weight_kg}kg`);
@@ -229,7 +284,7 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
       baby: BabyProfile,
       recentLogs: BabyDailyLog[],
       latestGrowth: BabyGrowthRecord | null,
-      options?: { qaQuestion?: string; stream?: boolean }
+      options?: { qaQuestion?: string; stream?: boolean; lifePhase?: 'prenatal' | 'postnatal' }
     ): Promise<void> => {
       const stored = getStoredAiKey(userId);
       if (!stored) {
@@ -251,7 +306,8 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
           recentLogs,
           latestGrowth,
           mode,
-          options?.qaQuestion
+          options?.qaQuestion,
+          options?.lifePhase ?? (isPrenatal(baby) ? 'prenatal' : 'postnatal'),
         );
 
         const useStream = options?.stream ?? true;

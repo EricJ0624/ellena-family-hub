@@ -15,6 +15,7 @@ interface AiGuidePanelProps {
   /** 홈 1줄 브리핑용 — guide 결과만 부모에 반영 */
   externalText?: string | null;
   onTextChange?: (text: string | null) => void;
+  lifePhase?: 'prenatal' | 'postnatal';
 }
 
 const MODES: { key: AiMode; emoji: string; labelKey: keyof BabyGrowthTranslations }[] = [
@@ -32,6 +33,7 @@ export function AiGuidePanel({
   t,
   externalText,
   onTextChange,
+  lifePhase = 'postnatal',
 }: AiGuidePanelProps) {
   const {
     hasApiKey,
@@ -66,10 +68,11 @@ export function AiGuidePanel({
   const handleGenerate = async (mode: AiMode) => {
     setActiveMode(mode);
     clearResult();
-    if (mode === 'guide' && onTextChange) onTextChange(null);
+    // guide 재생성 시작 때 홈 배너를 비우지 않음 — 완료 시 result effect 가 교체
     await generate(mode, profile, recentLogs, latestGrowth, {
       qaQuestion: mode === 'qa' ? qaQuestion : undefined,
       stream: true,
+      lifePhase,
     });
   };
 

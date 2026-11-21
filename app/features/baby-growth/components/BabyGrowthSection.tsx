@@ -23,13 +23,21 @@ import {
   type BabyProfileDraft,
   type BabyRecentStatus,
   type LogType,
+  type PrenatalLog,
+  type PrenatalLogType,
 } from '../types';
 import { asFiniteNumber } from '../utils/birth-snapshot';
+import { gestationalProgress, isPrenatal } from '../utils/prenatal';
 import { BABY_PROFILE_MAX, useBabyGrowth } from '../hooks/useBabyGrowth';
 import { useBabyLogs, calcRecentStatus } from '../hooks/useBabyLogs';
+import { usePrenatalLogs } from '../hooks/usePrenatalLogs';
+import { useBirthTransition } from '../hooks/useBirthTransition';
 import { BabyProfileCard } from './BabyProfileCard';
 import { QuickStatusCards } from './QuickStatusCards';
 import { QuickLogModal } from './QuickLogModal';
+import { PrenatalStatusCards } from './PrenatalStatusCards';
+import { PrenatalQuickLogModal } from './PrenatalQuickLogModal';
+import { BirthTransitionModal } from './BirthTransitionModal';
 import { TodayPhotoSlider } from './TodayPhotoSlider';
 import { BabyAlbumView } from './BabyAlbumView';
 import { BabyWidgetBackdrop, BabyWidgetStickers } from './BabyWidgetBackdrop';
@@ -38,6 +46,7 @@ import { getGuideBrief } from '../utils/parse-guide-brief';
 import { findCurrentOpenSleep, scheduledBedBefore } from '../utils/sleep-schedule';
 
 const ACTIVE_BABY_LS_KEY = 'sfh_baby_active_id';
+const AI_GUIDE_SESSION_KEY = 'sfh_baby_ai_guide';
 
 function readStoredActiveBabyId(groupId: string | null): string | null {
   if (!groupId || typeof window === 'undefined') return null;
@@ -52,6 +61,32 @@ function storeActiveBabyId(groupId: string | null, babyId: string) {
   if (!groupId || typeof window === 'undefined') return;
   try {
     localStorage.setItem(`${ACTIVE_BABY_LS_KEY}:${groupId}`, babyId);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readAiGuideSession(groupId: string | null): Record<string, string> {
+  if (!groupId || typeof window === 'undefined') return {};
+  try {
+    const raw = sessionStorage.getItem(`${AI_GUIDE_SESSION_KEY}:${groupId}`);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return {};
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof v === 'string' && v.length > 0) out[k] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writeAiGuideSession(groupId: string | null, map: Record<string, string>) {
+  if (!groupId || typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(`${AI_GUIDE_SESSION_KEY}:${groupId}`, JSON.stringify(map));
   } catch {
     /* ignore */
   }
@@ -105,10 +140,18 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
   const [logs, setLogs] = useState<BabyDailyLog[]>([]);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [logModalType, setLogModalType] = useState<LogType>('feeding');
+  const [prenatalLogs, setPrenatalLogs] = useState<PrenatalLog[]>([]);
+  const [prenatalModalOpen, setPrenatalModalOpen] = useState(false);
+  const [prenatalModalType, setPrenatalModalType] = useState<PrenatalLogType>('diary');
+  const [birthModalOpen, setBirthModalOpen] = useState(false);
   const [addProfileOpen, setAddProfileOpen] = useState(false);
+  const [addAsPrenatal, setAddAsPrenatal] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [babyLimitNotice, setBabyLimitNotice] = useState(false);
-  const [aiText, setAiText] = useState<string | null>(null);
+  /** 아이별 AI guide 전문 — 세션 유지(등록 슬롯·리마운트·슬라이드) */
+  const [aiTextByBabyId, setAiTextByBabyId] = useState<Record<string, string>>(() =>
+    readAiGuideSession(currentGroupId),
+  );
   const [albumOpen, setAlbumOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -134,6 +177,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
   const onAddSlide = canShowAddSlide && slideIndex >= profiles.length;
   const profile = onAddSlide ? null : (profiles[slideIndex] ?? profiles[0] ?? null);
   const activeBabyId = profile?.id ?? null;
+  const aiText = activeBabyId ? (aiTextByBabyId[activeBabyId] ?? null) : null;
 
   // ---------------------------------------------------------------------------
   // 콜백 (안정 참조 보장)
@@ -162,6 +206,45 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     onProfilesChange: handleProfilesChange,
   });
 
+  const { fetchLogs: fetchPrenatalLogs, addLog: addPrenatalLog } = usePrenatalLogs({
+    babyId: activeBabyId,
+    currentGroupId,
+    userId,
+  });
+
+  const { completeBirth } = useBirthTransition({
+    profile: profile ?? ({
+      id: '',
+      group_id: currentGroupId ?? '',
+      created_by: null,
+      name: '',
+      birth_date: null,
+      due_date: null,
+      birth_time: null,
+      birth_place: null,
+      fetal_name: null,
+      birth_weight_kg: null,
+      birth_height_cm: null,
+      birth_head_cm: null,
+      gestational_weeks: null,
+      blood_type: null,
+      birth_source: null,
+      birth_event_id: null,
+      gender: null,
+      country_code: 'KR',
+      notes: null,
+      usual_bedtime: null,
+      usual_wake_time: null,
+      created_at: '',
+      updated_at: '',
+    } as BabyProfile),
+    currentGroupId,
+    userId,
+    onProfileUpdated: (next) => {
+      setProfiles((prev) => prev.map((p) => (p.id === next.id ? next : p)));
+    },
+  });
+
   useEffect(() => {
     setSlideIndex((prev) => {
       if (profiles.length === 0) return 0;
@@ -183,11 +266,65 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     storeActiveBabyId(currentGroupId, activeBabyId);
   }, [currentGroupId, activeBabyId]);
 
+  // 그룹 전환 시 해당 그룹 세션에서 복원
   useEffect(() => {
-    setAiText(null);
+    setAiTextByBabyId(readAiGuideSession(currentGroupId));
+  }, [currentGroupId]);
+
+  // 맵 변경 시 세션 저장
+  useEffect(() => {
+    writeAiGuideSession(currentGroupId, aiTextByBabyId);
+  }, [currentGroupId, aiTextByBabyId]);
+
+  // 삭제된 아이 키만 정리 — profiles 가 잠깐 비는 동안은 지우지 않음
+  useEffect(() => {
+    if (profiles.length === 0) return;
+    const ids = new Set(profiles.map((p) => p.id));
+    setAiTextByBabyId((prev) => {
+      let changed = false;
+      const next: Record<string, string> = {};
+      for (const [id, text] of Object.entries(prev)) {
+        if (ids.has(id)) next[id] = text;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [profiles]);
+
+  const handleAiTextChange = useCallback(
+    (text: string | null) => {
+      if (!activeBabyId) return;
+      setAiTextByBabyId((prev) => {
+        // 생성 중 빈 문자열로 지우는 호출은 무시 — 이전 배너 유지
+        if (text === '') return prev;
+        if (text == null) {
+          if (!(activeBabyId in prev)) return prev;
+          const next = { ...prev };
+          delete next[activeBabyId];
+          return next;
+        }
+        if (prev[activeBabyId] === text) return prev;
+        return { ...prev, [activeBabyId]: text };
+      });
+    },
+    [activeBabyId],
+  );
+
+  useEffect(() => {
+    // 로그는 아이별로 다시 로드 — AI 배너(aiTextByBabyId)는 여기서 지우지 않음
     logsSigRef.current = '';
     setLogs([]);
+    setPrenatalLogs([]);
   }, [activeBabyId]);
+
+  useEffect(() => {
+    if (!profile || !isPrenatal(profile)) return;
+    let cancelled = false;
+    void fetchPrenatalLogs().then((rows) => {
+      if (!cancelled) setPrenatalLogs(rows);
+    });
+    return () => { cancelled = true; };
+  }, [profile, fetchPrenatalLogs]);
 
   // 세로 스냅 페이지 높이 = 스크롤포트 실측 (화면 비율 유지 + 스크롤 가능)
   useEffect(() => {
@@ -367,7 +504,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
         t={t}
         onAddLog={addLog}
         aiText={aiText}
-        onAiTextChange={setAiText}
+        onAiTextChange={handleAiTextChange}
       />
     </React.Suspense>
   ) : null;
@@ -407,12 +544,20 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
         >
           <span className="text-4xl">🍼</span>
           <p className="text-sm text-gray-500">{t.no_baby_profile}</p>
-          <button
-            onClick={tryOpenAddBaby}
-            className="rounded-full bg-pink-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-pink-600"
-          >
-            {t.add_baby}
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              onClick={() => { setAddAsPrenatal(true); tryOpenAddBaby(); }}
+              className="rounded-full bg-rose-100 px-5 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-200"
+            >
+              {t.prenatal_register}
+            </button>
+            <button
+              onClick={() => { setAddAsPrenatal(false); tryOpenAddBaby(); }}
+              className="rounded-full bg-pink-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-pink-600"
+            >
+              {t.postnatal_register}
+            </button>
+          </div>
           {babyLimitNotice && (
             <p className="max-w-xs text-xs leading-relaxed text-rose-500">{t.baby_limit_reached}</p>
           )}
@@ -430,20 +575,38 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
                 t={t}
                 onEditClick={() => setEditProfileOpen(true)}
                 onReportClick={() => setDetailOpen(true)}
+                onBirthClick={isPrenatal(profile) ? () => setBirthModalOpen(true) : undefined}
               />
               {guideBrief ? <AiGuideBriefingBanner text={guideBrief} /> : null}
             </div>
             <div className="relative z-[1] mt-1.5 min-h-0 flex-1">
-              <QuickStatusCards
-                status={recentStatus}
-                profile={profile}
-                logs={logs}
-                t={t}
-                fillHeight
-                onCardClick={handleCardClick}
-                onBed={() => { void handleBed(); }}
-                onWake={() => { void handleWake(); }}
-              />
+              {isPrenatal(profile) ? (
+                <PrenatalStatusCards
+                  weeksPregnant={
+                    profile.due_date
+                      ? gestationalProgress(profile.due_date).weeksPregnant
+                      : 0
+                  }
+                  logs={prenatalLogs}
+                  t={t}
+                  fillHeight
+                  onCardClick={(lt) => {
+                    setPrenatalModalType(lt);
+                    setPrenatalModalOpen(true);
+                  }}
+                />
+              ) : (
+                <QuickStatusCards
+                  status={recentStatus}
+                  profile={profile}
+                  logs={logs}
+                  t={t}
+                  fillHeight
+                  onCardClick={handleCardClick}
+                  onBed={() => { void handleBed(); }}
+                  onWake={() => { void handleWake(); }}
+                />
+              )}
             </div>
           </section>
           <section
@@ -480,12 +643,44 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
         />
       )}
 
+      {prenatalModalOpen && profile && isPrenatal(profile) && (
+        <PrenatalQuickLogModal
+          key={prenatalModalType}
+          isOpen={prenatalModalOpen}
+          defaultType={prenatalModalType}
+          babyId={profile.id}
+          currentGroupId={currentGroupId ?? ''}
+          weeksPregnant={
+            profile.due_date ? gestationalProgress(profile.due_date).weeksPregnant : 0
+          }
+          t={t}
+          onSave={async (draft) => {
+            const row = await addPrenatalLog(draft);
+            if (row) setPrenatalLogs((prev) => [row, ...prev]);
+          }}
+          onClose={() => setPrenatalModalOpen(false)}
+        />
+      )}
+
+      {birthModalOpen && profile && isPrenatal(profile) && (
+        <BirthTransitionModal
+          profile={profile}
+          t={t}
+          onSubmit={async (input) => {
+            await completeBirth(input);
+            setBirthModalOpen(false);
+          }}
+          onClose={() => setBirthModalOpen(false)}
+        />
+      )}
+
       {/* 아기 등록 모달 (간단 인라인) */}
       {addProfileOpen && (
         <AddBabyModal
           t={t}
           currentGroupId={currentGroupId ?? ''}
           lang={lang}
+          prenatalMode={addAsPrenatal}
           onSave={async (draft) => {
             try {
               const created = await addProfile({ ...draft, group_id: currentGroupId ?? '' });
@@ -529,7 +724,9 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
       {detailOpen && profile && createPortal(
         <div className="fixed inset-0 z-[9999] bg-white dark:bg-gray-950 flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-            <h2 className="text-sm font-bold">{t.widget_title}</h2>
+            <h2 className="text-sm font-bold">
+              {isPrenatal(profile) ? t.prenatal_widget_title : t.widget_title}
+            </h2>
             <button type="button" onClick={() => setDetailOpen(false)} className="text-sm text-gray-500">{t.close}</button>
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
@@ -542,7 +739,9 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
       {albumOpen && profile && createPortal(
         <div className="fixed inset-0 z-[9999] bg-white dark:bg-gray-950 flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-            <h2 className="text-sm font-bold">{t.album_title}</h2>
+            <h2 className="text-sm font-bold">
+              {isPrenatal(profile) ? t.prenatal_album_title : t.album_title}
+            </h2>
             <button type="button" onClick={() => setAlbumOpen(false)} className="text-sm text-gray-500">{t.close}</button>
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
@@ -568,17 +767,27 @@ interface AddBabyModalProps {
   currentGroupId: string;
   lang: LangCode;
   initial?: BabyProfile;
+  /** 신규 등록 시 임신 중 모드 */
+  prenatalMode?: boolean;
   onSave: (draft: Omit<BabyProfileDraft, 'group_id'> & { group_id?: string }) => Promise<void>;
   onDelete?: () => Promise<void>;
   onClose: () => void;
 }
 
-function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDelete, onClose }: AddBabyModalProps) {
+function AddBabyModal({
+  t, currentGroupId: _groupId, lang, initial, prenatalMode = false, onSave, onDelete, onClose,
+}: AddBabyModalProps) {
+  const editingPrenatal = initial ? isPrenatal(initial) : prenatalMode;
   const [name, setName] = useState(initial?.name ?? '');
   const [birthDate, setBirthDate] = useState(initial?.birth_date ?? '');
+  const [dueDate, setDueDate] = useState(initial?.due_date ?? '');
   const [birthTime, setBirthTime] = useState(initial?.birth_time?.slice(0, 5) ?? '');
   const [birthPlace, setBirthPlace] = useState(initial?.birth_place ?? '');
-  const [fetalName, setFetalName] = useState(initial?.fetal_name ?? '');
+  const [fetalName, setFetalName] = useState(
+    initial?.fetal_name
+      ?? (initial && !initial.birth_date ? (initial.name ?? '') : '')
+      ?? '',
+  )
   const [birthWeight, setBirthWeight] = useState(
     initial?.birth_weight_kg != null ? String(initial.birth_weight_kg) : '',
   );
@@ -630,26 +839,32 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
   );
 
   const handleSave = async () => {
-    if (!name.trim() || !birthDate) return;
+    const fetal = fetalName.trim();
+    const displayName = editingPrenatal ? fetal : (name.trim() || fetal);
+    if (editingPrenatal) {
+      if (!fetal || !dueDate) return;
+    } else if (!displayName || !birthDate) {
+      return;
+    }
     setSaving(true);
     try {
       await onSave({
-        name: name.trim(),
-        birth_date: birthDate,
-        birth_time: birthTime || null,
-        birth_place: birthPlace.trim() || null,
-        fetal_name: fetalName.trim() || null,
-        birth_weight_kg: asFiniteNumber(birthWeight),
-        birth_height_cm: asFiniteNumber(birthHeight),
-        birth_head_cm: asFiniteNumber(birthHead),
-        gestational_weeks: asFiniteNumber(gestationalWeeks),
-        blood_type: bloodType || null,
-        // 출산 이벤트 연동 후 취침 등만 수정해도 birth_event 출처를 덮지 않음
+        name: displayName,
+        birth_date: editingPrenatal ? null : birthDate,
+        due_date: editingPrenatal ? dueDate : (dueDate || null),
+        birth_time: editingPrenatal ? null : (birthTime || null),
+        birth_place: editingPrenatal ? null : (birthPlace.trim() || null),
+        fetal_name: editingPrenatal ? fetal : (fetal || null),
+        birth_weight_kg: editingPrenatal ? null : asFiniteNumber(birthWeight),
+        birth_height_cm: editingPrenatal ? null : asFiniteNumber(birthHeight),
+        birth_head_cm: editingPrenatal ? null : asFiniteNumber(birthHead),
+        gestational_weeks: editingPrenatal ? null : asFiniteNumber(gestationalWeeks),
+        blood_type: editingPrenatal ? null : (bloodType || null),
         birth_source: initial?.birth_source === 'birth_event' ? 'birth_event' : 'manual',
         gender,
         country_code: countryCode,
-        usual_bedtime: usualBedtime || null,
-        usual_wake_time: usualWake || null,
+        usual_bedtime: editingPrenatal ? null : (usualBedtime || null),
+        usual_wake_time: editingPrenatal ? null : (usualWake || null),
       });
     } catch (err) {
       console.error('[AddBabyModal] 저장 오류:', err);
@@ -665,135 +880,178 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
     >
       <div className="flex max-h-[90dvh] w-full flex-col rounded-t-2xl bg-white pb-safe shadow-2xl dark:bg-gray-900 sm:w-96 sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 pb-2 pt-4 dark:border-gray-800">
-          <h2 className="text-base font-bold">{initial ? t.edit_baby : t.add_baby}</h2>
+          <h2 className="text-base font-bold">
+            {initial ? t.edit_baby : editingPrenatal ? t.prenatal_register : t.postnatal_register}
+          </h2>
           <button onClick={onClose} className="text-xl text-gray-400 hover:text-gray-600">×</button>
         </div>
 
         <div className="space-y-3 overflow-y-auto px-5 py-4">
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-500">{t.baby_name}</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-500">{t.birth_date}</label>
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-            />
-          </div>
-
-          <p className="pt-1 text-xs font-semibold text-gray-600 dark:text-gray-300">{t.birth_info}</p>
-
-          <div className="grid grid-cols-2 gap-2">
+          {editingPrenatal ? (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-500">{t.birth_time}</label>
+              <label className="block text-xs font-medium text-gray-500">{t.fetal_name}</label>
               <input
-                type="time"
-                value={birthTime}
-                onChange={(e) => setBirthTime(e.target.value)}
+                type="text"
+                value={fetalName}
+                onChange={(e) => setFetalName(e.target.value)}
+                placeholder={t.fetal_name_placeholder}
                 className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
               />
             </div>
+          ) : (
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-500">{t.blood_type}</label>
-              <select
-                value={bloodType}
-                onChange={(e) => setBloodType((e.target.value || '') as BabyBloodType | '')}
+              <label className="block text-xs font-medium text-gray-500">{t.baby_name}</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-              >
-                <option value="">{t.blood_type_unset}</option>
-                {BABY_BLOOD_TYPES.map((bt) => (
-                  <option key={bt} value={bt}>{bt}</option>
-                ))}
-              </select>
+              />
             </div>
-          </div>
+          )}
 
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-500">{t.fetal_name}</label>
-            <input
-              type="text"
-              value={fetalName}
-              onChange={(e) => setFetalName(e.target.value)}
-              placeholder={t.fetal_name_placeholder}
-              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-            />
-          </div>
+          {editingPrenatal ? (
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.due_date}</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.birth_date}</label>
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
+          )}
 
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-500">{t.birth_place}</label>
-            <input
-              type="text"
-              value={birthPlace}
-              onChange={(e) => setBirthPlace(e.target.value)}
-              placeholder={t.birth_place_placeholder}
-              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-            />
-          </div>
+          {!editingPrenatal && initial?.due_date ? (
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.due_date}</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
+          ) : null}
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-500">{t.birth_weight_kg}</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                value={birthWeight}
-                onChange={(e) => setBirthWeight(e.target.value)}
-                placeholder="ex) 3.2"
-                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-500">{t.birth_height_cm}</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                min="0"
-                value={birthHeight}
-                onChange={(e) => setBirthHeight(e.target.value)}
-                placeholder="ex) 49"
-                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-500">{t.birth_head_cm}</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                min="0"
-                value={birthHead}
-                onChange={(e) => setBirthHead(e.target.value)}
-                placeholder="ex) 34"
-                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-500">{t.gestational_weeks}</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                min="0"
-                max="45"
-                value={gestationalWeeks}
-                onChange={(e) => setGestationalWeeks(e.target.value)}
-                placeholder="ex) 38"
-                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-              />
-            </div>
-          </div>
+          {!editingPrenatal ? (
+            <>
+              <p className="pt-1 text-xs font-semibold text-gray-600 dark:text-gray-300">{t.birth_info}</p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">{t.birth_time}</label>
+                  <input
+                    type="time"
+                    value={birthTime}
+                    onChange={(e) => setBirthTime(e.target.value)}
+                    className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">{t.blood_type}</label>
+                  <select
+                    value={bloodType}
+                    onChange={(e) => setBloodType((e.target.value || '') as BabyBloodType | '')}
+                    className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                  >
+                    <option value="">{t.blood_type_unset}</option>
+                    {BABY_BLOOD_TYPES.map((bt) => (
+                      <option key={bt} value={bt}>{bt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">{t.fetal_name}</label>
+                <input
+                  type="text"
+                  value={fetalName}
+                  onChange={(e) => setFetalName(e.target.value)}
+                  placeholder={t.fetal_name_placeholder}
+                  className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">{t.birth_place}</label>
+                <input
+                  type="text"
+                  value={birthPlace}
+                  onChange={(e) => setBirthPlace(e.target.value)}
+                  placeholder={t.birth_place_placeholder}
+                  className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">{t.birth_weight_kg}</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={birthWeight}
+                    onChange={(e) => setBirthWeight(e.target.value)}
+                    placeholder="ex) 3.2"
+                    className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">{t.birth_height_cm}</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    min="0"
+                    value={birthHeight}
+                    onChange={(e) => setBirthHeight(e.target.value)}
+                    placeholder="ex) 49"
+                    className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">{t.birth_head_cm}</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    min="0"
+                    value={birthHead}
+                    onChange={(e) => setBirthHead(e.target.value)}
+                    placeholder="ex) 34"
+                    className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-gray-500">{t.gestational_weeks}</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    min="0"
+                    max="45"
+                    value={gestationalWeeks}
+                    onChange={(e) => setGestationalWeeks(e.target.value)}
+                    placeholder="ex) 38"
+                    className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                  />
+                </div>
+              </div>
+            </>
+          ) : null}
 
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-500">{t.gender}</label>
@@ -814,26 +1072,28 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-500">{t.usual_bedtime}</label>
-              <input
-                type="time"
-                value={usualBedtime}
-                onChange={(e) => setUsualBedtime(e.target.value)}
-                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-              />
+          {!editingPrenatal ? (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">{t.usual_bedtime}</label>
+                <input
+                  type="time"
+                  value={usualBedtime}
+                  onChange={(e) => setUsualBedtime(e.target.value)}
+                  className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-500">{t.usual_wake_time}</label>
+                <input
+                  type="time"
+                  value={usualWake}
+                  onChange={(e) => setUsualWake(e.target.value)}
+                  className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-500">{t.usual_wake_time}</label>
-              <input
-                type="time"
-                value={usualWake}
-                onChange={(e) => setUsualWake(e.target.value)}
-                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
-              />
-            </div>
-          </div>
+          ) : null}
 
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-500">{t.country_code}</label>
@@ -903,7 +1163,12 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
           )}
           <button
             onClick={handleSave}
-            disabled={saving || !name.trim() || !birthDate}
+            disabled={
+              saving ||
+              (editingPrenatal
+                ? !fetalName.trim() || !dueDate
+                : !(name.trim() || fetalName.trim()) || !birthDate)
+            }
             className="flex-1 bg-pink-500 hover:bg-pink-600 disabled:opacity-60 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
           >
             {saving ? '...' : t.save}

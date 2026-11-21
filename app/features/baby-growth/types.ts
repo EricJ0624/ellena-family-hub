@@ -51,11 +51,14 @@ export interface BabyProfile {
   group_id: string;
   created_by: string | null;
   name: string;
-  birth_date: string; // ISO date 'YYYY-MM-DD'
+  /** null이면 Prenatal 모드 */
+  birth_date: string | null; // ISO date 'YYYY-MM-DD'
+  /** 출산예정일 — prenatal 앵커, 출산 후에도 유지 */
+  due_date: string | null;
   /** 출생 시각 'HH:mm' | 'HH:mm:ss' */
   birth_time: string | null;
   birth_place: string | null;
-  /** 태명 — prenatal/birth에서 전달 가능 */
+  /** 태명 — 영구 보존 */
   fetal_name: string | null;
   birth_weight_kg: number | null;
   birth_height_cm: number | null;
@@ -63,9 +66,8 @@ export interface BabyProfile {
   /** 출산 시 재태주수 (예: 38, 38.5) */
   gestational_weeks: number | null;
   blood_type: BabyBloodType | null;
-  /** 'manual' | 'birth_event' — 추후 prenatal 연동 */
+  /** 'manual' | 'birth_event' */
   birth_source: 'manual' | 'birth_event' | null;
-  /** 추후 birth 이벤트 FK */
   birth_event_id: string | null;
   gender: BabyGender | null;
   country_code: string;
@@ -80,7 +82,8 @@ export interface BabyProfile {
 export interface BabyProfileDraft {
   group_id: string;
   name: string;
-  birth_date: string;
+  birth_date?: string | null;
+  due_date?: string | null;
   birth_time?: string | null;
   birth_place?: string | null;
   fetal_name?: string | null;
@@ -90,11 +93,101 @@ export interface BabyProfileDraft {
   gestational_weeks?: number | null;
   blood_type?: BabyBloodType | null;
   birth_source?: 'manual' | 'birth_event' | null;
+  birth_event_id?: string | null;
   gender?: BabyGender;
   country_code?: string;
   notes?: string;
   usual_bedtime?: string | null;
   usual_wake_time?: string | null;
+}
+
+export type PrenatalLogType =
+  | 'maternal_weight'
+  | 'blood_pressure'
+  | 'symptom'
+  | 'diary'
+  | 'fetal_size'
+  | 'checkup_note'
+  | 'fetal_movement'
+  | 'lab_result'
+  | 'medication';
+
+export interface PrenatalLog {
+  id: string;
+  baby_id: string;
+  group_id: string;
+  log_type: PrenatalLogType;
+  logged_at: string;
+  weight_kg: number | null;
+  systolic: number | null;
+  diastolic: number | null;
+  symptom_tags: string | null;
+  notes: string | null;
+  fetal_size_label: string | null;
+  checkup_at: string | null;
+  hospital_name: string | null;
+  next_checkup_at: string | null;
+  kick_count: number | null;
+  kick_duration_min: number | null;
+  fundal_height_cm: number | null;
+  fetal_weight_est_g: number | null;
+  medication_name: string | null;
+  lab_name: string | null;
+  lab_result_text: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface PrenatalLogDraft {
+  baby_id: string;
+  group_id: string;
+  log_type: PrenatalLogType;
+  logged_at?: string;
+  weight_kg?: number | null;
+  systolic?: number | null;
+  diastolic?: number | null;
+  symptom_tags?: string | null;
+  notes?: string | null;
+  fetal_size_label?: string | null;
+  checkup_at?: string | null;
+  hospital_name?: string | null;
+  next_checkup_at?: string | null;
+  kick_count?: number | null;
+  kick_duration_min?: number | null;
+  fundal_height_cm?: number | null;
+  fetal_weight_est_g?: number | null;
+  medication_name?: string | null;
+  lab_name?: string | null;
+  lab_result_text?: string | null;
+}
+
+export interface BabyBirthEvent {
+  id: string;
+  baby_id: string;
+  group_id: string;
+  delivered_at: string;
+  legal_name: string;
+  birth_weight_kg: number | null;
+  birth_height_cm: number | null;
+  birth_head_cm: number | null;
+  birth_place: string | null;
+  blood_type: string | null;
+  gestational_weeks: number | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface BabyBirthEventDraft {
+  baby_id: string;
+  group_id: string;
+  delivered_at: string;
+  legal_name: string;
+  birth_weight_kg?: number | null;
+  birth_height_cm?: number | null;
+  birth_head_cm?: number | null;
+  birth_place?: string | null;
+  blood_type?: string | null;
+  gestational_weeks?: number | null;
 }
 
 // ---------------------------------------------------------------------------

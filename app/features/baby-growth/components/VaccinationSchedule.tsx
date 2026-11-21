@@ -31,6 +31,10 @@ export function VaccinationSchedule({
   });
 
   const reload = useCallback(async () => {
+    if (!profile.birth_date) {
+      setViews([]);
+      return;
+    }
     const records = await fetchVaccinations();
     setViews(buildVaccineDDayViews(profile.country_code, profile.birth_date, records));
   }, [fetchVaccinations, profile.birth_date, profile.country_code]);

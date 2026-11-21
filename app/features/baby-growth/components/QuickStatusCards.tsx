@@ -216,7 +216,7 @@ export function QuickStatusCards({
               <div
                 className={
                   fillHeight
-                    ? 'relative z-20 flex h-full min-h-0 flex-col items-start gap-0.5 overflow-hidden p-2'
+                    ? 'relative z-20 flex h-full min-h-0 flex-col items-start gap-0.5 overflow-visible p-1.5'
                     : 'relative z-20 flex h-full min-h-[6.5rem] flex-col items-start gap-1 p-2.5'
                 }
               >
@@ -226,22 +226,27 @@ export function QuickStatusCards({
                     {card.label}
                   </span>
                 </div>
-                {/* 본문은 줄어들 수 있게 — 하단 취침/기상 버튼 공간 우선 */}
-                <div className="min-h-0 w-full flex-1 overflow-hidden">
+                {/* overflow 없음 + 집계 줄 분리 — AI 배너로 높이가 줄어도 2줄 잘림 방지 */}
+                <div className="flex w-full min-h-0 flex-1 flex-col items-start justify-start gap-0.5">
                   <span
-                    className={`line-clamp-2 w-full text-xs font-semibold leading-normal ${
-                      value ? 'text-gray-800' : 'text-gray-400'
-                    }`}
+                    className={`w-full shrink-0 text-xs font-semibold leading-normal ${
+                      fillHeight ? 'truncate' : 'line-clamp-2'
+                    } ${value ? 'text-gray-800' : 'text-gray-400'}`}
                   >
                     {value ?? t.no_record}
                   </span>
-                  {avg ? (
-                    <span className="mt-0.5 line-clamp-2 w-full whitespace-pre-line text-[10px] font-medium leading-normal text-gray-500">
-                      {avg}
-                    </span>
-                  ) : null}
+                  {avg
+                    ? avg.split('\n').map((line, i) => (
+                        <span
+                          key={`avg-${i}`}
+                          className="w-full shrink-0 truncate text-[10px] font-medium leading-normal text-gray-500"
+                        >
+                          {line}
+                        </span>
+                      ))
+                    : null}
                   {!(card.key === 'sleep' && showSleepActions) ? (
-                    <span className="mt-0.5 inline-block text-[10px] font-medium leading-normal text-pink-400">
+                    <span className="inline-block shrink-0 text-[10px] font-medium leading-normal text-pink-400">
                       {t.record_now} +
                     </span>
                   ) : null}
@@ -252,7 +257,7 @@ export function QuickStatusCards({
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onBed(); }}
-                        className="flex-1 rounded-md bg-indigo-500 py-1 text-center text-[10px] font-semibold text-white"
+                        className="flex-1 rounded-md bg-indigo-500 py-0.5 text-center text-[10px] font-semibold text-white"
                       >
                         {t.sleep_bed_btn}
                       </button>
@@ -261,15 +266,13 @@ export function QuickStatusCards({
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onWake(); }}
-                        className="flex-1 rounded-md bg-amber-500 py-1 text-center text-[10px] font-semibold text-white"
+                        className="flex-1 rounded-md bg-amber-500 py-0.5 text-center text-[10px] font-semibold text-white"
                       >
                         {t.sleep_wake_btn}
                       </button>
                     )}
                   </span>
-                ) : (
-                  <span className={`w-full shrink-0 ${showSleepActions ? 'h-[26px]' : ''}`} aria-hidden />
-                )}
+                ) : null}
               </div>
             </div>
           );

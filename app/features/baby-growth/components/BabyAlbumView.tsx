@@ -12,7 +12,7 @@ import { BabyPhotoCollections } from './BabyPhotoCollections';
 interface BabyAlbumViewProps {
   babyId: string;
   currentGroupId: string | null;
-  birthDate: string;
+  birthDate: string | null;
   t: BabyGrowthTranslations;
 }
 
@@ -33,6 +33,7 @@ export function BabyAlbumView({
   const [printOpen, setPrintOpen] = useState(false);
   const [viewerIdx, setViewerIdx] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const albumLabel = birthDate ? t.album_title : t.prenatal_album_title;
 
   const load = async () => {
     if (!currentGroupId) return;
@@ -194,7 +195,7 @@ export function BabyAlbumView({
         babyId={babyId}
         currentGroupId={currentGroupId}
         photos={allPhotos}
-        defaultTitle={t.album_title}
+        defaultTitle={albumLabel}
         t={t}
       />
 
@@ -239,7 +240,7 @@ export function BabyAlbumView({
           className="fixed inset-0 z-[10000] flex flex-col bg-black/95"
           role="dialog"
           aria-modal="true"
-          aria-label={t.album_title}
+          aria-label={albumLabel}
         >
           <div className="flex shrink-0 items-center gap-2 px-4 py-3 text-white">
             <span className="mr-auto text-sm tabular-nums text-white/80">

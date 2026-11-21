@@ -12,7 +12,7 @@ import type { BabyProfile, BabyProfileDraft } from '../types';
 export const BABY_PROFILE_MAX = 3;
 
 const PROFILE_SELECT =
-  'id, group_id, created_by, name, birth_date, birth_time, birth_place, fetal_name, birth_weight_kg, birth_height_cm, birth_head_cm, gestational_weeks, blood_type, birth_source, birth_event_id, gender, country_code, notes, usual_bedtime, usual_wake_time, created_at, updated_at';
+  'id, group_id, created_by, name, birth_date, due_date, birth_time, birth_place, fetal_name, birth_weight_kg, birth_height_cm, birth_head_cm, gestational_weeks, blood_type, birth_source, birth_event_id, gender, country_code, notes, usual_bedtime, usual_wake_time, created_at, updated_at';
 
 function profilesSignature(list: BabyProfile[]): string {
   if (list.length === 0) return 'empty';

@@ -74,6 +74,7 @@ export function TodayPhotoSlider({
     };
   }, [photos.length]);
 
+  const albumLabel = birthDate ? t.album_title : t.prenatal_album_title;
   const title =
     source === 'today'
       ? t.photo_moments_today
@@ -85,12 +86,12 @@ export function TodayPhotoSlider({
             ? t.photo_moments_other_years
             : source === 'fallback'
               ? t.photo_moments_recent
-              : t.album_title;
+              : albumLabel;
 
   if (photos.length === 0) {
     return (
       <div className={fillHeight ? 'flex h-full min-h-0 flex-col gap-1.5' : 'flex flex-col gap-1.5'}>
-        <p className="shrink-0 px-0.5 text-[11px] font-semibold text-slate-500">{t.album_title}</p>
+        <p className="shrink-0 px-0.5 text-[11px] font-semibold text-slate-500">{albumLabel}</p>
         <button
           type="button"
           onClick={onOpen}
