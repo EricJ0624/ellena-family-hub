@@ -1532,15 +1532,22 @@ export default function FamilyHub() {
   }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
 
   // 닉네임 모달 열릴 때 가족 표시·언어·국가 값 초기화
+  // lang / familyRoleByUserId는 deps에 넣지 않음 — 편집 중 서버·컨텍스트 갱신으로 선택이 덮이지 않게
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 모달 오픈(또는 userId 변경) 시에만 초기화
   useEffect(() => {
     if (!isNicknameModalOpen || !userId) return;
     setNicknameModalFamilyRole(familyRoleByUserId[userId] ?? null);
     setAccountModalLang(lang);
+    let cancelled = false;
     void fetchProfilePreferences(userId).then((prefs) => {
+      if (cancelled) return;
       if (prefs?.preferred_language) setAccountModalLang(prefs.preferred_language);
       if (prefs?.country_code) setAccountModalCountry(prefs.country_code);
     }).catch(() => undefined);
-  }, [isNicknameModalOpen, userId, familyRoleByUserId, lang]);
+    return () => {
+      cancelled = true;
+    };
+  }, [isNicknameModalOpen, userId]);
 
   // 위젯에서 발행하는 'sfh:open-nickname-modal' 이벤트 — 닉네임/계정 설정 모달 오픈
   useEffect(() => {
@@ -7801,6 +7808,7 @@ export default function FamilyHub() {
                   onChange={(next) => setAccountModalLang(next as LangCode)}
                   options={LANG_OPTIONS.map(({ code, label }) => ({ value: code, label }))}
                   className="form-input"
+                  panelZIndexClass="z-[10060]"
                 />
               </div>
               <div className="form-field">
@@ -7816,6 +7824,7 @@ export default function FamilyHub() {
                     })),
                   ]}
                   className="form-input"
+                  panelZIndexClass="z-[10060]"
                 />
               </div>
               <AccountNotificationSettings

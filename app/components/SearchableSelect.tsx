@@ -21,6 +21,11 @@ type Props = {
   /** 가입 화면처럼 화면 언어와 폼 언어가 다를 때 */
   lang?: LangCode;
   tone?: 'default' | 'night';
+  /**
+   * 포털 드롭다운 z-index 유틸. 기본은 z-[10035].
+   * z-[10050] 모달(계정 설정 등) 안에서는 그보다 큰 값을 넘긴다.
+   */
+  panelZIndexClass?: string;
 };
 
 /**
@@ -36,6 +41,7 @@ export function SearchableSelect({
   ariaLabel,
   lang: langProp,
   tone = 'default',
+  panelZIndexClass = 'z-[10035]',
 }: Props) {
   const { lang: contextLang } = useLanguage();
   const lang = langProp ?? contextLang;
@@ -124,7 +130,8 @@ export function SearchableSelect({
               role="listbox"
               style={{ top: box.top, left: box.left, width: box.width }}
               className={[
-                'fixed z-[10035] flex max-h-72 flex-col overflow-hidden rounded-lg border shadow-lg',
+                'fixed flex max-h-72 flex-col overflow-hidden rounded-lg border shadow-lg',
+                panelZIndexClass,
                 night ? 'border-slate-600 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-800',
               ].join(' ')}
             >
