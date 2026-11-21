@@ -167,6 +167,22 @@ export type DashboardTranslations = {
   chat_translate_lang_search: string;
   /** 번역 목표 언어 select aria */
   chat_translate_lang_aria: string;
+  /** 실시간 자동번역 스위치 라벨 */
+  chat_auto_translate: string;
+  /** 자동번역 스위치 aria */
+  chat_auto_translate_aria: string;
+  /** 자동번역 일일 안내 제목 */
+  chat_auto_translate_notice_title: string;
+  /** 자동번역 일일 안내 본문 */
+  chat_auto_translate_notice_body: string;
+  /** 자동번역 안내 확인 */
+  chat_auto_translate_confirm: string;
+  /** 자동번역 안내 취소 */
+  chat_auto_translate_cancel: string;
+  /** 원문 보기 */
+  chat_show_original: string;
+  /** 번역문 보기 */
+  chat_show_translation: string;
   /** 위젯 배지. `{count}` */
   chat_unread_badge: string;
   /** 요약 패널 제목. `{count}` */
@@ -541,6 +557,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: '직접 선택…',
     chat_translate_lang_search: '언어 검색…',
     chat_translate_lang_aria: '번역할 언어',
+    chat_auto_translate: '자동번역',
+    chat_auto_translate_aria: '실시간 자동번역',
+    chat_auto_translate_notice_title: '실시간 자동번역',
+    chat_auto_translate_notice_body:
+      '번역시 메시지 내용이 번역을 위해 AI(및 앱 프록시)로 전달됩니다. 원문 암호화는 유지되지만 번역 순간에는 평문이 나갑니다. 등록된 API 키·요금이 사용되며 언제든 끌 수 있습니다.',
+    chat_auto_translate_confirm: '이해하고 켭니다',
+    chat_auto_translate_cancel: '취소',
+    chat_show_original: '원문',
+    chat_show_translation: '번역',
     chat_send_no_group: '가족 그룹이 아직 선택되지 않았습니다. 잠시 후 다시 시도해 주세요.',
     chat_send_no_access:
       '이 그룹에 채팅을 보낼 권한이 없습니다. 상단에서 참여 중인 가족 그룹을 선택했는지 확인하거나, 페이지를 새로고침해 주세요.',
@@ -892,6 +917,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: 'More…',
     chat_translate_lang_search: 'Search language…',
     chat_translate_lang_aria: 'Target language',
+    chat_auto_translate: 'Auto',
+    chat_auto_translate_aria: 'Realtime auto-translate',
+    chat_auto_translate_notice_title: 'Realtime auto-translate',
+    chat_auto_translate_notice_body:
+      'When translating, message text is sent to AI (and the app proxy). Original encryption is kept, but plaintext is used during translation. Your registered API key and fees apply. You can turn this off anytime.',
+    chat_auto_translate_confirm: 'I understand — turn on',
+    chat_auto_translate_cancel: 'Cancel',
+    chat_show_original: 'Original',
+    chat_show_translation: 'Translation',
     chat_send_no_group: 'No family group selected yet. Please try again in a moment.',
     chat_send_no_access:
       'You cannot send messages in this family group. Select a group you belong to or refresh the page.',
@@ -1243,6 +1277,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: 'その他…',
     chat_translate_lang_search: '言語を検索…',
     chat_translate_lang_aria: '翻訳先の言語',
+    chat_auto_translate: '自動翻訳',
+    chat_auto_translate_aria: 'リアルタイム自動翻訳',
+    chat_auto_translate_notice_title: 'リアルタイム自動翻訳',
+    chat_auto_translate_notice_body:
+      '翻訳時、メッセージ内容は AI（およびアプリのプロキシ）に送られます。原文の暗号化は維持されますが、翻訳の瞬間は平文になります。登録済み API キー・料金が使われ、いつでもオフにできます。',
+    chat_auto_translate_confirm: '理解してオンにする',
+    chat_auto_translate_cancel: 'キャンセル',
+    chat_show_original: '原文',
+    chat_show_translation: '翻訳',
     chat_send_no_group: 'ファミリーグループがまだ選択されていません。しばらくしてから再度お試しください。',
     chat_send_no_access:
       'このグループにメッセージを送る権限がありません。参加中のファミリーグループを選び直すか、ページを更新してください。',
@@ -1594,6 +1637,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: '更多…',
     chat_translate_lang_search: '搜索语言…',
     chat_translate_lang_aria: '目标语言',
+    chat_auto_translate: '自动翻译',
+    chat_auto_translate_aria: '实时自动翻译',
+    chat_auto_translate_notice_title: '实时自动翻译',
+    chat_auto_translate_notice_body:
+      '翻译时，消息内容会发送到 AI（及应用代理）。原文加密仍保留，但翻译瞬间会使用明文。将使用已登记的 API 密钥与费用，可随时关闭。',
+    chat_auto_translate_confirm: '了解并开启',
+    chat_auto_translate_cancel: '取消',
+    chat_show_original: '原文',
+    chat_show_translation: '译文',
     chat_send_no_group: '尚未选择家庭群组。请稍后再试。',
     chat_send_no_access: '您没有权限在此群组发送消息。请在上方的家庭群组中选择您已加入的群组，或刷新页面后重试。',
     map_error_no_key: '未设置 Google Maps API 密钥。请检查环境变量。',
@@ -1942,6 +1994,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: '更多…',
     chat_translate_lang_search: '搜尋語言…',
     chat_translate_lang_aria: '目標語言',
+    chat_auto_translate: '自動翻譯',
+    chat_auto_translate_aria: '即時自動翻譯',
+    chat_auto_translate_notice_title: '即時自動翻譯',
+    chat_auto_translate_notice_body:
+      '翻譯時，訊息內容會送至 AI（及應用代理）。原文加密仍保留，但翻譯瞬間會使用明文。將使用已登記的 API 金鑰與費用，可隨時關閉。',
+    chat_auto_translate_confirm: '了解並開啟',
+    chat_auto_translate_cancel: '取消',
+    chat_show_original: '原文',
+    chat_show_translation: '譯文',
     chat_send_no_group: '尚未選擇家庭群組。請稍後再試。',
     chat_send_no_access: '您沒有權限在此群組傳送訊息。請在上方選擇您已加入的家庭群組，或重新整理頁面後再試。',
     map_error_no_key: '未設定 Google Maps API 金鑰。請檢查環境變數。',
@@ -2290,6 +2351,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: 'Más…',
     chat_translate_lang_search: 'Buscar idioma…',
     chat_translate_lang_aria: 'Idioma de destino',
+    chat_auto_translate: 'Auto',
+    chat_auto_translate_aria: 'Traducción automática en tiempo real',
+    chat_auto_translate_notice_title: 'Traducción automática',
+    chat_auto_translate_notice_body:
+      'Al traducir, el contenido del mensaje se envía a la IA (y al proxy de la app). El cifrado del original se mantiene, pero se usa texto plano en el momento de traducir. Se usan la clave API registrada y sus cargos. Puede desactivarlo cuando quiera.',
+    chat_auto_translate_confirm: 'Entiendo — activar',
+    chat_auto_translate_cancel: 'Cancelar',
+    chat_show_original: 'Original',
+    chat_show_translation: 'Traducción',
     chat_send_no_group: 'Aún no se ha seleccionado ningún grupo familiar. Inténtelo de nuevo en un momento.',
     chat_send_no_access: 'No puedes enviar mensajes en este grupo familiar. Seleccione un grupo al que pertenece o actualice la página.',
     map_error_no_key: 'La clave API de Google Maps no está configurada. Verifique las variables de su entorno.',
@@ -2637,6 +2707,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: 'Plus…',
     chat_translate_lang_search: 'Rechercher une langue…',
     chat_translate_lang_aria: 'Langue cible',
+    chat_auto_translate: 'Auto',
+    chat_auto_translate_aria: 'Traduction automatique en temps réel',
+    chat_auto_translate_notice_title: 'Traduction automatique',
+    chat_auto_translate_notice_body:
+      'Lors de la traduction, le contenu du message est envoyé à l’IA (et au proxy de l’app). Le chiffrement de l’original est conservé, mais le texte est en clair pendant la traduction. La clé API enregistrée et les frais s’appliquent. Vous pouvez désactiver à tout moment.',
+    chat_auto_translate_confirm: 'Je comprends — activer',
+    chat_auto_translate_cancel: 'Annuler',
+    chat_show_original: 'Original',
+    chat_show_translation: 'Traduction',
     chat_send_no_group: 'Aucun groupe familial sélectionné pour l\'instant. Veuillez réessayer dans un instant.',
     chat_send_no_access: 'Vous ne pouvez pas envoyer de messages dans ce groupe familial. Sélectionnez un groupe auquel vous appartenez ou actualisez la page.',
     map_error_no_key: 'La clé API Google Maps n\'est pas définie. Vérifiez vos variables d\'environnement.',
@@ -2984,6 +3063,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: 'Mehr…',
     chat_translate_lang_search: 'Sprache suchen…',
     chat_translate_lang_aria: 'Zielsprache',
+    chat_auto_translate: 'Auto',
+    chat_auto_translate_aria: 'Echtzeit-Autoübersetzung',
+    chat_auto_translate_notice_title: 'Echtzeit-Autoübersetzung',
+    chat_auto_translate_notice_body:
+      'Beim Übersetzen wird der Nachrichteninhalt an die KI (und den App-Proxy) gesendet. Die Verschlüsselung des Originals bleibt, aber im Übersetzungs­moment wird Klartext genutzt. Der hinterlegte API-Schlüssel und die Kosten gelten. Sie können jederzeit ausschalten.',
+    chat_auto_translate_confirm: 'Verstanden — einschalten',
+    chat_auto_translate_cancel: 'Abbrechen',
+    chat_show_original: 'Original',
+    chat_show_translation: 'Übersetzung',
     chat_send_no_group: 'Noch keine Familiengruppe ausgewählt. Bitte versuchen Sie es gleich noch einmal.',
     chat_send_no_access: 'In dieser Familiengruppe können Sie keine Nachrichten senden. Wählen Sie eine Gruppe aus, zu der Sie gehören, oder aktualisieren Sie die Seite.',
     map_error_no_key: 'Der Google Maps-API-Schlüssel ist nicht festgelegt. Überprüfen Sie Ihre Umgebungsvariablen.',
@@ -3331,6 +3419,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: 'Altro…',
     chat_translate_lang_search: 'Cerca lingua…',
     chat_translate_lang_aria: 'Lingua di destinazione',
+    chat_auto_translate: 'Auto',
+    chat_auto_translate_aria: 'Traduzione automatica in tempo reale',
+    chat_auto_translate_notice_title: 'Traduzione automatica',
+    chat_auto_translate_notice_body:
+      'In traduzione, il contenuto del messaggio viene inviato all’IA (e al proxy dell’app). La cifratura dell’originale resta, ma nel momento della traduzione si usa il testo in chiaro. Si usano la chiave API registrata e i relativi costi. Puoi disattivare in qualsiasi momento.',
+    chat_auto_translate_confirm: 'Ho capito — attiva',
+    chat_auto_translate_cancel: 'Annulla',
+    chat_show_original: 'Originale',
+    chat_show_translation: 'Traduzione',
     chat_send_no_group: 'Nessun gruppo familiare ancora selezionato. Per favore riprova tra un attimo.',
     chat_send_no_access: 'Non puoi inviare messaggi in questo gruppo familiare. Seleziona un gruppo a cui appartieni o aggiorna la pagina.',
     map_error_no_key: 'La chiave API di Google Maps non è impostata. Controlla le variabili d\'ambiente.',
@@ -3678,6 +3775,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_lang_more: 'Mais…',
     chat_translate_lang_search: 'Buscar idioma…',
     chat_translate_lang_aria: 'Idioma de destino',
+    chat_auto_translate: 'Auto',
+    chat_auto_translate_aria: 'Tradução automática em tempo real',
+    chat_auto_translate_notice_title: 'Tradução automática',
+    chat_auto_translate_notice_body:
+      'Ao traduzir, o conteúdo da mensagem é enviado à IA (e ao proxy do app). A criptografia do original permanece, mas no momento da tradução usa-se texto simples. A chave de API registrada e os custos se aplicam. Você pode desligar a qualquer momento.',
+    chat_auto_translate_confirm: 'Entendi — ativar',
+    chat_auto_translate_cancel: 'Cancelar',
+    chat_show_original: 'Original',
+    chat_show_translation: 'Tradução',
     chat_send_no_group: 'Nenhum grupo familiar selecionado ainda. Tente novamente em instantes.',
     chat_send_no_access: 'Você não pode enviar mensagens neste grupo familiar. Selecione um grupo ao qual pertence ou atualize a página.',
     map_error_no_key: 'A chave da API do Google Maps não está configurada. Verifique suas variáveis de ambiente.',

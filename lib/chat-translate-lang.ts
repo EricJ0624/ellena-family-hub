@@ -1,6 +1,6 @@
 /**
  * 채팅 번역 목표 언어 — 퀵(영·중·한·일) + 직접 선택 추가분
- * 원문 언어는 목록에서 제외. 추가는 localStorage에 사용자별 저장.
+ * 추가는 localStorage에 사용자별 저장.
  */
 
 import {
@@ -105,62 +105,34 @@ export function detectChatSourceLang(text: string): LangCode | null {
   return null;
 }
 
-/** 원문 제외한 선택 가능 코드 (퀵 + 추가분). 선호가 퀵이 아니면 extras에 합류. */
-export function buildTranslateTargetOptions(
-  userId: string,
-  sourceLang: LangCode | null,
-): LangCode[] {
+/** 선택 가능 코드 (퀵 + 추가분). 선호가 퀵이 아니면 extras에 합류. */
+export function buildTranslateTargetOptions(userId: string): LangCode[] {
   const extras = readTranslateExtras(userId);
   const preferred = readPreferredTranslateLang(userId);
   const merged: LangCode[] = [];
   for (const code of [...CHAT_TRANSLATE_QUICK_LANGS, ...extras]) {
-    if (sourceLang && code === sourceLang) continue;
     if (!merged.includes(code)) merged.push(code);
   }
-  // 선호가 퀵이 아닌데 extras에서 빠진 경우(저장 불일치)에도 목록·번역에 유지
-  if (
-    preferred &&
-    preferred !== sourceLang &&
-    !isQuickLang(preferred) &&
-    !merged.includes(preferred)
-  ) {
+  if (preferred && !isQuickLang(preferred) && !merged.includes(preferred)) {
     merged.push(preferred);
   }
   return merged;
 }
 
 /** 기본 목표: 선호 → en → 목록 첫 항목 */
-export function pickDefaultTranslateTarget(
-  userId: string,
-  sourceLang: LangCode | null,
-): LangCode | null {
-  const options = buildTranslateTargetOptions(userId, sourceLang);
+export function pickDefaultTranslateTarget(userId: string): LangCode | null {
+  const options = buildTranslateTargetOptions(userId);
   if (options.length === 0) return null;
   const preferred = readPreferredTranslateLang(userId);
-  if (preferred && preferred !== sourceLang && options.includes(preferred)) return preferred;
+  if (preferred && options.includes(preferred)) return preferred;
   if (options.includes('en')) return 'en';
   return options[0] ?? null;
 }
 
-/**
- * 직접 선택(타입 검색)용 — 이미 퀵/추가에 있는 코드·원문 제외
- */
+/** 직접 선택(타입 검색)용 — 이미 퀵/추가에 있는 코드 제외 */
 export function buildTranslateMoreOptions(
-  sourceLang: LangCode | null,
   alreadyListed: readonly LangCode[] = [],
 ): LangCode[] {
   const listed = new Set<string>(alreadyListed);
-  if (sourceLang) listed.add(sourceLang);
   return LANG_OPTIONS.map((o) => o.code).filter((code) => !listed.has(code));
-}
-
-/** 현재 선택 유지 가능하면 유지, 아니면 기본값 */
-export function resolveTranslateDest(
-  userId: string,
-  sourceLang: LangCode | null,
-  currentTarget: LangCode,
-): LangCode | null {
-  const options = buildTranslateTargetOptions(userId, sourceLang);
-  if (options.includes(currentTarget)) return currentTarget;
-  return pickDefaultTranslateTarget(userId, sourceLang);
 }
