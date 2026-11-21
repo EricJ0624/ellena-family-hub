@@ -13,6 +13,7 @@ import {
   aiUserKeyStorageKey,
   getStoredAiKey,
   storedAiKeyToProxyBody,
+  writeStoredAiKey,
   type AiUserProvider,
 } from '@/lib/ai-user-key';
 import type { BabyProfile, BabyDailyLog, BabyGrowthRecord } from '../types';
@@ -37,13 +38,13 @@ function migrateLegacyKeys(userId: string): void {
     if (localStorage.getItem(newKey)) continue;
     const legacy = localStorage.getItem(LS_LEGACY_KEY_PROVIDER(userId, prov));
     if (legacy) {
-      localStorage.setItem(newKey, legacy);
+      writeStoredAiKey(userId, prov, legacy);
       localStorage.removeItem(LS_LEGACY_KEY_PROVIDER(userId, prov));
     }
   }
   const singleLegacy = localStorage.getItem(LS_LEGACY_KEY(userId));
   if (singleLegacy && !localStorage.getItem(aiUserKeyStorageKey(userId, 'openai'))) {
-    localStorage.setItem(aiUserKeyStorageKey(userId, 'openai'), singleLegacy);
+    writeStoredAiKey(userId, 'openai', singleLegacy);
   }
   localStorage.removeItem(LS_LEGACY_KEY(userId));
 }
