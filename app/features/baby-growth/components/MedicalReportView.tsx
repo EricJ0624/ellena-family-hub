@@ -4,6 +4,11 @@ import React, { useMemo, useState } from 'react';
 import type { BabyCheckup, BabyDailyLog, BabyDailyLogDraft } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import { BABY_SYMPTOM_CHIPS, BABY_SYMPTOM_EMOJI } from '../utils/symptom-chips';
+import {
+  type DayGroup,
+  formatClockTime,
+  groupByLocalDate,
+} from '../utils/local-day-groups';
 
 type TimelineItem = {
   id: string;
@@ -219,17 +224,11 @@ export function MedicalReportView({ logs, t, checkups, babyId, groupId, onAddLog
   );
 }
 
-type DayGroup = {
-  dateKey: string;
-  dateLabel: string;
-  items: TimelineItem[];
-};
-
 type SymptomColumn = {
   key: string;
   title: string;
   emoji: string;
-  dayGroups: DayGroup[];
+  dayGroups: DayGroup<TimelineItem>[];
 };
 
 function parseSymptomTags(raw: string | null | undefined): string[] {
@@ -260,7 +259,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations): S
       feverItems.push({
         id: `t-${l.id}`,
         at: new Date(l.logged_at).getTime(),
-        label: formatTime(l.logged_at),
+        label: formatClockTime(l.logged_at),
         text: `${l.temperature_celsius}°C`,
       });
     }
@@ -268,7 +267,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations): S
       medicationItems.push({
         id: `m-${l.id}`,
         at: new Date(l.logged_at).getTime(),
-        label: formatTime(l.logged_at),
+        label: formatClockTime(l.logged_at),
         text: `${l.medication_name}${l.medication_dose_mg != null ? ` ${l.medication_dose_mg}mg` : ''}`,
       });
     }
@@ -280,7 +279,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations): S
       diarrheaItems.push({
         id: `d-${l.id}`,
         at: new Date(l.logged_at).getTime(),
-        label: formatTime(l.logged_at),
+        label: formatClockTime(l.logged_at),
         text: [typeName, cLabel].filter(Boolean).join(' · ') || t.log_diaper,
       });
     }
@@ -289,7 +288,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations): S
       diarrheaItems.push({
         id: `s-설사-${l.id}`,
         at: new Date(l.logged_at).getTime(),
-        label: formatTime(l.logged_at),
+        label: formatClockTime(l.logged_at),
         text: l.notes?.trim() || '설사',
       });
     }
@@ -309,7 +308,7 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations): S
       .map((l) => ({
         id: `s-${chip}-${l.id}`,
         at: new Date(l.logged_at).getTime(),
-        label: formatTime(l.logged_at),
+        label: formatClockTime(l.logged_at),
         text: l.notes?.trim() || chip,
       }));
     if (items.length === 0) continue;
@@ -322,47 +321,6 @@ function buildSymptomColumns(logs: BabyDailyLog[], t: BabyGrowthTranslations): S
       key: col.key,
       title: col.title,
       emoji: col.emoji,
-      dayGroups: groupItemsByDate(col.items),
-    }));
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
-
-function dateKeyFromMs(ms: number): string {
-  const d = new Date(ms);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function formatDateLabel(dateKey: string): string {
-  const [y, m, day] = dateKey.split('-').map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString('ko-KR', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/** 날짜별 묶음(최신 날짜 위) · 당일 항목은 시간 오름차순 */
-function groupItemsByDate(items: TimelineItem[]) {
-  const map = new Map<string, TimelineItem[]>();
-  for (const item of items) {
-    const key = dateKeyFromMs(item.at);
-    const list = map.get(key);
-    if (list) list.push(item);
-    else map.set(key, [item]);
-  }
-  return [...map.keys()]
-    .sort((a, b) => b.localeCompare(a))
-    .map((dateKey) => ({
-      dateKey,
-      dateLabel: formatDateLabel(dateKey),
-      items: (map.get(dateKey) ?? []).sort((a, b) => a.at - b.at),
+      dayGroups: groupByLocalDate(col.items, (i) => i.at),
     }));
 }

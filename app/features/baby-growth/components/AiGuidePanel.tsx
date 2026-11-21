@@ -48,21 +48,29 @@ export function AiGuidePanel({
   const [qaQuestion, setQaQuestion] = useState('');
   const [activeMode, setActiveMode] = useState<AiMode>('guide');
   const didSeedRef = useRef(false);
+  /** seedResult로 채운 result는 부모 배너/fetchedAt을 건드리지 않음 */
+  const skipParentNotifyRef = useRef(false);
 
   // 탭 재진입 시 저장된 guide 전문을 패널에 1회 복원
   useEffect(() => {
     if (didSeedRef.current) return;
     didSeedRef.current = true;
     if (externalText && externalText.length > 0) {
+      skipParentNotifyRef.current = true;
       seedResult(externalText);
       setActiveMode('guide');
     }
   }, [externalText, seedResult]);
 
-  // guide 완료 후에만 부모(홈 배너)에 반영 — 스트리밍 중 fallback 깜빡임 방지
+  // guide 생성 완료 후에만 부모(홈 배너)에 반영 — 시드/스트리밍 중 제외
   useEffect(() => {
     if (!onTextChange || activeMode !== 'guide' || generating) return;
-    if (result) onTextChange(result);
+    if (!result) return;
+    if (skipParentNotifyRef.current) {
+      skipParentNotifyRef.current = false;
+      return;
+    }
+    onTextChange(result);
   }, [result, generating, onTextChange, activeMode]);
 
   const handleGenerate = async (mode: AiMode) => {

@@ -142,6 +142,8 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
 
   // 로그 시그니처 ref — 동일 내용 setState 방지
   const logsSigRef = useRef<string>('');
+  const logsRef = useRef<BabyDailyLog[]>(logs);
+  logsRef.current = logs;
   const swipeStartRef = useRef<{
     x: number;
     y: number;
@@ -291,7 +293,11 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
           delete next[activeBabyId];
           return next;
         }
-        if (prev[activeBabyId]?.text === text) return prev;
+        // 동일 문구여도 수동 생성 완료 시각은 갱신 (주간 자동 갱신 기준)
+        const prevEntry = prev[activeBabyId];
+        if (prevEntry?.text === text && prevEntry.fetchedAt > Date.now() - 5_000) {
+          return prev;
+        }
         return {
           ...prev,
           [activeBabyId]: { text, fetchedAt: Date.now() },
@@ -333,7 +339,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
       if (cancelled) return;
       started = true;
       void (async () => {
-        const text = await generateAiGuide('guide', profile, logs, null, {
+        const text = await generateAiGuide('guide', profile, logsRef.current, null, {
           stream: false,
           lifePhase: prenatal ? 'prenatal' : 'postnatal',
         });

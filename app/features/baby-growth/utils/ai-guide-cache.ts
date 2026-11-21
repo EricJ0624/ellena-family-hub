@@ -1,7 +1,6 @@
 /** 아이별 AI guide 배너 캐시 (localStorage, 주 1회 갱신 판정용) */
 
-export const AI_GUIDE_CACHE_KEY = 'sfh_baby_ai_guide';
-const AI_GUIDE_SESSION_LEGACY_KEY = 'sfh_baby_ai_guide';
+const AI_GUIDE_CACHE_KEY = 'sfh_baby_ai_guide';
 
 export const AI_GUIDE_REFRESH_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -53,12 +52,12 @@ function migrateSessionLegacy(groupId: string): void {
   try {
     const lsKey = storageKey(groupId);
     if (localStorage.getItem(lsKey)) return;
-    const raw = sessionStorage.getItem(`${AI_GUIDE_SESSION_LEGACY_KEY}:${groupId}`);
+    const raw = sessionStorage.getItem(`${AI_GUIDE_CACHE_KEY}:${groupId}`);
     if (!raw) return;
     const map = parseMap(raw);
     if (Object.keys(map).length === 0) return;
     localStorage.setItem(lsKey, JSON.stringify(map));
-    sessionStorage.removeItem(`${AI_GUIDE_SESSION_LEGACY_KEY}:${groupId}`);
+    sessionStorage.removeItem(`${AI_GUIDE_CACHE_KEY}:${groupId}`);
   } catch {
     /* ignore */
   }

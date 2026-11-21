@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import type { PrenatalLog } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import { usePrenatalLogs } from '../hooks/usePrenatalLogs';
+import { formatClockTime, groupByLocalDate } from '../utils/local-day-groups';
 
 interface PrenatalTimelineViewProps {
   babyId: string;
@@ -46,49 +47,6 @@ function bodyText(log: PrenatalLog, t: BabyGrowthTranslations): string {
   return bits.join(' · ') || '—';
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
-
-function dateKeyFromIso(iso: string): string {
-  const d = new Date(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function formatDateLabel(dateKey: string): string {
-  const [y, m, day] = dateKey.split('-').map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString('ko-KR', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/** 날짜별 묶음(최신 날짜 위) · 당일 항목은 시간 오름차순 */
-function groupLogsByDate(logs: PrenatalLog[]) {
-  const map = new Map<string, PrenatalLog[]>();
-  for (const log of logs) {
-    const key = dateKeyFromIso(log.logged_at);
-    const list = map.get(key);
-    if (list) list.push(log);
-    else map.set(key, [log]);
-  }
-  return [...map.keys()]
-    .sort((a, b) => b.localeCompare(a))
-    .map((dateKey) => ({
-      dateKey,
-      dateLabel: formatDateLabel(dateKey),
-      items: (map.get(dateKey) ?? []).sort(
-        (a, b) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime(),
-      ),
-    }));
-}
-
 export function PrenatalTimelineView({
   babyId, currentGroupId, userId, t,
 }: PrenatalTimelineViewProps) {
@@ -109,7 +67,10 @@ export function PrenatalTimelineView({
     return () => { cancelled = true; };
   }, [fetchLogs]);
 
-  const dayGroups = useMemo(() => groupLogsByDate(logs), [logs]);
+  const dayGroups = useMemo(
+    () => groupByLocalDate(logs, (log) => new Date(log.logged_at).getTime()),
+    [logs],
+  );
 
   if (loading) {
     return <p className="p-4 text-sm text-gray-400">{t.loading}</p>;
@@ -145,7 +106,7 @@ export function PrenatalTimelineView({
                       {typeLabel(log, t)}
                     </span>
                     <span className="text-[10px] text-gray-400">
-                      {formatTime(log.logged_at)}
+                      {formatClockTime(log.logged_at)}
                     </span>
                   </div>
                   <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-200">
