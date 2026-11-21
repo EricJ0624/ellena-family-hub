@@ -33,7 +33,13 @@ import { applyOpenGroupIfValid } from '@/lib/route-guard-group-required';
 import { formatUnknownError, isAbortLikeError, isSupabaseLockError } from '@/lib/supabase-error';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { fetchAiProxy } from '@/lib/ai-proxy-client';
-import { aiUserKeyStorageKey } from '@/lib/ai-user-key';
+import {
+  aiUserKeyStorageKey,
+  clearStoredCustomMeta,
+  getStoredCustomMeta,
+  setStoredCustomMeta,
+  type AiUserProvider,
+} from '@/lib/ai-user-key';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -8423,16 +8429,55 @@ export default function FamilyHub() {
 // AiApiKeySettings — 닉네임 모달 내 AI API 키 관리 섹션
 // localStorage만 사용, 서버 저장 없음
 // ---------------------------------------------------------------------------
-type _AiApiProvider = 'openai' | 'anthropic';
+const AI_PROVIDER_TABS: {
+  id: AiUserProvider;
+  label: string;
+  activeClass: string;
+  hint: string;
+  placeholder: string;
+}[] = [
+  {
+    id: 'openai',
+    label: 'GPT',
+    activeClass: 'bg-green-500 text-white',
+    hint: 'OpenAI API 키 (sk-...) · platform.openai.com',
+    placeholder: 'sk-...',
+  },
+  {
+    id: 'anthropic',
+    label: 'Claude',
+    activeClass: 'bg-orange-500 text-white',
+    hint: 'Anthropic API 키 (sk-ant-...) · console.anthropic.com',
+    placeholder: 'sk-ant-...',
+  },
+  {
+    id: 'gemini',
+    label: 'Gemini',
+    activeClass: 'bg-blue-500 text-white',
+    hint: 'Google AI Studio 키 (AIza...) · aistudio.google.com',
+    placeholder: 'AIza...',
+  },
+  {
+    id: 'custom',
+    label: '기타',
+    activeClass: 'bg-slate-700 text-white',
+    hint: 'OpenAI 호환 · Base URL + 모델명 + API 키',
+    placeholder: 'API 키',
+  },
+];
 
 function AiApiKeySettings({ userId }: { userId: string }) {
-  const [activeProvider, setActiveProvider] = React.useState<_AiApiProvider>('openai');
+  const [activeProvider, setActiveProvider] = React.useState<AiUserProvider>('openai');
   const [keyInput, setKeyInput] = React.useState('');
+  const [baseUrlInput, setBaseUrlInput] = React.useState('');
+  const [modelInput, setModelInput] = React.useState('');
   const [saved, setSaved] = React.useState(false);
   const [pinging, setPinging] = React.useState(false);
   const [pingResult, setPingResult] = React.useState<'ok' | 'fail' | null>(null);
 
-  // 현재 provider의 저장된 키 로드
+  const activeTab = AI_PROVIDER_TABS.find((t) => t.id === activeProvider) ?? AI_PROVIDER_TABS[0];
+
+  // 현재 provider의 저장된 키·커스텀 메타 로드
   const storedKey = React.useMemo(
     () =>
       typeof window !== 'undefined'
@@ -8442,16 +8487,43 @@ function AiApiKeySettings({ userId }: { userId: string }) {
     [userId, activeProvider, saved]
   );
 
-  const handleProviderChange = (prov: _AiApiProvider) => {
+  const storedCustomMeta = React.useMemo(
+    () => (typeof window !== 'undefined' ? getStoredCustomMeta(userId) : { baseUrl: '', model: '' }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userId, saved, activeProvider]
+  );
+
+  const handleProviderChange = (prov: AiUserProvider) => {
     setActiveProvider(prov);
     setKeyInput('');
     setPingResult(null);
     setSaved(false);
+    if (prov === 'custom' && typeof window !== 'undefined') {
+      const meta = getStoredCustomMeta(userId);
+      setBaseUrlInput(meta.baseUrl);
+      setModelInput(meta.model);
+    } else {
+      setBaseUrlInput('');
+      setModelInput('');
+    }
   };
 
   const handleSave = () => {
-    if (!keyInput.trim()) return;
-    localStorage.setItem(aiUserKeyStorageKey(userId, activeProvider), keyInput.trim());
+    const keyToSave = keyInput.trim() || storedKey;
+    if (!keyToSave) return;
+    if (activeProvider === 'custom') {
+      const base = baseUrlInput.trim() || storedCustomMeta.baseUrl;
+      if (!base) return;
+      setStoredCustomMeta(userId, {
+        baseUrl: base,
+        model: modelInput.trim() || storedCustomMeta.model,
+      });
+      setBaseUrlInput(base);
+      setModelInput(modelInput.trim() || storedCustomMeta.model);
+    }
+    if (keyInput.trim()) {
+      localStorage.setItem(aiUserKeyStorageKey(userId, activeProvider), keyInput.trim());
+    }
     window.dispatchEvent(new CustomEvent('sfh:ai-key-updated'));
     setSaved(true);
     setKeyInput('');
@@ -8460,6 +8532,11 @@ function AiApiKeySettings({ userId }: { userId: string }) {
 
   const handleDelete = () => {
     localStorage.removeItem(aiUserKeyStorageKey(userId, activeProvider));
+    if (activeProvider === 'custom') {
+      clearStoredCustomMeta(userId);
+      setBaseUrlInput('');
+      setModelInput('');
+    }
     window.dispatchEvent(new CustomEvent('sfh:ai-key-updated'));
     setKeyInput('');
     setPingResult(null);
@@ -8469,13 +8546,23 @@ function AiApiKeySettings({ userId }: { userId: string }) {
   const handlePing = async () => {
     const testKey = keyInput.trim() || storedKey;
     if (!testKey) return;
+    if (activeProvider === 'custom') {
+      const base = baseUrlInput.trim() || storedCustomMeta.baseUrl;
+      if (!base) {
+        setPingResult('fail');
+        return;
+      }
+    }
     setPinging(true);
     setPingResult(null);
     try {
-      const res = await fetchAiProxy({
-        apiKey: testKey,
-        body: { provider: activeProvider, ping: true },
-      });
+      const body: Record<string, unknown> = { provider: activeProvider, ping: true };
+      if (activeProvider === 'custom') {
+        body.baseUrl = baseUrlInput.trim() || storedCustomMeta.baseUrl;
+        const model = modelInput.trim() || storedCustomMeta.model;
+        if (model) body.model = model;
+      }
+      const res = await fetchAiProxy({ apiKey: testKey, body });
       setPingResult(res.ok ? 'ok' : 'fail');
     } catch {
       setPingResult('fail');
@@ -8484,40 +8571,53 @@ function AiApiKeySettings({ userId }: { userId: string }) {
     }
   };
 
+  const hasKeyForActions = Boolean(keyInput.trim() || storedKey);
+  const hasCustomBase = Boolean(baseUrlInput.trim() || storedCustomMeta.baseUrl);
+  // 연결 테스트: 모든 provider에서 키 필수 (기타는 Base URL도 필수)
+  const canPing =
+    hasKeyForActions && (activeProvider !== 'custom' || hasCustomBase);
+  // 저장: 신규 키 입력, 또는 기타에서 기존 키 유지하며 URL/모델만 수정
+  const canSave =
+    activeProvider === 'custom'
+      ? hasCustomBase && hasKeyForActions
+      : Boolean(keyInput.trim());
+
   return (
     <div className="form-field">
       <label className="form-label">🤖 AI API 키 설정</label>
       <p className="text-xs text-slate-500 mb-3">
-        OpenAI 또는 Anthropic API 키를 등록하면 위젯의 AI 기능을 사용할 수 있습니다.<br />
-        🔒 키는 이 기기의 localStorage에만 저장되며 서버로 전송되지 않습니다.
+        GPT·Claude·Gemini 또는 OpenAI 호환(기타) 키를 등록하면 위젯의 AI 기능을 사용할 수 있습니다.
+        <br />
+        🔒 키는 이 기기의 localStorage에만 저장되며 서버 DB에는 저장되지 않습니다.
       </p>
 
-      {/* Provider 탭 */}
-      <div className="flex gap-2 mb-3">
-        {(['openai', 'anthropic'] as _AiApiProvider[]).map((prov) => (
+      {/* Provider 탭 — 한 줄 짧은 라벨 */}
+      <div className="flex gap-1.5 mb-2">
+        {AI_PROVIDER_TABS.map((tab) => (
           <button
-            key={prov}
+            key={tab.id}
             type="button"
-            onClick={() => handleProviderChange(prov)}
-            className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeProvider === prov
-                ? prov === 'openai'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-orange-500 text-white'
+            onClick={() => handleProviderChange(tab.id)}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              activeProvider === tab.id
+                ? tab.activeClass
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            {prov === 'openai' ? 'OpenAI' : 'Anthropic'}
+            {tab.label}
           </button>
         ))}
       </div>
+      <p className="text-[11px] text-slate-500 mb-3">{activeTab.hint}</p>
 
       {/* 현재 저장 상태 */}
-      {storedKey ? (
+      {storedKey && (activeProvider !== 'custom' || storedCustomMeta.baseUrl) ? (
         <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
           <span className="text-green-600 text-xs font-medium flex-1">
-            ✅ {activeProvider === 'openai' ? 'OpenAI' : 'Anthropic'} 키 등록됨
-            &nbsp;({storedKey.slice(0, 8)}…)
+            ✅ {activeTab.label} 키 등록됨 ({storedKey.slice(0, 8)}…)
+            {activeProvider === 'custom' && storedCustomMeta.baseUrl
+              ? ` · ${storedCustomMeta.baseUrl.replace(/^https?:\/\//, '').slice(0, 24)}`
+              : ''}
           </span>
           <button
             type="button"
@@ -8529,16 +8629,46 @@ function AiApiKeySettings({ userId }: { userId: string }) {
         </div>
       ) : (
         <p className="text-xs text-slate-400 mb-2">
-          {activeProvider === 'openai' ? 'OpenAI' : 'Anthropic'} 키가 등록되지 않았습니다.
+          {activeTab.label} 키가 등록되지 않았습니다.
         </p>
+      )}
+
+      {activeProvider === 'custom' && (
+        <>
+          <input
+            type="url"
+            value={baseUrlInput}
+            onChange={(e) => {
+              setBaseUrlInput(e.target.value);
+              setPingResult(null);
+            }}
+            placeholder="https://api.example.com/v1"
+            className="form-input mb-2"
+            autoComplete="off"
+          />
+          <input
+            type="text"
+            value={modelInput}
+            onChange={(e) => {
+              setModelInput(e.target.value);
+              setPingResult(null);
+            }}
+            placeholder="모델명 (예: gpt-4o-mini)"
+            className="form-input mb-2"
+            autoComplete="off"
+          />
+        </>
       )}
 
       {/* 키 입력 */}
       <input
         type="password"
         value={keyInput}
-        onChange={(e) => { setKeyInput(e.target.value); setPingResult(null); }}
-        placeholder={activeProvider === 'openai' ? 'sk-...' : 'sk-ant-...'}
+        onChange={(e) => {
+          setKeyInput(e.target.value);
+          setPingResult(null);
+        }}
+        placeholder={activeTab.placeholder}
         className="form-input mb-2"
         autoComplete="off"
       />
@@ -8548,7 +8678,7 @@ function AiApiKeySettings({ userId }: { userId: string }) {
         <button
           type="button"
           onClick={handlePing}
-          disabled={pinging || (!keyInput.trim() && !storedKey)}
+          disabled={pinging || !canPing}
           className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 transition-colors"
         >
           {pinging ? '테스트 중...' : '연결 테스트'}
@@ -8556,7 +8686,7 @@ function AiApiKeySettings({ userId }: { userId: string }) {
         <button
           type="button"
           onClick={handleSave}
-          disabled={!keyInput.trim()}
+          disabled={!canSave}
           className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 transition-colors"
         >
           {saved ? '✅ 저장됨' : '저장'}
@@ -8565,8 +8695,14 @@ function AiApiKeySettings({ userId }: { userId: string }) {
 
       {/* 테스트 결과 */}
       {pingResult && (
-        <p className={`mt-1.5 text-xs font-medium ${pingResult === 'ok' ? 'text-green-600' : 'text-red-500'}`}>
-          {pingResult === 'ok' ? '✅ 연결 성공! 키가 유효합니다.' : '❌ 연결 실패. 키를 확인해 주세요.'}
+        <p
+          className={`mt-1.5 text-xs font-medium ${
+            pingResult === 'ok' ? 'text-green-600' : 'text-red-500'
+          }`}
+        >
+          {pingResult === 'ok'
+            ? '✅ 연결 성공! 키가 유효합니다.'
+            : '❌ 연결 실패. 키·URL을 확인해 주세요.'}
         </p>
       )}
     </div>

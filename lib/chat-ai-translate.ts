@@ -4,7 +4,7 @@
  */
 
 import { fetchAiProxy } from '@/lib/ai-proxy-client';
-import { getStoredAiKey, hasStoredAiKey } from '@/lib/ai-user-key';
+import { getStoredAiKey, hasStoredAiKey, storedAiKeyToProxyBody } from '@/lib/ai-user-key';
 
 export { hasStoredAiKey as hasStoredChatAiKey };
 
@@ -48,13 +48,12 @@ export async function translateChatText(params: {
 
   const res = await fetchAiProxy({
     apiKey: stored.key,
-    body: {
-      provider: stored.provider,
+    body: storedAiKeyToProxyBody(stored, {
       systemPrompt,
       userPrompt,
       stream: false,
       maxTokens: 800,
-    },
+    }),
   });
 
   if (!res.ok) {

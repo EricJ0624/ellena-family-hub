@@ -89,7 +89,7 @@ export function AiGuidePanel({
             AI 육아 가이드를 사용하려면 API 키가 필요합니다
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            OpenAI 또는 Anthropic API 키를 등록하면<br />
+            GPT·Claude·Gemini 또는 OpenAI 호환(기타) 키를 등록하면<br />
             맞춤 육아 가이드, 일기 초안, 일과 예측을 받을 수 있습니다.
           </p>
           <p className="text-[11px] text-gray-400">

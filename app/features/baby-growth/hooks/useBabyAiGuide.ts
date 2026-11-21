@@ -9,7 +9,12 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { fetchAiProxy } from '@/lib/ai-proxy-client';
-import { aiUserKeyStorageKey, type AiUserProvider } from '@/lib/ai-user-key';
+import {
+  aiUserKeyStorageKey,
+  getStoredAiKey,
+  storedAiKeyToProxyBody,
+  type AiUserProvider,
+} from '@/lib/ai-user-key';
 import type { BabyProfile, BabyDailyLog, BabyGrowthRecord } from '../types';
 import { calcAgeInDays, calcAgeInMonths } from '../utils/age-calculator';
 
@@ -17,32 +22,28 @@ import { calcAgeInDays, calcAgeInMonths } from '../utils/age-calculator';
 // 상수
 // ---------------------------------------------------------------------------
 
-export type AiProvider = AiUserProvider;
 export type AiMode = 'guide' | 'diary' | 'schedule' | 'qa';
 
-const LS_KEY = aiUserKeyStorageKey;
-
 // 구버전 호환: sfh_baby_ai_key_{userId}_{provider} 및 단일 키 형식
-const LS_LEGACY_KEY_PROVIDER = (userId: string, provider: AiProvider) =>
+const LS_LEGACY_KEY_PROVIDER = (userId: string, provider: AiUserProvider) =>
   `sfh_baby_ai_key_${userId}_${provider}`;
 const LS_LEGACY_KEY = (userId: string) => `sfh_baby_ai_key_${userId}`;
 
 /** 구버전 키가 있으면 새 공통 키로 1회 마이그레이션 */
 function migrateLegacyKeys(userId: string): void {
   if (typeof window === 'undefined') return;
-  for (const prov of ['openai', 'anthropic'] as AiProvider[]) {
-    const newKey = LS_KEY(userId, prov);
-    if (localStorage.getItem(newKey)) continue; // 이미 존재
+  for (const prov of ['openai', 'anthropic'] as AiUserProvider[]) {
+    const newKey = aiUserKeyStorageKey(userId, prov);
+    if (localStorage.getItem(newKey)) continue;
     const legacy = localStorage.getItem(LS_LEGACY_KEY_PROVIDER(userId, prov));
     if (legacy) {
       localStorage.setItem(newKey, legacy);
       localStorage.removeItem(LS_LEGACY_KEY_PROVIDER(userId, prov));
     }
   }
-  // 단일 키 형식(provider 없음) → openai로 마이그레이션
   const singleLegacy = localStorage.getItem(LS_LEGACY_KEY(userId));
-  if (singleLegacy && !localStorage.getItem(LS_KEY(userId, 'openai'))) {
-    localStorage.setItem(LS_KEY(userId, 'openai'), singleLegacy);
+  if (singleLegacy && !localStorage.getItem(aiUserKeyStorageKey(userId, 'openai'))) {
+    localStorage.setItem(aiUserKeyStorageKey(userId, 'openai'), singleLegacy);
   }
   localStorage.removeItem(LS_LEGACY_KEY(userId));
 }
@@ -176,113 +177,21 @@ interface UseBabyAiGuideProps {
 }
 
 export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
-  const [provider, setProvider] = useState<AiProvider>(() => {
-    if (typeof window === 'undefined') return 'openai';
-    migrateLegacyKeys(userId); // 구버전 키 1회 마이그레이션
-    // 현재 등록된 키가 있는 provider 자동 선택
-    if (localStorage.getItem(LS_KEY(userId, 'anthropic'))) return 'anthropic';
-    return 'openai';
+  const [hasApiKey, setHasApiKey] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    migrateLegacyKeys(userId);
+    return Boolean(getStoredAiKey(userId));
   });
-
-  const [apiKey, setApiKeyState] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem(LS_KEY(userId, provider)) ?? '';
-  });
-
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [pinging, setPinging] = useState(false);
-  const [pingResult, setPingResult] = useState<'ok' | 'fail' | null>(null);
 
-  const saveApiKey = useCallback(
-    (key: string, prov?: AiProvider) => {
-      const trimmed = key.trim();
-      const targetProvider = prov ?? provider;
-      localStorage.setItem(LS_KEY(userId, targetProvider), trimmed);
-      if (targetProvider === provider) setApiKeyState(trimmed);
-    },
-    [userId, provider]
-  );
-
-  const clearApiKey = useCallback(
-    (prov?: AiProvider) => {
-      const targetProvider = prov ?? provider;
-      localStorage.removeItem(LS_KEY(userId, targetProvider));
-      if (targetProvider === provider) setApiKeyState('');
-    },
-    [userId, provider]
-  );
-
-  const switchProvider = useCallback(
-    (prov: AiProvider) => {
-      setProvider(prov);
-      const key = localStorage.getItem(LS_KEY(userId, prov)) ?? '';
-      setApiKeyState(key);
-      setPingResult(null);
-      setResult('');
-      setError(null);
-    },
-    [userId]
-  );
-
-  /**
-   * 외부(닉네임 모달 등)에서 AI 키를 저장·삭제하면
-   * 'sfh:ai-key-updated' 이벤트를 발행한다.
-   * 이 훅은 그 이벤트를 수신해 localStorage에서 최신 키를 다시 읽는다.
-   */
   useEffect(() => {
-    const handleKeyUpdated = () => {
-      const latest = localStorage.getItem(LS_KEY(userId, provider)) ?? '';
-      setApiKeyState(latest);
-      // 키가 없어진 경우 반대 provider에 키가 있으면 자동 전환
-      if (!latest) {
-        const other: AiProvider = provider === 'openai' ? 'anthropic' : 'openai';
-        const otherKey = localStorage.getItem(LS_KEY(userId, other)) ?? '';
-        if (otherKey) {
-          setProvider(other);
-          setApiKeyState(otherKey);
-        }
-      }
-    };
-    window.addEventListener('sfh:ai-key-updated', handleKeyUpdated);
-    return () => window.removeEventListener('sfh:ai-key-updated', handleKeyUpdated);
-  }, [userId, provider]);
+    const sync = () => setHasApiKey(Boolean(getStoredAiKey(userId)));
+    window.addEventListener('sfh:ai-key-updated', sync);
+    return () => window.removeEventListener('sfh:ai-key-updated', sync);
+  }, [userId]);
 
-  /**
-   * API 키 유효성 검증 (Ping Test)
-   * 최소 토큰으로 호출하여 인증 오류 여부를 확인한다.
-   */
-  const pingTest = useCallback(
-    async (key?: string): Promise<boolean> => {
-      const testKey = (key ?? apiKey).trim();
-      if (!testKey) return false;
-      setPinging(true);
-      setPingResult(null);
-      try {
-        const res = await fetchAiProxy({
-          apiKey: testKey,
-          body: {
-            provider,
-            ping: true,
-          },
-        });
-        const ok = res.ok;
-        setPingResult(ok ? 'ok' : 'fail');
-        return ok;
-      } catch {
-        setPingResult('fail');
-        return false;
-      } finally {
-        setPinging(false);
-      }
-    },
-    [apiKey, provider]
-  );
-
-  /**
-   * LLM 텍스트 생성 — 스트리밍(SSE) 지원
-   */
   const generate = useCallback(
     async (
       mode: AiMode,
@@ -291,7 +200,8 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
       latestGrowth: BabyGrowthRecord | null,
       options?: { qaQuestion?: string; stream?: boolean }
     ): Promise<void> => {
-      if (!apiKey) {
+      const stored = getStoredAiKey(userId);
+      if (!stored) {
         setError('API 키가 필요합니다. 설정에서 키를 등록해 주세요.');
         return;
       }
@@ -311,13 +221,12 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
         const useStream = options?.stream ?? true;
 
         const res = await fetchAiProxy({
-          apiKey,
-          body: {
-            provider,
+          apiKey: stored.key,
+          body: storedAiKeyToProxyBody(stored, {
             systemPrompt,
             userPrompt,
             stream: useStream,
-          },
+          }),
         });
 
         if (!res.ok) {
@@ -326,7 +235,6 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
         }
 
         if (useStream && res.body) {
-          // 스트리밍 처리
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
           let accumulated = '';
@@ -334,17 +242,14 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
             const { done, value } = await reader.read();
             if (done) break;
             const chunk = decoder.decode(value, { stream: true });
-            // SSE 라인 파싱 (data: {...})
-            const lines = chunk.split('\n');
+            const lines = chunk.split('\\n');
             for (const line of lines) {
               if (!line.startsWith('data: ')) continue;
               const payload = line.slice(6).trim();
               if (payload === '[DONE]') continue;
               try {
                 const parsed = JSON.parse(payload);
-                // OpenAI format
                 const delta = parsed.choices?.[0]?.delta?.content ?? '';
-                // Anthropic format
                 const anthropicDelta = parsed.delta?.text ?? '';
                 accumulated += delta || anthropicDelta;
                 setResult(accumulated);
@@ -354,7 +259,6 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
             }
           }
         } else {
-          // 일반 JSON 응답
           const json = await res.json();
           const text =
             json.choices?.[0]?.message?.content?.trim() ??
@@ -370,19 +274,11 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
         setGenerating(false);
       }
     },
-    [apiKey, provider]
+    [userId]
   );
 
   return {
-    provider,
-    apiKey,
-    hasApiKey: Boolean(apiKey),
-    saveApiKey,
-    clearApiKey,
-    switchProvider,
-    pingTest,
-    pinging,
-    pingResult,
+    hasApiKey,
     generate,
     generating,
     result,
@@ -390,7 +286,6 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
     clearResult: () => {
       setResult('');
       setError(null);
-      setPingResult(null);
     },
   };
 }

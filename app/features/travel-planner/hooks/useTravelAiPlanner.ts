@@ -9,15 +9,12 @@
 
 import { useState, useCallback } from 'react';
 import { fetchAiProxy } from '@/lib/ai-proxy-client';
-import { getStoredAiKey, type AiUserProvider } from '@/lib/ai-user-key';
+import { getStoredAiKey, storedAiKeyToProxyBody } from '@/lib/ai-user-key';
 import type { ParsedImportItem } from '@/lib/modules/travel-planner/itinerary-import-types';
 
 // ---------------------------------------------------------------------------
 // 타입
 // ---------------------------------------------------------------------------
-
-export type AiProvider = AiUserProvider;
-export { getStoredAiKey };
 
 export interface TravelAiDraft {
   title: string;
@@ -253,13 +250,12 @@ export function useTravelAiPlanner({ userId, hasApiKeyRevision }: UseTravelAiPla
 
         const res = await fetchAiProxy({
           apiKey: currentKeyInfo.key,
-          body: {
-            provider: currentKeyInfo.provider,
+          body: storedAiKeyToProxyBody(currentKeyInfo, {
             systemPrompt,
             userPrompt,
             stream: false,
             maxTokens: 2500,
-          },
+          }),
         });
 
         if (!res.ok) {
