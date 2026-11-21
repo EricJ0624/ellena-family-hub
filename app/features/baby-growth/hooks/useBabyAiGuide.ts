@@ -285,11 +285,11 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
       recentLogs: BabyDailyLog[],
       latestGrowth: BabyGrowthRecord | null,
       options?: { qaQuestion?: string; stream?: boolean; lifePhase?: 'prenatal' | 'postnatal' }
-    ): Promise<void> => {
+    ): Promise<string | null> => {
       const stored = getStoredAiKey(userId);
       if (!stored) {
         setError('API 키가 필요합니다. 설정에서 키를 등록해 주세요.');
-        return;
+        return null;
       }
 
       abortRef.current?.abort();
@@ -322,7 +322,7 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
           signal: ac.signal,
         });
 
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted) return null;
 
         if (!res.ok) {
           const errJson = await res.json().catch(() => ({}));
@@ -340,7 +340,7 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
               } catch {
                 /* ignore */
               }
-              return;
+              return null;
             }
             const { done, value } = await reader.read();
             if (done) break;
@@ -361,22 +361,25 @@ export function useBabyAiGuide({ userId }: UseBabyAiGuideProps) {
               }
             }
           }
-        } else {
-          const json = await res.json();
-          if (ac.signal.aborted) return;
-          const text =
-            json.choices?.[0]?.message?.content?.trim() ??
-            json.content?.[0]?.text?.trim() ??
-            '';
-          setResult(text);
+          return accumulated.trim() || null;
         }
+
+        const json = await res.json();
+        if (ac.signal.aborted) return null;
+        const text =
+          json.choices?.[0]?.message?.content?.trim() ??
+          json.content?.[0]?.text?.trim() ??
+          '';
+        setResult(text);
+        return text || null;
       } catch (err: unknown) {
         if (ac.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
-          return;
+          return null;
         }
         const msg = err instanceof Error ? err.message : 'AI 응답을 받지 못했습니다.';
         console.error('[useBabyAiGuide] AI 오류:', err);
         setError(msg);
+        return null;
       } finally {
         if (abortRef.current === ac) abortRef.current = null;
         if (!ac.signal.aborted) setGenerating(false);

@@ -44,9 +44,16 @@ import { BabyWidgetBackdrop, BabyWidgetStickers } from './BabyWidgetBackdrop';
 import { AiGuideBriefingBanner } from './AiGuideBriefingBanner';
 import { getGuideBrief } from '../utils/parse-guide-brief';
 import { findCurrentOpenSleep, scheduledBedBefore } from '../utils/sleep-schedule';
+import { useBabyAiGuide } from '../hooks/useBabyAiGuide';
+import {
+  type AiGuideCacheMap,
+  isAiGuideStale,
+  readAiGuideCache,
+  textsFromCache,
+  writeAiGuideCache,
+} from '../utils/ai-guide-cache';
 
 const ACTIVE_BABY_LS_KEY = 'sfh_baby_active_id';
-const AI_GUIDE_SESSION_KEY = 'sfh_baby_ai_guide';
 
 function readStoredActiveBabyId(groupId: string | null): string | null {
   if (!groupId || typeof window === 'undefined') return null;
@@ -61,32 +68,6 @@ function storeActiveBabyId(groupId: string | null, babyId: string) {
   if (!groupId || typeof window === 'undefined') return;
   try {
     localStorage.setItem(`${ACTIVE_BABY_LS_KEY}:${groupId}`, babyId);
-  } catch {
-    /* ignore */
-  }
-}
-
-function readAiGuideSession(groupId: string | null): Record<string, string> {
-  if (!groupId || typeof window === 'undefined') return {};
-  try {
-    const raw = sessionStorage.getItem(`${AI_GUIDE_SESSION_KEY}:${groupId}`);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') return {};
-    const out: Record<string, string> = {};
-    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof v === 'string' && v.length > 0) out[k] = v;
-    }
-    return out;
-  } catch {
-    return {};
-  }
-}
-
-function writeAiGuideSession(groupId: string | null, map: Record<string, string>) {
-  if (!groupId || typeof window === 'undefined') return;
-  try {
-    sessionStorage.setItem(`${AI_GUIDE_SESSION_KEY}:${groupId}`, JSON.stringify(map));
   } catch {
     /* ignore */
   }
@@ -148,10 +129,14 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
   const [addAsPrenatal, setAddAsPrenatal] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [babyLimitNotice, setBabyLimitNotice] = useState(false);
-  /** 아이별 AI guide 전문 — 세션 유지(등록 슬롯·리마운트·슬라이드) */
-  const [aiTextByBabyId, setAiTextByBabyId] = useState<Record<string, string>>(() =>
-    readAiGuideSession(currentGroupId),
+  /** 아이별 AI guide 전문 + 생성시각 — localStorage (주 1회 자동 갱신) */
+  const [aiGuideCache, setAiGuideCache] = useState<AiGuideCacheMap>(() =>
+    readAiGuideCache(currentGroupId),
   );
+  const aiTextByBabyId = useMemo(() => textsFromCache(aiGuideCache), [aiGuideCache]);
+  const aiGuideCacheRef = useRef(aiGuideCache);
+  aiGuideCacheRef.current = aiGuideCache;
+  const weeklyAiAttemptRef = useRef<Record<string, true>>({});
   const [albumOpen, setAlbumOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -212,6 +197,8 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     userId,
   });
 
+  const { hasApiKey, generate: generateAiGuide } = useBabyAiGuide({ userId });
+
   const { completeBirth } = useBirthTransition({
     profile: profile ?? ({
       id: '',
@@ -266,25 +253,26 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     storeActiveBabyId(currentGroupId, activeBabyId);
   }, [currentGroupId, activeBabyId]);
 
-  // 그룹 전환 시 해당 그룹 세션에서 복원
+  // 그룹 전환 시 해당 그룹 캐시 복원
   useEffect(() => {
-    setAiTextByBabyId(readAiGuideSession(currentGroupId));
+    setAiGuideCache(readAiGuideCache(currentGroupId));
+    weeklyAiAttemptRef.current = {};
   }, [currentGroupId]);
 
-  // 맵 변경 시 세션 저장
+  // 맵 변경 시 localStorage 저장
   useEffect(() => {
-    writeAiGuideSession(currentGroupId, aiTextByBabyId);
-  }, [currentGroupId, aiTextByBabyId]);
+    writeAiGuideCache(currentGroupId, aiGuideCache);
+  }, [currentGroupId, aiGuideCache]);
 
   // 삭제된 아이 키만 정리 — profiles 가 잠깐 비는 동안은 지우지 않음
   useEffect(() => {
     if (profiles.length === 0) return;
     const ids = new Set(profiles.map((p) => p.id));
-    setAiTextByBabyId((prev) => {
+    setAiGuideCache((prev) => {
       let changed = false;
-      const next: Record<string, string> = {};
-      for (const [id, text] of Object.entries(prev)) {
-        if (ids.has(id)) next[id] = text;
+      const next: AiGuideCacheMap = {};
+      for (const [id, entry] of Object.entries(prev)) {
+        if (ids.has(id)) next[id] = entry;
         else changed = true;
       }
       return changed ? next : prev;
@@ -294,7 +282,7 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
   const handleAiTextChange = useCallback(
     (text: string | null) => {
       if (!activeBabyId) return;
-      setAiTextByBabyId((prev) => {
+      setAiGuideCache((prev) => {
         // 생성 중 빈 문자열로 지우는 호출은 무시 — 이전 배너 유지
         if (text === '') return prev;
         if (text == null) {
@@ -303,8 +291,11 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
           delete next[activeBabyId];
           return next;
         }
-        if (prev[activeBabyId] === text) return prev;
-        return { ...prev, [activeBabyId]: text };
+        if (prev[activeBabyId]?.text === text) return prev;
+        return {
+          ...prev,
+          [activeBabyId]: { text, fetchedAt: Date.now() },
+        };
       });
     },
     [activeBabyId],
@@ -325,6 +316,47 @@ export const BabyGrowthSection = memo(function BabyGrowthSection({
     });
     return () => { cancelled = true; };
   }, [profile, fetchPrenatalLogs]);
+
+  // API 키 있으면 주 1회(만료 시 앱 오픈) guide 자동 갱신 → 홈 배너 반영
+  useEffect(() => {
+    if (!profile || !currentGroupId || !hasApiKey) return;
+    const babyId = profile.id;
+    const entry = aiGuideCacheRef.current[babyId];
+    if (entry && !isAiGuideStale(entry.fetchedAt)) return;
+    if (weeklyAiAttemptRef.current[babyId]) return;
+    weeklyAiAttemptRef.current[babyId] = true;
+
+    const prenatal = isPrenatal(profile);
+    let cancelled = false;
+    let started = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      started = true;
+      void (async () => {
+        const text = await generateAiGuide('guide', profile, logs, null, {
+          stream: false,
+          lifePhase: prenatal ? 'prenatal' : 'postnatal',
+        });
+        if (cancelled) return;
+        if (!text) {
+          delete weeklyAiAttemptRef.current[babyId];
+          return;
+        }
+        setAiGuideCache((prev) => ({
+          ...prev,
+          [babyId]: { text, fetchedAt: Date.now() },
+        }));
+      })();
+    }, prenatal ? 400 : 900);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      if (!started) delete weeklyAiAttemptRef.current[babyId];
+    };
+    // logs는 타이머 시점 클로저로만 사용 (의존성 추가 시 반복 호출 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- weekly once per baby while stale
+  }, [profile?.id, currentGroupId, hasApiKey, generateAiGuide]);
 
   // 세로 스냅 페이지 높이 = 스크롤포트 실측 (화면 비율 유지 + 스크롤 가능)
   useEffect(() => {

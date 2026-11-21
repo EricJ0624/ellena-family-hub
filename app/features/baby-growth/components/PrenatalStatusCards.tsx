@@ -4,6 +4,7 @@ import React from 'react';
 import type { PrenatalLog, PrenatalLogType } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import { formatTimeAgo } from '../utils/age-calculator';
+import { fetalSizeLabelForWeek } from '../utils/fetal-size';
 
 interface PrenatalStatusCardsProps {
   /** PrenatalQuickLogModal(태아크기)와 동일 주수 전달용 */
@@ -19,7 +20,7 @@ function latestOf(logs: PrenatalLog[], type: PrenatalLogType): PrenatalLog | nul
 }
 
 export function PrenatalStatusCards({
-  weeksPregnant: _weeksPregnant,
+  weeksPregnant,
   logs,
   t,
   onCardClick,
@@ -29,18 +30,53 @@ export function PrenatalStatusCards({
   const bp = latestOf(logs, 'blood_pressure');
   const checkup = latestOf(logs, 'checkup_note');
   const kicks = latestOf(logs, 'fetal_movement');
-  const lab = latestOf(logs, 'lab_result') ?? latestOf(logs, 'medication');
+  const fetalSizeLog = latestOf(logs, 'fetal_size');
 
   const checkupValue = checkup
     ? [
+        checkup.next_checkup_at
+          ? `${t.prenatal_next_checkup} ${checkup.next_checkup_at}`
+          : null,
         checkup.checkup_at ?? formatTimeAgo(checkup.logged_at, t),
         checkup.hospital_name,
-        checkup.next_checkup_at ? `${t.prenatal_next_checkup} ${checkup.next_checkup_at}` : null,
-        checkup.fetal_weight_est_g != null ? `${checkup.fetal_weight_est_g}g` : null,
       ]
         .filter(Boolean)
         .join(' · ')
     : null;
+
+  const sizeLabel =
+    fetalSizeLog?.fetal_size_label?.trim() ||
+    (weeksPregnant > 0 ? fetalSizeLabelForWeek(weeksPregnant) : null);
+  const fetalGrowthBits = [
+    weeksPregnant > 0 && sizeLabel
+      ? t.prenatal_fetal_size_value
+          .replace('{weeks}', String(weeksPregnant))
+          .replace('{size}', sizeLabel)
+      : sizeLabel,
+    checkup?.fetal_weight_est_g != null
+      ? `${checkup.fetal_weight_est_g}g`
+      : null,
+    checkup?.fundal_height_cm != null ? `${checkup.fundal_height_cm}cm` : null,
+  ].filter(Boolean) as string[];
+
+  const maternalBits: string[] = [];
+  if (weight?.weight_kg != null) maternalBits.push(`${weight.weight_kg}kg`);
+  if (bp?.systolic != null) maternalBits.push(`${bp.systolic}/${bp.diastolic ?? '-'}`);
+  const maternalAgo =
+    weight && bp
+      ? formatTimeAgo(
+          new Date(weight.logged_at) >= new Date(bp.logged_at) ? weight.logged_at : bp.logged_at,
+          t,
+        )
+      : weight
+        ? formatTimeAgo(weight.logged_at, t)
+        : bp
+          ? formatTimeAgo(bp.logged_at, t)
+          : null;
+  const maternalValue =
+    maternalBits.length > 0
+      ? `${maternalBits.join(' · ')}${maternalAgo ? ` · ${maternalAgo}` : ''}`
+      : null;
 
   const cards: Array<{
     key: PrenatalLogType;
@@ -55,16 +91,6 @@ export function PrenatalStatusCards({
       value: checkupValue,
     },
     {
-      key: 'maternal_weight',
-      emoji: '⚖️',
-      label: t.prenatal_card_maternal,
-      value: weight?.weight_kg != null
-        ? `${weight.weight_kg}kg · ${formatTimeAgo(weight.logged_at, t)}`
-        : bp && bp.systolic != null
-          ? `${bp.systolic}/${bp.diastolic} · ${formatTimeAgo(bp.logged_at, t)}`
-          : null,
-    },
-    {
       key: 'fetal_movement',
       emoji: '🦶',
       label: t.prenatal_card_kicks,
@@ -75,18 +101,16 @@ export function PrenatalStatusCards({
           : null,
     },
     {
-      key: 'lab_result',
-      emoji: '🧪',
-      label: t.prenatal_card_lab,
-      value: lab
-        ? [
-            lab.lab_name || lab.medication_name,
-            lab.lab_result_text || lab.notes,
-            formatTimeAgo(lab.logged_at, t),
-          ]
-            .filter(Boolean)
-            .join(' · ')
-        : null,
+      key: 'fetal_size',
+      emoji: '🍈',
+      label: t.prenatal_card_fetal_size,
+      value: fetalGrowthBits.length > 0 ? fetalGrowthBits.join(' · ') : null,
+    },
+    {
+      key: 'maternal_weight',
+      emoji: '⚖️',
+      label: t.prenatal_card_maternal,
+      value: maternalValue,
     },
   ];
 
