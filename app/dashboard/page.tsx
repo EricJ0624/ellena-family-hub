@@ -723,6 +723,11 @@ export default function FamilyHub() {
     chat_translate_undo: getDashboardTranslation(lang, 'chat_translate_undo'),
     chat_translating: getDashboardTranslation(lang, 'chat_translating'),
     chat_translate_failed: getDashboardTranslation(lang, 'chat_translate_failed'),
+    chat_translate_empty: getDashboardTranslation(lang, 'chat_translate_empty'),
+    chat_translate_same_lang: getDashboardTranslation(lang, 'chat_translate_same_lang'),
+    chat_translate_lang_more: getDashboardTranslation(lang, 'chat_translate_lang_more'),
+    chat_translate_lang_search: getDashboardTranslation(lang, 'chat_translate_lang_search'),
+    chat_translate_lang_aria: getDashboardTranslation(lang, 'chat_translate_lang_aria'),
     me: getCommonTranslation(lang, 'me'),
     user: getCommonTranslation(lang, 'user'),
   }), [lang]);

@@ -5,24 +5,12 @@
 
 import { fetchAiProxy } from '@/lib/ai-proxy-client';
 import { getStoredAiKey, hasStoredAiKey, storedAiKeyToProxyBody } from '@/lib/ai-user-key';
+import { getLangLabel, isValidLang } from '@/lib/language-fonts';
 
 export { hasStoredAiKey as hasStoredChatAiKey };
 
-const LANG_LABEL: Record<string, string> = {
-  ko: 'Korean',
-  en: 'English',
-  ja: 'Japanese',
-  'zh-CN': 'Simplified Chinese',
-  'zh-TW': 'Traditional Chinese',
-  es: 'Spanish',
-  fr: 'French',
-  de: 'German',
-  it: 'Italian',
-  pt: 'Portuguese',
-};
-
 function languageLabel(code: string): string {
-  return LANG_LABEL[code] || code;
+  return isValidLang(code) ? getLangLabel(code) : code;
 }
 
 /**

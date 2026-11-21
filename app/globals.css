@@ -4606,8 +4606,18 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   gap: var(--spacing-sm);
   width: 100%;
   min-width: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   flex-shrink: 0;
+}
+
+/* 번역 UI는 입력 줄 아래 전체 폭 — 입력칸이 밀려 사라지지 않게 */
+.chat-translate-bar {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  order: 5;
 }
 
 .dashboard-widget-grid:not([data-columns='1']) .chat-input-wrapper {
@@ -7406,11 +7416,14 @@ html[data-ui-theme='default'] .widget-chrome .chat-section-header {
 
 .chat-widget-section .message-item {
   gap: 0;
+  /* 메시지 액션 오버레이가 잘리지 않도록 */
+  overflow: visible;
 }
 
 .chat-widget-section .message-header {
   margin: 0;
   line-height: 1.1;
+  overflow: visible;
 }
 
 .chat-widget-section .message-bubble {

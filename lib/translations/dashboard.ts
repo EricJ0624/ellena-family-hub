@@ -157,6 +157,16 @@ export type DashboardTranslations = {
   chat_translating: string;
   /** 번역 실패 */
   chat_translate_failed: string;
+  /** 번역할 텍스트 없음 */
+  chat_translate_empty: string;
+  /** 원문과 목표 언어가 같음 */
+  chat_translate_same_lang: string;
+  /** 번역 목표 언어 — 직접 선택 */
+  chat_translate_lang_more: string;
+  /** 직접 선택 검색 입력 placeholder */
+  chat_translate_lang_search: string;
+  /** 번역 목표 언어 select aria */
+  chat_translate_lang_aria: string;
   /** 위젯 배지. `{count}` */
   chat_unread_badge: string;
   /** 요약 패널 제목. `{count}` */
@@ -526,6 +536,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: '되돌리기',
     chat_translating: '번역 중…',
     chat_translate_failed: '번역에 실패했습니다.',
+    chat_translate_empty: '번역할 내용을 입력해 주세요.',
+    chat_translate_same_lang: '이미 같은 언어입니다.',
+    chat_translate_lang_more: '직접 선택…',
+    chat_translate_lang_search: '언어 검색…',
+    chat_translate_lang_aria: '번역할 언어',
     chat_send_no_group: '가족 그룹이 아직 선택되지 않았습니다. 잠시 후 다시 시도해 주세요.',
     chat_send_no_access:
       '이 그룹에 채팅을 보낼 권한이 없습니다. 상단에서 참여 중인 가족 그룹을 선택했는지 확인하거나, 페이지를 새로고침해 주세요.',
@@ -872,6 +887,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: 'Undo',
     chat_translating: 'Translating…',
     chat_translate_failed: 'Translation failed.',
+    chat_translate_empty: 'Enter text to translate.',
+    chat_translate_same_lang: 'Already in that language.',
+    chat_translate_lang_more: 'More…',
+    chat_translate_lang_search: 'Search language…',
+    chat_translate_lang_aria: 'Target language',
     chat_send_no_group: 'No family group selected yet. Please try again in a moment.',
     chat_send_no_access:
       'You cannot send messages in this family group. Select a group you belong to or refresh the page.',
@@ -1218,6 +1238,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: '元に戻す',
     chat_translating: '翻訳中…',
     chat_translate_failed: '翻訳に失敗しました。',
+    chat_translate_empty: '翻訳する内容を入力してください。',
+    chat_translate_same_lang: 'すでに同じ言語です。',
+    chat_translate_lang_more: 'その他…',
+    chat_translate_lang_search: '言語を検索…',
+    chat_translate_lang_aria: '翻訳先の言語',
     chat_send_no_group: 'ファミリーグループがまだ選択されていません。しばらくしてから再度お試しください。',
     chat_send_no_access:
       'このグループにメッセージを送る権限がありません。参加中のファミリーグループを選び直すか、ページを更新してください。',
@@ -1564,6 +1589,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: '还原',
     chat_translating: '翻译中…',
     chat_translate_failed: '翻译失败。',
+    chat_translate_empty: '请输入要翻译的内容。',
+    chat_translate_same_lang: '已是相同语言。',
+    chat_translate_lang_more: '更多…',
+    chat_translate_lang_search: '搜索语言…',
+    chat_translate_lang_aria: '目标语言',
     chat_send_no_group: '尚未选择家庭群组。请稍后再试。',
     chat_send_no_access: '您没有权限在此群组发送消息。请在上方的家庭群组中选择您已加入的群组，或刷新页面后重试。',
     map_error_no_key: '未设置 Google Maps API 密钥。请检查环境变量。',
@@ -1907,6 +1937,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: '還原',
     chat_translating: '翻譯中…',
     chat_translate_failed: '翻譯失敗。',
+    chat_translate_empty: '請輸入要翻譯的內容。',
+    chat_translate_same_lang: '已是相同語言。',
+    chat_translate_lang_more: '更多…',
+    chat_translate_lang_search: '搜尋語言…',
+    chat_translate_lang_aria: '目標語言',
     chat_send_no_group: '尚未選擇家庭群組。請稍後再試。',
     chat_send_no_access: '您沒有權限在此群組傳送訊息。請在上方選擇您已加入的家庭群組，或重新整理頁面後再試。',
     map_error_no_key: '未設定 Google Maps API 金鑰。請檢查環境變數。',
@@ -2250,6 +2285,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: 'Deshacer',
     chat_translating: 'Traduciendo…',
     chat_translate_failed: 'Error al traducir.',
+    chat_translate_empty: 'Escribe un texto para traducir.',
+    chat_translate_same_lang: 'Ya está en ese idioma.',
+    chat_translate_lang_more: 'Más…',
+    chat_translate_lang_search: 'Buscar idioma…',
+    chat_translate_lang_aria: 'Idioma de destino',
     chat_send_no_group: 'Aún no se ha seleccionado ningún grupo familiar. Inténtelo de nuevo en un momento.',
     chat_send_no_access: 'No puedes enviar mensajes en este grupo familiar. Seleccione un grupo al que pertenece o actualice la página.',
     map_error_no_key: 'La clave API de Google Maps no está configurada. Verifique las variables de su entorno.',
@@ -2592,6 +2632,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: 'Annuler',
     chat_translating: 'Traduction…',
     chat_translate_failed: 'Échec de la traduction.',
+    chat_translate_empty: 'Saisissez un texte à traduire.',
+    chat_translate_same_lang: 'Déjà dans cette langue.',
+    chat_translate_lang_more: 'Plus…',
+    chat_translate_lang_search: 'Rechercher une langue…',
+    chat_translate_lang_aria: 'Langue cible',
     chat_send_no_group: 'Aucun groupe familial sélectionné pour l\'instant. Veuillez réessayer dans un instant.',
     chat_send_no_access: 'Vous ne pouvez pas envoyer de messages dans ce groupe familial. Sélectionnez un groupe auquel vous appartenez ou actualisez la page.',
     map_error_no_key: 'La clé API Google Maps n\'est pas définie. Vérifiez vos variables d\'environnement.',
@@ -2934,6 +2979,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: 'Rückgängig',
     chat_translating: 'Übersetze…',
     chat_translate_failed: 'Übersetzung fehlgeschlagen.',
+    chat_translate_empty: 'Text zum Übersetzen eingeben.',
+    chat_translate_same_lang: 'Bereits in dieser Sprache.',
+    chat_translate_lang_more: 'Mehr…',
+    chat_translate_lang_search: 'Sprache suchen…',
+    chat_translate_lang_aria: 'Zielsprache',
     chat_send_no_group: 'Noch keine Familiengruppe ausgewählt. Bitte versuchen Sie es gleich noch einmal.',
     chat_send_no_access: 'In dieser Familiengruppe können Sie keine Nachrichten senden. Wählen Sie eine Gruppe aus, zu der Sie gehören, oder aktualisieren Sie die Seite.',
     map_error_no_key: 'Der Google Maps-API-Schlüssel ist nicht festgelegt. Überprüfen Sie Ihre Umgebungsvariablen.',
@@ -3276,6 +3326,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: 'Annulla',
     chat_translating: 'Traduzione…',
     chat_translate_failed: 'Traduzione non riuscita.',
+    chat_translate_empty: 'Inserisci il testo da tradurre.',
+    chat_translate_same_lang: 'Già in quella lingua.',
+    chat_translate_lang_more: 'Altro…',
+    chat_translate_lang_search: 'Cerca lingua…',
+    chat_translate_lang_aria: 'Lingua di destinazione',
     chat_send_no_group: 'Nessun gruppo familiare ancora selezionato. Per favore riprova tra un attimo.',
     chat_send_no_access: 'Non puoi inviare messaggi in questo gruppo familiare. Seleziona un gruppo a cui appartieni o aggiorna la pagina.',
     map_error_no_key: 'La chiave API di Google Maps non è impostata. Controlla le variabili d\'ambiente.',
@@ -3618,6 +3673,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_translate_undo: 'Desfazer',
     chat_translating: 'Traduzindo…',
     chat_translate_failed: 'Falha na tradução.',
+    chat_translate_empty: 'Digite um texto para traduzir.',
+    chat_translate_same_lang: 'Já está nesse idioma.',
+    chat_translate_lang_more: 'Mais…',
+    chat_translate_lang_search: 'Buscar idioma…',
+    chat_translate_lang_aria: 'Idioma de destino',
     chat_send_no_group: 'Nenhum grupo familiar selecionado ainda. Tente novamente em instantes.',
     chat_send_no_access: 'Você não pode enviar mensagens neste grupo familiar. Selecione um grupo ao qual pertence ou atualize a página.',
     map_error_no_key: 'A chave da API do Google Maps não está configurada. Verifique suas variáveis de ambiente.',

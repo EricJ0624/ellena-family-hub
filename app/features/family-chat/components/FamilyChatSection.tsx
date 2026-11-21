@@ -5,7 +5,8 @@
 'use client';
 
 import { Camera, ImageIcon, Mic, Paperclip, Send } from 'lucide-react';
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { UiTheme } from '@/lib/ui-theme';
@@ -20,8 +21,17 @@ import {
 
 const EMPTY_UNREAD_SUMMARY: UnreadChatSenderSummary[] = [];
 import { getCommonTranslation } from '@/lib/translations/common';
-import { isValidLang } from '@/lib/language-fonts';
+import { getLangLabel, isValidLang, type LangCode } from '@/lib/language-fonts';
 import { hasStoredChatAiKey, translateChatText } from '@/lib/chat-ai-translate';
+import {
+  addTranslateExtra,
+  buildTranslateMoreOptions,
+  buildTranslateTargetOptions,
+  detectChatSourceLang,
+  pickDefaultTranslateTarget,
+  resolveTranslateDest,
+  writePreferredTranslateLang,
+} from '@/lib/chat-translate-lang';
 
 interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
@@ -80,10 +90,17 @@ interface FamilyChatSectionProps {
     chat_translate_undo: string;
     chat_translating: string;
     chat_translate_failed: string;
+    chat_translate_empty: string;
+    chat_translate_same_lang: string;
+    chat_translate_lang_more: string;
+    chat_translate_lang_search: string;
+    chat_translate_lang_aria: string;
     me: string;
     user: string;
   };
 }
+
+const TRANSLATE_LANG_MORE_VALUE = '__more__';
 
 const KIDS_CHAT_DECOS: { src: string; className: string; overChat?: boolean }[] = [
   { src: '/family-calendar/emojis/earth.png', className: 'top-[2%] left-[1.5%] w-[12%]' },
@@ -167,6 +184,28 @@ export const FamilyChatSection = memo(function FamilyChatSection({
   /** messageId → 번역문 (원문은 messages[].text 유지, 되돌리기 시 삭제) */
   const [translatedById, setTranslatedById] = useState<Record<string, string>>({});
   const [msgTranslateBusyId, setMsgTranslateBusyId] = useState<string | null>(null);
+  /** 입력 원문 추정 언어 — 목표 목록에서 제외 */
+  const [composeSourceLang, setComposeSourceLang] = useState<LangCode | null>(null);
+  const [targetLang, setTargetLang] = useState<LangCode>('en');
+  /** extras 변경 시 옵션 재계산용 */
+  const [extrasTick, setExtrasTick] = useState(0);
+  /** 직접 선택 — 타입 검색 패널 */
+  const [showLangSearch, setShowLangSearch] = useState(false);
+  const [langSearchQuery, setLangSearchQuery] = useState('');
+  const [langSearchBox, setLangSearchBox] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+  const langSearchAnchorRef = useRef<HTMLDivElement>(null);
+  const langSearchPanelRef = useRef<HTMLDivElement>(null);
+  const langSearchInputRef = useRef<HTMLInputElement>(null);
+
+  const closeLangSearch = () => {
+    setShowLangSearch(false);
+    setLangSearchQuery('');
+    setLangSearchBox(null);
+  };
 
   useEffect(() => {
     const sync = () => setHasAiKey(hasStoredChatAiKey(userId));
@@ -179,6 +218,95 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     };
   }, [userId]);
 
+  // 사용자별 선호 목표 언어 복원 (퀵이 아니면 extras에도 합류)
+  useEffect(() => {
+    if (!userId) return;
+    const next = pickDefaultTranslateTarget(userId, null);
+    if (!next) return;
+    const listed = buildTranslateTargetOptions(userId, null);
+    if (!listed.includes(next)) {
+      addTranslateExtra(userId, next);
+      setExtrasTick((n) => n + 1);
+    }
+    setTargetLang((prev) => (prev === next ? prev : next));
+  }, [userId]);
+
+  const composeTargetOptions = useMemo(
+    () => buildTranslateTargetOptions(userId, composeSourceLang),
+    [userId, composeSourceLang, extrasTick],
+  );
+
+  const moreLangOptions = useMemo(
+    () => buildTranslateMoreOptions(composeSourceLang, composeTargetOptions),
+    [composeSourceLang, composeTargetOptions],
+  );
+
+  const filteredMoreLangOptions = useMemo(() => {
+    const q = langSearchQuery.trim().toLowerCase();
+    if (!q) return [] as LangCode[];
+    return moreLangOptions.filter((code) => {
+      const label = getLangLabel(code).toLowerCase();
+      return label.includes(q) || code.toLowerCase().includes(q);
+    });
+  }, [moreLangOptions, langSearchQuery]);
+
+  // 현재 목표가 목록에 없을 때만 기본값으로 교체 (입력 중 사용자 선택 덮어쓰기 방지)
+  useEffect(() => {
+    if (composeTargetOptions.includes(targetLang)) return;
+    const next = resolveTranslateDest(userId, composeSourceLang, targetLang);
+    if (next && next !== targetLang) setTargetLang(next);
+  }, [userId, composeSourceLang, composeTargetOptions, targetLang, extrasTick]);
+
+  useLayoutEffect(() => {
+    if (!showLangSearch) {
+      setLangSearchBox(null);
+      return;
+    }
+    const place = () => {
+      const anchor = langSearchAnchorRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(Math.max(rect.width, 256), window.innerWidth - 16);
+      let left = rect.left;
+      if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+      if (left < 8) left = 8;
+      const panelH = 220;
+      const top =
+        rect.top >= panelH + 8
+          ? Math.max(8, rect.top - panelH - 4)
+          : Math.min(window.innerHeight - panelH - 8, rect.bottom + 4);
+      setLangSearchBox({ top, left, width });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [showLangSearch]);
+
+  useEffect(() => {
+    if (!showLangSearch || !langSearchBox) return;
+    langSearchInputRef.current?.focus();
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (langSearchAnchorRef.current?.contains(target)) return;
+      if (langSearchPanelRef.current?.contains(target)) return;
+      closeLangSearch();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeLangSearch();
+    };
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showLangSearch, langSearchBox]);
+
   // 그룹 바뀌면 수신 번역 오버레이·되돌리기 상태 초기화
   useEffect(() => {
     setTranslatedById({});
@@ -186,6 +314,8 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     composeOriginalRef.current = null;
     composeTranslatedValueRef.current = null;
     setComposeTranslated(false);
+    setComposeSourceLang(null);
+    closeLangSearch();
   }, [currentGroupId]);
 
   // ── 안 읽은 메시지 추적 ──────────────────────────────────────────
@@ -328,6 +458,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     onSendMessage(text);
     input.value = '';
     clearComposeTranslateState();
+    setComposeSourceLang(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -338,6 +469,15 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     handleSendClick();
   };
 
+  const applyTargetLangChoice = (code: LangCode, listed: readonly LangCode[]) => {
+    if (!listed.includes(code)) {
+      addTranslateExtra(userId, code);
+      setExtrasTick((n) => n + 1);
+    }
+    setTargetLang(code);
+    writePreferredTranslateLang(userId, code);
+  };
+
   const handleComposeTranslateToggle = async () => {
     if (!hasAiKey || composeBusy || isSendingText) return;
     const input = chatInputRef.current;
@@ -346,24 +486,38 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     if (composeTranslated && composeOriginalRef.current != null) {
       input.value = composeOriginalRef.current;
       clearComposeTranslateState();
+      setComposeSourceLang(detectChatSourceLang(input.value));
       return;
     }
 
     const raw = input.value.trim();
-    if (!raw) return;
+    if (!raw) {
+      alert(t.chat_translate_empty);
+      return;
+    }
+
+    const source = detectChatSourceLang(raw);
+    setComposeSourceLang(source);
+    const dest = resolveTranslateDest(userId, source, targetLang);
+    if (!dest || (source && dest === source)) {
+      alert(t.chat_translate_same_lang);
+      return;
+    }
 
     setComposeBusy(true);
     try {
-      // 보내기 전: 영어로 번역 (다국어 가족 공유용)
       const translated = await translateChatText({
         userId,
         text: raw,
-        targetLang: 'en',
+        targetLang: dest,
       });
       composeOriginalRef.current = raw;
       composeTranslatedValueRef.current = translated;
       input.value = translated;
       setComposeTranslated(true);
+      writePreferredTranslateLang(userId, dest);
+      setTargetLang(dest);
+      setComposeSourceLang(detectChatSourceLang(translated));
     } catch {
       alert(t.chat_translate_failed);
     } finally {
@@ -387,15 +541,23 @@ export const FamilyChatSection = memo(function FamilyChatSection({
     const plain = originalText.trim();
     if (!plain || isChatCipherText(plain)) return;
 
+    const source = detectChatSourceLang(plain);
+    const dest = resolveTranslateDest(userId, source, targetLang);
+    if (!dest || (source && dest === source)) {
+      alert(t.chat_translate_same_lang);
+      return;
+    }
+
     setMsgTranslateBusyId(messageId);
     try {
-      const targetLang = isValidLang(lang) ? lang : 'en';
       const translated = await translateChatText({
         userId,
         text: plain,
-        targetLang,
+        targetLang: dest,
       });
       setTranslatedById((prev) => ({ ...prev, [messageId]: translated }));
+      writePreferredTranslateLang(userId, dest);
+      setTargetLang(dest);
     } catch {
       alert(t.chat_translate_failed);
     } finally {
@@ -486,12 +648,12 @@ export const FamilyChatSection = memo(function FamilyChatSection({
         window.addEventListener('pointercancel', cleanup);
       }}
       onInput={() => {
-        if (!composeTranslated) return;
         const input = chatInputRef.current;
         if (!input) return;
-        if (input.value !== composeTranslatedValueRef.current) {
+        if (composeTranslated && input.value !== composeTranslatedValueRef.current) {
           clearComposeTranslateState();
         }
+        setComposeSourceLang(detectChatSourceLang(input.value));
       }}
       onFocus={onInputFocus}
       onKeyDown={handleKeyDown}
@@ -499,6 +661,92 @@ export const FamilyChatSection = memo(function FamilyChatSection({
       placeholder={t.chat_placeholder}
     />
   );
+
+  const translateLangSelect = hasAiKey ? (
+    <div ref={langSearchAnchorRef} className="relative shrink-0">
+      <select
+        aria-label={t.chat_translate_lang_aria}
+        value={
+          composeTargetOptions.includes(targetLang) ? targetLang : (composeTargetOptions[0] ?? '')
+        }
+        onFocus={() => {
+          const raw = chatInputRef.current?.value?.trim() ?? '';
+          setComposeSourceLang(detectChatSourceLang(raw));
+        }}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === TRANSLATE_LANG_MORE_VALUE) {
+            setLangSearchQuery('');
+            setShowLangSearch(true);
+            return;
+          }
+          if (!isValidLang(v)) return;
+          closeLangSearch();
+          applyTargetLangChoice(v, composeTargetOptions);
+        }}
+        disabled={composeBusy || isSendingText || composeTargetOptions.length === 0}
+        className="max-w-[7.5rem] shrink-0 rounded-full border border-emerald-200 bg-white/90 px-1.5 py-1 text-xs font-semibold text-emerald-800"
+      >
+        {composeTargetOptions.map((code) => (
+          <option key={code} value={code}>
+            {getLangLabel(code)}
+          </option>
+        ))}
+        {moreLangOptions.length > 0 ? (
+          <option value={TRANSLATE_LANG_MORE_VALUE}>{t.chat_translate_lang_more}</option>
+        ) : null}
+      </select>
+      {showLangSearch && langSearchBox && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={langSearchPanelRef}
+              role="dialog"
+              aria-label={t.chat_translate_lang_search}
+              className="fixed z-[80] rounded-xl border border-emerald-200/80 bg-white/95 p-2 shadow-lg backdrop-blur-sm"
+              style={{
+                top: langSearchBox.top,
+                left: langSearchBox.left,
+                width: langSearchBox.width,
+              }}
+            >
+              <input
+                ref={langSearchInputRef}
+                type="search"
+                value={langSearchQuery}
+                onChange={(e) => setLangSearchQuery(e.target.value)}
+                placeholder={t.chat_translate_lang_search}
+                aria-label={t.chat_translate_lang_search}
+                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-emerald-400"
+              />
+              <ul className="mt-1 max-h-40 overflow-y-auto" role="listbox">
+                {!langSearchQuery.trim() ? (
+                  <li className="px-2 py-1.5 text-xs text-slate-400">{t.chat_translate_lang_search}</li>
+                ) : filteredMoreLangOptions.length === 0 ? (
+                  <li className="px-2 py-1.5 text-xs text-slate-400">—</li>
+                ) : (
+                  filteredMoreLangOptions.map((code) => (
+                    <li key={code}>
+                      <button
+                        type="button"
+                        role="option"
+                        className="w-full rounded-md px-2 py-1.5 text-left text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+                        onClick={() => {
+                          applyTargetLangChoice(code, composeTargetOptions);
+                          closeLangSearch();
+                        }}
+                      >
+                        {getLangLabel(code)}
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  ) : null;
 
   const composeTranslateBtn = hasAiKey ? (
     <button
@@ -600,8 +848,8 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                 setActiveMessageId((prev) => (prev === messageId ? null : messageId));
               }}
             >
-              <div className="message-header">
-                <span className="message-user flex items-center gap-1">
+              <div className="message-header relative">
+                <span className="message-user flex min-w-0 items-center gap-1">
                   {m.sender_id && familyRoleByUserId[m.sender_id] && (
                     <>
                       <span className="chat-role-emoji">
@@ -622,12 +870,14 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                       : eventAuthorNames[m.sender_id] ?? (m.user === '사용자' ? t.user : m.user)}
                   </span>
                 </span>
-                <span className="message-time">{m.time}</span>
-                {/* PC: hover, 모바일: 메시지 탭으로 토글 */}
+                <span className="message-time shrink-0">{m.time}</span>
+                {/* 레이아웃 높이에서 제외(absolute) — opacity-0만 쓰면 말풍선 간격이 벌어짐 */}
                 {showMsgActions && (
                   <span
-                    className={`ml-auto flex flex-wrap items-center justify-end gap-1 transition-opacity ${
-                      actionsOpen ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'
+                    className={`absolute right-0 top-full z-20 mt-0.5 flex max-w-[min(100%,18rem)] flex-wrap items-center justify-end gap-1 transition-opacity ${
+                      actionsOpen
+                        ? 'pointer-events-auto opacity-100'
+                        : 'pointer-events-none opacity-0 group-hover/msg:pointer-events-auto group-hover/msg:opacity-100'
                     }`}
                   >
                     {canTranslateMsg && (
@@ -638,7 +888,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                           void handleMessageTranslateToggle(messageId, String(m.text));
                         }}
                         disabled={msgBusy}
-                        className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-70"
+                        className="rounded-full border border-emerald-200/80 bg-emerald-50/80 px-2 py-0.5 text-xs font-semibold text-emerald-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-emerald-100/90 disabled:opacity-70"
                         title={translatedText ? t.chat_translate_undo : t.chat_translate}
                       >
                         {msgBusy
@@ -656,7 +906,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                           if (isChatCipherText(m.text)) return;
                           onOpenTaskWithText(m.text);
                         }}
-                        className="rounded-full border border-indigo-200 bg-white px-2 py-0.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        className="rounded-full border border-indigo-200/80 bg-indigo-50/80 px-2 py-0.5 text-xs font-semibold text-indigo-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-indigo-100/90"
                         title={t.chat_quick_add_task}
                       >
                         ✅ {t.chat_quick_add_task}
@@ -669,7 +919,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                           e.stopPropagation();
                           onOpenCalendarWithText(m.text);
                         }}
-                        className="rounded-full border border-violet-200 bg-white px-2 py-0.5 text-xs font-semibold text-violet-600 hover:bg-violet-50 transition-colors"
+                        className="rounded-full border border-violet-200/80 bg-violet-50/80 px-2 py-0.5 text-xs font-semibold text-violet-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-violet-100/90"
                         title={t.chat_quick_add_calendar}
                       >
                         📅 {t.chat_quick_add_calendar}
@@ -753,10 +1003,7 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                 })()}
                 {displaySource && (
                   <p className="message-text">
-                    {getChatMessageDisplayText(
-                      String(displaySource),
-                      lang === 'en' ? 'Unable to load message' : '메시지를 불러올 수 없습니다',
-                    )}
+                    {getChatMessageDisplayText(String(displaySource), unavailableLabel)}
                   </p>
                 )}
               </div>
@@ -771,13 +1018,11 @@ export const FamilyChatSection = memo(function FamilyChatSection({
                 <Mic className="chat-kids-mic-icon" />
               </span>
               {inputField}
-              {composeTranslateBtn}
               {attachControls}
             </div>
           ) : (
             <>
               {inputField}
-              {composeTranslateBtn}
               {attachControls}
             </>
           )}
@@ -795,6 +1040,12 @@ export const FamilyChatSection = memo(function FamilyChatSection({
               <img src="/family-chat/emojis/rocket.png" alt="" className="chat-kids-rocket" aria-hidden />
             ) : null}
           </div>
+          {hasAiKey ? (
+            <div className="chat-translate-bar">
+              {translateLangSelect}
+              {composeTranslateBtn}
+            </div>
+          ) : null}
           <input
             ref={chatFileInputRef}
             type="file"
