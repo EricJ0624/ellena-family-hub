@@ -235,11 +235,20 @@ export interface BabyVaccinationDraft {
 
 /** 최근 7일 카드용 평균·횟수 */
 export interface BabyLogAverages {
-  feedingCount7d: number;
-  feedingAvgMl: number | null;
-  feedingAvgBreastMin: number | null;
-  diaperCountToday: number;
-  diaperCount7d: number;
+  /** 직수 좌/우 + 모유 젖병(mixed) */
+  feedingBreastToday: number;
+  feedingBreast7d: number;
+  /** bottle = 분유 */
+  feedingBottleToday: number;
+  feedingBottle7d: number;
+  feedingSolidToday: number;
+  feedingSolid7d: number;
+  /** wet / mixed → +1. dry·미입력은 제외 */
+  diaperWetToday: number;
+  diaperWet7d: number;
+  /** dirty / mixed → +1. dry·미입력은 제외 */
+  diaperDirtyToday: number;
+  diaperDirty7d: number;
   sleepAvgMin7d: number | null;
   tempAvgC7d: number | null;
 }

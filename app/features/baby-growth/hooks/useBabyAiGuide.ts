@@ -62,10 +62,14 @@ function serializeLogs(logs: BabyDailyLog[], hours: number): string {
     const time = new Date(l.logged_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
     switch (l.log_type) {
       case 'feeding':
-        if (l.feeding_type?.startsWith('breast')) {
+        if (l.feeding_type === 'breast_left' || l.feeding_type === 'breast_right') {
           const leftMin = l.breast_left_min ?? 0;
           const rightMin = l.breast_right_min ?? 0;
           lines.push(`[${time}] 모유수유 좌${leftMin}분 우${rightMin}분`);
+        } else if (l.feeding_type === 'mixed') {
+          lines.push(`[${time}] 모유 젖병 ${l.feeding_amount_ml ?? '-'}ml`);
+        } else if (l.feeding_type === 'bottle') {
+          lines.push(`[${time}] 분유 ${l.feeding_amount_ml ?? '-'}ml`);
         } else if (l.feeding_type === 'solid') {
           lines.push(`[${time}] 이유식 ${l.feeding_amount_ml ?? '-'}g${l.solid_ingredients ? ' (재료: ' + l.solid_ingredients + ')' : ''}${l.allergy_reaction ? ' ⚠️ 알레르기: ' + l.allergy_reaction : ''}`);
         } else {

@@ -232,18 +232,16 @@ export function QuickLogModal({
 
         if (activeTab === 'feeding') {
           draft.feeding_type = feedingType;
-          if (feedingType === 'breast_left' || feedingType === 'breast_right') {
+          if (feedingType === 'breast_left') {
             if (breastLeftMin > 0) draft.breast_left_min = breastLeftMin;
+          } else if (feedingType === 'breast_right') {
             if (breastRightMin > 0) draft.breast_right_min = breastRightMin;
-          } else if (feedingType === 'mixed') {
-            if (breastLeftMin > 0) draft.breast_left_min = breastLeftMin;
-            if (breastRightMin > 0) draft.breast_right_min = breastRightMin;
-            if (feedingAmountMl) draft.feeding_amount_ml = Number(feedingAmountMl);
           } else if (feedingType === 'solid') {
             if (feedingAmountMl) draft.feeding_amount_ml = Number(feedingAmountMl);
             if (solidIngredients.trim()) draft.solid_ingredients = solidIngredients.trim();
             if (allergyReaction.trim()) draft.allergy_reaction = allergyReaction.trim();
           } else {
+            // bottle(분유) · mixed(모유 젖병): ml + 선택 시간
             if (feedingAmountMl) draft.feeding_amount_ml = Number(feedingAmountMl);
             if (feedingDurationMin) draft.feeding_duration_min = Number(feedingDurationMin);
           }
@@ -320,7 +318,7 @@ export function QuickLogModal({
             <>
               <Field label={t.feeding_type}>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {(['breast_left', 'breast_right', 'bottle', 'solid', 'mixed'] as FeedingType[]).map((v) => (
+                  {(['breast_left', 'breast_right', 'mixed', 'bottle', 'solid'] as FeedingType[]).map((v) => (
                     <button
                       key={v}
                       type="button"
@@ -335,8 +333,8 @@ export function QuickLogModal({
                 </div>
               </Field>
 
-              {/* 모유 수유 타이머 */}
-              {(feedingType === 'breast_left' || feedingType === 'mixed') && (
+              {/* 모유 직수 타이머 */}
+              {feedingType === 'breast_left' && (
                 <BreastfeedingTimer
                   side="left"
                   label={t.breast_left_timer}
@@ -344,7 +342,7 @@ export function QuickLogModal({
                   onChange={setBreastLeftMin}
                 />
               )}
-              {(feedingType === 'breast_right' || feedingType === 'mixed') && (
+              {feedingType === 'breast_right' && (
                 <BreastfeedingTimer
                   side="right"
                   label={t.breast_right_timer}
@@ -394,23 +392,22 @@ export function QuickLogModal({
                 </>
               )}
 
-              {/* 분유 — 양/시간 */}
-              {feedingType === 'bottle' && (
+              {/* 분유 · 모유 젖병 — 양/시간 */}
+              {(feedingType === 'bottle' || feedingType === 'mixed') && (
                 <>
-                  <Field label={t.feeding_amount_ml}>
+                  <Field
+                    label={
+                      feedingType === 'bottle'
+                        ? t.feeding_amount_formula_ml
+                        : t.feeding_amount_breast_bottle_ml
+                    }
+                  >
                     <NumberInput value={feedingAmountMl} onChange={setFeedingAmountMl} placeholder="ex) 120" />
                   </Field>
                   <Field label={t.feeding_duration_min}>
                     <NumberInput value={feedingDurationMin} onChange={setFeedingDurationMin} placeholder="ex) 15" />
                   </Field>
                 </>
-              )}
-
-              {/* 혼합 — 모유 시간 + 선택 수유량(ml) */}
-              {feedingType === 'mixed' && (
-                <Field label={t.feeding_amount_ml}>
-                  <NumberInput value={feedingAmountMl} onChange={setFeedingAmountMl} placeholder="ex) 60" />
-                </Field>
               )}
             </>
           )}

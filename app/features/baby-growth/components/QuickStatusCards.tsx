@@ -29,16 +29,14 @@ interface CardConfig {
 
 function feedingAvgLine(status: BabyRecentStatus, t: BabyGrowthTranslations): string | null {
   const a = status.averages;
-  if (a.feedingCount7d <= 0) return null;
-  const parts: string[] = [];
-  if (a.feedingAvgMl != null) {
-    parts.push(t.avg_feeding_ml.replace('{n}', String(a.feedingAvgMl)));
-  }
-  if (a.feedingAvgBreastMin != null) {
-    parts.push(t.avg_feeding_min.replace('{n}', String(a.feedingAvgBreastMin)));
-  }
-  parts.push(t.avg_count.replace('{n}', String(a.feedingCount7d)));
-  return `${t.avg_7d} ${parts.join(' · ')}`;
+  if (a.feedingBreast7d <= 0 && a.feedingBottle7d <= 0 && a.feedingSolid7d <= 0) return null;
+  return t.avg_feeding_count
+    .replace('{breastToday}', String(a.feedingBreastToday))
+    .replace('{bottleToday}', String(a.feedingBottleToday))
+    .replace('{solidToday}', String(a.feedingSolidToday))
+    .replace('{breast7d}', String(a.feedingBreast7d))
+    .replace('{bottle7d}', String(a.feedingBottle7d))
+    .replace('{solid7d}', String(a.feedingSolid7d));
 }
 
 /** 카드별 장식. 카드 면(z-5) 위·글자(z-20) 아래. */
@@ -144,10 +142,13 @@ export function QuickStatusCards({
         return bits.join(' · ');
       },
       getAvg: (s) => {
-        if (s.averages.diaperCount7d <= 0) return null;
+        const { diaperWetToday, diaperDirtyToday, diaperWet7d, diaperDirty7d } = s.averages;
+        if (diaperWet7d <= 0 && diaperDirty7d <= 0) return null;
         return t.avg_diaper_count
-          .replace('{today}', String(s.averages.diaperCountToday))
-          .replace('{n}', String(s.averages.diaperCount7d));
+          .replace('{wetToday}', String(diaperWetToday))
+          .replace('{dirtyToday}', String(diaperDirtyToday))
+          .replace('{wet7d}', String(diaperWet7d))
+          .replace('{dirty7d}', String(diaperDirty7d));
       },
     },
     {
@@ -235,7 +236,7 @@ export function QuickStatusCards({
                     {value ?? t.no_record}
                   </span>
                   {avg ? (
-                    <span className="mt-0.5 line-clamp-2 w-full text-[10px] font-medium leading-normal text-gray-500">
+                    <span className="mt-0.5 line-clamp-2 w-full whitespace-pre-line text-[10px] font-medium leading-normal text-gray-500">
                       {avg}
                     </span>
                   ) : null}

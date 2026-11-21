@@ -1,4 +1,4 @@
-import type { BabyDailyLog, BabyLogAverages } from '../types';
+import type { BabyDailyLog, BabyLogAverages, DiaperType, FeedingType } from '../types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const AVG_WINDOW_MS = 7 * DAY_MS;
@@ -15,8 +15,37 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function breastMinutes(log: BabyDailyLog): number {
-  return (log.breast_left_min ?? 0) + (log.breast_right_min ?? 0);
+/** wet→소변, dirty→대변, mixed→둘 다, dry(깨끗함)·미입력→카운트 없음 */
+function countDiaperSide(rows: BabyDailyLog[], side: 'wet' | 'dirty'): number {
+  let n = 0;
+  for (const l of rows) {
+    const t = l.diaper_type as DiaperType | null;
+    if (t === 'mixed' || t === side) n += 1;
+  }
+  return n;
+}
+
+/**
+ * 모유 = 직수 좌/우 + 모유 젖병(mixed)
+ * 분유 = bottle
+ * 이유식 = solid
+ */
+function countFeedingKind(
+  rows: BabyDailyLog[],
+  kind: 'breast' | 'bottle' | 'solid',
+): number {
+  let n = 0;
+  for (const l of rows) {
+    const t = l.feeding_type as FeedingType | null;
+    if (kind === 'breast') {
+      if (t === 'breast_left' || t === 'breast_right' || t === 'mixed') n += 1;
+    } else if (kind === 'bottle') {
+      if (t === 'bottle') n += 1;
+    } else if (t === 'solid') {
+      n += 1;
+    }
+  }
+  return n;
 }
 
 /**
@@ -26,13 +55,10 @@ export function calcLogAverages(logs: BabyDailyLog[], now = new Date()): BabyLog
   const since = now.getTime() - AVG_WINDOW_MS;
   const todayStart = startOfLocalDay(now).getTime();
 
-  const feedings = logs.filter(
+  const feedings7d = logs.filter(
     (l) => l.log_type === 'feeding' && new Date(l.logged_at).getTime() >= since,
   );
-  const mlSamples = feedings
-    .map((l) => l.feeding_amount_ml)
-    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0);
-  const breastSamples = feedings.map(breastMinutes).filter((v) => v > 0);
+  const feedingsToday = feedings7d.filter((l) => new Date(l.logged_at).getTime() >= todayStart);
 
   const diapers7d = logs.filter(
     (l) => l.log_type === 'diaper' && new Date(l.logged_at).getTime() >= since,
@@ -61,17 +87,16 @@ export function calcLogAverages(logs: BabyDailyLog[], now = new Date()): BabyLog
     .map((l) => l.temperature_celsius as number);
 
   return {
-    feedingCount7d: feedings.length,
-    feedingAvgMl:
-      mlSamples.length > 0
-        ? Math.round(mlSamples.reduce((a, b) => a + b, 0) / mlSamples.length)
-        : null,
-    feedingAvgBreastMin:
-      breastSamples.length > 0
-        ? Math.round(breastSamples.reduce((a, b) => a + b, 0) / breastSamples.length)
-        : null,
-    diaperCountToday: diapersToday.length,
-    diaperCount7d: diapers7d.length,
+    feedingBreastToday: countFeedingKind(feedingsToday, 'breast'),
+    feedingBreast7d: countFeedingKind(feedings7d, 'breast'),
+    feedingBottleToday: countFeedingKind(feedingsToday, 'bottle'),
+    feedingBottle7d: countFeedingKind(feedings7d, 'bottle'),
+    feedingSolidToday: countFeedingKind(feedingsToday, 'solid'),
+    feedingSolid7d: countFeedingKind(feedings7d, 'solid'),
+    diaperWetToday: countDiaperSide(diapersToday, 'wet'),
+    diaperWet7d: countDiaperSide(diapers7d, 'wet'),
+    diaperDirtyToday: countDiaperSide(diapersToday, 'dirty'),
+    diaperDirty7d: countDiaperSide(diapers7d, 'dirty'),
     sleepAvgMin7d:
       sleepDurations.length > 0
         ? Math.round(
