@@ -17,10 +17,13 @@ import {
 } from '@/lib/ai-key-share-constants';
 import {
   clearStoredCustomMeta,
+  getPreferredAiProvider,
   getStoredCustomMeta,
+  hasStoredAiKey,
   maskAiKeyPreview,
   readStoredAiKeyPlain,
   removeStoredAiKey,
+  setPreferredAiProvider,
   setStoredCustomMeta,
   writeStoredAiKey,
   type AiUserProvider,
@@ -51,8 +54,8 @@ const AI_PROVIDER_TABS: {
     id: 'gemini',
     label: 'Gemini',
     activeClass: 'bg-blue-500 text-white',
-    hint: 'Google AI Studio 키 (AIza...) · aistudio.google.com',
-    placeholder: 'AIza...',
+    hint: 'Google AI Studio 키 (AQ.… 또는 AIza…) · aistudio.google.com',
+    placeholder: 'AQ.… 또는 AIza…',
   },
   {
     id: 'custom',
@@ -85,11 +88,19 @@ export function AiApiKeySettings({
   userId: string;
   groupId: string | null;
 }) {
-  const [activeProvider, setActiveProvider] = React.useState<AiUserProvider>('openai');
+  const [activeProvider, setActiveProvider] = React.useState<AiUserProvider>(() =>
+    getPreferredAiProvider(userId),
+  );
   const [keyInput, setKeyInput] = React.useState('');
-  const [baseUrlInput, setBaseUrlInput] = React.useState('');
-  const [modelInput, setModelInput] = React.useState('');
+  const [baseUrlInput, setBaseUrlInput] = React.useState(() =>
+    typeof window !== 'undefined' ? getStoredCustomMeta(userId).baseUrl : '',
+  );
+  const [modelInput, setModelInput] = React.useState(() =>
+    typeof window !== 'undefined' ? getStoredCustomMeta(userId).model : '',
+  );
   const [saved, setSaved] = React.useState(false);
+  /** localStorage 키/메타 변경 시 useMemo 재계산용 */
+  const [storageEpoch, setStorageEpoch] = React.useState(0);
   const [pinging, setPinging] = React.useState(false);
   const [pingResult, setPingResult] = React.useState<'ok' | 'fail' | null>(null);
 
@@ -113,13 +124,13 @@ export function AiApiKeySettings({
   const storedKey = React.useMemo(
     () => (typeof window !== 'undefined' ? readStoredAiKeyPlain(userId, activeProvider) ?? '' : ''),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userId, activeProvider, saved, scanMessage],
+    [userId, activeProvider, saved, scanMessage, storageEpoch],
   );
 
   const storedCustomMeta = React.useMemo(
     () => (typeof window !== 'undefined' ? getStoredCustomMeta(userId) : { baseUrl: '', model: '' }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userId, saved, activeProvider, scanMessage],
+    [userId, saved, activeProvider, scanMessage, storageEpoch],
   );
 
   React.useEffect(() => {
@@ -188,7 +199,9 @@ export function AiApiKeySettings({
     if (keyInput.trim()) {
       writeStoredAiKey(userId, activeProvider, keyInput.trim());
     }
+    setPreferredAiProvider(userId, activeProvider);
     window.dispatchEvent(new CustomEvent('sfh:ai-key-updated'));
+    setStorageEpoch((n) => n + 1);
     setSaved(true);
     setKeyInput('');
     setTimeout(() => setSaved(false), 2500);
@@ -205,6 +218,7 @@ export function AiApiKeySettings({
     setKeyInput('');
     setPingResult(null);
     setSaved(false);
+    setStorageEpoch((n) => n + 1);
   };
 
   const handlePing = async () => {
@@ -331,14 +345,7 @@ export function AiApiKeySettings({
       }
 
       // 서버 1회 삭제 전에 덮어쓰기 확인 (거절 시 토큰 소모 방지)
-      // provider는 redeem 응답 전이므로, 이미 아무 키라도 있으면 한 번 확인
-      const anyExisting = Boolean(
-        readStoredAiKeyPlain(userId, 'openai') ||
-          readStoredAiKeyPlain(userId, 'anthropic') ||
-          readStoredAiKeyPlain(userId, 'gemini') ||
-          readStoredAiKeyPlain(userId, 'custom'),
-      );
-      if (anyExisting && !window.confirm('이미 등록된 AI 키가 있습니다. 스캔한 키로 덮어쓸까요?')) {
+      if (hasStoredAiKey(userId) && !window.confirm('이미 등록된 AI 키가 있습니다. 스캔한 키로 덮어쓸까요?')) {
         setScanMessage('등록이 취소되었습니다. QR은 아직 유효합니다. 다시 스캔해 주세요.');
         scanHandledRef.current = false;
         return;
@@ -371,12 +378,14 @@ export function AiApiKeySettings({
             model: json.model ?? '',
           });
         }
+        setPreferredAiProvider(userId, json.provider);
         setActiveProvider(json.provider);
         if (json.provider === 'custom') {
           setBaseUrlInput(json.baseUrl ?? '');
           setModelInput(json.model ?? '');
         }
         window.dispatchEvent(new CustomEvent('sfh:ai-key-updated'));
+        setStorageEpoch((n) => n + 1);
         setScanMessage('✅ 키가 이 기기에 등록되었습니다. (저장값은 암호화됩니다)');
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);

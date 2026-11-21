@@ -7,7 +7,7 @@
  * - 키는 서버에 저장되지 않음
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { fetchAiProxy } from '@/lib/ai-proxy-client';
 import { getStoredAiKey, storedAiKeyToProxyBody } from '@/lib/ai-user-key';
 import type { ParsedImportItem } from '@/lib/modules/travel-planner/itinerary-import-types';
@@ -208,10 +208,13 @@ interface UseTravelAiPlannerProps {
   hasApiKeyRevision?: number;
 }
 
-export function useTravelAiPlanner({ userId, hasApiKeyRevision }: UseTravelAiPlannerProps) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const keyInfo = getStoredAiKey(userId);
-  void hasApiKeyRevision;
+export function useTravelAiPlanner({ userId, hasApiKeyRevision = 0 }: UseTravelAiPlannerProps) {
+  // hasApiKeyRevision 변경 시 localStorage 재조회
+  const keyInfo = useMemo(
+    () => getStoredAiKey(userId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userId, hasApiKeyRevision],
+  );
 
   const [generating, setGenerating] = useState(false);
   const [plan, setPlan] = useState<AiTravelPlan | null>(null);

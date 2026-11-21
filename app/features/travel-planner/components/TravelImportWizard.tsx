@@ -110,15 +110,17 @@ export function TravelImportWizard({
     });
   }, []);
 
-  // 닉네임 모달에서 키 등록 후 닫히면 localStorage 재읽기
+  // 계정 모달에서 키 등록·삭제·모달 닫힘 시 localStorage 재읽기
   useEffect(() => {
     const refresh = () => setKeyRevision((n) => n + 1);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('sfh:ai-key-updated', refresh);
     window.addEventListener('sfh:ai-key-settings-closed', refresh);
     return () => {
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('sfh:ai-key-updated', refresh);
       window.removeEventListener('sfh:ai-key-settings-closed', refresh);
     };
   }, []);

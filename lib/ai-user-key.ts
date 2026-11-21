@@ -120,24 +120,63 @@ export function clearStoredCustomMeta(userId: string): void {
   localStorage.removeItem(aiUserModelStorageKey(userId));
 }
 
+function storedAiKeyForProvider(
+  userId: string,
+  provider: AiUserProvider,
+): StoredAiKey | null {
+  const key = readStoredAiKeyPlain(userId, provider);
+  if (!key) return null;
+  if (provider === 'custom') {
+    const { baseUrl, model } = getStoredCustomMeta(userId);
+    if (!baseUrl) return null;
+    return { key, provider, baseUrl, model: model || undefined };
+  }
+  return { key, provider };
+}
+
+const lastProviderStorageKey = (userId: string) => `sfh_ai_last_provider_${userId}`;
+
+function readLastPreferredProvider(userId: string): AiUserProvider | null {
+  if (typeof window === 'undefined' || !userId) return null;
+  const lastRaw = localStorage.getItem(lastProviderStorageKey(userId));
+  if (!lastRaw || !(AI_USER_PROVIDERS as readonly string[]).includes(lastRaw)) return null;
+  return lastRaw as AiUserProvider;
+}
+
+/**
+ * 사용할 AI 키: 최근 저장·선택 제공자 우선 → 없으면 openai→…→custom 순
+ */
 export function getStoredAiKey(userId: string): StoredAiKey | null {
   if (typeof window === 'undefined' || !userId) return null;
 
+  const preferred = readLastPreferredProvider(userId);
+  if (preferred) {
+    const preferredStored = storedAiKeyForProvider(userId, preferred);
+    if (preferredStored) return preferredStored;
+  }
+
   for (const provider of AI_USER_PROVIDERS) {
-    const key = readStoredAiKeyPlain(userId, provider);
-    if (!key) continue;
-    if (provider === 'custom') {
-      const { baseUrl, model } = getStoredCustomMeta(userId);
-      if (!baseUrl) continue;
-      return { key, provider, baseUrl, model: model || undefined };
-    }
-    return { key, provider };
+    const stored = storedAiKeyForProvider(userId, provider);
+    if (stored) return stored;
   }
   return null;
 }
 
 export function hasStoredAiKey(userId: string): boolean {
   return getStoredAiKey(userId) != null;
+}
+
+/** 계정 모달 등에서 마지막으로 저장·선택한 제공자 기억 */
+export function setPreferredAiProvider(userId: string, provider: AiUserProvider): void {
+  if (typeof window === 'undefined' || !userId) return;
+  localStorage.setItem(lastProviderStorageKey(userId), provider);
+}
+
+/**
+ * 모달 진입 시 기본 탭: getStoredAiKey와 동일 우선순위 → 없으면 openai
+ */
+export function getPreferredAiProvider(userId: string): AiUserProvider {
+  return getStoredAiKey(userId)?.provider ?? 'openai';
 }
 
 /** /api/ai/proxy body에 넣을 provider·custom 필드 */

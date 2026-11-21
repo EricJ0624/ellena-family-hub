@@ -18,9 +18,12 @@ const ANTHROPIC_VERSION = '2023-06-01';
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 const DEFAULT_MODEL: Record<Exclude<AiUserProvider, 'custom'>, string> = {
+  // gpt-4o-mini: deprecated, shutdown ~2027-01-14 — 당분간 유지
   openai: 'gpt-4o-mini',
-  anthropic: 'claude-3-haiku-20240307',
-  gemini: 'gemini-2.0-flash',
+  // claude-3-haiku-20240307 retired 2026-04-20
+  anthropic: 'claude-haiku-4-5-20251001',
+  // gemini-2.0-flash shut down 2026-06-01
+  gemini: 'gemini-3.5-flash-lite',
 };
 
 const CUSTOM_DEFAULT_MODEL = 'gpt-4o-mini';
