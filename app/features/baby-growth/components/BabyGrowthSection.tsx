@@ -578,6 +578,7 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
   const [birthDate, setBirthDate] = useState(initial?.birth_date ?? '');
   const [birthTime, setBirthTime] = useState(initial?.birth_time?.slice(0, 5) ?? '');
   const [birthPlace, setBirthPlace] = useState(initial?.birth_place ?? '');
+  const [fetalName, setFetalName] = useState(initial?.fetal_name ?? '');
   const [birthWeight, setBirthWeight] = useState(
     initial?.birth_weight_kg != null ? String(initial.birth_weight_kg) : '',
   );
@@ -637,6 +638,7 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
         birth_date: birthDate,
         birth_time: birthTime || null,
         birth_place: birthPlace.trim() || null,
+        fetal_name: fetalName.trim() || null,
         birth_weight_kg: asFiniteNumber(birthWeight),
         birth_height_cm: asFiniteNumber(birthHeight),
         birth_head_cm: asFiniteNumber(birthHead),
@@ -713,6 +715,17 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-500">{t.fetal_name}</label>
+            <input
+              type="text"
+              value={fetalName}
+              onChange={(e) => setFetalName(e.target.value)}
+              placeholder={t.fetal_name_placeholder}
+              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+            />
           </div>
 
           <div className="space-y-1">

@@ -77,9 +77,12 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
       ? t.gestational_weeks_value.replace('{n}', String(gestationalWeeks))
       : null,
   ].filter(Boolean) as string[];
+  const fetalName = profile.fetal_name?.trim() || null;
+  const birthPlace = profile.birth_place?.trim() || null;
   const hasBirthInfo = Boolean(
     birthTime ||
-      profile.birth_place?.trim() ||
+      fetalName ||
+      birthPlace ||
       birthMetrics.length > 0,
   );
 
@@ -94,14 +97,19 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
               {profile.birth_date}
               {birthTime ? ` (${birthTime})` : ''}
             </p>
+            {fetalName ? (
+              <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
+                {t.fetal_name}: {fetalName}
+              </p>
+            ) : null}
             {birthMetrics.length > 0 ? (
               <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
                 {birthMetrics.join(' · ')}
               </p>
             ) : null}
-            {profile.birth_place ? (
+            {birthPlace ? (
               <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
-                {profile.birth_place}
+                {birthPlace}
               </p>
             ) : null}
           </div>

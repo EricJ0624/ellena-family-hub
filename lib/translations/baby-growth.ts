@@ -23,6 +23,8 @@ export type BabyGrowthTranslations = {
   birth_time: string;
   birth_place: string;
   birth_place_placeholder: string;
+  fetal_name: string;
+  fetal_name_placeholder: string;
   birth_weight_kg: string;
   birth_height_cm: string;
   birth_head_cm: string;
@@ -315,6 +317,8 @@ const ko: BabyGrowthTranslations = {
   birth_time: '출생 시각',
   birth_place: '출생 장소',
   birth_place_placeholder: '예) ○○대학교병원',
+  fetal_name: '태명',
+  fetal_name_placeholder: '예) 콩이',
   birth_weight_kg: '출생 체중 (kg)',
   birth_height_cm: '출생 키 (cm)',
   birth_head_cm: '출생 머리둘레 (cm)',
@@ -586,6 +590,8 @@ const en: BabyGrowthTranslations = {
   birth_time: 'Birth time',
   birth_place: 'Birth place',
   birth_place_placeholder: 'e.g. City Hospital',
+  fetal_name: 'Fetal name',
+  fetal_name_placeholder: 'e.g. Bean',
   birth_weight_kg: 'Birth weight (kg)',
   birth_height_cm: 'Birth length (cm)',
   birth_head_cm: 'Head circumference (cm)',
@@ -857,6 +863,8 @@ const ja: BabyGrowthTranslations = {
   birth_time: '出生時刻',
   birth_place: '出生場所',
   birth_place_placeholder: '例) ○○病院',
+  fetal_name: '胎児名',
+  fetal_name_placeholder: '例) 豆ちゃん',
   birth_weight_kg: '出生体重 (kg)',
   birth_height_cm: '出生身長 (cm)',
   birth_head_cm: '出生頭囲 (cm)',
@@ -1131,6 +1139,8 @@ const zhCN: BabyGrowthTranslations = {
   birth_time: '出生时间',
   birth_place: '出生地点',
   birth_place_placeholder: '例) ○○医院',
+  fetal_name: '胎名',
+  fetal_name_placeholder: '例) 豆豆',
   birth_weight_kg: '出生体重 (kg)',
   birth_height_cm: '出生身高 (cm)',
   birth_head_cm: '出生头围 (cm)',
@@ -1400,6 +1410,8 @@ const zhTW: BabyGrowthTranslations = {
   birth_time: '出生時間',
   birth_place: '出生地點',
   birth_place_placeholder: '例) ○○醫院',
+  fetal_name: '胎名',
+  fetal_name_placeholder: '例) 豆豆',
   birth_weight_kg: '出生體重 (kg)',
   birth_height_cm: '出生身高 (cm)',
   birth_head_cm: '出生頭圍 (cm)',
@@ -1669,6 +1681,8 @@ const es: BabyGrowthTranslations = {
   birth_time: 'Hora de nacimiento',
   birth_place: 'Lugar de nacimiento',
   birth_place_placeholder: 'ej. Hospital',
+  fetal_name: 'Nombre fetal',
+  fetal_name_placeholder: 'ej. Habichuela',
   birth_weight_kg: 'Peso al nacer (kg)',
   birth_height_cm: 'Talla al nacer (cm)',
   birth_head_cm: 'Perímetro cefálico (cm)',
@@ -1938,6 +1952,8 @@ const fr: BabyGrowthTranslations = {
   birth_time: 'Heure de naissance',
   birth_place: 'Lieu de naissance',
   birth_place_placeholder: 'ex. Hôpital',
+  fetal_name: 'Prénom in utero',
+  fetal_name_placeholder: 'ex. Petit pois',
   birth_weight_kg: 'Poids de naissance (kg)',
   birth_height_cm: 'Taille de naissance (cm)',
   birth_head_cm: 'Périmètre crânien (cm)',
@@ -2207,6 +2223,8 @@ const de: BabyGrowthTranslations = {
   birth_time: 'Geburtszeit',
   birth_place: 'Geburtsort',
   birth_place_placeholder: 'z. B. Klinik',
+  fetal_name: 'Kosenname (vor Geburt)',
+  fetal_name_placeholder: 'z. B. Böhnchen',
   birth_weight_kg: 'Geburtsgewicht (kg)',
   birth_height_cm: 'Geburtsgröße (cm)',
   birth_head_cm: 'Kopfumfang (cm)',
@@ -2476,6 +2494,8 @@ const it: BabyGrowthTranslations = {
   birth_time: 'Ora di nascita',
   birth_place: 'Luogo di nascita',
   birth_place_placeholder: 'es. Ospedale',
+  fetal_name: 'Nome fetale',
+  fetal_name_placeholder: 'es. Fagiolo',
   birth_weight_kg: 'Peso alla nascita (kg)',
   birth_height_cm: 'Lunghezza alla nascita (cm)',
   birth_head_cm: 'Circonferenza cranica (cm)',
@@ -2745,6 +2765,8 @@ const pt: BabyGrowthTranslations = {
   birth_time: 'Hora de nascimento',
   birth_place: 'Local de nascimento',
   birth_place_placeholder: 'ex. Hospital',
+  fetal_name: 'Nome fetal',
+  fetal_name_placeholder: 'ex. Feijãozinho',
   birth_weight_kg: 'Peso ao nascer (kg)',
   birth_height_cm: 'Comprimento ao nascer (cm)',
   birth_head_cm: 'Perímetro cefálico (cm)',

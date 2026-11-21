@@ -55,6 +55,8 @@ export interface BabyProfile {
   /** 출생 시각 'HH:mm' | 'HH:mm:ss' */
   birth_time: string | null;
   birth_place: string | null;
+  /** 태명 — prenatal/birth에서 전달 가능 */
+  fetal_name: string | null;
   birth_weight_kg: number | null;
   birth_height_cm: number | null;
   birth_head_cm: number | null;
@@ -81,6 +83,7 @@ export interface BabyProfileDraft {
   birth_date: string;
   birth_time?: string | null;
   birth_place?: string | null;
+  fetal_name?: string | null;
   birth_weight_kg?: number | null;
   birth_height_cm?: number | null;
   birth_head_cm?: number | null;
