@@ -39,12 +39,32 @@ export type MilestoneCategory =
 // BabyProfile — baby_profiles 테이블
 // ---------------------------------------------------------------------------
 
+/** 혈액형. prenatal/birth → 프로필 스냅샷 */
+export type BabyBloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'O+' | 'O-' | 'AB+' | 'AB-';
+
+export const BABY_BLOOD_TYPES: BabyBloodType[] = [
+  'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-',
+];
+
 export interface BabyProfile {
   id: string;
   group_id: string;
   created_by: string | null;
   name: string;
   birth_date: string; // ISO date 'YYYY-MM-DD'
+  /** 출생 시각 'HH:mm' | 'HH:mm:ss' */
+  birth_time: string | null;
+  birth_place: string | null;
+  birth_weight_kg: number | null;
+  birth_height_cm: number | null;
+  birth_head_cm: number | null;
+  /** 출산 시 재태주수 (예: 38, 38.5) */
+  gestational_weeks: number | null;
+  blood_type: BabyBloodType | null;
+  /** 'manual' | 'birth_event' — 추후 prenatal 연동 */
+  birth_source: 'manual' | 'birth_event' | null;
+  /** 추후 birth 이벤트 FK */
+  birth_event_id: string | null;
   gender: BabyGender | null;
   country_code: string;
   notes: string | null;
@@ -59,6 +79,14 @@ export interface BabyProfileDraft {
   group_id: string;
   name: string;
   birth_date: string;
+  birth_time?: string | null;
+  birth_place?: string | null;
+  birth_weight_kg?: number | null;
+  birth_height_cm?: number | null;
+  birth_head_cm?: number | null;
+  gestational_weeks?: number | null;
+  blood_type?: BabyBloodType | null;
+  birth_source?: 'manual' | 'birth_event' | null;
   gender?: BabyGender;
   country_code?: string;
   notes?: string;

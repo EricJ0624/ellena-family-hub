@@ -15,7 +15,16 @@ import { createPortal } from 'react-dom';
 import { getBabyGrowthTranslations } from '@/lib/translations/baby-growth';
 import type { LangCode } from '@/lib/language-fonts';
 import { getCountryOptions } from '@/lib/countries';
-import type { BabyProfile, BabyDailyLog, BabyRecentStatus, LogType } from '../types';
+import {
+  BABY_BLOOD_TYPES,
+  type BabyBloodType,
+  type BabyDailyLog,
+  type BabyProfile,
+  type BabyProfileDraft,
+  type BabyRecentStatus,
+  type LogType,
+} from '../types';
+import { asFiniteNumber } from '../utils/birth-snapshot';
 import { BABY_PROFILE_MAX, useBabyGrowth } from '../hooks/useBabyGrowth';
 import { useBabyLogs, calcRecentStatus } from '../hooks/useBabyLogs';
 import { BabyProfileCard } from './BabyProfileCard';
@@ -559,7 +568,7 @@ interface AddBabyModalProps {
   currentGroupId: string;
   lang: LangCode;
   initial?: BabyProfile;
-  onSave: (draft: { name: string; birth_date: string; gender?: 'male' | 'female' | 'other'; country_code?: string; usual_bedtime?: string | null; usual_wake_time?: string | null }) => Promise<void>;
+  onSave: (draft: Omit<BabyProfileDraft, 'group_id'> & { group_id?: string }) => Promise<void>;
   onDelete?: () => Promise<void>;
   onClose: () => void;
 }
@@ -567,6 +576,21 @@ interface AddBabyModalProps {
 function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDelete, onClose }: AddBabyModalProps) {
   const [name, setName] = useState(initial?.name ?? '');
   const [birthDate, setBirthDate] = useState(initial?.birth_date ?? '');
+  const [birthTime, setBirthTime] = useState(initial?.birth_time?.slice(0, 5) ?? '');
+  const [birthPlace, setBirthPlace] = useState(initial?.birth_place ?? '');
+  const [birthWeight, setBirthWeight] = useState(
+    initial?.birth_weight_kg != null ? String(initial.birth_weight_kg) : '',
+  );
+  const [birthHeight, setBirthHeight] = useState(
+    initial?.birth_height_cm != null ? String(initial.birth_height_cm) : '',
+  );
+  const [birthHead, setBirthHead] = useState(
+    initial?.birth_head_cm != null ? String(initial.birth_head_cm) : '',
+  );
+  const [gestationalWeeks, setGestationalWeeks] = useState(
+    initial?.gestational_weeks != null ? String(initial.gestational_weeks) : '',
+  );
+  const [bloodType, setBloodType] = useState<BabyBloodType | ''>(initial?.blood_type ?? '');
   const [gender, setGender] = useState<'male' | 'female' | 'other'>(initial?.gender ?? 'female');
   const [countryCode, setCountryCode] = useState(initial?.country_code ?? 'KR');
   const [usualBedtime, setUsualBedtime] = useState(initial?.usual_bedtime?.slice(0, 5) ?? '');
@@ -611,6 +635,15 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
       await onSave({
         name: name.trim(),
         birth_date: birthDate,
+        birth_time: birthTime || null,
+        birth_place: birthPlace.trim() || null,
+        birth_weight_kg: asFiniteNumber(birthWeight),
+        birth_height_cm: asFiniteNumber(birthHeight),
+        birth_head_cm: asFiniteNumber(birthHead),
+        gestational_weeks: asFiniteNumber(gestationalWeeks),
+        blood_type: bloodType || null,
+        // 출산 이벤트 연동 후 취침 등만 수정해도 birth_event 출처를 덮지 않음
+        birth_source: initial?.birth_source === 'birth_event' ? 'birth_event' : 'manual',
         gender,
         country_code: countryCode,
         usual_bedtime: usualBedtime || null,
@@ -628,13 +661,13 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
       className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full sm:w-96 bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl pb-safe">
-        <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100 dark:border-gray-800">
+      <div className="flex max-h-[90dvh] w-full flex-col rounded-t-2xl bg-white pb-safe shadow-2xl dark:bg-gray-900 sm:w-96 sm:rounded-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 pb-2 pt-4 dark:border-gray-800">
           <h2 className="text-base font-bold">{initial ? t.edit_baby : t.add_baby}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+          <button onClick={onClose} className="text-xl text-gray-400 hover:text-gray-600">×</button>
         </div>
 
-        <div className="px-5 py-4 space-y-3">
+        <div className="space-y-3 overflow-y-auto px-5 py-4">
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-500">{t.baby_name}</label>
             <input
@@ -653,6 +686,100 @@ function AddBabyModal({ t, currentGroupId: _groupId, lang, initial, onSave, onDe
               onChange={(e) => setBirthDate(e.target.value)}
               className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
             />
+          </div>
+
+          <p className="pt-1 text-xs font-semibold text-gray-600 dark:text-gray-300">{t.birth_info}</p>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.birth_time}</label>
+              <input
+                type="time"
+                value={birthTime}
+                onChange={(e) => setBirthTime(e.target.value)}
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.blood_type}</label>
+              <select
+                value={bloodType}
+                onChange={(e) => setBloodType((e.target.value || '') as BabyBloodType | '')}
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              >
+                <option value="">{t.blood_type_unset}</option>
+                {BABY_BLOOD_TYPES.map((bt) => (
+                  <option key={bt} value={bt}>{bt}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-500">{t.birth_place}</label>
+            <input
+              type="text"
+              value={birthPlace}
+              onChange={(e) => setBirthPlace(e.target.value)}
+              placeholder={t.birth_place_placeholder}
+              className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.birth_weight_kg}</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                value={birthWeight}
+                onChange={(e) => setBirthWeight(e.target.value)}
+                placeholder="ex) 3.2"
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.birth_height_cm}</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                min="0"
+                value={birthHeight}
+                onChange={(e) => setBirthHeight(e.target.value)}
+                placeholder="ex) 49"
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.birth_head_cm}</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                min="0"
+                value={birthHead}
+                onChange={(e) => setBirthHead(e.target.value)}
+                placeholder="ex) 34"
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-500">{t.gestational_weeks}</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                min="0"
+                max="45"
+                value={gestationalWeeks}
+                onChange={(e) => setGestationalWeeks(e.target.value)}
+                placeholder="ex) 38"
+                className="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 px-3 py-2"
+              />
+            </div>
           </div>
 
           <div className="space-y-1">

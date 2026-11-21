@@ -7,6 +7,7 @@ import {
   calcAgeInWeeks,
   getBabyFaceEmoji,
 } from '../utils/age-calculator';
+import { formatBirthTime } from '../utils/birth-snapshot';
 import type { BabyProfile } from '../types';
 import type { BabyGrowthTranslations } from '@/lib/translations/baby-growth';
 
@@ -29,6 +30,10 @@ export function BabyProfileCard({ profile, t, onEditClick, onReportClick }: Baby
       : t.age_months.replace('{n}', String(months));
 
   const faceEmoji = getBabyFaceEmoji(profile.gender, months);
+  const birthTime = formatBirthTime(profile.birth_time);
+  const birthLine = birthTime
+    ? `${profile.birth_date} (${birthTime})`
+    : profile.birth_date;
 
   return (
     <div className="relative z-20 flex w-full items-center gap-3">
@@ -43,11 +48,18 @@ export function BabyProfileCard({ profile, t, onEditClick, onReportClick }: Baby
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate rounded bg-[#fff8f4] text-base font-bold text-gray-900">{profile.name}</span>
-          <span className="shrink-0 rounded-full bg-pink-100 px-2 py-0.5 text-xs font-medium text-pink-500">
-            {ageLabel}
+          <span className="inline-flex h-5 shrink-0 items-center gap-0">
+            <span className="inline-flex h-full items-center rounded-full bg-pink-100 px-2 text-xs font-medium leading-none text-pink-500">
+              {ageLabel}
+            </span>
+            {profile.blood_type ? (
+              <span className="-ml-0.5 inline-flex h-full items-center rounded-full bg-rose-50 px-2 text-xs font-medium leading-none text-rose-500">
+                {profile.blood_type}
+              </span>
+            ) : null}
           </span>
         </div>
-        <p className="mt-0.5 w-fit rounded bg-[#fff8f4] text-xs text-gray-400">{profile.birth_date}</p>
+        <p className="mt-0.5 w-fit rounded bg-[#fff8f4] text-xs text-gray-400">{birthLine}</p>
         {onReportClick && (
           <button
             type="button"

@@ -11,6 +11,7 @@ import {
   estimatePercentile,
 } from '../utils/who-growth-curves';
 import { calcAgeInMonths } from '../utils/age-calculator';
+import { asFiniteNumber, formatBirthTime } from '../utils/birth-snapshot';
 import { MILESTONE_DEFINITIONS } from './MilestoneChecklist';
 
 type Metric = 'weight' | 'height';
@@ -62,8 +63,53 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
   const latestRecord = records[records.length - 1] ?? null;
   const ageMonths = calcAgeInMonths(profile.birth_date);
 
+  const birthTime = formatBirthTime(profile.birth_time);
+  const birthWeightKg = asFiniteNumber(profile.birth_weight_kg);
+  const birthHeightCm = asFiniteNumber(profile.birth_height_cm);
+  const birthHeadCm = asFiniteNumber(profile.birth_head_cm);
+  const gestationalWeeks = asFiniteNumber(profile.gestational_weeks);
+  const birthMetrics = [
+    profile.blood_type ?? null,
+    birthWeightKg != null ? `${birthWeightKg}kg` : null,
+    birthHeightCm != null ? `${birthHeightCm}cm` : null,
+    birthHeadCm != null ? t.birth_head_value.replace('{n}', String(birthHeadCm)) : null,
+    gestationalWeeks != null
+      ? t.gestational_weeks_value.replace('{n}', String(gestationalWeeks))
+      : null,
+  ].filter(Boolean) as string[];
+  const hasBirthInfo = Boolean(
+    birthTime ||
+      profile.birth_place?.trim() ||
+      birthMetrics.length > 0,
+  );
+
   return (
     <div className="flex flex-col gap-5 p-4 overflow-y-auto">
+      {/* 출생정보 — 「성장 발달」 위. 아이(profile) 단위, prenatal write-through 대비 */}
+      <section className="space-y-1.5">
+        <h2 className="text-base font-bold">{t.birth_info}</h2>
+        {hasBirthInfo ? (
+          <div className="rounded-2xl border border-green-100 bg-green-50/70 px-3 py-2.5 dark:border-green-900/40 dark:bg-green-950/30">
+            <p className="text-xs font-medium text-gray-700 dark:text-gray-200">
+              {profile.birth_date}
+              {birthTime ? ` (${birthTime})` : ''}
+            </p>
+            {birthMetrics.length > 0 ? (
+              <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
+                {birthMetrics.join(' · ')}
+              </p>
+            ) : null}
+            {profile.birth_place ? (
+              <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                {profile.birth_place}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">{t.birth_info_empty}</p>
+        )}
+      </section>
+
       <h2 className="text-base font-bold">{t.growth_title}</h2>
 
       {/* 최근 측정값 요약 */}
@@ -120,6 +166,8 @@ export function GrowthChartView({ profile, currentGroupId, userId, t }: GrowthCh
           metric={metric}
           gender={profile.gender ?? 'other'}
           birthDate={profile.birth_date}
+          birthWeightKg={birthWeightKg}
+          birthHeightCm={birthHeightCm}
         />
       </div>
 
@@ -202,12 +250,14 @@ function MetricBadge({
 // WHO 성장 곡선 SVG 차트
 // ---------------------------------------------------------------------------
 function WhoChart({
-  records, metric, gender, birthDate,
+  records, metric, gender, birthDate, birthWeightKg, birthHeightCm,
 }: {
   records: BabyGrowthRecord[];
   metric: Metric;
   gender: 'male' | 'female' | 'other';
   birthDate: string;
+  birthWeightKg?: number | null;
+  birthHeightCm?: number | null;
 }) {
   const isMale = gender !== 'female';
   const table = metric === 'weight'
@@ -232,7 +282,7 @@ function WhoChart({
   const makePath = (key: keyof typeof table[0]) =>
     table.map((r, i) => `${i === 0 ? 'M' : 'L'} ${tx(r.monthAge).toFixed(1)} ${ty(r[key] as number).toFixed(1)}`).join(' ');
 
-  // 아기 실측 데이터
+  // 아기 실측 데이터 (+ 출생 체중/키를 월령 0 포인트로 표시, growth_records에 넣지 않음)
   const babyPoints = records
     .filter((r) => (metric === 'weight' ? r.weight_kg : r.height_cm) != null)
     .map((r) => {
@@ -242,6 +292,10 @@ function WhoChart({
       const val = metric === 'weight' ? r.weight_kg! : r.height_cm!;
       return { x: tx(months), y: ty(val), val };
     });
+  const birthVal = asFiniteNumber(metric === 'weight' ? birthWeightKg : birthHeightCm);
+  if (birthVal != null) {
+    babyPoints.unshift({ x: tx(0), y: ty(birthVal), val: birthVal });
+  }
 
   return (
     <div className="overflow-x-auto">
